@@ -19,9 +19,7 @@ import (
 	"io"
 	"log/slog"
 	"mime"
-	"net"
 	"net/http"
-	"net/netip"
 	"net/url"
 	"os"
 	"strings"
@@ -59,10 +57,6 @@ type Notebrew struct {
 	ContentDomain string // localhost:6444, example.com
 
 	ImgDomain string
-
-	Proxies map[netip.Addr]struct{} // TODO: fill it in in main
-
-	ProxyForwardedIPHeader map[netip.Addr]string // TODO: fill it in in main
 
 	Logger *slog.Logger
 }
@@ -346,67 +340,6 @@ func filenameSafe(s string) string {
 		b.WriteRune(char)
 	}
 	return b.String()
-}
-
-func IsCommonPassword(password []byte) bool {
-	hash := blake2b.Sum256(password)
-	encodedHash := hex.EncodeToString(hash[:])
-	_, ok := commonPasswordHashes[encodedHash]
-	return ok
-}
-
-func (nbrew *Notebrew) realClientIP(r *http.Request) string {
-	// Reference: https://adam-p.ca/blog/2022/03/x-forwarded-for/
-	// proxies.json example:
-	// {proxyIPs: ["<ip>", "<ip>", "<ip>"], forwardedIPHeaders: {"<ip>": "X-Real-IP", "<ip>": "CF-Connecting-IP"}}
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return ""
-	}
-	remoteAddr, err := netip.ParseAddr(strings.TrimSpace(ip))
-	if err != nil {
-		return ""
-	}
-	// If we don't have any proxy servers configured (i.e. we are directly
-	// connected to the internet), treat remoteAddr as the real client IP.
-	if len(nbrew.ProxyForwardedIPHeader) == 0 && len(nbrew.Proxies) == 0 {
-		return remoteAddr.String()
-	}
-	// If remoteAddr is trusted to populate a known header with the real client
-	// IP, look in that header.
-	if trustedHeader, ok := nbrew.ProxyForwardedIPHeader[remoteAddr]; ok {
-		ipAddr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(trustedHeader)))
-		if err != nil {
-			return ""
-		}
-		return ipAddr.String()
-	}
-	// Check X-Forwarded-For header only if remoteAddr is the IP of a proxy
-	// server.
-	_, ok := nbrew.Proxies[remoteAddr]
-	if !ok {
-		return remoteAddr.String()
-	}
-	// Loop over all IP addresses in X-Forwarded-For headers from right to
-	// left. We want to rightmost IP address that isn't a proxy server's IP
-	// address.
-	values := r.Header.Values("X-Forwarded-For")
-	for i := len(values) - 1; i >= 0; i-- {
-		ips := strings.Split(values[i], ",")
-		for j := len(ips) - 1; j >= 0; j-- {
-			ip := ips[j]
-			ipAddr, err := netip.ParseAddr(strings.TrimSpace(ip))
-			if err != nil {
-				continue
-			}
-			_, ok := nbrew.Proxies[ipAddr]
-			if ok {
-				continue
-			}
-			return ipAddr.String()
-		}
-	}
-	return ""
 }
 
 var hashPool = sync.Pool{
