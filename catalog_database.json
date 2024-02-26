@@ -173,19 +173,6 @@
     ]
   },
   {
-    "table": "signup",
-    "columns": [
-      {
-        "column": "signup_token_hash",
-        "type": {
-          "default": "BINARY(40)",
-          "postgres": "BYTEA"
-        },
-        "primarykey": true
-      }
-    ]
-  },
-  {
     "table": "authentication",
     "columns": [
       {
