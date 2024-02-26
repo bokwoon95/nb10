@@ -43,6 +43,8 @@ var embedFS embed.FS
 
 var RuntimeFS fs.FS = embedFS
 
+var logSessions = false
+
 var (
 	stylesCSS                    string
 	baselineJS                   string
@@ -125,8 +127,6 @@ func getLogger(ctx context.Context) *slog.Logger {
 	}
 	return slog.Default()
 }
-
-var logSessions = false
 
 func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name string, value any) error {
 	buf := bufPool.Get().(*bytes.Buffer)

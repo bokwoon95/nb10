@@ -7,3 +7,12 @@ creation_time_darwin.go
 creation_time_linux.go
 creation_time_windows.go
 notebrew.go
+rootdirectory.go
+...
+notebrew/exit_unix.go
+notebrew/exit_windows.go
+notebrew/sqlite_cgo.go
+notebrew/sqlite_nocgo.go
+notebrew/start_cmd.go
+notebrew/main.go
+notebrew/open_browser.go
