@@ -17,3 +17,5 @@ notebrew/sqlite_nocgo.go
 notebrew/start_cmd.go
 notebrew/main.go
 notebrew/open_browser.go
+
+TODO: rewrite main.go such that we generate post.html and postlist.html into /posts/ rather than /output/themes/
