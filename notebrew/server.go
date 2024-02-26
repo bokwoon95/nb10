@@ -26,9 +26,6 @@ import (
 	"github.com/mholt/acmez"
 )
 
-type StartCmd struct {
-}
-
 func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, error) {
 	if nbrew.CMSDomain == "" {
 		return nil, fmt.Errorf("CMSDomain cannot be empty")
