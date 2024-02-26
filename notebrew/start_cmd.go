@@ -31,7 +31,7 @@ type StartCmd struct {
 
 func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, error) {
 	if nbrew.CMSDomain == "" {
-		return nil, fmt.Errorf("Domain cannot be empty")
+		return nil, fmt.Errorf("CMSDomain cannot be empty")
 	}
 	if nbrew.ContentDomain == "" {
 		return nil, fmt.Errorf("ContentDomain cannot be empty")
