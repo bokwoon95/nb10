@@ -10,6 +10,7 @@ notebrew.go
 dev.go
 rootdirectory.go
 ...
+serve_http.go
 notebrew/exit_unix.go
 notebrew/exit_windows.go
 notebrew/sqlite_cgo.go
