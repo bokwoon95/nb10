@@ -1,0 +1,13 @@
+<style>
+html { max-width: 80ch; padding: 3em 1em; margin: auto; line-height: 1.75; font-size: 1.25em; background-color: #fafafa; }
+p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
+</style>
+<title>{{ if $.Site.Title }}{{ $.Site.Title }}{{ else }}My Blog{{ end }}</title>
+<nav>
+  {{- range $i, $navigationLink := $.Site.NavigationLinks }}
+  {{ if $i }}&boxv; {{ end }}<a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a>
+  {{- end }}
+</nav>
+<hr>
+<h1>404 Not Found</h1>
+<p>The page you are looking for could not be found.</p>
