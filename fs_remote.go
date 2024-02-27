@@ -1562,11 +1562,21 @@ type LocalStorage struct {
 	tempDir string
 }
 
-func NewLocalStorage(rootDir, tempDir string) *LocalStorage {
-	return &LocalStorage{
+func NewLocalStorage(rootDir, tempDir string) (*LocalStorage, error) {
+	var err error
+	rootDir, err = filepath.Abs(filepath.FromSlash(rootDir))
+	if err != nil {
+		return nil, err
+	}
+	tempDir, err = filepath.Abs(filepath.FromSlash(tempDir))
+	if err != nil {
+		return nil, err
+	}
+	localStorage := &LocalStorage{
 		rootDir: filepath.FromSlash(rootDir),
 		tempDir: filepath.FromSlash(tempDir),
 	}
+	return localStorage, nil
 }
 
 func (storage *LocalStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {

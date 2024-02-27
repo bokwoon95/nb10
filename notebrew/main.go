@@ -24,9 +24,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/go-sql-driver/mysql"
@@ -161,6 +158,7 @@ func main() {
 			nbrew.ImgDomain = string(bytes.TrimSpace(b))
 		}
 
+		// Database.
 		b, err = os.ReadFile(filepath.Join(configDir, "database.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
@@ -316,6 +314,7 @@ func main() {
 			}()
 		}
 
+		// Files.
 		b, err = os.ReadFile(filepath.Join(configDir, "files.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
@@ -457,7 +456,7 @@ func main() {
 			}
 			err = db.Ping()
 			if err != nil {
-				return fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "database.json"), dialect, dataSourceName, err)
+				return fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "files.json"), dialect, dataSourceName, err)
 			}
 			filesCatalog, err := nb10.FilesCatalog(dialect)
 			if err != nil {
@@ -580,13 +579,9 @@ func main() {
 				if s3Config.SecretAccessKey == "" {
 					return fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "s3.json"))
 				}
-				storage = &nb10.S3Storage{
-					Client: s3.New(s3.Options{
-						BaseEndpoint: aws.String(s3Config.Endpoint),
-						Region:       s3Config.Region,
-						Credentials:  aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(s3Config.AccessKeyID, s3Config.SecretAccessKey, "")),
-					}),
-					Bucket: s3Config.Bucket,
+				storage, err = nb10.NewS3Storage(context.Background(), s3Config)
+				if err != nil {
+					return err
 				}
 			} else {
 				b, err = os.ReadFile(filepath.Join(configDir, "objectsdir.txt"))
@@ -607,7 +602,10 @@ func main() {
 						return err
 					}
 				}
-				storage = nb10.NewLocalStorage(objectsDir, os.TempDir())
+				storage, err = nb10.NewLocalStorage(objectsDir, os.TempDir())
+				if err != nil {
+					return err
+				}
 			}
 			nbrew.FS, err = nb10.NewRemoteFS(nb10.RemoteFSConfig{
 				DB:        db,
@@ -737,7 +735,7 @@ func main() {
 				return err
 			}
 		}
-		_, err = fs.Stat(nbrew.FS, "output/themes/post.html")
+		_, err = fs.Stat(nbrew.FS, "posts/post.html")
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err
@@ -746,7 +744,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			writer, err := nbrew.FS.OpenWriter("output/themes/post.html", 0644)
+			writer, err := nbrew.FS.OpenWriter("posts/post.html", 0644)
 			if err != nil {
 				return err
 			}
@@ -760,7 +758,7 @@ func main() {
 				return err
 			}
 		}
-		_, err = fs.Stat(nbrew.FS, "output/themes/postlist.html")
+		_, err = fs.Stat(nbrew.FS, "posts/postlist.html")
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err
@@ -769,7 +767,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			writer, err := nbrew.FS.OpenWriter("output/themes/postlist.html", 0644)
+			writer, err := nbrew.FS.OpenWriter("posts/postlist.html", 0644)
 			if err != nil {
 				return err
 			}
