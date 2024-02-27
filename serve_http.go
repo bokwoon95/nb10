@@ -256,13 +256,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch head {
-		case "site.json":
-			if tail != "" {
-				notFound(w, r)
-				return
-			}
-			nbrew.siteJSON(w, r, username, sitePrefix)
-			return
 		case "":
 			nbrew.rootdirectory(w, r, username, sitePrefix, time.Time{})
 			return
@@ -283,6 +276,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch urlPath {
+		case "site.json":
+			nbrew.siteJSON(w, r, username, sitePrefix)
+			return
 		case "regenerate":
 			// nbrew.regenerate(w, r, sitePrefix)
 			return
