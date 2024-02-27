@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -14,8 +15,10 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"golang.org/x/crypto/blake2b"
 )
 
 func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -87,17 +90,16 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {
 		switch tail {
-		case "signup":
-			// nbrew.signup(w, r, ip)
 		case "login":
 			// nbrew.login(w, r, ip)
+			return
 		case "logout":
 			// nbrew.logout(w, r, ip)
-		case "resetpassword":
+			return
 		default:
 			notFound(w, r)
+			return
 		}
-		return
 	}
 
 	// Handle the /files/* route on the CMS domain.
@@ -135,18 +137,36 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Figure out the sitePrefix of the site we are serving.
 		var sitePrefix string
-		if strings.HasPrefix(head, "@") || (strings.Contains(head, ".") && head != "site.json") {
+		tld := path.Ext(head)
+		if strings.HasPrefix(head, "@") {
 			sitePrefix, urlPath = head, tail
 			head, tail, _ = strings.Cut(urlPath, "/")
+		} else if tld != "" {
+			_, ok := fileTypes[tld]
+			if !ok {
+				sitePrefix, urlPath = head, tail
+				head, tail, _ = strings.Cut(urlPath, "/")
+			}
 		}
 
 		// If the users database is present, check if the user is authorized to
 		// access the files for this site.
 		var username string
-		var isAuthorizedForSite bool
+		isAuthorizedForSite := true
 		if nbrew.DB != nil {
-			authenticationTokenHash := getAuthenticationTokenHash(r)
-			if authenticationTokenHash == nil {
+			var authenticationTokenString string
+			if r.Form.Has("api") {
+				header := r.Header.Get("Authorization")
+				if strings.HasPrefix(header, "Notebrew ") {
+					authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
+				}
+			} else {
+				cookie, _ := r.Cookie("authentication")
+				if cookie != nil {
+					authenticationTokenString = cookie.Value
+				}
+			}
+			if authenticationTokenString == "" {
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
@@ -154,6 +174,19 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				notAuthenticated(w, r)
 				return
 			}
+			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
+			if err != nil {
+				if head == "" {
+					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
+					return
+				}
+				notAuthenticated(w, r)
+				return
+			}
+			var authenticationTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(authenticationToken[8:])
+			copy(authenticationTokenHash[:8], authenticationToken[:8])
+			copy(authenticationTokenHash[8:], checksum[:])
 			result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
@@ -161,7 +194,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					" JOIN users ON users.user_id = authentication.user_id" +
 					" WHERE authentication.authentication_token_hash = {authenticationTokenHash}",
 				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash),
+					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
 				},
 			}, func(row *sq.Row) (result struct {
 				Username            string
@@ -203,90 +236,78 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
 		}
 
-		switch head {
-		case "", "notes", "pages", "posts", "output", "site.json":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				if sitePrefix != "" || urlPath != "" {
-					notAuthorized(w, r)
-					return
-				}
-			}
-			// nbrew.file(w, r, username, sitePrefix, urlPath)
-			return
-		case "clipboard":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
+		if sitePrefix == "" {
+			switch urlPath {
+			case "":
+				nbrew.rootdirectory(w, r, username, "", time.Time{})
+				return
+			case "createsite":
+				// nbrew.createsite(w, r, username)
+				return
+			case "deletesite":
+				// nbrew.deletesite(w, r, username)
 				return
 			}
+		}
+
+		if !isAuthorizedForSite {
+			notAuthorized(w, r)
+			return
+		}
+
+		switch head {
+		case "site.json":
+			if tail != "" {
+				notFound(w, r)
+				return
+			}
+			nbrew.siteJSON(w, r, username, sitePrefix)
+			return
+		case "":
+			nbrew.rootdirectory(w, r, username, sitePrefix, time.Time{})
+			return
+		case "posts":
+			if path.Base(tail) == "postlist.json" {
+				category := path.Dir(tail)
+				nbrew.postlistJSON(w, r, username, sitePrefix, category)
+				return
+			}
+			nbrew.file(w, r, username, sitePrefix, urlPath)
+			return
+		case "notes", "pages", "output":
+			nbrew.file(w, r, username, sitePrefix, urlPath)
+			return
+		case "clipboard":
 			// nbrew.clipboard(w, r, username, sitePrefix, tail)
 			return
 		}
 
 		switch urlPath {
 		case "regenerate":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.regenerate(w, r, sitePrefix)
-		case "regeneratelist":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
-			// nbrew.regeneratelist(w, r, sitePrefix)
-		case "createsite":
-			if sitePrefix != "" {
-				notFound(w, r)
-				return
-			}
-			// nbrew.createsite(w, r, username)
-		case "deletesite":
-			if sitePrefix != "" {
-				notFound(w, r)
-				return
-			}
-			// nbrew.deletesite(w, r, username)
+			return
 		case "createfolder":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.createfolder(w, r, username, sitePrefix)
+			return
 		case "createfile":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.createfile(w, r, username, sitePrefix)
+			return
 		case "delete":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.delete(w, r, username, sitePrefix)
+			return
 		case "search":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.search(w, r, username, sitePrefix)
+			return
 		case "uploadfile":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.uploadfile(w, r, username, sitePrefix)
+			return
 		case "rename":
-			if nbrew.DB != nil && !isAuthorizedForSite {
-				notAuthorized(w, r)
-				return
-			}
 			// nbrew.rename(w, r, username, sitePrefix)
+			return
 		default:
 			notFound(w, r)
+			return
 		}
-		return
 	}
 
 	// If we reach here, we are serving generated site content. Only GET
@@ -306,16 +327,13 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// img.nbrew.io/foo/bar.jpg             => sitePrefix: <none>,      urlPath: foo/bar.jpg
 			// img.nbrew.io/@username/foo/bar.jpg   => sitePrefix: @username,   urlPath: foo/bar.jpg
 			// img.nbrew.io/example.com/foo/bar.jpg => sitePrefix: example.com, urlPath: foo/bar.jpg
+			tld := path.Ext(head)
 			if strings.HasPrefix(head, "@") {
 				sitePrefix, urlPath = head, tail
-			} else if strings.Contains(head, ".") {
-				if tail != "" {
+			} else if tld != "" {
+				_, ok := fileTypes[tld] // if it's not a file extension, then it's a TLD
+				if !ok {
 					sitePrefix, urlPath = head, tail
-				} else {
-					_, ok := fileTypes[path.Ext(head)] // if it's not a file extension, then it's a TLD
-					if !ok {
-						sitePrefix, urlPath = head, tail
-					}
 				}
 			}
 		} else {

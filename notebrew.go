@@ -266,30 +266,6 @@ func (nbrew *Notebrew) clearSession(w http.ResponseWriter, r *http.Request, name
 	}
 }
 
-func getAuthenticationTokenHash(r *http.Request) []byte {
-	var encodedToken string
-	if r.Form.Has("api") {
-		encodedToken = strings.TrimPrefix(r.Header.Get("Authorization"), "Notebrew ")
-	} else {
-		cookie, _ := r.Cookie("authentication")
-		if cookie != nil {
-			encodedToken = cookie.Value
-		}
-	}
-	if encodedToken == "" {
-		return nil
-	}
-	token, err := hex.DecodeString(fmt.Sprintf("%048s", encodedToken))
-	if err != nil {
-		return nil
-	}
-	var tokenHash [8 + blake2b.Size256]byte
-	checksum := blake2b.Sum256(token[8:])
-	copy(tokenHash[:8], token[:8])
-	copy(tokenHash[8:], checksum[:])
-	return tokenHash[:]
-}
-
 var base32Encoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)
 
 func stripMarkdownStyles(markdown goldmark.Markdown, src []byte) string {
@@ -611,9 +587,9 @@ func notAuthenticated(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Title":    `401 unauthorized`,
+		"Title":    "401 unauthorized",
 		"Headline": "401 unauthorized",
-		"Byline":   fmt.Sprintf(`You are not authenticated, please <a href="/users/login/%s">log in</a>.`, query),
+		"Byline":   fmt.Sprintf("You are not authenticated, please <a href='/users/login/%s'>log in</a>.", query),
 	})
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())

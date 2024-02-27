@@ -677,7 +677,10 @@ func main() {
 				return err
 			}
 		}
-		var siteGen *nb10.SiteGenerator
+		siteGen, err := nb10.NewSiteGenerator(context.Background(), nbrew.FS, "", nbrew.ContentDomain, nbrew.ImgDomain)
+		if err != nil {
+			return err
+		}
 		_, err = fs.Stat(nbrew.FS, "pages/index.html")
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
@@ -699,12 +702,6 @@ func main() {
 			err = writer.Close()
 			if err != nil {
 				return err
-			}
-			if siteGen == nil {
-				siteGen, err = nb10.NewSiteGenerator(context.Background(), nbrew.FS, "", nbrew.ContentDomain, nbrew.ImgDomain)
-				if err != nil {
-					return err
-				}
 			}
 			err = siteGen.GeneratePage(context.Background(), "pages/index.html", string(b))
 			if err != nil {
@@ -732,12 +729,6 @@ func main() {
 			err = writer.Close()
 			if err != nil {
 				return err
-			}
-			if siteGen == nil {
-				siteGen, err = nb10.NewSiteGenerator(context.Background(), nbrew.FS, "", nbrew.ContentDomain, nbrew.ImgDomain)
-				if err != nil {
-					return err
-				}
 			}
 			err = siteGen.GeneratePage(context.Background(), "pages/404.html", string(b))
 			if err != nil {
