@@ -56,13 +56,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 		FilesTooBig     []string       `json:"filesTooBig,omitempty"`
 	}
 
-	head, tail, _ := strings.Cut(filePath, "/")
-	if head == "posts" && path.Base(tail) == "postlist.json" {
-		category := path.Dir(tail)
-		if !strings.Contains(category, "/") {
-		}
-	}
-
 	file, err := nbrew.FS.Open(path.Join(".", sitePrefix, filePath))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -85,10 +78,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 			methodNotAllowed(w, r)
 			return
 		}
-		if filePath == "" {
-			nbrew.rootdirectory(w, r, username, sitePrefix, fileInfo.ModTime())
-			return
-		}
 		nbrew.directory(w, r, username, sitePrefix, filePath, fileInfo.ModTime())
 		return
 	}
@@ -100,6 +89,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 
 	// Figure out if the file is a user-editable file.
 	var isEditable bool
+	head, tail, _ := strings.Cut(filePath, "/")
 	switch head {
 	case "":
 		notFound(w, r)
@@ -122,8 +112,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 		default:
 			isEditable = fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md"
 		}
-	case "site.json":
-		isEditable = false
 	default:
 		notFound(w, r)
 		return

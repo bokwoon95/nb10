@@ -10,8 +10,8 @@ notebrew.go
 dev.go
 rootdirectory.go
 directory.go
-site_settings.go
-postlist_settings.go
+site_json.go
+postlist_json.go
 ...
 serve_http.go
 notebrew/exit_unix.go

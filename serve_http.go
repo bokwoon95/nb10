@@ -129,9 +129,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				internalServerError(w, r, err)
 				return
 			}
-			_ = fileType
-			_ = fileInfo
-			// serveFile(w, r, file, fileInfo, fileType, "max-age: 2592000, stale-while-revalidate" /* 30 days */)
+			serveFile(w, r, file, fileInfo, fileType, "max-age: 2592000, stale-while-revalidate" /* 30 days */)
 			return
 		}
 
@@ -142,6 +140,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			sitePrefix, urlPath = head, tail
 			head, tail, _ = strings.Cut(urlPath, "/")
 		} else if tld != "" {
+			// head is a sitePrefix only if its TLD is not a file extension.
 			_, ok := fileTypes[tld]
 			if !ok {
 				sitePrefix, urlPath = head, tail
@@ -327,7 +326,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(head, "@") {
 				sitePrefix, urlPath = head, tail
 			} else if tld != "" {
-				_, ok := fileTypes[tld] // if it's not a file extension, then it's a TLD
+				// head is a sitePrefix only if its TLD is not a file
+				// extension.
+				_, ok := fileTypes[tld]
 				if !ok {
 					sitePrefix, urlPath = head, tail
 				}
@@ -403,8 +404,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		cacheControl = "no-cache, stale-while-revalidate, max-age=120" /* 2 minutes */
 	}
-	_ = cacheControl
-	// serveFile(w, r, file, fileInfo, fileType, cacheControl)
+	serveFile(w, r, file, fileInfo, fileType, cacheControl)
 }
 
 func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix string) {
