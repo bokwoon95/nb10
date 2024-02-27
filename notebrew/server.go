@@ -181,9 +181,17 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 	}
 	var domains []string
 	if nbrew.CMSDomain == nbrew.ContentDomain {
-		domains = append(domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain, "img."+nbrew.CMSDomain)
+		if dns01Solver != nil {
+			domains = []string{nbrew.CMSDomain, "*." + nbrew.CMSDomain}
+		} else {
+			domains = []string{nbrew.CMSDomain, "img." + nbrew.CMSDomain, "www." + nbrew.CMSDomain}
+		}
 	} else {
-		domains = append(domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain, "img."+nbrew.ContentDomain, nbrew.ContentDomain, "www."+nbrew.ContentDomain)
+		if dns01Solver != nil {
+			domains = []string{nbrew.ContentDomain, "*." + nbrew.ContentDomain, nbrew.CMSDomain, "*." + nbrew.CMSDomain}
+		} else {
+			domains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
+		}
 	}
 	if dns01Solver != nil {
 		domains = append(domains, "*."+nbrew.ContentDomain)
@@ -206,7 +214,7 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 	dynamicCertConfig.Storage = certStorage
 	dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
 		DecisionFunc: func(ctx context.Context, name string) error {
-			if nb10.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+			if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
 				return nil
 			}
 			fileInfo, err := fs.Stat(nbrew.FS, name)
@@ -227,7 +235,7 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 				return nil, fmt.Errorf("server name empty")
 			}
 			for _, domain := range domains {
-				if nb10.MatchWildcard(clientHello.ServerName, domain) {
+				if certmagic.MatchWildcard(clientHello.ServerName, domain) {
 					return staticCertConfig.GetCertificate(clientHello)
 				}
 			}
