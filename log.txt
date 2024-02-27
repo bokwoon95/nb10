@@ -8,10 +8,11 @@ creation_time_linux.go
 creation_time_windows.go
 notebrew.go
 dev.go
-rootdirectory.go
-directory.go
 site_json.go
 postlist_json.go
+rootdirectory.go
+directory.go
+file.go
 ...
 serve_http.go
 notebrew/exit_unix.go
@@ -22,4 +23,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: site.json, configure the page such that it reads from and writes to site.json and also regenerates the site on change.
+TODO: postlist.json, configure the page such that it reads from and writes to posts/{category}/postlist.json and also regenerates the postlist on change.
 TODO: oh my god, every action related to creating a page or deleting a page (that includes copying, moving and renaming pages) has to honor the same system where the outputDir /output/abc/ actually is co-owned by two files, /pages/abc.html and /pages/abc/. If we create files via copying/move/rename, we must copy only the relevant files in the outputDir. If we delete files due to a delete/move/rename, we must only delete the relevant files in the outputDir.
