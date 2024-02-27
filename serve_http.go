@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/caddyserver/certmagic"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -315,7 +316,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Figure out the sitePrefix of the site we have to serve.
 	var sitePrefix string
 	var subdomain string
-	if MatchWildcard(r.Host, "*."+nbrew.ContentDomain) {
+	if certmagic.MatchWildcard(r.Host, "*."+nbrew.ContentDomain) {
 		subdomain = strings.TrimSuffix(r.Host, "."+nbrew.ContentDomain)
 		if subdomain == "img" {
 			// examples:
