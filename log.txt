@@ -16,7 +16,7 @@ directory.go
 file.go
 ...
 serve_http.go
-notebrew/exit_unix.go
+notebrew/exit.go
 notebrew/exit_windows.go
 notebrew/sqlite_cgo.go
 notebrew/sqlite_nocgo.go
