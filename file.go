@@ -99,7 +99,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 	case "pages":
 		isEditable = fileType.Ext == ".html"
 	case "posts":
-		isEditable = fileType.Ext == ".md"
+		parent := path.Dir(tail)
+		name := path.Base(tail)
+		isEditable = fileType.Ext == ".md" || ((name == "post.html" || name == "postlist.html") && !strings.Contains(parent, "/"))
 	case "output":
 		next, _, _ := strings.Cut(tail, "/")
 		switch next {
