@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"strconv"
 	"strings"
 )
 
@@ -30,28 +29,30 @@ var chromaStyles = map[string]bool{
 }
 
 func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username, sitePrefix string) {
+	type NavigationLink struct {
+		Name string       `json:"name"`
+		URL  template.URL `json:"url"`
+	}
 	type Request struct {
-		Title               string   `json:"title"`
-		Emoji               string   `json:"emoji"`
-		Favicon             string   `json:"favicon"`
-		CodeStyle           string   `json:"codeStyle"`
-		Description         string   `json:"description"`
-		NavigationLinkNames []string `json:"navigationLinkNames"`
-		NavigationLinkURLs  []string `json:"navigationLinkURLs"`
+		Title           string           `json:"title"`
+		Emoji           string           `json:"emoji"`
+		Favicon         string           `json:"favicon"`
+		CodeStyle       string           `json:"codeStyle"`
+		Description     string           `json:"description"`
+		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
 	type Response struct {
-		Error               string     `json:"error,omitempty"`
-		FormErrors          url.Values `json:"formErrors,omitempty"`
-		ContentSite         string     `json:"contentSite"`
-		Username            NullString `json:"username"`
-		SitePrefix          string     `json:"sitePrefix"`
-		Title               string     `json:"title"`
-		Emoji               string     `json:"emoji"`
-		Favicon             string     `json:"favicon"`
-		CodeStyle           string     `json:"codeStyle"`
-		Description         string     `json:"description"`
-		NavigationLinkNames []string   `json:"navigationLinkNames"`
-		NavigationLinkURLs  []string   `json:"navigationLinkURLs"`
+		Error           string           `json:"error,omitempty"`
+		FormErrors      url.Values       `json:"formErrors,omitempty"`
+		ContentSite     string           `json:"contentSite"`
+		Username        NullString       `json:"username"`
+		SitePrefix      string           `json:"sitePrefix"`
+		Title           string           `json:"title"`
+		Emoji           string           `json:"emoji"`
+		Favicon         string           `json:"favicon"`
+		CodeStyle       string           `json:"codeStyle"`
+		Description     string           `json:"description"`
+		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
 
 	switch r.Method {
@@ -108,75 +109,40 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			internalServerError(w, r, err)
 			return
 		}
-		var config struct {
-			Lang            string
-			Title           string
-			Emoji           string
-			Favicon         string
-			CodeStyle       string
-			Description     string
-			NavigationLinks []NavigationLink
-		}
 		if len(b) > 0 {
+			var config struct {
+				Lang            string
+				Title           string
+				Emoji           string
+				Favicon         string
+				CodeStyle       string
+				Description     string
+				NavigationLinks []NavigationLink
+			}
 			err := json.Unmarshal(b, &config)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
 			}
-		}
-		response.Title = strings.TrimSpace(r.Form.Get("title"))
-		if response.Title == "" {
 			response.Title = config.Title
+			response.Emoji = config.Emoji
+			response.Favicon = config.Favicon
+			response.CodeStyle = config.CodeStyle
+			response.Description = config.Description
+			response.NavigationLinks = config.NavigationLinks
 		}
 		if response.Title == "" {
 			response.Title = "My Blog"
 		}
-		response.Emoji = strings.TrimSpace(r.Form.Get("emoji"))
 		if response.Emoji == "" {
-			response.Emoji = config.Emoji
-		}
-		response.Favicon = strings.TrimSpace(r.Form.Get("favicon"))
-		if response.Favicon == "" {
-			response.Favicon = config.Favicon
-		}
-		response.CodeStyle = strings.TrimSpace(r.Form.Get("codeStyle"))
-		if response.CodeStyle == "" {
-			response.CodeStyle = config.CodeStyle
+			response.Emoji = "☕"
 		}
 		if !chromaStyles[response.CodeStyle] {
 			response.CodeStyle = "onedark"
 		}
-		response.Description = strings.TrimSpace(r.Form.Get("description"))
-		if response.Description == "" {
-			response.Description = config.Description
-		}
 		if response.Description == "" {
 			response.Description = "# Hello World!\n\nWelcome to my blog."
-		}
-		navigationLinkNames := r.Form["navigationLinkName"]
-		navigationLinkURLs := r.Form["navigationLinkURL"]
-		if len(navigationLinkNames) > 0 && len(navigationLinkNames) == len(navigationLinkURLs) {
-			response.NavigationLinkNames = navigationLinkNames
-			response.NavigationLinkURLs = navigationLinkURLs
-		} else {
-			for _, navigationLink := range config.NavigationLinks {
-				response.NavigationLinkNames = append(response.NavigationLinkNames, navigationLink.Name)
-				response.NavigationLinkURLs = append(response.NavigationLinkURLs, string(navigationLink.URL))
-			}
-		}
-		addNavigationLinks, _ := strconv.Atoi(r.Form.Get("addNavigationLinks"))
-		if addNavigationLinks > 0 {
-			for i := 0; i < addNavigationLinks; i++ {
-				response.NavigationLinkNames = append(response.NavigationLinkNames, "")
-				response.NavigationLinkURLs = append(response.NavigationLinkURLs, "")
-			}
-		} else if addNavigationLinks < 0 {
-			newLength := len(response.NavigationLinkNames) + addNavigationLinks
-			if newLength >= 0 {
-				response.NavigationLinkNames = response.NavigationLinkNames[:newLength]
-				response.NavigationLinkURLs = response.NavigationLinkURLs[:newLength]
-			}
 		}
 		writeResponse(w, r, response)
 	case "POST":

@@ -119,6 +119,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			file, err := RuntimeFS.Open(urlPath)
 			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					notFound(w, r)
+					return
+				}
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
