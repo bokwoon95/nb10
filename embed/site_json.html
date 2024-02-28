@@ -71,19 +71,19 @@
   <div class='mv3'>
     <div class='b'>Navigation Links:</div>
     <div data-navigation-links>
-      {{- range $i, $name := $.NavigationLinkNames }}
-      <fieldset>
+      {{- range $i, $navigationLink := $.NavigationLinks }}
+      <fieldset data-navigation-link>
         <legend>item {{ incr $i }}</legend>
         <div class='mv1'>
           <label for='navigationLinkName:{{ $i }}'>
             <span class='b'>Name: </span>
-            <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'>
+            <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $navigationLink.Name }}' class='pv1 ph2 br2 ba'>
           </label>
         </div>
         <div class='mv1'>
           <label for='navigationLinkURL:{{ $i }}'>
             <span class='b'>URL: </span>
-            <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'>
+            <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ $navigationLink.URL }}' class='pv1 ph2 br2 ba'>
           </label>
         </div>
       </fieldset>
@@ -91,7 +91,7 @@
     </div>
     <div class='mt2'>
       <button type='button' data-add-navigation-link>add item</button>
-      <button type='button' data-remove-navigation-links>remove item</button>
+      <button type='button' data-remove-navigation-link>remove item</button>
     </div>
   </div>
   <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
