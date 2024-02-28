@@ -25,6 +25,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: site.json, configure the page such that it reads from and writes to site.json and also regenerates the site on change.
+    TODO: site_json.js, which intercepts the data-add-navigation-links buttons, pulls the
 TODO: postlist.json, configure the page such that it reads from and writes to posts/{category}/postlist.json and also regenerates the postlist on change.
 TODO: actually, don't overwrite/rename markdown post files if the user created it externally. Instead, it just means the post's creationTime cannot be determined when generating the atom feed, as a result the tag URL will not use the timestamp but the filename instead (sans the .md extension).
     - This means that it will not be a good atom feed citizen, but it means that users can create and edit markdown files from their text editor without worrying about generating the timestamp prefix artificially. It's a education issue. We can educate users later on that they should strive to include the timestamp prefix in their posts if they want their atom feed postIDs to be stable, otherwise don't rename the post filenames at all.

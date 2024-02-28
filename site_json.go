@@ -155,7 +155,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			response.Description = "# Hello World!\n\nWelcome to my blog."
 		}
 		navigationLinkNames := r.Form["navigationLinkName"]
-		navigationLinkURLs := r.Form["naviationLinkURL"]
+		navigationLinkURLs := r.Form["navigationLinkURL"]
 		if len(navigationLinkNames) > 0 && len(navigationLinkNames) == len(navigationLinkURLs) {
 			response.NavigationLinkNames = navigationLinkNames
 			response.NavigationLinkURLs = navigationLinkURLs
@@ -165,11 +165,17 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 				response.NavigationLinkURLs = append(response.NavigationLinkURLs, string(navigationLink.URL))
 			}
 		}
-		numNavigationLinks, err := strconv.Atoi(r.Form.Get("numNavigationLinks"))
-		if err == nil && numNavigationLinks > len(response.NavigationLinkNames) {
-			for i := len(response.NavigationLinkNames); i <= numNavigationLinks; i++ {
+		addNavigationLinks, _ := strconv.Atoi(r.Form.Get("addNavigationLinks"))
+		if addNavigationLinks > 0 {
+			for i := 0; i < addNavigationLinks; i++ {
 				response.NavigationLinkNames = append(response.NavigationLinkNames, "")
 				response.NavigationLinkURLs = append(response.NavigationLinkURLs, "")
+			}
+		} else if addNavigationLinks < 0 {
+			newLength := len(response.NavigationLinkNames) + addNavigationLinks
+			if newLength >= 0 {
+				response.NavigationLinkNames = response.NavigationLinkNames[:newLength]
+				response.NavigationLinkURLs = response.NavigationLinkURLs[:newLength]
 			}
 		}
 		writeResponse(w, r, response)

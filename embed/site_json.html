@@ -5,6 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
+<script type='module' src='/files/static/site_json.js'></script>
 <script type='module' src='/files/static/codemirror.js'></script>
 <title>site.json (Site Settings)</title>
 <body class='centered-body'>
@@ -69,16 +70,22 @@
   </div>
   <div class='mv3'>
     <div class='b'>Navigation Links:</div>
-    {{- range $i, $name := $.NavigationLinkNames }}
-    <div>
-      <label for='navigationLinkName:{{ $i }}'>name: </label>
-      <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'>
-      <label for='navigationLinkURL:{{ $i }}'>url: </label>
-      <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'>
+    <div data-navigation-links>
+      {{- range $i, $name := $.NavigationLinkNames }}
+      <fieldset>
+        <legend>item {{ incr $i }}</legend>
+        <div>
+          <label for='navigationLinkName:{{ $i }}'>name: <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'></label>
+        </div>
+        <div>
+          <label for='navigationLinkURL:{{ $i }}'>url: <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'></label>
+        </div>
+      </fieldset>
+      {{- end }}
     </div>
-    {{- end }}
-    <div>
-      <button type='submit' formmethod='get' name='numNavigationLinks' value='{{ incr (len $.NavigationLinkNames) }}'>add entry</button>
+    <div class='mt2'>
+      <button type='submit' formmethod='get' name='addNavigationLinks' value='1' data-add-navigation-links>add item</button>
+      <button type='submit' formmethod='get' name='addNavigationLinks' value='-1' data-add-navigation-links>remove item</button>
       <a href='?'>reset</a>
     </div>
   </div>
