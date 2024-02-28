@@ -25,6 +25,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: site.json, configure the page such that it reads from and writes to site.json and also regenerates the site on change.
+    TODO: Request struct should not take in a deconstructed NavigationLinks slice, rather it should contain the slice directly and read its data from the decontructed url.Values.
     TODO: site_json.js, which hooks into data-add-navigation-links buttons and prevents the default action, plus adds or removes navigation links from the data-navigation-links div.
 TODO: postlist.json, configure the page such that it reads from and writes to posts/{category}/postlist.json and also regenerates the postlist on change.
 TODO: actually, don't overwrite/rename markdown post files if the user created it externally. Instead, it just means the post's creationTime cannot be determined when generating the atom feed, as a result the tag URL will not use the timestamp but the filename instead (sans the .md extension).
