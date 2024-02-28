@@ -74,13 +74,13 @@
       {{- range $i, $name := $.NavigationLinkNames }}
       <fieldset>
         <legend>item {{ incr $i }}</legend>
-        <div>
+        <div class='mv1'>
           <label for='navigationLinkName:{{ $i }}'>
             <span class='b'>Name: </span>
             <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'>
           </label>
         </div>
-        <div>
+        <div class='mv1'>
           <label for='navigationLinkURL:{{ $i }}'>
             <span class='b'>URL: </span>
             <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'>
