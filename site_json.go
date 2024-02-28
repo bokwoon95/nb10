@@ -109,41 +109,33 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			internalServerError(w, r, err)
 			return
 		}
+		var request Request
 		if len(b) > 0 {
-			var config struct {
-				Lang            string
-				Title           string
-				Emoji           string
-				Favicon         string
-				CodeStyle       string
-				Description     string
-				NavigationLinks []NavigationLink
-			}
-			err := json.Unmarshal(b, &config)
+			err := json.Unmarshal(b, &request)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
 			}
-			response.Title = config.Title
-			response.Emoji = config.Emoji
-			response.Favicon = config.Favicon
-			response.CodeStyle = config.CodeStyle
-			response.Description = config.Description
-			response.NavigationLinks = config.NavigationLinks
 		}
+		response.Title = request.Title
 		if response.Title == "" {
 			response.Title = "My Blog"
 		}
+		response.Emoji = request.Emoji
 		if response.Emoji == "" {
 			response.Emoji = "☕"
 		}
+		response.Favicon = request.Favicon
+		response.CodeStyle = request.CodeStyle
 		if !chromaStyles[response.CodeStyle] {
 			response.CodeStyle = "onedark"
 		}
+		response.Description = request.Description
 		if response.Description == "" {
 			response.Description = "# Hello World!\n\nWelcome to my blog."
 		}
+		response.NavigationLinks = request.NavigationLinks
 		writeResponse(w, r, response)
 	case "POST":
 	default:
