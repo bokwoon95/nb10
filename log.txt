@@ -31,7 +31,5 @@ TODO: actually, don't overwrite/rename markdown post files if the user created i
 TODO: oh my god, every action related to creating a page or deleting a page (that includes copying, moving and renaming pages) has to honor the same system where the outputDir /output/abc/ actually is co-owned by two files, /pages/abc.html and /pages/abc/. If we create files via copying/move/rename, we must copy only the relevant files in the outputDir. If we delete files due to a delete/move/rename, we must only delete the relevant files in the outputDir.
 TODO: copy a private implementation of certmagic.MatchWildcard so that notebrew itself doesn't rely on certmagic.
 
-Q&A:
-
-Q: Is it flat file or database?
-A: It works off a filesystem interface so it interacts with what it thinks are flat files, but these flat files can actually be stored in a database.
+sample template error message
+template: site_json.html:58:44: executing "site_json.html" at <eq $.CodeStyle $codeStyle>: error calling eq: incompatible types for comparison

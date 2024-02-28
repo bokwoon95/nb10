@@ -2,10 +2,13 @@ package nb10
 
 import (
 	"encoding/json"
+	"errors"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -75,6 +78,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 				"baselineJS":   func() template.JS { return template.JS(baselineJS) },
 				"referer":      func() string { return referer },
 				"chromaStyles": func() map[string]bool { return chromaStyles },
+				"incr":         func(n int) int { return n + 1 },
 			}
 			tmpl, err := template.New("site_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/site_json.html")
 			if err != nil {
@@ -98,9 +102,76 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			writeResponse(w, r, response)
 			return
 		}
-		// for any field, check if it has a GET pull request data from GET parameters and use it, if not fall back to site.json.
-		// TODO: if the user specifies ?numNavigationLinks as a GET parameter, use that to render the number of input fields to show the user
-		// when the user clicks on an "+ add" button for navigation links, embedded in it is the correct number of numNavigationLinks that will increase the number of navigationLinks by 1. There is also a "reset" button that clears the GET paramaters and makes everything fall back to site.json.
+		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "site.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+		var config struct {
+			Lang            string
+			Title           string
+			Emoji           string
+			Favicon         string
+			CodeStyle       string
+			Description     string
+			NavigationLinks []NavigationLink
+		}
+		if len(b) > 0 {
+			err := json.Unmarshal(b, &config)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+		}
+		response.Title = strings.TrimSpace(r.Form.Get("title"))
+		if response.Title == "" {
+			response.Title = config.Title
+		}
+		if response.Title == "" {
+			response.Title = "My Blog"
+		}
+		response.Emoji = strings.TrimSpace(r.Form.Get("emoji"))
+		if response.Emoji == "" {
+			response.Emoji = config.Emoji
+		}
+		response.Favicon = strings.TrimSpace(r.Form.Get("favicon"))
+		if response.Favicon == "" {
+			response.Favicon = config.Favicon
+		}
+		response.CodeStyle = strings.TrimSpace(r.Form.Get("codeStyle"))
+		if response.CodeStyle == "" {
+			response.CodeStyle = config.CodeStyle
+		}
+		if !chromaStyles[response.CodeStyle] {
+			response.CodeStyle = "onedark"
+		}
+		response.Description = strings.TrimSpace(r.Form.Get("description"))
+		if response.Description == "" {
+			response.Description = config.Description
+		}
+		if response.Description == "" {
+			response.Description = "# Hello World!\n\nWelcome to my blog."
+		}
+		navigationLinkNames := r.Form["navigationLinkName"]
+		navigationLinkURLs := r.Form["naviationLinkURL"]
+		if len(navigationLinkNames) > 0 && len(navigationLinkNames) == len(navigationLinkURLs) {
+			response.NavigationLinkNames = navigationLinkNames
+			response.NavigationLinkURLs = navigationLinkURLs
+		} else {
+			for _, navigationLink := range config.NavigationLinks {
+				response.NavigationLinkNames = append(response.NavigationLinkNames, navigationLink.Name)
+				response.NavigationLinkURLs = append(response.NavigationLinkURLs, string(navigationLink.URL))
+			}
+		}
+		numNavigationLinks, err := strconv.Atoi(r.Form.Get("numNavigationLinks"))
+		if err == nil && numNavigationLinks > len(response.NavigationLinkNames) {
+			for i := len(response.NavigationLinkNames); i <= numNavigationLinks; i++ {
+				response.NavigationLinkNames = append(response.NavigationLinkNames, "")
+				response.NavigationLinkURLs = append(response.NavigationLinkURLs, "")
+			}
+		}
 		writeResponse(w, r, response)
 	case "POST":
 	default:

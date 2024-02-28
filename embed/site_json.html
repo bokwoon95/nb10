@@ -5,6 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
+<script type='module' src='/files/static/codemirror.js'></script>
 <title>site.json (Site Settings)</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -17,7 +18,7 @@
   <a href='/users/logout/' class='ma2'>logout</a>
   {{- end }}
 </nav>
-<form method='post' action='/{{ join "files" $.SitePrefix "site.json" }}' class='mv5'>
+<form method='post' action='/{{ join "files" $.SitePrefix "site.json" }}' class='mv2'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}
@@ -26,7 +27,7 @@
   <h1 class='f3 mv3 b'>site.json (Site Settings)</h1>
   <div class='mv3'>
     <div><label for='title' class='b'>Title:</label></div>
-    <input id='title' name='title' value='{{ $.Title }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "title" }} b--invalid-red{{ end }}' autocomplete='on'>
+    <input id='title' name='title' value='{{ $.Title }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "title" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "title" }}
       <li>{{ $error }}</li>
@@ -34,8 +35,8 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='emoji' class='b'>Emoji:</label></div>
-    <input id='emoji' name='emoji' value='{{ $.Emoji }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "emoji" }} b--invalid-red{{ end }}' autocomplete='on'>
+    <div><label for='emoji' class='b'>Emoji (optional):</label></div>
+    <input id='emoji' name='emoji' value='{{ $.Emoji }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "emoji" }} b--invalid-red{{ end }}'>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "emoji" }}
       <li>{{ $error }}</li>
@@ -43,8 +44,8 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='favicon' class='b'>Favicon:</label></div>
-    <input id='favicon' name='favicon' value='{{ $.Favicon }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "favicon" }} b--invalid-red{{ end }}' autocomplete='on'>
+    <div><label for='favicon' class='b'>Favicon (optional):</label></div>
+    <input id='favicon' name='favicon' value='{{ $.Favicon }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "favicon" }} b--invalid-red{{ end }}'>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "favicon" }}
       <li>{{ $error }}</li>
@@ -52,16 +53,34 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='codeStyle' class='b'>Code Style:</label></div>
-    <select id='codeStyle' name='codeStyle'>
-      {{- range $codeStyle := chromaStyles }}
+    <div><label for='codeStyle' class='b'>Code Style (<a href='https://xyproto.github.io/splash/docs/all.html'>Chroma Style Gallery</a>):</label></div>
+    <select id='codeStyle' name='codeStyle' class='br2'>
+      {{- range $codeStyle, $true := chromaStyles }}
       <option value='{{ $codeStyle }}'{{ if eq $.CodeStyle $codeStyle }} selected{{ end }}>{{ $codeStyle }}</option>
       {{- end }}
     </select>
   </div>
   <div class='mv3'>
     <div><label for='description' class='b'>Description:</label></div>
-    <textarea id='description' name='description' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Description }}</textarea>
+    <div data-codemirror>
+      <input type='hidden' name='ext:0' value='.md'>
+      <textarea id='description' name='description' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code' required>{{ $.Description }}</textarea>
+    </div>
+  </div>
+  <div class='mv3'>
+    <div class='b'>Navigation Links:</div>
+    {{- range $i, $name := $.NavigationLinkNames }}
+    <div>
+      <label for='navigationLinkName:{{ $i }}'>name: </label>
+      <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'>
+      <label for='navigationLinkURL:{{ $i }}'>url: </label>
+      <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'>
+    </div>
+    {{- end }}
+    <div>
+      <button type='submit' formmethod='get' name='numNavigationLinks' value='{{ incr (len $.NavigationLinkNames) }}'>add entry</button>
+      <a href='?'>reset</a>
+    </div>
   </div>
   <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
 </form>

@@ -96,7 +96,10 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
   });
 
   // Configure language.
-  const extElement = form.elements["ext"];
+  let extElement = form.elements[`ext:${index}`];
+  if (!extElement) {
+    extElement = form.elements["ext"];
+  }
   if (extElement && textarea.value.length <= 50000) {
     const configureLanguage = function() {
       if (extElement.value == ".html") {
