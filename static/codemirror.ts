@@ -185,7 +185,6 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
     }
   }
 
-
   // Restore cursor position from localStorage.
   const position = Number(localStorage.getItem(`${window.location.pathname}:${index}`));
   if (position && position <= textarea.value.length) {
