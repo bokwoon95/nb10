@@ -25,19 +25,43 @@
   {{- end }}
   <h1 class='f3 mv3 b'>site.json (Site Settings)</h1>
   <div class='mv3'>
-    <div><label for='name' class='b'>Name:</label></div>
-    <input id='name' name='name' value='{{ $.Name }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "name" }} b--invalid-red{{ end }}' autocomplete='on' required{{ if not (index $.FormErrors "name") }} autofocus{{ end }}>
+    <div><label for='title' class='b'>Title:</label></div>
+    <input id='title' name='title' value='{{ $.Title }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "title" }} b--invalid-red{{ end }}' autocomplete='on'>
     <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "name" }}
+      {{- range $error := index $.FormErrors "title" }}
       <li>{{ $error }}</li>
       {{- end }}
     </ul>
   </div>
-  <button type='submit' class='button ba br2 pa2 mv3 w-100'>
-    {{- if eq $.Parent "posts" }}
-    Create category
-    {{- else }}
-    Create folder
-    {{- end }}
-  </button>
+  <div class='mv3'>
+    <div><label for='emoji' class='b'>Emoji:</label></div>
+    <input id='emoji' name='emoji' value='{{ $.Emoji }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "emoji" }} b--invalid-red{{ end }}' autocomplete='on'>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "emoji" }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  <div class='mv3'>
+    <div><label for='favicon' class='b'>Favicon:</label></div>
+    <input id='favicon' name='favicon' value='{{ $.Favicon }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "favicon" }} b--invalid-red{{ end }}' autocomplete='on'>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "favicon" }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  <div class='mv3'>
+    <div><label for='codeStyle' class='b'>Code Style:</label></div>
+    <select id='codeStyle' name='codeStyle'>
+      {{- range $codeStyle := chromaStyles }}
+      <option value='{{ $codeStyle }}'{{ if eq $.CodeStyle $codeStyle }} selected{{ end }}>{{ $codeStyle }}</option>
+      {{- end }}
+    </select>
+  </div>
+  <div class='mv3'>
+    <div><label for='description' class='b'>Description:</label></div>
+    <textarea id='description' name='description' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Description }}</textarea>
+  </div>
+  <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
 </form>

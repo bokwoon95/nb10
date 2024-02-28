@@ -9,23 +9,46 @@ import (
 	"strings"
 )
 
+var chromaStyles = map[string]bool{
+	"abap": true, "algol": true, "algol_nu": true, "api": true, "arduino": true,
+	"autumn": true, "average": true, "base16-snazzy": true, "borland": true, "bw": true,
+	"catppuccin-frappe": true, "catppuccin-latte": true, "catppuccin-macchiato": true,
+	"catppuccin-mocha": true, "colorful": true, "compat": true, "doom-one": true,
+	"doom-one2": true, "dracula": true, "emacs": true, "friendly": true, "fruity": true,
+	"github-dark": true, "github": true, "gruvbox-light": true, "gruvbox": true,
+	"hr_high_contrast": true, "hrdark": true, "igor": true, "lovelace": true, "manni": true,
+	"modus-operandi": true, "modus-vivendi": true, "monokai": true, "monokailight": true,
+	"murphy": true, "native": true, "nord": true, "onedark": true, "onesenterprise": true,
+	"paraiso-dark": true, "paraiso-light": true, "pastie": true, "perldoc": true,
+	"pygments": true, "rainbow_dash": true, "rose-pine-dawn": true, "rose-pine-moon": true,
+	"rose-pine": true, "rrt": true, "solarized-dark": true, "solarized-dark256": true,
+	"solarized-light": true, "swapoff": true, "tango": true, "trac": true, "vim": true,
+	"vs": true, "vulcan": true, "witchhazel": true, "xcode-dark": true, "xcode": true,
+}
+
 func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username, sitePrefix string) {
 	type Request struct {
-		Lang                string   `json:"lang"`
 		Title               string   `json:"title"`
-		Description         string   `json:"description"`
 		Emoji               string   `json:"emoji"`
 		Favicon             string   `json:"favicon"`
 		CodeStyle           string   `json:"codeStyle"`
+		Description         string   `json:"description"`
 		NavigationLinkNames []string `json:"navigationLinkNames"`
 		NavigationLinkURLs  []string `json:"navigationLinkURLs"`
 	}
 	type Response struct {
-		Error       string     `json:"error,omitempty"`
-		FormErrors  url.Values `json:"formErrors,omitempty"`
-		ContentSite string     `json:"contentSite"`
-		Username    NullString `json:"username"`
-		SitePrefix  string     `json:"sitePrefix"`
+		Error               string     `json:"error,omitempty"`
+		FormErrors          url.Values `json:"formErrors,omitempty"`
+		ContentSite         string     `json:"contentSite"`
+		Username            NullString `json:"username"`
+		SitePrefix          string     `json:"sitePrefix"`
+		Title               string     `json:"title"`
+		Emoji               string     `json:"emoji"`
+		Favicon             string     `json:"favicon"`
+		CodeStyle           string     `json:"codeStyle"`
+		Description         string     `json:"description"`
+		NavigationLinkNames []string   `json:"navigationLinkNames"`
+		NavigationLinkURLs  []string   `json:"navigationLinkURLs"`
 	}
 
 	switch r.Method {
@@ -43,14 +66,15 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			}
 			referer := getReferer(r)
 			funcMap := map[string]any{
-				"join":       path.Join,
-				"base":       path.Base,
-				"hasPrefix":  strings.HasPrefix,
-				"trimPrefix": strings.TrimPrefix,
-				"contains":   strings.Contains,
-				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(baselineJS) },
-				"referer":    func() string { return referer },
+				"join":         path.Join,
+				"base":         path.Base,
+				"hasPrefix":    strings.HasPrefix,
+				"trimPrefix":   strings.TrimPrefix,
+				"contains":     strings.Contains,
+				"stylesCSS":    func() template.CSS { return template.CSS(stylesCSS) },
+				"baselineJS":   func() template.JS { return template.JS(baselineJS) },
+				"referer":      func() string { return referer },
+				"chromaStyles": func() map[string]bool { return chromaStyles },
 			}
 			tmpl, err := template.New("site_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/site_json.html")
 			if err != nil {

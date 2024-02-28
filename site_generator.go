@@ -54,8 +54,8 @@ type NavigationLink struct {
 type Site struct {
 	Lang            string
 	Title           string
-	Description     template.HTML
 	Favicon         template.URL
+	Description     template.HTML
 	NavigationLinks []NavigationLink
 }
 
@@ -72,10 +72,10 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 	var config struct {
 		Lang            string
 		Title           string
-		Description     string
 		Emoji           string
 		Favicon         string
 		CodeStyle       string
+		Description     string
 		NavigationLinks []NavigationLink
 	}
 	b, err := fs.ReadFile(fsys, path.Join(sitePrefix, "site.json"))
