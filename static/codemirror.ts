@@ -171,6 +171,15 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
     const cmContent = editor.dom.querySelector<HTMLElement>(".cm-content");
     if (cmContent) {
       cmContent.focus();
+      if (textarea.id) {
+        const textareaLabel = editor.dom.querySelector<HTMLElement>(`label[for=${textarea.id}]`);
+        if (textareaLabel) {
+          textareaLabel.addEventListener("click", function(event) {
+            event.preventDefault();
+            cmContent.focus();
+          });
+        }
+      }
     }
   }
 
