@@ -36,7 +36,7 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='emoji' class='b'>Emoji (optional):</label></div>
+    <div><label for='emoji' class='b'>Emoji:</label></div>
     <input id='emoji' name='emoji' value='{{ $.Emoji }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "emoji" }} b--invalid-red{{ end }}'>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "emoji" }}
