@@ -75,10 +75,16 @@
       <fieldset>
         <legend>item {{ incr $i }}</legend>
         <div>
-          <label for='navigationLinkName:{{ $i }}'>name: <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'></label>
+          <label for='navigationLinkName:{{ $i }}'>
+            <span class='b'>Name: </span>
+            <input id='navigationLinkName:{{ $i }}' name='navigationLinkName' value='{{ $name }}' class='pv1 ph2 br2 ba'>
+          </label>
         </div>
         <div>
-          <label for='navigationLinkURL:{{ $i }}'>url: <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'></label>
+          <label for='navigationLinkURL:{{ $i }}'>
+            <span class='b'>URL: </span>
+            <input id='navigationLinkURL:{{ $i }}' name='navigationLinkURL' value='{{ index $.NavigationLinkURLs $i }}' class='pv1 ph2 br2 ba'>
+          </label>
         </div>
       </fieldset>
       {{- end }}
@@ -86,7 +92,6 @@
     <div class='mt2'>
       <button type='submit' formmethod='get' name='addNavigationLinks' value='1' data-add-navigation-links>add item</button>
       <button type='submit' formmethod='get' name='addNavigationLinks' value='-1' data-add-navigation-links>remove item</button>
-      <a href='?'>reset</a>
     </div>
   </div>
   <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
