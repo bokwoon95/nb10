@@ -166,24 +166,25 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
   textarea.style.display = "none";
   textarea.after(editor.dom);
 
-  // If the textarea has autofocus on, shift focus to the codemirror editor.
-  if (textarea.hasAttribute("autofocus")) {
-    const cmContent = editor.dom.querySelector<HTMLElement>(".cm-content");
-    if (cmContent) {
+  const cmContent = editor.dom.querySelector<HTMLElement>(".cm-content");
+  if (cmContent) {
+    // If the textarea has autofocus on, shift focus to the codemirror editor.
+    if (textarea.hasAttribute("autofocus")) {
       cmContent.focus();
+    }
+    // If the textarea has an associated label, focus the codemirror editor
+    // whenever we click on it.
+    if (textarea.id) {
+      const textareaLabel = document.querySelector<HTMLLabelElement>(`label[for=${textarea.id}]`);
+      if (textareaLabel) {
+        textareaLabel.addEventListener("click", function(event) {
+          event.preventDefault();
+          cmContent.focus();
+        });
+      }
     }
   }
 
-  if (textarea.id) {
-    const textareaLabel = document.querySelector<HTMLLabelElement>(`label[for=${textarea.id}]`);
-    const cmContent = editor.dom.querySelector<HTMLElement>(".cm-content");
-    if (textareaLabel && cmContent) {
-      textareaLabel.addEventListener("click", function(event) {
-        event.preventDefault();
-        cmContent.focus();
-      });
-    }
-  }
 
   // Restore cursor position from localStorage.
   const position = Number(localStorage.getItem(`${window.location.pathname}:${index}`));
