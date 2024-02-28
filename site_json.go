@@ -74,8 +74,9 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			writeResponse(w, r, response)
 			return
 		}
-		// TODO: if the user specifies ?numNavigationLinks as a GET parameter, use that to render the number of input fields to show the user
 		// for any field, check if it has a GET pull request data from GET parameters and use it, if not fall back to site.json.
+		// TODO: if the user specifies ?numNavigationLinks as a GET parameter, use that to render the number of input fields to show the user
+		// when the user clicks on an "+ add" button for navigation links, embedded in it is the correct number of numNavigationLinks that will increase the number of navigationLinks by 1. There is also a "reset" button that clears the GET paramaters and makes everything fall back to site.json.
 		writeResponse(w, r, response)
 	case "POST":
 	default:
