@@ -124,8 +124,10 @@ type Notebrew struct {
 type User struct {
 	UserID        [16]byte
 	Username      string
+	// accountDisabled(): "you may not perform that action as your account has been disabled for the following reason"
 	DisableReason string
 	SiteLimit     int64
+	// storageLimitExceeded(): "you have exceeded your storage limit of {{ $storageLimit }} (current: {{ $currentStorage }}"
 	StorageLimit  int64
 }
 
