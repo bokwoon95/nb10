@@ -751,7 +751,7 @@ type PostData struct {
 	ModificationTime time.Time
 }
 
-func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text string, tmpl *template.Template) error {
+func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text string, creationTime time.Time, tmpl *template.Template) error {
 	urlPath := strings.TrimSuffix(filePath, path.Ext(filePath))
 	outputDir := path.Join(siteGen.sitePrefix, "output", urlPath)
 	postData := PostData{
@@ -759,6 +759,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		Category:         path.Dir(strings.TrimPrefix(urlPath, "posts/")),
 		Name:             path.Base(strings.TrimPrefix(urlPath, "posts/")),
 		Images:           []Image{},
+		CreationTime:     creationTime,
 		ModificationTime: time.Now().UTC(),
 	}
 	if strings.Contains(postData.Category, "/") {
@@ -766,15 +767,6 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	}
 	if postData.Category == "." {
 		postData.Category = ""
-	}
-	prefix, _, _ := strings.Cut(path.Base(urlPath), "-")
-	if len(prefix) > 0 && len(prefix) <= 8 {
-		b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
-		if len(b) == 5 {
-			var timestamp [8]byte
-			copy(timestamp[len(timestamp)-5:], b)
-			postData.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
-		}
 	}
 	// Title
 	var line string
@@ -1050,6 +1042,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			post.Category = category
 			name := path.Base(row.String("file_path"))
 			post.Name = strings.TrimSuffix(name, path.Ext(name))
+			post.CreationTime = row.Time("creation_time")
 			post.ModificationTime = row.Time("mod_time")
 			post.text = row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "text")
 			return post
@@ -1146,6 +1139,10 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	})
 	page := 1
 	batch := make([]Post, 0, config.PostsPerPage)
+	var absoluteDir string
+	if localFS, ok := siteGen.fsys.(*LocalFS); ok {
+		absoluteDir = path.Join(localFS.RootDir, siteGen.sitePrefix, "posts", category)
+	}
 	for _, dirEntry := range dirEntries {
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
@@ -1155,6 +1152,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		batch = append(batch, Post{
 			Category:         category,
 			Name:             strings.TrimSuffix(name, path.Ext(name)),
+			CreationTime:     CreationTime(path.Join(absoluteDir, name), fileInfo),
 			ModificationTime: fileInfo.ModTime(),
 		})
 		if len(batch) >= config.PostsPerPage {
@@ -1186,33 +1184,6 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 }
 
 func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category string, tmpl *template.Template, lastPage, currentPage int, posts []Post) error {
-	n := 0
-	for _, post := range posts {
-		prefix, _, _ := strings.Cut(post.Name, "-")
-		if prefix == "" || len(prefix) > 8 {
-			if post.text != nil && len(post.text) <= maxPoolableBufferCapacity {
-				post.text = post.text[:0]
-				bufPool.Put(bytes.NewBuffer(post.text))
-				post.text = nil
-			}
-			continue
-		}
-		b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
-		if len(b) != 5 {
-			if post.text != nil && len(post.text) <= maxPoolableBufferCapacity {
-				post.text = post.text[:0]
-				bufPool.Put(bytes.NewBuffer(post.text))
-				post.text = nil
-			}
-			continue
-		}
-		var timestamp [8]byte
-		copy(timestamp[len(timestamp)-5:], b)
-		post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
-		posts[n] = post
-		n++
-	}
-	posts = posts[:n]
 	groupA, groupctxA := errgroup.WithContext(ctx)
 	for i := range posts {
 		i := i
@@ -1402,8 +1373,10 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 	})
 	groupB.Go(func() error {
 		scheme := "https://"
-		contentDomain := siteGen.sitePrefix
-		if !strings.Contains(siteGen.sitePrefix, ".") {
+		var contentDomain string
+		if strings.Contains(siteGen.sitePrefix, ".") {
+			contentDomain = siteGen.sitePrefix
+		} else {
 			if siteGen.contentDomain == "localhost" || strings.HasPrefix(siteGen.contentDomain, "localhost:") {
 				scheme = "http://"
 			}
@@ -1430,13 +1403,18 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		for i, post := range postListData.Posts {
 			// ID: tag:bokwoon.nbrew.io,yyyy-mm-dd:1jjdz28
 			var postID string
-			if post.CreationTime.IsZero() {
-				postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + urlSafe(post.Name)
-			} else {
-				var timestamp [8]byte
-				binary.BigEndian.PutUint64(timestamp[:], uint64(post.CreationTime.Unix()))
-				prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
-				postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + prefix
+			timestampPrefix, _, _ := strings.Cut(post.Name, "-")
+			if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
+				b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
+				if len(b) == 5 && err == nil {
+					var timestamp [8]byte
+					copy(timestamp[len(timestamp)-5:], b)
+					creationTime := time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+					postID = "tag:" + contentDomain + "," + creationTime.UTC().Format("2006-01-02") + ":" + timestampPrefix
+				}
+			}
+			if postID == "" {
+				postID = scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/"
 			}
 			feed.Entry[i] = AtomEntry{
 				ID:        postID,

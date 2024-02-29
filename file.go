@@ -755,7 +755,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 					}
 					return err
 				}
-				err = siteGen.GeneratePost(groupctx, filePath, response.Content, tmpl)
+				err = siteGen.GeneratePost(groupctx, filePath, response.Content, response.CreationTime, tmpl)
 				if err != nil {
 					if errors.As(err, &templateErr) {
 						templateErrPtr.CompareAndSwap(nil, &templateErr)

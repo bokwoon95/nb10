@@ -293,8 +293,9 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			type File struct {
-				FilePath string
-				Text     string
+				FilePath     string
+				Text         string
+				CreationTime time.Time
 			}
 			var count atomic.Int64
 			startedAt := time.Now()
@@ -409,8 +410,9 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 					},
 				}, func(row *sq.Row) File {
 					return File{
-						FilePath: row.String("file_path"),
-						Text:     row.String("text"),
+						FilePath:     row.String("file_path"),
+						Text:         row.String("text"),
+						CreationTime: row.Time("creation_time"),
 					}
 				})
 				if err != nil {
@@ -432,7 +434,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 						if postTemplate == nil {
 							return nil
 						}
-						err = siteGen.GeneratePost(subctxB, file.FilePath, file.Text, postTemplate)
+						err = siteGen.GeneratePost(subctxB, file.FilePath, file.Text, file.CreationTime, postTemplate)
 						if err != nil {
 							return err
 						}
@@ -597,7 +599,12 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 					if err != nil {
 						return err
 					}
-					err = siteGen.GeneratePost(subctxB, filePath, b.String(), postTemplate)
+					var absolutePath string
+					if localFS, ok := nbrew.FS.(*LocalFS); ok {
+						absolutePath = path.Join(localFS.RootDir, sitePrefix, filePath)
+					}
+					creationTime := CreationTime(absolutePath, fileInfo)
+					err = siteGen.GeneratePost(subctxB, filePath, b.String(), creationTime, postTemplate)
 					if err != nil {
 						return err
 					}
