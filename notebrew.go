@@ -38,17 +38,20 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-//go:embed embed static
-var embedFS embed.FS
-
-var RuntimeFS fs.FS = embedFS
-
-var logSessions = false
-
 var (
-	stylesCSS                        string
-	baselineJS                       string
-	contentSecurityPolicy            string
+	//go:embed embed static
+	embedFS embed.FS
+
+	RuntimeFS fs.FS = embedFS
+
+	logSessions = false
+
+	stylesCSS string
+
+	baselineJS string
+
+	contentSecurityPolicy string
+
 	contentSecurityPolicyWithCaptcha string
 )
 
@@ -116,6 +119,14 @@ type Notebrew struct {
 	ImgDomain string
 
 	Logger *slog.Logger
+}
+
+type User struct {
+	UserID        [16]byte
+	Username      string
+	DisableReason string
+	SiteLimit     int64
+	StorageLimit  int64
 }
 
 type contextKey struct{}

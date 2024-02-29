@@ -72,13 +72,13 @@
       {
         "column": "site_limit",
         "type": {
-          "default": "INT"
+          "default": "BIGINT"
         }
       },
       {
         "column": "storage_limit",
         "type": {
-          "default": "INT"
+          "default": "BIGINT"
         }
       }
     ]

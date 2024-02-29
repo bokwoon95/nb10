@@ -895,7 +895,14 @@ func main() {
 		return nil
 	}()
 	if err != nil && !errors.Is(err, flag.ErrHelp) && !errors.Is(err, io.EOF) {
-		fmt.Println(err)
+		var migrationErr *ddl.MigrationError
+		if errors.As(err, &migrationErr) {
+			fmt.Println(err)
+			fmt.Println(migrationErr.Filename)
+			fmt.Println(migrationErr.Contents)
+		} else {
+			fmt.Println(err)
+		}
 		pressAnyKeyToExit()
 		os.Exit(1)
 	}
