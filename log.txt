@@ -24,6 +24,9 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: directory.html: also show the delete buttons in the entire output directory (not just themes).
+    - This means later on we will have to allow delete.go to explicitly delete files where the parent directory is the output folder. There will no longer be any invalid parents.
+    - the main motivation behind this is to allow users to self-correct in buggy cases where notebrew fails to clean up output files.
 TODO: site.json, configure the page such that it reads from and writes to site.json and also regenerates the site on change.
     TODO: Request struct should not take in a deconstructed NavigationLinks slice, rather it should contain the slice directly and read its data from the decontructed url.Values.
     TODO: site_json.js, which hooks into data-add-navigation-links buttons and prevents the default action, plus adds or removes navigation links from the data-navigation-links div.
