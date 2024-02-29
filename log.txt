@@ -9,6 +9,7 @@ creation_time_windows.go
 notebrew.go
 dev.go
 site_generator.go
+regenerate.go
 site_json.go
 postlist_json.go
 rootdirectory.go
