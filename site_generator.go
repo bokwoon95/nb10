@@ -768,16 +768,14 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		postData.Category = ""
 	}
 	prefix, _, _ := strings.Cut(path.Base(urlPath), "-")
-	if len(prefix) == 0 || len(prefix) > 8 {
-		return nil
+	if len(prefix) > 0 && len(prefix) <= 8 {
+		b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
+		if len(b) == 5 {
+			var timestamp [8]byte
+			copy(timestamp[len(timestamp)-5:], b)
+			postData.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+		}
 	}
-	b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
-	if len(b) != 5 {
-		return nil
-	}
-	var timestamp [8]byte
-	copy(timestamp[len(timestamp)-5:], b)
-	postData.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
 	// Title
 	var line string
 	remainder := text
@@ -1431,11 +1429,17 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		}
 		for i, post := range postListData.Posts {
 			// ID: tag:bokwoon.nbrew.io,yyyy-mm-dd:1jjdz28
-			var timestamp [8]byte
-			binary.BigEndian.PutUint64(timestamp[:], uint64(post.CreationTime.Unix()))
-			prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
+			var postID string
+			if post.CreationTime.IsZero() {
+				postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + urlSafe(post.Name)
+			} else {
+				var timestamp [8]byte
+				binary.BigEndian.PutUint64(timestamp[:], uint64(post.CreationTime.Unix()))
+				prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
+				postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + prefix
+			}
 			feed.Entry[i] = AtomEntry{
-				ID:        "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + prefix,
+				ID:        postID,
 				Title:     post.Title,
 				Published: post.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
 				Updated:   post.ModificationTime.UTC().Format("2006-01-02 15:04:05Z"),
