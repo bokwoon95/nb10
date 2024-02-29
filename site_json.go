@@ -246,13 +246,13 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			internalServerError(w, r, err)
 			return
 		}
-
 		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
 		}
+
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			type File struct {
 				FilePath string
@@ -264,14 +264,16 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			startedAt := time.Now()
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
+				pagesDir := path.Join(sitePrefix, "pages")
 				cursor, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
 					Dialect: remoteFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE file_path LIKE {pattern} ESCAPE '\\'" +
-						" AND (NOT is_dir AND file_path LIKE '%.html')",
+						" AND NOT is_dir" +
+						" AND file_path LIKE '%.html'",
 					Values: []any{
-						sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(path.Join(sitePrefix, "pages"))+"/%"),
+						sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(pagesDir)+"/%"),
 					},
 				}, func(row *sq.Row) File {
 					return File{
@@ -293,8 +295,12 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 						if sitePrefix != "" {
 							_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 						}
+						err := siteGen.GeneratePage(subctx, file.FilePath, file.Text)
+						if err != nil {
+							return err
+						}
 						count.Add(1)
-						return siteGen.GeneratePage(subctx, file.FilePath, file.Text)
+						return nil
 					})
 				}
 				err = cursor.Close()
@@ -308,68 +314,127 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 				return nil
 			})
 			group.Go(func() error {
-				postTemplates := make(map[string]*template.Template)
-				postTemplatesMu := sync.Mutex{}
-				cursor, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
+				postsDir := path.Join(sitePrefix, "posts")
+				postTemplate, err := siteGen.PostTemplate(groupctx, "")
+				if err != nil {
+					return err
+				}
+				postTemplates := map[string]*template.Template{
+					"": postTemplate,
+				}
+				postListTemplate, err := siteGen.PostListTemplate(groupctx, "")
+				if err != nil {
+					return err
+				}
+				postListTemplates := map[string]*template.Template{
+					"": postListTemplate,
+				}
+				cursorA, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
 					Dialect: remoteFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
-						" WHERE (file_path = {posts} OR file_path LIKE {pattern} ESCAPE '\\')" +
-						" AND (is_dir OR file_path LIKE '%.md')",
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {postsDir})" +
+						" AND is_dir",
 					Values: []any{
-						sq.StringParam("posts", path.Join(sitePrefix, "posts")),
-						sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(path.Join(sitePrefix, "posts"))+"/%"),
+						sq.StringParam("postsDir", postsDir),
+					},
+				}, func(row *sq.Row) string {
+					return row.String("file_path")
+				})
+				if err != nil {
+					return err
+				}
+				defer cursorA.Close()
+				var mutex sync.Mutex
+				subgroupA, subctxA := errgroup.WithContext(groupctx)
+				for cursorA.Next() {
+					filePath, err := cursorA.Result()
+					if err != nil {
+						return err
+					}
+					subgroupA.Go(func() error {
+						category := path.Base(filePath)
+						postTemplate, err := siteGen.PostTemplate(subctxA, category)
+						if err != nil {
+							return err
+						}
+						postListTemplate, err := siteGen.PostListTemplate(subctxA, category)
+						if err != nil {
+							return err
+						}
+						mutex.Lock()
+						postTemplates[category] = postTemplate
+						postListTemplates[category] = postListTemplate
+						mutex.Unlock()
+						return nil
+					})
+				}
+				err = cursorA.Close()
+				if err != nil {
+					return err
+				}
+				err = subgroupA.Wait()
+				if err != nil {
+					return err
+				}
+				cursorB, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
+					Dialect: remoteFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE file_path LIKE {pattern} ESCAPE '\\'" +
+						" AND NOT is_dir" +
+						" AND file_path LIKE '%.md'",
+					Values: []any{
+						sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(postsDir)+"/%"),
 					},
 				}, func(row *sq.Row) File {
 					return File{
 						FilePath: row.String("file_path"),
-						IsDir:    row.Bool("is_dir"),
 						Text:     row.String("text"),
 					}
 				})
 				if err != nil {
 					return err
 				}
-				defer cursor.Close()
-				subgroup, subctx := errgroup.WithContext(groupctx)
-				for cursor.Next() {
-					file, err := cursor.Result()
+				defer cursorB.Close()
+				subgroupB, subctxB := errgroup.WithContext(groupctx)
+				for cursorB.Next() {
+					file, err := cursorB.Result()
 					if err != nil {
 						return err
 					}
-					subgroup.Go(func() error {
+					subgroupB.Go(func() error {
 						if sitePrefix != "" {
-							file.FilePath = strings.TrimPrefix(file.FilePath, sitePrefix+"/")
+							_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 						}
-						if !file.IsDir {
-							count.Add(1)
-							postTemplate, err := siteGen.PostTemplate(groupctx)
-							if err != nil {
-								return err
-							}
-							return siteGen.GeneratePost(subctx, file.FilePath, file.Text, postTemplate)
-						}
-						_, category, _ := strings.Cut(file.FilePath, "/")
-						if strings.Contains(category, "/") {
+						_, category, _ := strings.Cut(path.Dir(file.FilePath), "/")
+						postTemplate := postTemplates[category]
+						if postTemplate == nil {
 							return nil
 						}
-						postListTemplate, err := siteGen.PostListTemplate(subctx, category)
+						err = siteGen.GeneratePost(subctxB, file.FilePath, file.Text, postTemplate)
 						if err != nil {
 							return err
 						}
-						n, err := siteGen.GeneratePostList(subctx, category, postListTemplate)
-						count.Add(int64(n))
-						if err != nil {
-							return err
-						}
+						count.Add(1)
 						return nil
 					})
 				}
-				err = cursor.Close()
+				err = cursorB.Close()
 				if err != nil {
 					return err
 				}
-				err = subgroup.Wait()
+				for category, postListTemplate := range postListTemplates {
+					subgroupB.Go(func() error {
+						n, err := siteGen.GeneratePostList(subctxB, category, postListTemplate)
+						if err != nil {
+							return err
+						}
+						count.Add(int64(n))
+						return nil
+					})
+				}
+				err = subgroupB.Wait()
 				if err != nil {
 					return err
 				}
@@ -388,6 +453,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			writeResponse(w, r, response)
 			return
 		}
+
 		var response Response
 		var count atomic.Int64
 		startedAt := time.Now()
