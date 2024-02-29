@@ -296,13 +296,13 @@
   {{- if eq (head $.FilePath) "pages" "posts" }}
   <div class='mt2'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div class='b'>Upload Assets:</div>
+    <div class='b'>upload assets:</div>
     <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.css,.js,.md' multiple></div>
-    <div><input placeholder='paste files from clipboard' style='min-width: 220px;' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".css",".js",".md"]}'></div>
+    <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".css",".js",".md"]}'></div>
     {{- else if eq (head $.FilePath) "posts" }}
-    <div class='b'>Upload Images:</div>
+    <div class='b'>upload images:</div>
     <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif' multiple></div>
-    <div><input placeholder='paste images from clipboard' style='min-width: 220px;' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif"]}'></div>
+    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif"]}'></div>
     {{- end }}
   </div>
   {{- end }}
@@ -311,10 +311,10 @@
 {{- if eq (head $.FilePath) "pages" "posts" }}
   <div class='flex items-center'>
     {{- if eq (head $.FilePath) "pages" }}
-    <span class='b'>Assets</span>
+    <span class='b'>assets</span>
     <div class='ma2'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap'>create file</a></div>
     {{- else }}
-    <span class='b'>Images</span>
+    <span class='b'>images</span>
     {{- end }}
   </div>
   {{- if $.Assets }}
