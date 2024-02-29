@@ -188,7 +188,11 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 	return siteGen, nil
 }
 
-func (siteGen *SiteGenerator) ParseTemplate(groupctx context.Context, name, text string, callers []string) (*template.Template, error) {
+func (siteGen *SiteGenerator) ParseTemplate(ctx context.Context, name, text string) (*template.Template, error) {
+	return siteGen.parseTemplate(ctx, name, text, nil)
+}
+
+func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text string, callers []string) (*template.Template, error) {
 	currentTemplate, err := template.New(name).Funcs(funcMap).Parse(text)
 	if err != nil {
 		return nil, NewTemplateError(err)
@@ -245,7 +249,7 @@ func (siteGen *SiteGenerator) ParseTemplate(groupctx context.Context, name, text
 	slices.Sort(externalNames)
 	externalNames = slices.Compact(externalNames)
 
-	group, groupctx := errgroup.WithContext(groupctx)
+	group, groupctx := errgroup.WithContext(ctx)
 	externalTemplates := make([]*template.Template, len(externalNames))
 	for i, externalName := range externalNames {
 		i, externalName := i, externalName
@@ -346,7 +350,7 @@ func (siteGen *SiteGenerator) ParseTemplate(groupctx context.Context, name, text
 				return err
 			}
 			newCallers := append(append(make([]string, 0, len(callers)+1), callers...), externalName)
-			externalTemplate, err := siteGen.ParseTemplate(groupctx, externalName, b.String(), newCallers)
+			externalTemplate, err := siteGen.parseTemplate(groupctx, externalName, b.String(), newCallers)
 			if err != nil {
 				return err
 			}
@@ -443,7 +447,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			"\n<meta name='viewport' content='width=device-width, initial-scale=1'>" +
 			"\n<link rel='icon' href='{{ $.Site.Favicon }}'>" +
 			"\n" + text
-		tmpl, err = siteGen.ParseTemplate(groupctx, "/"+filePath, text, nil)
+		tmpl, err = siteGen.ParseTemplate(groupctx, "/"+filePath, text)
 		if err != nil {
 			return err
 		}
@@ -1909,7 +1913,7 @@ type AtomCDATA struct {
 	Content string `xml:",cdata"`
 }
 
-func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string) (tmpl *template.Template, err error) {
+func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string) (*template.Template, error) {
 	if strings.Contains(category, "/") {
 		return nil, fmt.Errorf("invalid post category")
 	}
@@ -1983,7 +1987,7 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 		"\n<meta name='viewport' content='width=device-width, initial-scale=1'>" +
 		"\n<link rel='icon' href='{{ $.Site.Favicon }}'>" +
 		"\n" + text
-	tmpl, err = siteGen.ParseTemplate(ctx, path.Join("posts", category, "post.html"), text, nil)
+	tmpl, err := siteGen.ParseTemplate(ctx, path.Join("posts", category, "post.html"), text)
 	if err != nil {
 		return nil, err
 	}
@@ -2066,7 +2070,7 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 		"\n<link rel='icon' href='{{ $.Site.Favicon }}'>" +
 		"\n<link rel='alternate' href='/" + path.Join("posts", category) + "/index.atom' type='application/atom+xml'>" +
 		"\n" + text
-	tmpl, err := siteGen.ParseTemplate(ctx, path.Join("posts", category, "postlist.html"), text, nil)
+	tmpl, err := siteGen.ParseTemplate(ctx, path.Join("posts", category, "postlist.html"), text)
 	if err != nil {
 		return nil, err
 	}
