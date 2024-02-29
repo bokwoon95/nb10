@@ -28,7 +28,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		UserSiteNames []string   `json:"userSiteNames,omitempty"`
 	}
 
-	getSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {
+	getUserSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {
 		if nbrew.DB == nil {
 			return nil, false, nil
 		}
@@ -107,7 +107,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
-		userSiteNames, maxSitesReached, err := getSiteInfo(user.Username)
+		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
@@ -195,7 +195,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			SiteName:   request.SiteName,
 			FormErrors: url.Values{},
 		}
-		userSiteNames, maxSitesReached, err := getSiteInfo(user.Username)
+		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
@@ -210,6 +210,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 
 		if response.SiteName == "" {
 			response.FormErrors.Add("siteName", "required")
+		} else if response.SiteName == "www" || response.SiteName == "img" || response.SiteName == "video" || response.SiteName == "cdn" {
+			response.FormErrors.Add("siteName", "unavailable")
 		} else {
 			hasForbiddenCharacters := false
 			digitCount := 0
@@ -228,52 +230,77 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				response.FormErrors.Add("siteName", "cannot exceed 30 characters")
 			}
 		}
+		if len(response.FormErrors) > 0 {
+			response.Error = "FormErrorsPresent"
+			writeResponse(w, r, response)
+			return
+		}
 		var sitePrefix string
 		if strings.Contains(response.SiteName, ".") {
 			sitePrefix = response.SiteName
 		} else if response.SiteName != "" {
 			sitePrefix = "@" + response.SiteName
 		}
-		if response.SiteName == "www" || response.SiteName == "img" {
-			// TODO: enforce a list of common forbidden subdomains.
-			response.FormErrors.Add("siteName", "unavailable")
-		} else if !response.FormErrors.Has("siteName") {
-			_, err := fs.Stat(nbrew.FS, sitePrefix)
+		if nbrew.DB != nil {
+			tx, err := nbrew.DB.Begin()
 			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
-					return
-				}
-				if nbrew.DB != nil {
-					exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-						Dialect: nbrew.Dialect,
-						Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-						Values: []any{
-							sq.StringParam("siteName", response.SiteName),
-						},
-					})
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			defer tx.Rollback()
+			siteID := NewID()
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, {siteName})",
+				Values: []any{
+					sq.UUIDParam("siteID", siteID),
+					sq.StringParam("siteName", request.SiteName),
+				},
+			})
+			if err != nil {
+				if nbrew.ErrorCode != nil {
+					errorCode := nbrew.ErrorCode(err)
+					if IsKeyViolation(nbrew.Dialect, errorCode) {
+						response.FormErrors.Add("siteName", "unavailable")
+						response.Error = "FormErrorsPresent"
+						writeResponse(w, r, response)
 						return
 					}
-					if exists {
-						response.FormErrors.Add("siteName", "unavailable")
-					}
 				}
-			} else {
-				response.FormErrors.Add("siteName", "unavailable")
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "INSERT INTO site_user (site_id, user_id)" +
+					" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
+				Values: []any{
+					sq.StringParam("siteName", request.SiteName),
+					sq.StringParam("username", user.Username),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			err = tx.Commit()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
 			}
 		}
-		if len(response.FormErrors) > 0 {
-			response.Error = "FormErrorsPresent"
-			writeResponse(w, r, response)
-			return
-		}
-
 		err = nbrew.FS.Mkdir(sitePrefix, 0755)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
+		if err != nil {
+			if errors.Is(err, fs.ErrExist) {
+				response.FormErrors.Add("siteName", "unavailable")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
+			}
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
@@ -300,6 +327,54 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/site.json")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.json"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
 		group.Go(func() error {
 			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 			if err != nil {
@@ -364,7 +439,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "output/themes/post.html"), 0644)
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/post.html"), 0644)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil
@@ -388,7 +463,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, "output/themes/postlist.html"), 0644)
+			writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil
@@ -416,44 +491,6 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			}
 			return nil
 		})
-		if nbrew.DB != nil {
-			group.Go(func() error {
-				tx, err := nbrew.DB.Begin()
-				if err != nil {
-					return err
-				}
-				defer tx.Rollback()
-				siteID := NewID()
-				_, err = sq.Exec(groupctx, tx, sq.Query{
-					Dialect: nbrew.Dialect,
-					Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, {siteName})",
-					Values: []any{
-						sq.UUIDParam("siteID", siteID),
-						sq.StringParam("siteName", request.SiteName),
-					},
-				})
-				if err != nil {
-					return err
-				}
-				_, err = sq.Exec(groupctx, tx, sq.Query{
-					Dialect: nbrew.Dialect,
-					Format: "INSERT INTO site_user (site_id, user_id)" +
-						" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
-					Values: []any{
-						sq.StringParam("siteName", request.SiteName),
-						sq.StringParam("username", user.Username),
-					},
-				})
-				if err != nil {
-					return err
-				}
-				err = tx.Commit()
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-		}
 		err = group.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())

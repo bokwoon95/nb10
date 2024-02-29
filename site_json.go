@@ -71,9 +71,13 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 		if request.Description == "" {
 			request.Description = "# Hello World!\n\nWelcome to my blog."
 		}
+		home := strings.TrimPrefix(sitePrefix, "@")
+		if home == "" {
+			home = "home"
+		}
 		if len(request.NavigationLinks) == 0 {
 			request.NavigationLinks = []NavigationLink{
-				{Name: "home", URL: "/"},
+				{Name: home, URL: "/"},
 				{Name: "posts", URL: "/posts/"},
 			}
 		}
