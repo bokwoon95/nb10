@@ -28,8 +28,6 @@ TODO: directory.html: also show the delete buttons in the entire output director
     - This means later on we will have to allow delete.go to explicitly delete files where the parent directory is the output folder. There will no longer be any invalid parents.
     - the main motivation behind this is to allow users to self-correct in buggy cases where notebrew fails to clean up output files.
 TODO: site.json, configure the page such that it reads from and writes to site.json and also regenerates the site on change.
-    TODO: Request struct should not take in a deconstructed NavigationLinks slice, rather it should contain the slice directly and read its data from the decontructed url.Values.
-    TODO: site_json.js, which hooks into data-add-navigation-links buttons and prevents the default action, plus adds or removes navigation links from the data-navigation-links div.
 TODO: postlist.json, configure the page such that it reads from and writes to posts/{category}/postlist.json and also regenerates the postlist on change.
 TODO: actually, don't overwrite/rename markdown post files if the user created it externally. Instead, it just means the post's creationTime cannot be determined when generating the atom feed, as a result the tag URL will not use the timestamp but the filename instead (sans the .md extension).
     - This means that it will not be a good atom feed citizen, but it means that users can create and edit markdown files from their text editor without worrying about generating the timestamp prefix artificially. It's a education issue. We can educate users later on that they should strive to include the timestamp prefix in their posts if they want their atom feed postIDs to be stable, otherwise don't rename the post filenames at all.
