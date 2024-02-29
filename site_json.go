@@ -246,11 +246,32 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			internalServerError(w, r, err)
 			return
 		}
+
 		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
+		}
+		pagesDir := path.Join(sitePrefix, "pages")
+		postsDir := path.Join(sitePrefix, "posts")
+		postTemplate, err := siteGen.PostTemplate(r.Context(), "")
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+		postTemplates := map[string]*template.Template{
+			"": postTemplate,
+		}
+		postListTemplate, err := siteGen.PostListTemplate(r.Context(), "")
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+		postListTemplates := map[string]*template.Template{
+			"": postListTemplate,
 		}
 
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
@@ -264,7 +285,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			startedAt := time.Now()
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
-				pagesDir := path.Join(sitePrefix, "pages")
 				cursor, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
 					Dialect: remoteFS.Dialect,
 					Format: "SELECT {*}" +
@@ -314,21 +334,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 				return nil
 			})
 			group.Go(func() error {
-				postsDir := path.Join(sitePrefix, "posts")
-				postTemplate, err := siteGen.PostTemplate(groupctx, "")
-				if err != nil {
-					return err
-				}
-				postTemplates := map[string]*template.Template{
-					"": postTemplate,
-				}
-				postListTemplate, err := siteGen.PostListTemplate(groupctx, "")
-				if err != nil {
-					return err
-				}
-				postListTemplates := map[string]*template.Template{
-					"": postListTemplate,
-				}
 				cursorA, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
 					Dialect: remoteFS.Dialect,
 					Format: "SELECT {*}" +
@@ -425,6 +430,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 					return err
 				}
 				for category, postListTemplate := range postListTemplates {
+					category, postListTemplate := category, postListTemplate
 					subgroupB.Go(func() error {
 						n, err := siteGen.GeneratePostList(subctxB, category, postListTemplate)
 						if err != nil {
@@ -460,12 +466,11 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() error {
 			subgroup, subctx := errgroup.WithContext(groupctx)
-			root := path.Join(sitePrefix, "pages")
-			err := fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+			err := fs.WalkDir(nbrew.FS.WithContext(groupctx), pagesDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
 				if err != nil {
 					return err
 				}
-				if filePath == root {
+				if filePath == pagesDir {
 					return nil
 				}
 				subgroup.Go(func() error {
@@ -489,8 +494,12 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 					if sitePrefix != "" {
 						filePath = strings.TrimPrefix(filePath, sitePrefix+"/")
 					}
+					err = siteGen.GeneratePage(subctx, filePath, b.String())
+					if err != nil {
+						return err
+					}
 					count.Add(1)
-					return siteGen.GeneratePage(subctx, filePath, b.String())
+					return nil
 				})
 				return nil
 			})
@@ -504,65 +513,97 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			return nil
 		})
 		group.Go(func() error {
-			postTemplate, err := siteGen.PostTemplate(groupctx)
+			dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(postsDir)
 			if err != nil {
 				return err
 			}
-			subgroup, subctx := errgroup.WithContext(groupctx)
-			root := path.Join(sitePrefix, "posts")
-			err = fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+			var mutex sync.Mutex
+			subgroupA, subctxA := errgroup.WithContext(groupctx)
+			for _, dirEntry := range dirEntries {
+				if !dirEntry.IsDir() {
+					continue
+				}
+				category := dirEntry.Name()
+				subgroupA.Go(func() error {
+					postTemplate, err := siteGen.PostTemplate(subctxA, category)
+					if err != nil {
+						return err
+					}
+					postListTemplate, err := siteGen.PostListTemplate(subctxA, category)
+					if err != nil {
+						return err
+					}
+					mutex.Lock()
+					postTemplates[category] = postTemplate
+					postListTemplates[category] = postListTemplate
+					mutex.Unlock()
+					return nil
+				})
+			}
+			err = subgroupA.Wait()
+			if err != nil {
+				return err
+			}
+			subgroupB, subctxB := errgroup.WithContext(groupctx)
+			err = fs.WalkDir(nbrew.FS.WithContext(groupctx), postsDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
 				if err != nil {
 					return err
 				}
-				subgroup.Go(func() error {
-					if !dirEntry.IsDir() {
-						if !strings.HasSuffix(filePath, ".md") {
-							return nil
-						}
-						file, err := nbrew.FS.WithContext(subctx).Open(filePath)
-						if err != nil {
-							return err
-						}
-						fileInfo, err := file.Stat()
-						if err != nil {
-							return err
-						}
-						var b strings.Builder
-						b.Grow(int(fileInfo.Size()))
-						_, err = io.Copy(&b, file)
-						if err != nil {
-							return err
-						}
-						if sitePrefix != "" {
-							filePath = strings.TrimPrefix(filePath, sitePrefix+"/")
-						}
-						count.Add(1)
-						return siteGen.GeneratePost(subctx, filePath, b.String(), postTemplate)
-					}
-					if sitePrefix != "" {
-						filePath = strings.TrimPrefix(filePath, sitePrefix+"/")
-					}
+				if sitePrefix != "" {
+					_, filePath, _ = strings.Cut(filePath, "/")
+				}
+				if dirEntry.IsDir() {
 					_, category, _ := strings.Cut(filePath, "/")
 					if strings.Contains(category, "/") {
+						return fs.SkipDir
+					}
+					return nil
+				}
+				if !strings.HasSuffix(filePath, ".md") {
+					return nil
+				}
+				subgroupB.Go(func() error {
+					_, category, _ := strings.Cut(path.Dir(filePath), "/")
+					postTemplate := postTemplates[category]
+					if postTemplate == nil {
 						return nil
 					}
-					postListTemplate, err := siteGen.PostListTemplate(subctx, category)
+					file, err := nbrew.FS.WithContext(subctxB).Open(path.Join(sitePrefix, filePath))
 					if err != nil {
 						return err
 					}
-					n, err := siteGen.GeneratePostList(subctx, category, postListTemplate)
-					count.Add(int64(n))
+					defer file.Close()
+					fileInfo, err := file.Stat()
 					if err != nil {
 						return err
 					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						return err
+					}
+					err = siteGen.GeneratePost(subctxB, filePath, b.String(), postTemplate)
+					if err != nil {
+						return err
+					}
+					count.Add(1)
 					return nil
 				})
 				return nil
 			})
-			err = subgroup.Wait()
-			if err != nil {
-				return err
+			for category, postListTemplate := range postListTemplates {
+				category, postListTemplate := category, postListTemplate
+				subgroupB.Go(func() error {
+					n, err := siteGen.GeneratePostList(subctxB, category, postListTemplate)
+					if err != nil {
+						return err
+					}
+					count.Add(int64(n))
+					return nil
+				})
 			}
+			err = subgroupB.Wait()
 			if err != nil {
 				return err
 			}
