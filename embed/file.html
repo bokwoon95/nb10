@@ -20,7 +20,7 @@
   {{- end }}
 </nav>
 {{- if eq (index $.PostRedirectGet "from") "createfile" }}
-<div role='alert' class='alert mv2 pa2 br2 flex items-center'>
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div>
     {{- if eq (head $.FilePath) "pages" }}
     <div>created page</div>
@@ -83,20 +83,23 @@
 </div>
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "delete" }}
-<div role='alert' class='alert mv2 pa2 br2 flex items-center'>
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
   {{- $numErrors := index $.PostRedirectGet "numErrors" }}
   <div class='flex items-center'>
     {{ template "heroicons-trash" }}
-    <span class='ml2'>{{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} deleted {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}</span>
+    <span class='ml2'>
+      {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} deleted {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
+    </span>
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "clipboard/paste" }}
-<div role='alert' class='alert mv2 pa2 br2 flex items-center'>
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $error := index $.PostRedirectGet "error" }}
+  <div>
   {{- if $error }}
     <div>{{ $error }}</div>
   {{- else }}
@@ -140,6 +143,7 @@
       {{- end }}
     </div>
   {{- end }}
+  </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
@@ -150,8 +154,8 @@
   {{ $oldName := index $.PostRedirectGet "oldName" }}
   {{ $newName := index $.PostRedirectGet "newName" }}
   {{ $isDir := index $.PostRedirectGet "isDir" }}
-  <div class='flex items-center'>
-    <div>renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a></div>
+  <div>
+    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
