@@ -46,10 +46,10 @@ var RuntimeFS fs.FS = embedFS
 var logSessions = false
 
 var (
-	stylesCSS                    string
-	baselineJS                   string
-	contentSecurityPolicy        string
-	contentSecurityPolicyCaptcha string
+	stylesCSS                        string
+	baselineJS                       string
+	contentSecurityPolicy            string
+	contentSecurityPolicyWithCaptcha string
 )
 
 func init() {
@@ -58,8 +58,9 @@ func init() {
 	if err != nil {
 		return
 	}
-	// We don't need to calculate stylesCSSHash because we are already allowing
-	// style-src 'unsafe-inline' in our Content-Security-Policy.
+	// We don't need to calculate stylesCSSHash because we are already using
+	// the extra permissive style-src 'unsafe-inline' in our
+	// Content-Security-Policy.
 	stylesCSS = string(b)
 	// baseline.js
 	b, err = fs.ReadFile(embedFS, "static/baseline.js")
@@ -80,7 +81,7 @@ func init() {
 		" form-action 'self';" +
 		" manifest-src 'self';"
 	// contentSecurityPolicyCaptcha
-	contentSecurityPolicyCaptcha = "default-src 'none';" +
+	contentSecurityPolicyWithCaptcha = "default-src 'none';" +
 		" script-src 'self' 'unsafe-hashes' " + baselineJSHash + " https://hcaptcha.com https://*.hcaptcha.com;" +
 		" connect-src 'self' https://hcaptcha.com https://*.hcaptcha.com;" +
 		" img-src 'self' data:;" +

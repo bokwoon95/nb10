@@ -246,6 +246,17 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			internalServerError(w, r, err)
 			return
 		}
+		response := Response{
+			ContentSite:     nbrew.contentSite(sitePrefix),
+			Username:        NullString{String: username, Valid: nbrew.DB != nil},
+			SitePrefix:      sitePrefix,
+			Title:           request.Title,
+			Emoji:           request.Emoji,
+			Favicon:         request.Favicon,
+			CodeStyle:       request.CodeStyle,
+			Description:     request.Description,
+			NavigationLinks: request.NavigationLinks,
+		}
 
 		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 		if err != nil {
@@ -277,10 +288,8 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			type File struct {
 				FilePath string
-				IsDir    bool
 				Text     string
 			}
-			var response Response
 			var count atomic.Int64
 			startedAt := time.Now()
 			group, groupctx := errgroup.WithContext(r.Context())
@@ -460,7 +469,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			return
 		}
 
-		var response Response
 		var count atomic.Int64
 		startedAt := time.Now()
 		group, groupctx := errgroup.WithContext(r.Context())

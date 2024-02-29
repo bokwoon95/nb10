@@ -959,12 +959,12 @@ type PostListData struct {
 func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category string, tmpl *template.Template) (int, error) {
 	const numAtomPages = 1 // we unconditionally generate index.atom for the first page so add it to the count
 	var config struct {
-		PostsPerPage int `json:"postsPerPage"`
+		PostsPerPage int
 	}
 	if strings.Contains(category, "/") {
 		return 0, fmt.Errorf("invalid post category")
 	}
-	b, err := fs.ReadFile(siteGen.fsys.WithContext(ctx), path.Join(siteGen.sitePrefix, "postlist.json"))
+	b, err := fs.ReadFile(siteGen.fsys.WithContext(ctx), path.Join(siteGen.sitePrefix, "posts", category, "postlist.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return 0, err
 	}
