@@ -752,6 +752,15 @@ type PostData struct {
 }
 
 func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text string, creationTime time.Time, tmpl *template.Template) error {
+	timestampPrefix, _, _ := strings.Cut(path.Base(filePath), "-")
+	if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
+		b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
+		if len(b) == 5 && err == nil {
+			var timestamp [8]byte
+			copy(timestamp[len(timestamp)-5:], b)
+			creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+		}
+	}
 	urlPath := strings.TrimSuffix(filePath, path.Ext(filePath))
 	outputDir := path.Join(siteGen.sitePrefix, "output", urlPath)
 	postData := PostData{
@@ -1149,10 +1158,20 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			return page, err
 		}
 		name := fileInfo.Name()
+		creationTime := CreationTime(path.Join(absoluteDir, name), fileInfo)
+		timestampPrefix, _, _ := strings.Cut(name, "-")
+		if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
+			b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
+			if len(b) == 5 && err == nil {
+				var timestamp [8]byte
+				copy(timestamp[len(timestamp)-5:], b)
+				creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+			}
+		}
 		batch = append(batch, Post{
 			Category:         category,
 			Name:             strings.TrimSuffix(name, path.Ext(name)),
-			CreationTime:     CreationTime(path.Join(absoluteDir, name), fileInfo),
+			CreationTime:     creationTime,
 			ModificationTime: fileInfo.ModTime(),
 		})
 		if len(batch) >= config.PostsPerPage {

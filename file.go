@@ -5,11 +5,9 @@ import (
 	"compress/gzip"
 	"context"
 	"database/sql"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"hash"
 	"html/template"
 	"io"
@@ -756,17 +754,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 						return nil
 					}
 					return err
-				}
-				if _, ok := fileInfo.(*RemoteFileInfo); !ok {
-					timestampPrefix, _, _ := strings.Cut(path.Base(filePath), "-")
-					if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
-						b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
-						if len(b) == 5 && err == nil {
-							var timestamp [8]byte
-							copy(timestamp[len(timestamp)-5:], b)
-							response.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
-						}
-					}
 				}
 				err = siteGen.GeneratePost(groupctx, filePath, response.Content, response.CreationTime, tmpl)
 				if err != nil {
