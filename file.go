@@ -114,6 +114,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 		default:
 			isEditable = fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md"
 		}
+		if fileType.Ext == ".html" && !isEditable {
+			fileType.ContentType = "text/plain; charset=utf-8"
+		}
 	default:
 		notFound(w, r)
 		return

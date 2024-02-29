@@ -610,13 +610,15 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			return nil
 		})
 		err = group.Wait()
+		if err != nil {
+			if !errors.As(err, &response.TemplateError) {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+		}
 		response.Count = int(count.Load())
 		response.TimeTaken = time.Since(startedAt).String()
-		if err != nil && !errors.As(err, &response.TemplateError) {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
-		}
 		writeResponse(w, r, response)
 	default:
 		methodNotAllowed(w, r)
