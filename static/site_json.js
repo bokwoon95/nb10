@@ -19,7 +19,7 @@ if (dataNavigationLinks) {
         + `\n<span class='b'>URL: </span>`
         + `\n<input id='navigationLinkURL:${i}' name='navigationLinkURL' class='pv1 ph2 br2 ba'>`
         + `\n</label>`
-        + `\n</div>`
+        + `\n</div>`;
       dataNavigationLinks.appendChild(fieldset);
     });
   }
