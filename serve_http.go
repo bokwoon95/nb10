@@ -287,7 +287,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.siteJSON(w, r, username, sitePrefix)
 			return
 		case "regenerate":
-			// nbrew.regenerate(w, r, sitePrefix)
+			nbrew.regenerate(w, r, sitePrefix)
 			return
 		case "createfolder":
 			// nbrew.createfolder(w, r, username, sitePrefix)

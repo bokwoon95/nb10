@@ -55,7 +55,6 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 		}
 		http.Redirect(w, r, referer, http.StatusFound)
 	}
-
 	if r.Method != "POST" {
 		methodNotAllowed(w, r)
 		return
