@@ -333,6 +333,8 @@
           <div class='flex items-center'>
             {{- if $file.IsDir }}
             <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>
+            {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
+            <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
             {{- end }}
             <a href='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
             {{- if not $file.IsDir }}
