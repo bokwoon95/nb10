@@ -155,7 +155,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// If the users database is present, check if the user is authorized to
 		// access the files for this site.
-		var username string
+		var user User
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
 			var authenticationTokenString string
@@ -201,10 +201,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
 				},
 			}, func(row *sq.Row) (result struct {
-				Username            string
+				User
 				IsAuthorizedForSite bool
 			}) {
+				result.UserID = row.UUID("users.user_id")
 				result.Username = row.String("users.username")
+				result.DisableReason = row.String("users.disable_reason")
+				result.SiteLimit = row.Int64("users.site_limit")
+				result.StorageLimit = row.Int64("users.storage_limit")
 				result.IsAuthorizedForSite = row.Bool("EXISTS (SELECT 1"+
 					" FROM site"+
 					" JOIN site_user ON site_user.site_id = site.site_id"+
@@ -234,16 +238,16 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				notAuthenticated(w, r)
 				return
 			}
-			username = result.Username
+			user = result.User
 			isAuthorizedForSite = result.IsAuthorizedForSite
-			logger := logger.With(slog.String("username", username))
+			logger := logger.With(slog.String("username", user.Username))
 			r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
 		}
 
 		if sitePrefix == "" {
 			switch urlPath {
 			case "":
-				nbrew.rootdirectory(w, r, username, "", time.Time{})
+				nbrew.rootdirectory(w, r, user.Username, "", time.Time{})
 				return
 			case "createsite":
 				// nbrew.createsite(w, r, username)
@@ -261,7 +265,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch head {
 		case "":
-			nbrew.rootdirectory(w, r, username, sitePrefix, time.Time{})
+			nbrew.rootdirectory(w, r, user.Username, sitePrefix, time.Time{})
 			return
 		case "posts":
 			if path.Base(tail) == "postlist.json" {
@@ -269,13 +273,13 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if category == "." {
 					category = ""
 				}
-				nbrew.postlistJSON(w, r, username, sitePrefix, category)
+				nbrew.postlistJSON(w, r, user.Username, sitePrefix, category)
 				return
 			}
-			nbrew.file(w, r, username, sitePrefix, urlPath)
+			nbrew.file(w, r, user.Username, sitePrefix, urlPath)
 			return
 		case "notes", "pages", "output":
-			nbrew.file(w, r, username, sitePrefix, urlPath)
+			nbrew.file(w, r, user.Username, sitePrefix, urlPath)
 			return
 		case "clipboard":
 			// nbrew.clipboard(w, r, username, sitePrefix, tail)
@@ -287,7 +291,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.regenerate(w, r, sitePrefix)
 			return
 		case "site.json":
-			nbrew.siteJSON(w, r, username, sitePrefix)
+			nbrew.siteJSON(w, r, user.Username, sitePrefix)
 			return
 		case "createfolder":
 			// nbrew.createfolder(w, r, username, sitePrefix)
