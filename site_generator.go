@@ -1409,8 +1409,8 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				if len(b) == 5 && err == nil {
 					var timestamp [8]byte
 					copy(timestamp[len(timestamp)-5:], b)
-					creationTime := time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
-					postID = "tag:" + contentDomain + "," + creationTime.UTC().Format("2006-01-02") + ":" + timestampPrefix
+					post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+					postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + timestampPrefix
 				}
 			}
 			if postID == "" {
