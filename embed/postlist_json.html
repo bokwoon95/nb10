@@ -28,3 +28,34 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+<form method='post' action='/{{ join "files" $.SitePrefix "posts" $.Category "postlist.json" }}' class='mv2'>
+  {{- if $.TemplateError.ErrorMessage }}
+  <div class='mv2 invalid-red'>
+    <span class='b'>template error: </span>
+    {{- $path := "" }}
+    {{- if $.TemplateError.Name }}
+      {{- if hasPrefix $.TemplateError.Name "/themes/" }}
+      {{- $path = join "files" $.SitePrefix "output" $.TemplateError.Name }}
+      {{- else }}
+      {{- $path = join "files" $.SitePrefix $.TemplateError.Name }}
+      {{- end }}
+    {{- end }}
+    {{- if $path }}
+    <a href='/{{ $path }}{{ if $.TemplateError.Line }}#L{{ $.TemplateError.Line }}{{ end }}'>{{ $.TemplateError.Name }}{{ if $.TemplateError.Line }}:{{ $.TemplateError.Line }}{{ end }}</a>: {{ $.TemplateError.ErrorMessage }}
+    {{- else }}
+    {{ $.TemplateError.ErrorMessage }}
+    {{- end }}
+  </div>
+  {{- end }}
+  {{- if referer }}
+  <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
+  {{- else }}
+  <div><a href='/{{ join "files" $.SitePrefix }}{{ if not (contains $.SitePrefix ".") }}/{{ end }}'>&larr; back</a></div>
+  {{- end }}
+  <h1 class='f3 mv3 b'>{{ join $.Category "postlist.json" }} (Post List Settings)</h1>
+  <div class='mv3'>
+    <div><label for='postsPerPage' class='b'>Posts per page:</label></div>
+    <input id='postsPerPage' type='number' name='postsPerPage' value='{{ $.PostsPerPage }}' min='1' class='pv1 ph2 br2 ba' required>
+  </div>
+  <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
+</form>

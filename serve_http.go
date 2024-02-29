@@ -266,6 +266,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "posts":
 			if path.Base(tail) == "postlist.json" {
 				category := path.Dir(tail)
+				if category == "." {
+					category = ""
+				}
 				nbrew.postlistJSON(w, r, username, sitePrefix, category)
 				return
 			}

@@ -176,6 +176,12 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			internalServerError(w, r, err)
 			return
 		}
+		err = writer.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
 		response := Response{
 			ContentSite:  nbrew.contentSite(sitePrefix),
 			Username:     NullString{String: username, Valid: nbrew.DB != nil},
