@@ -247,10 +247,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if sitePrefix == "" {
 			switch urlPath {
 			case "":
-				nbrew.rootdirectory(w, r, user.Username, "", time.Time{})
+				nbrew.rootdirectory(w, r, user, "", time.Time{})
 				return
 			case "createsite":
-				// nbrew.createsite(w, r, username)
+				nbrew.createsite(w, r, user)
 				return
 			case "deletesite":
 				// nbrew.deletesite(w, r, username)
@@ -265,7 +265,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch head {
 		case "":
-			nbrew.rootdirectory(w, r, user.Username, sitePrefix, time.Time{})
+			nbrew.rootdirectory(w, r, user, sitePrefix, time.Time{})
 			return
 		case "posts":
 			if path.Base(tail) == "postlist.json" {

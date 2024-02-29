@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, username string) {
+func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		SiteName string `json:"siteName"`
 	}
@@ -27,7 +27,6 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, userna
 		SiteName      string     `json:"siteName,omitempty"`
 		UserSiteNames []string   `json:"userSiteNames,omitempty"`
 	}
-	const maxSites = 3
 
 	getSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {
 		if nbrew.DB == nil {
@@ -60,7 +59,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, userna
 			n++
 		}
 		userSiteNames = userSiteNames[:n]
-		return userSiteNames, !unlimitedSites && len(userSiteNames) >= maxSites, nil
+		return userSiteNames, !unlimitedSites && len(userSiteNames) >= int(user.SiteLimit), nil
 	}
 
 	switch r.Method {
@@ -85,7 +84,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, userna
 				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
 				"baselineJS": func() template.JS { return template.JS(baselineJS) },
 				"referer":    func() string { return referer },
-				"maxSites":   func() int { return maxSites },
+				"maxSites":   func() int { return int(user.SiteLimit) },
 			}
 			tmpl, err := template.New("createsite.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/createsite.html")
 			if err != nil {
@@ -103,12 +102,12 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, userna
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
 		}
-		userSiteNames, maxSitesReached, err := getSiteInfo(username)
+		userSiteNames, maxSitesReached, err := getSiteInfo(user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
@@ -196,7 +195,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, userna
 			SiteName:   request.SiteName,
 			FormErrors: url.Values{},
 		}
-		userSiteNames, maxSitesReached, err := getSiteInfo(username)
+		userSiteNames, maxSitesReached, err := getSiteInfo(user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
@@ -442,7 +441,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, userna
 						" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
 					Values: []any{
 						sq.StringParam("siteName", request.SiteName),
-						sq.StringParam("username", username),
+						sq.StringParam("username", user.Username),
 					},
 				})
 				if err != nil {

@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, username, sitePrefix string, modTime time.Time) {
+func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, user User, sitePrefix string, modTime time.Time) {
 	type File struct {
 		Name         string    `json:"name"`
 		IsDir        bool      `json:"isDir"`
@@ -125,7 +125,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 	nbrew.clearSession(w, r, "flash")
 	response.ContentSite = nbrew.contentSite(sitePrefix)
-	response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+	response.Username = NullString{String: user.Username, Valid: user.UserID != [16]byte{}}
 	response.SitePrefix = sitePrefix
 	response.IsDir = true
 	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
@@ -141,7 +141,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				" WHERE users.username = {username}" +
 				" ORDER BY site_prefix",
 			Values: []any{
-				sq.StringParam("username", username),
+				sq.StringParam("username", user.Username),
 			},
 		}, func(row *sq.Row) Site {
 			return Site{

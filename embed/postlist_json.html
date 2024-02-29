@@ -50,7 +50,7 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}
-  <div><a href='/{{ join "files" $.SitePrefix }}{{ if not (contains $.SitePrefix ".") }}/{{ end }}'>&larr; back</a></div>
+  <div><a href='/{{ join "files" $.SitePrefix "posts" $.Category }}{{ if not (contains $.SitePrefix ".") }}/{{ end }}'>&larr; back</a></div>
   {{- end }}
   <h1 class='f3 mv3 b'>{{ join $.Category "postlist.json" }} (Post List Settings)</h1>
   <div class='mv3'>
