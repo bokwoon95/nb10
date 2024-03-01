@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -15,12 +16,15 @@ import (
 
 func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
-		SiteName string `json:"siteName,omitempty"`
+		SiteName        string `json:"siteName"`
+		ConfirmSiteName string `json:"confirmSiteName"`
 	}
 	type Response struct {
-		Error    string     `json:"error,omitempty"`
-		Username NullString `json:"username,omitempty"`
-		SiteName string     `json:"siteName,omitempty"`
+		Error           string     `json:"error"`
+		FormErrors      url.Values `json:"formErrors"`
+		Username        NullString `json:"username"`
+		SiteName        string     `json:"siteName"`
+		ConfirmSiteName string     `json:"confirmSiteName"`
 	}
 
 	validateSiteName := func(siteName string) bool {
@@ -33,23 +37,6 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			}
 		}
 		return true
-	}
-
-	siteIsUser := func(siteName string) (bool, error) {
-		if nbrew.DB == nil {
-			return false, nil
-		}
-		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format:  "SELECT 1 FROM users WHERE username = {siteName}",
-			Values: []any{
-				sq.StringParam("siteName", siteName),
-			},
-		})
-		if err != nil {
-			return false, err
-		}
-		return exists, nil
 	}
 
 	getSitePermissions := func(siteName, username string) (siteNotFound, userIsAuthorized bool, err error) {
@@ -136,17 +123,6 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
-		isUser, err := siteIsUser(response.SiteName)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
-		}
-		if isUser {
-			response.Error = "SiteIsUser"
-			writeResponse(w, r, response)
-			return
-		}
 		siteNotFound, userIsAuthorized, err := getSitePermissions(response.SiteName, user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -184,7 +160,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 					internalServerError(w, r, err)
 					return
 				}
-				http.Redirect(w, r, "/files/deletesite/", http.StatusFound)
+				http.Redirect(w, r, "/files/deletesite/?name="+url.QueryEscape(response.SiteName), http.StatusFound)
 				return
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
@@ -226,14 +202,17 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				}
 			}
 			request.SiteName = r.Form.Get("siteName")
+			request.ConfirmSiteName = r.Form.Get("confirmSiteName")
 		default:
 			unsupportedContentType(w, r)
 			return
 		}
 
 		response := Response{
-			Username: NullString{String: user.Username, Valid: nbrew.DB != nil},
-			SiteName: request.SiteName,
+			FormErrors:      make(url.Values),
+			Username:        NullString{String: user.Username, Valid: nbrew.DB != nil},
+			SiteName:        request.SiteName,
+			ConfirmSiteName: request.ConfirmSiteName,
 		}
 		if response.SiteName == "" {
 			response.Error = "SiteNameNotProvided"
@@ -243,17 +222,6 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		ok := validateSiteName(response.SiteName)
 		if !ok {
 			response.Error = "InvalidSiteName"
-			writeResponse(w, r, response)
-			return
-		}
-		ok, err := siteIsUser(response.SiteName)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
-		}
-		if ok {
-			response.Error = "SiteIsUser"
 			writeResponse(w, r, response)
 			return
 		}
@@ -270,6 +238,12 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		}
 		if !userIsAuthorized {
 			response.Error = "NotAuthorized"
+			writeResponse(w, r, response)
+			return
+		}
+		if response.ConfirmSiteName != response.SiteName {
+			response.FormErrors.Add("confirmSiteName", "site name does not match")
+			response.Error = "FormErrorsPresent"
 			writeResponse(w, r, response)
 			return
 		}

@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, username, sitePrefix, category string) {
+func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user User, sitePrefix, category string) {
 	type Request struct {
 		PostsPerPage int `json:"postsPerPage"`
 	}
@@ -77,7 +77,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentSite = nbrew.contentSite(sitePrefix)
-		response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Category = category
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", category, "postlist.json"))
@@ -184,7 +184,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		}
 		response := Response{
 			ContentSite:  nbrew.contentSite(sitePrefix),
-			Username:     NullString{String: username, Valid: nbrew.DB != nil},
+			Username:     NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:   sitePrefix,
 			PostsPerPage: request.PostsPerPage,
 		}

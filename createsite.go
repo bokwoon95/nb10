@@ -22,7 +22,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 	}
 	type Response struct {
 		Error         string     `json:"error"`
-		FormErrors    url.Values `json:"formErrors,omitempty"`
+		FormErrors    url.Values `json:"formErrors"`
 		Username      NullString `json:"username"`
 		SiteName      string     `json:"siteName,omitempty"`
 		UserSiteNames []string   `json:"userSiteNames,omitempty"`

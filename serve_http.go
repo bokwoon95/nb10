@@ -273,7 +273,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if category == "." {
 					category = ""
 				}
-				nbrew.postlistJSON(w, r, user.Username, sitePrefix, category)
+				nbrew.postlistJSON(w, r, user, sitePrefix, category)
 				return
 			}
 			nbrew.file(w, r, user.Username, sitePrefix, urlPath)
