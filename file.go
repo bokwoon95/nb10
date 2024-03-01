@@ -421,6 +421,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					"from": "file",
 				},
 				"timeTaken":     response.TimeTaken,
+				"count":         response.Count,
 				"templateError": response.TemplateError,
 				"filesExist":    response.FilesExist,
 				"filesTooBig":   response.FilesTooBig,
