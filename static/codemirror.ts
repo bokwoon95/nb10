@@ -2,7 +2,7 @@
 // - Navigate to the project root where package.json is located.
 // - Run npm install
 // - Run ./node_modules/.bin/esbuild ./static/codemirror.ts --outfile=./static/codemirror.js --bundle --minify
-import { EditorState, Prec, Compartment } from '@codemirror/state';
+import { EditorState, Prec, Compartment, TransactionSpec } from '@codemirror/state';
 import { EditorView, lineNumbers, keymap } from '@codemirror/view';
 import { indentWithTab, history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 import { indentOnInput, indentUnit, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
@@ -14,6 +14,17 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 // import { languages } from '@codemirror/language-data';
 
 for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[data-codemirror]").entries()) {
+  const config = new Map<string, any>();
+  try {
+    let obj = JSON.parse(dataCodemirror.getAttribute("data-codemirror") || `{}`);
+    for (const [key, value] of Object.entries(obj)) {
+      config.set(key, value);
+    }
+  } catch (e) {
+    console.error(e);
+    continue;
+  }
+
   // The textarea we are overriding.
   const textarea = dataCodemirror.querySelector("textarea");
   if (!textarea) {
@@ -94,45 +105,59 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
       ],
     }),
   });
-
-  // Configure language.
-  let extElement = form.elements[`ext:${index}`];
-  if (!extElement) {
-    extElement = form.elements["ext"];
-  }
-  if (extElement && textarea.value.length <= 50000) {
-    const configureLanguage = function() {
-      if (extElement.value == ".html") {
+  function configureLanguage(ext: string) {
+    switch (ext) {
+      case ".html":
         editor.dispatch({
           effects: language.reconfigure(html()),
         });
-      } else if (extElement.value == ".css") {
+        break;
+      case ".css":
         editor.dispatch({
           effects: language.reconfigure(css()),
         });
-      } else if (extElement.value == ".js") {
+        break;
+      case ".js":
         editor.dispatch({
           effects: language.reconfigure(javascript()),
         });
-      } else if (extElement.value == ".md") {
+        break;
+      case ".md":
         editor.dispatch({
           effects: language.reconfigure(markdown({
             base: markdownLanguage,
             // codeLanguages: languages,
           })),
         });
-      } else {
+        break;
+      default:
         editor.dispatch({
           effects: language.reconfigure([]),
         });
-      }
+        break;
     }
-    configureLanguage();
-    extElement.addEventListener("change", configureLanguage);
+  }
+
+  // Configure language.
+  let ext = "";
+  if (config.has("ext")) {
+    ext = config.get("ext");
+    if (textarea.value.length <= 50000) {
+      configureLanguage(ext);
+    }
+  } else if (config.has("extElementName")) {
+    const extElementName = config.get("extElementName");
+    const extElement = form.elements[extElementName] as HTMLInputElement | HTMLSelectElement;
+    if (extElement && textarea.value.length <= 50000) {
+      ext = extElement.value;
+      configureLanguage(ext);
+      extElement.addEventListener("change", function() {
+        configureLanguage(extElement.value);
+      });
+    }
   }
 
   // Configure word wrap.
-  const ext = extElement ? extElement.value : "";
   let wordwrapEnabled = false;
   if (localStorage.getItem(`wordwrap:${ext}`) == "true") {
     wordwrapEnabled = true;
@@ -144,22 +169,25 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
       effects: wordwrap.reconfigure(EditorView.lineWrapping),
     });
   }
-  const wordwrapInput = document.querySelector<HTMLInputElement>(`input[type=checkbox]#wordwrap\\:${index}`);
-  if (wordwrapInput) {
-    wordwrapInput.checked = wordwrapEnabled;
-    wordwrapInput.addEventListener("change", function() {
-      if (wordwrapInput.checked) {
-        localStorage.setItem(`wordwrap:${ext}`, "true");
-        editor.dispatch({
-          effects: wordwrap.reconfigure(EditorView.lineWrapping),
-        });
-      } else {
-        localStorage.setItem(`wordwrap:${ext}`, "false");
-        editor.dispatch({
-          effects: wordwrap.reconfigure([]),
-        });
-      }
-    });
+  if (config.has("wordwrapCheckboxID")) {
+    const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
+    const wordwrapInput = document.getElementById(wordwrapCheckboxID) as HTMLInputElement;
+    if (wordwrapInput) {
+      wordwrapInput.checked = wordwrapEnabled;
+      wordwrapInput.addEventListener("change", function() {
+        if (wordwrapInput.checked) {
+          localStorage.setItem(`wordwrap:${ext}`, "true");
+          editor.dispatch({
+            effects: wordwrap.reconfigure(EditorView.lineWrapping),
+          });
+        } else {
+          localStorage.setItem(`wordwrap:${ext}`, "false");
+          editor.dispatch({
+            effects: wordwrap.reconfigure([]),
+          });
+        }
+      });
+    }
   }
 
   // Replace the textarea with the codemirror editor.
@@ -188,10 +216,13 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
   // Restore cursor position from localStorage.
   const position = Number(localStorage.getItem(`${window.location.pathname}:${index}`));
   if (position && position <= textarea.value.length) {
-    editor.dispatch({
+    const transaction: TransactionSpec = {
       selection: { anchor: position, head: position },
-      effects: EditorView.scrollIntoView(position, { y: "center" }),
-    });
+    };
+    if (config.get("scrollIntoView")) {
+      transaction.effects = EditorView.scrollIntoView(position, { y: "center" });
+    }
+    editor.dispatch(transaction);
   }
 
   // On submit, synchronize the codemirror editor's contents with the

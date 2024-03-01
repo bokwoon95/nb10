@@ -17,6 +17,8 @@ directory.go
 file.go
 createsite.go
 deletesite.go
+createfolder.go
+createfile.go
 ...
 serve_http.go
 notebrew/exit.go
@@ -28,9 +30,13 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: don't regenerate silently; every action that does regenerate a file (e.g. save page, save post), inform the user how many files were regenerated and how long it took as well as a helpful view link to the page | post | post list's first page.
-TODO: actually, don't overwrite/rename markdown post files if the user created it externally. Instead, it just means the post's creationTime cannot be determined when generating the atom feed, as a result the tag URL will not use the timestamp but the filename instead (sans the .md extension).
-    - This means that it will not be a good atom feed citizen, but it means that users can create and edit markdown files from their text editor without worrying about generating the timestamp prefix artificially. It's a education issue. We can educate users later on that they should strive to include the timestamp prefix in their posts if they want their atom feed postIDs to be stable, otherwise don't rename the post filenames at all.
 TODO: oh my god, every action related to creating a page or deleting a page (that includes copying, moving and renaming pages) has to honor the same system where the outputDir /output/abc/ actually is co-owned by two files, /pages/abc.html and /pages/abc/. If we create files via copying/move/rename, we must copy only the relevant files in the outputDir. If we delete files due to a delete/move/rename, we must only delete the relevant files in the outputDir.
+TODO: for page assets, we need to include a little help link "how do I include assets?" that directs users to the guide for linking to assets in HTML.
+    - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
+    - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
+    - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
+        - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
+    - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 TODO: once we finish porting nb9 over to nb10, look into accepting a user struct instead of username in the handlers and decide what to do if the account is disabled.
 TODO: copy a private implementation of certmagic.MatchWildcard so that notebrew itself doesn't rely on certmagic.
 

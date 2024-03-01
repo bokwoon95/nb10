@@ -91,6 +91,11 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
 
   dataPaste.addEventListener("paste", function(event) {
     event.preventDefault();
+    if (event.clipboardData.files.length == 0) {
+      dataPaste.value = "no files in clipboard";
+      setTimeout(function() { dataPaste.value = "" }, 800);
+      return;
+    }
     let dataTransfer = new DataTransfer();
     let invalidCount = 0;
     for (let i = 0; i < input.files.length; i++) {
