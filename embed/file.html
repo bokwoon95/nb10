@@ -24,8 +24,12 @@
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
     <div>created page</div>
+    <div>generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
+    <div><a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
     <div>created post</div>
+    <div>generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
+    <div><a href='{{ $.URL }}'>view</a></div>
     {{- else }}
     <div>created file</div>
     {{- end }}
@@ -50,10 +54,14 @@
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
     <div>saved page</div>
+    <div>regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
+    <div><a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
     <div>saved post</div>
+    <div>regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
+    <div><a href='{{ $.URL }}'>view</a></div>
     {{- else }}
-    <div>saved file</div>
+    <div>saved</div>
     {{- end }}
     {{- if $.FilesExist }}
     <br>

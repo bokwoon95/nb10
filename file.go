@@ -420,6 +420,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				"postRedirectGet": map[string]any{
 					"from": "file",
 				},
+				"timeTaken":     response.TimeTaken,
 				"templateError": response.TemplateError,
 				"filesExist":    response.FilesExist,
 				"filesTooBig":   response.FilesTooBig,
@@ -702,7 +703,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				internalServerError(w, r, err)
 				return
 			}
+			startedAt := time.Now()
 			err = siteGen.GeneratePage(r.Context(), filePath, response.Content)
+			response.TimeTaken = time.Since(startedAt).String()
 			if err != nil {
 				if !errors.As(err, &response.TemplateError) {
 					getLogger(r.Context()).Error(err.Error())
@@ -710,6 +713,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 			}
+			response.Count = 1
 		case "posts":
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
@@ -718,8 +722,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return
 			}
 			category := path.Dir(tail)
+			if category == "." {
+				category = ""
+			}
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
+			startedAt := time.Now()
 			group.Go(func() error {
 				var templateErr TemplateError
 				tmpl, err := siteGen.PostTemplate(groupctx, category)
@@ -761,11 +769,13 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return nil
 			})
 			err = group.Wait()
+			response.TimeTaken = time.Since(startedAt).String()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
 			}
+			response.Count = 1
 		}
 		writeResponse(w, r, response)
 	default:
