@@ -32,7 +32,8 @@
   {{- if not $templateError.ErrorMessage }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
     <div class='pv1'>
-      regenerated site ({{ $count }} file{{ if ne $count 1.0 }}s{{ end }} in {{ $timeTaken }})
+      <div>regenerated site ({{ $count }} file{{ if ne $count 1.0 }}s{{ end }} in {{ $timeTaken }})</div>
+      <div><a href='{{ $.ContentSite }}'>view</a></div>
     </div>
     <div class='flex-grow-1'></div>
     <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>

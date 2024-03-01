@@ -9,16 +9,16 @@ creation_time_windows.go
 notebrew.go
 dev.go
 site_generator.go
-regenerate.go
-site_json.go
-postlist_json.go
+regenerate.go => regenerated site (x files in xxx duration) view
+site_json.go => regenerated site (x files in xxx duration) view
+postlist_json.go => regenerated post list (x files in xxx duration) view
 rootdirectory.go
 directory.go
-file.go
+file.go => regenerated page|post in xxx duration view
 createsite.go
 deletesite.go
 createfolder.go
-createfile.go
+createfile.go => generated page|post in xxx duration view
 ...
 serve_http.go
 notebrew/exit.go

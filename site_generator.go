@@ -960,7 +960,6 @@ type PostListData struct {
 }
 
 func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category string, tmpl *template.Template) (int, error) {
-	const numAtomPages = 1 // we unconditionally generate index.atom for the first page so add it to the count
 	var config struct {
 		PostsPerPage int
 	}
@@ -1110,7 +1109,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				return page, err
 			}
 		}
-		return page + numAtomPages, nil
+		return page, nil
 	}
 	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
 	if err != nil {
@@ -1212,7 +1211,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			return page, err
 		}
 	}
-	return page + numAtomPages, nil
+	return page, nil
 }
 
 func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category string, tmpl *template.Template, lastPage, currentPage int, posts []Post) error {
