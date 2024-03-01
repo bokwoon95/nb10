@@ -44,10 +44,10 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any   `json:"postRedirectGet,omitempty"`
+		PostRedirectGet map[string]any   `json:"postRedirectGet"`
 		Count           int              `json:"count"`
 		TimeTaken       string           `json:"timeTaken"`
-		TemplateError   TemplateError    `json:"templateError,omitempty"`
+		TemplateError   TemplateError    `json:"templateError"`
 		ContentSite     string           `json:"contentSite"`
 		Username        NullString       `json:"username"`
 		SitePrefix      string           `json:"sitePrefix"`

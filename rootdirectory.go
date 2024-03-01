@@ -24,15 +24,15 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
-		Size         int64     `json:"size,omitempty"`
+		Size         int64     `json:"size"`
 	}
 	type Site struct {
 		Name  string `json:"name"`
-		Owner string `json:"owner,omitempty"`
+		Owner string `json:"owner"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet,omitempty"`
-		TemplateError   TemplateError  `json:"templateError,omitempty"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
+		TemplateError   TemplateError  `json:"templateError"`
 		ContentSite     string         `json:"contentSite"`
 		Username        NullString     `json:"username"`
 		SitePrefix      string         `json:"sitePrefix"`
@@ -40,14 +40,14 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		IsDir           bool           `json:"isDir"`
 		SearchSupported bool           `json:"searchSupported"`
 
-		Files []File `json:"files,omitempty"`
+		Files []File `json:"files"`
 
-		From        string `json:"from,omitempty"`
-		Before      string `json:"before,omitempty"`
+		From        string `json:"from"`
+		Before      string `json:"before"`
 		Limit       int    `json:"limit"`
 		Sites       []Site `json:"sites"`
-		PreviousURL string `json:"previousURL,omitempty"`
-		NextURL     string `json:"nextURL,omitempty"`
+		PreviousURL string `json:"previousURL"`
+		NextURL     string `json:"nextURL"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.Sites == nil {

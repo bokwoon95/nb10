@@ -38,8 +38,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 		Size         int64     `json:"size"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet,omitempty"`
-		TemplateError   TemplateError  `json:"templateError,omitempty"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
+		Count           int            `json:"count"`
+		TimeTaken       string         `json:"timeTaken"`
+		TemplateError   TemplateError  `json:"templateError"`
 		ContentSite     string         `json:"contentSite"`
 		Username        NullString     `json:"username"`
 		SitePrefix      string         `json:"sitePrefix"`
@@ -49,11 +51,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 		CreationTime    time.Time      `json:"creationTime"`
 		Content         string         `json:"content"`
 		URL             string         `json:"url,omitempty"`
-		BelongsTo       string         `json:"belongsTo,omitempty"`
-		AssetDir        string         `json:"assetDir,omitempty"`
-		Assets          []Asset        `json:"assets,omitempty"`
-		FilesExist      []string       `json:"filesExist,omitempty"`
-		FilesTooBig     []string       `json:"filesTooBig,omitempty"`
+		BelongsTo       string         `json:"belongsTo"`
+		AssetDir        string         `json:"assetDir"`
+		Assets          []Asset        `json:"assets"`
+		FilesExist      []string       `json:"filesExist"`
+		FilesTooBig     []string       `json:"filesTooBig"`
 	}
 
 	file, err := nbrew.FS.Open(path.Join(".", sitePrefix, filePath))

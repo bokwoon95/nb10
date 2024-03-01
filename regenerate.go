@@ -22,7 +22,7 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 	type Response struct {
 		Count         int           `json:"count"`
 		TimeTaken     string        `json:"timeTaken"`
-		TemplateError TemplateError `json:"templateError,omitempty"`
+		TemplateError TemplateError `json:"templateError"`
 	}
 	referer := r.Referer()
 	if referer == "" {

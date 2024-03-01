@@ -24,8 +24,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		Error         string     `json:"error"`
 		FormErrors    url.Values `json:"formErrors"`
 		Username      NullString `json:"username"`
-		SiteName      string     `json:"siteName,omitempty"`
-		UserSiteNames []string   `json:"userSiteNames,omitempty"`
+		SiteName      string     `json:"siteName"`
+		UserSiteNames []string   `json:"userSiteNames"`
 	}
 
 	getUserSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {

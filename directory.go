@@ -23,11 +23,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
-		Size         int64     `json:"size,omitempty"`
+		Size         int64     `json:"size"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet,omitempty"`
-		TemplateError   TemplateError  `json:"templateError,omitempty"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
+		TemplateError   TemplateError  `json:"templateError"`
 		ContentSite     string         `json:"contentSite"`
 		Username        NullString     `json:"username"`
 		SitePrefix      string         `json:"sitePrefix"`
@@ -35,16 +35,16 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 		IsDir           bool           `json:"isDir"`
 		SearchSupported bool           `json:"searchSupported"`
 
-		Sort        string `json:"sort,omitempty"`
-		Order       string `json:"order,omitempty"`
-		From        string `json:"from,omitempty"`
-		FromTime    string `json:"fromTime,omitempty"`
-		Before      string `json:"before,omitempty"`
-		BeforeTime  string `json:"beforeTime,omitempty"`
-		Limit       int    `json:"limit,omitempty"`
+		Sort        string `json:"sort"`
+		Order       string `json:"order"`
+		From        string `json:"from"`
+		FromTime    string `json:"fromTime"`
+		Before      string `json:"before"`
+		BeforeTime  string `json:"beforeTime"`
+		Limit       int    `json:"limit"`
 		Files       []File `json:"files"`
-		PreviousURL string `json:"previousURL,omitempty"`
-		NextURL     string `json:"nextURL,omitempty"`
+		PreviousURL string `json:"previousURL"`
+		NextURL     string `json:"nextURL"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.Files == nil {

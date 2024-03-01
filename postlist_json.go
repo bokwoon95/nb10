@@ -20,10 +20,10 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		PostsPerPage int `json:"postsPerPage"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet,omitempty"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
 		Count           int            `json:"count"`
 		TimeTaken       string         `json:"timeTaken"`
-		TemplateError   TemplateError  `json:"templateError,omitempty"`
+		TemplateError   TemplateError  `json:"templateError"`
 		ContentSite     string         `json:"contentSite"`
 		Category        string         `json:"category"`
 		Username        NullString     `json:"username"`
