@@ -37,7 +37,7 @@
   <h3 class='mv3 b'>Are you sure you wish to delete the site <a href='/files/{{ if contains $.SiteName "." }}$.SiteName{{ else }}@{{ $.SiteName }}{{ end }}/'>{{ $.SiteName }}</a>?</h3>
   <div>This action is permanent and cannot be undone. All files within the site will be deleted.</div>
   <div><label for='confirmSiteName'>Please confirm the site name that you wish to delete (<span class='b'>{{ $.SiteName }}</span>):</label></div>
-  <div><input id='confirmSiteName' name='confirmSiteName' value='{{ $.ConfirmSiteName }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "confirmSiteName" }} b--invalid-red{{ end }}' required></div>
+  <div><input id='confirmSiteName' name='confirmSiteName' value='{{ $.ConfirmSiteName }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "confirmSiteName" }} b--invalid-red{{ end }}' autofocus required></div>
   <ul class='list-style-disc ph3 f6 invalid-red'>
     {{- range $error := index $.FormErrors "confirmSiteName" }}
     <li>{{ $error }}</li>

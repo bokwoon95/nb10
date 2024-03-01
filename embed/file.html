@@ -21,7 +21,7 @@
 </nav>
 {{- if eq (index $.PostRedirectGet "from") "createfile" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div>
+  <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
     <div>created page</div>
     {{- else if eq (head $.FilePath) "posts" }}
@@ -47,7 +47,7 @@
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "file" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div>
+  <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
     <div>saved page</div>
     {{- else if eq (head $.FilePath) "posts" }}
@@ -86,7 +86,7 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
   {{- $numErrors := index $.PostRedirectGet "numErrors" }}
-  <div class='flex items-center'>
+  <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
     <span class='ml2'>
       {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} deleted {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
@@ -99,7 +99,7 @@
 {{- if eq (index $.PostRedirectGet "from") "clipboard/paste" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $error := index $.PostRedirectGet "error" }}
-  <div>
+  <div class='pv1'>
   {{- if $error }}
     <div>{{ $error }}</div>
   {{- else }}
@@ -154,7 +154,7 @@
   {{ $oldName := index $.PostRedirectGet "oldName" }}
   {{ $newName := index $.PostRedirectGet "newName" }}
   {{ $isDir := index $.PostRedirectGet "isDir" }}
-  <div>
+  <div class='pv1'>
     renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>
   </div>
   <div class='flex-grow-1'></div>

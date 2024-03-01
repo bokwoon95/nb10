@@ -31,7 +31,7 @@
   {{- $templateError := index $.PostRedirectGet "templateError" }}
   {{- if not $templateError.ErrorMessage }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-    <div>
+    <div class='pv1'>
       regenerated site ({{ $count }} file{{ if ne $count 1.0 }}s{{ end }} in {{ $timeTaken }})
     </div>
     <div class='flex-grow-1'></div>
@@ -43,7 +43,7 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $parent := index $.PostRedirectGet "parent" }}
   {{- $name := index $.PostRedirectGet "name" }}
-  <div>
+  <div class='pv1'>
     {{- if eq $parent "posts" }}
     created category <a href='/{{ join "files" $.SitePrefix $parent $name }}/'>{{ $name }}</a>
     {{- else }}
@@ -58,11 +58,11 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
   {{- $numErrors := index $.PostRedirectGet "numErrors" }}
-  <div class='flex items-center'>
+  <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
-    <span class='ml2'>
+    <div class='ml2'>
       {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} deleted {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
-    </span>
+    </div>
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -71,7 +71,7 @@
 {{- if eq (index $.PostRedirectGet "from") "clipboard/paste" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $error := index $.PostRedirectGet "error" }}
-  <div>
+  <div class='pv1'>
   {{- if $error }}
     {{- if eq $error "PostNoPaste" }}
     <div>files from other folders cannot be pasted into a posts folder<br>create a new post and manually copy its contents over instead</div>
@@ -132,7 +132,7 @@
   {{- $filesExist := index $.PostRedirectGet "filesExist" }}
   {{- $filesTooBig := index $.PostRedirectGet "filesTooBig" }}
   {{- $size := float64ToInt64 (index $.PostRedirectGet "size") }}
-  <div>
+  <div class='pv1'>
     <div>{{ $count }} file{{ if ne $count 1.0 }}s{{ end }} uploaded ({{ fileSizeToString $size }} total)</div>
     {{- if $filesExist }}
     <br>
@@ -167,7 +167,7 @@
   {{ $oldName := index $.PostRedirectGet "oldName" }}
   {{ $newName := index $.PostRedirectGet "newName" }}
   {{ $isDir := index $.PostRedirectGet "isDir" }}
-  <div>
+  <div class='pv1'>
     renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>
   </div>
   <div class='flex-grow-1'></div>

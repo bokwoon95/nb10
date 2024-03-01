@@ -50,7 +50,7 @@
 
 {{- if eq (index $.PostRedirectGet "from") "regenerate" }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-    <div>
+    <div class='pv1'>
       regenerated site ({{ index $.PostRedirectGet "count" }} file{{ if ne (index $.PostRedirectGet "count") 1.0 }}s{{ end }} in {{ index $.PostRedirectGet "timeTaken" }})
     </div>
     <div class='flex-grow-1'></div>
@@ -59,7 +59,7 @@
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "createsite" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div>
+  <div class='pv1'>
     created site <a href='/files/{{ index $.PostRedirectGet "sitePrefix" }}/'>{{ trimPrefix (index $.PostRedirectGet "sitePrefix") "@" }}</a>
   </div>
   <div class='flex-grow-1'></div>
@@ -68,11 +68,11 @@
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "deletesite" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div class='flex items-center'>
+  <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
-    <span class='ml2'>
+    <div class='ml2'>
       deleted site ({{ index $.PostRedirectGet "siteName" }})
-    </span>
+    </div>
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
