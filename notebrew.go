@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -122,13 +123,13 @@ type Notebrew struct {
 }
 
 type User struct {
-	UserID        [16]byte
-	Username      string
+	UserID   [16]byte
+	Username string
 	// accountDisabled(): "you may not perform that action as your account has been disabled for the following reason"
 	DisableReason string
 	SiteLimit     int64
 	// storageLimitExceeded(): "you have exceeded your storage limit of {{ $storageLimit }} (current: {{ $currentStorage }})"
-	StorageLimit  int64
+	StorageLimit int64
 }
 
 type contextKey struct{}
@@ -828,4 +829,31 @@ func internalServerError(w http.ResponseWriter, r *http.Request, serverErr error
 type NullString struct {
 	String string `json:"string"`
 	Valid  bool   `json:"valid"`
+}
+
+func WriteFile(ctx context.Context, fsys FS, filePath string, reader io.Reader) error {
+	writer, err := fsys.WithContext(ctx).OpenWriter(filePath, 0644)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		err := fsys.WithContext(ctx).MkdirAll(path.Dir(filePath), 0755)
+		if err != nil {
+			return err
+		}
+		writer, err = fsys.WithContext(ctx).OpenWriter(filePath, 0644)
+		if err != nil {
+			return err
+		}
+	}
+	defer writer.Close()
+	_, err = io.Copy(writer, reader)
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+	return nil
 }

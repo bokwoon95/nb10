@@ -3,7 +3,6 @@ package nb10
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -29,7 +28,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, sitePrefix, filePath string) {
+func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string) {
 	type Asset struct {
 		FileID       [16]byte  `json:"-"`
 		Name         string    `json:"name"`
@@ -80,7 +79,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 			methodNotAllowed(w, r)
 			return
 		}
-		nbrew.directory(w, r, username, sitePrefix, filePath, fileInfo.ModTime())
+		nbrew.directory(w, r, user.Username, sitePrefix, filePath, fileInfo.ModTime())
 		return
 	}
 	fileType, ok := fileTypes[path.Ext(filePath)]
@@ -137,7 +136,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentSite = nbrew.contentSite(sitePrefix)
-		response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
@@ -515,7 +514,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 
 		response := Response{
 			ContentSite: nbrew.contentSite(sitePrefix),
-			Username:    NullString{String: username, Valid: nbrew.DB != nil},
+			Username:    NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:  sitePrefix,
 			FilePath:    filePath,
 			IsDir:       fileInfo.IsDir(),
@@ -554,32 +553,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 
 		head, tail, _ := strings.Cut(filePath, "/")
 		if (head == "pages" || head == "posts") && contentType == "multipart/form-data" {
-			writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
-				writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
-				if err != nil {
-					if !errors.Is(err, fs.ErrNotExist) {
-						return err
-					}
-					err := nbrew.FS.WithContext(r.Context()).MkdirAll(path.Dir(filePath), 0755)
-					if err != nil {
-						return err
-					}
-					writer, err = nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
-					if err != nil {
-						return err
-					}
-				}
-				defer writer.Close()
-				_, err = io.Copy(writer, reader)
-				if err != nil {
-					return err
-				}
-				err = writer.Close()
-				if err != nil {
-					return err
-				}
-				return nil
-			}
 			var outputDir string
 			if head == "posts" {
 				outputDir = path.Join(sitePrefix, "output/posts", strings.TrimSuffix(tail, ".md"))
@@ -637,7 +610,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
 					cmdPath, err := exec.LookPath("nbrew-process-img")
 					if err != nil {
-						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
+						err := WriteFile(r.Context(), nbrew.FS, filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
 						if err != nil {
 							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
@@ -705,7 +678,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, username, si
 						if err != nil {
 							return err
 						}
-						err = writeFile(groupctx, filePath, output)
+						err = WriteFile(groupctx, nbrew.FS, filePath, output)
 						if err != nil {
 							return err
 						}

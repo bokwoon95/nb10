@@ -276,10 +276,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.postlistJSON(w, r, user, sitePrefix, category)
 				return
 			}
-			nbrew.file(w, r, user.Username, sitePrefix, urlPath)
+			nbrew.file(w, r, user, sitePrefix, urlPath)
 			return
 		case "notes", "pages", "output":
-			nbrew.file(w, r, user.Username, sitePrefix, urlPath)
+			nbrew.file(w, r, user, sitePrefix, urlPath)
 			return
 		case "clipboard":
 			// nbrew.clipboard(w, r, username, sitePrefix, tail)
@@ -294,7 +294,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.siteJSON(w, r, user.Username, sitePrefix)
 			return
 		case "createfolder":
-			// nbrew.createfolder(w, r, username, sitePrefix)
+			nbrew.createfolder(w, r, user, sitePrefix)
 			return
 		case "createfile":
 			// nbrew.createfile(w, r, username, sitePrefix)
