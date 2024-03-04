@@ -41,6 +41,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 		Ext           string        `json:"ext"`
 		Content       string        `json:"content"`
 		FilesTooBig   []string      `json:"filesTooBig"`
+		Count         int           `json:"count"`
+		TimeTaken     string        `json:"timeTaken"`
 		TemplateError TemplateError `json:"templateError"`
 	}
 
@@ -178,6 +180,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 				"postRedirectGet": map[string]any{
 					"from": "createfile",
 				},
+				"count":         response.Count,
+				"timeTaken":     response.TimeTaken,
 				"templateError": response.TemplateError,
 				"filesTooBig":   response.FilesTooBig,
 			})
@@ -556,6 +560,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 				internalServerError(w, r, err)
 				return
 			}
+			startedAt := time.Now()
 			err = siteGen.GeneratePage(r.Context(), path.Join(response.Parent, response.Name+response.Ext), response.Content)
 			if err != nil {
 				if !errors.As(err, &response.TemplateError) {
@@ -564,6 +569,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 					return
 				}
 			}
+			response.Count = 1
+			response.TimeTaken = time.Since(startedAt).String()
 		case "posts":
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
@@ -571,6 +578,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 				internalServerError(w, r, err)
 				return
 			}
+			var count atomic.Int64
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
@@ -593,6 +601,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 					}
 					return err
 				}
+				count.Add(1)
 				return nil
 			})
 			group.Go(func() error {
@@ -606,7 +615,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 					}
 					return err
 				}
-				_, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
+				n, err := siteGen.GeneratePostList(r.Context(), category, tmpl)
 				if err != nil {
 					if errors.As(err, &templateErr) {
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
@@ -614,6 +623,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 					}
 					return err
 				}
+				count.Add(int64(n))
 				return nil
 			})
 			err = group.Wait()
@@ -622,6 +632,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 				internalServerError(w, r, err)
 				return
 			}
+			response.Count = int(count.Load())
 			response.TemplateError = *templateErrPtr.Load()
 		}
 		writeResponse(w, r, response)
