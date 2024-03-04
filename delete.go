@@ -435,6 +435,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 			internalServerError(w, r, err)
 			return
 		}
+		// NOTE: if we deleted even a single post we must regenerate the post list. If we deleted even a single page we must regenerate the parent page.
 		if head == "output" {
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "posts" {
