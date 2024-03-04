@@ -252,7 +252,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		// map that keeps track of which outputDirs we have to delete
 		// - the map value need to indicate whether it was the file or folder that was deleted, or both
 		// map that keeps track of which pages or posts or post list needs to be regenerated.
-		// deleting a page or post should first involve deleting the source file, deleting the contents of the outputDir, then regenerating the .
+		// deleting a page or post should first involve deleting the source file (and replacing it if it is a permanent file), deleting the contents of the outputDir, then regenerating the parent page if head is pages, regenerating the post list if head is posts.
 		for i, name := range request.Names {
 			i, name := i, filepath.ToSlash(name)
 			if strings.Contains(name, "/") {
@@ -272,6 +272,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 					response.DeleteErrors[i] = err.Error()
 					return nil
 				}
+				_ = fileInfo
 				err = nbrew.FS.WithContext(groupctx).RemoveAll(filePath)
 				if err != nil {
 					response.DeleteErrors[i] = err.Error()
@@ -314,20 +315,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 								getLogger(groupctx).Error(err.Error())
 								return nil
 							}
-						}
-					} else {
-						var counterpart, outputDir string
-						if !fileInfo.IsDir() {
-							counterpart = strings.TrimSuffix(filePath, ".html")
-							outputDir = path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
-						} else {
-							counterpart = filePath + ".html"
-							outputDir = path.Join(sitePrefix, "output", tail, name)
-						}
-						err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, path.Ext(name))))
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
 						}
 					}
 				case "posts":
