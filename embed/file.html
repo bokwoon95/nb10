@@ -23,13 +23,9 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div>created page</div>
-    <div>generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
-    <div><a href='{{ $.URL }}'>view</a></div>
+    <div>created page (generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
-    <div>created post</div>
-    <div>generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
-    <div><a href='{{ $.URL }}'>view</a></div>
+    <div>created post (generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else }}
     <div>created file</div>
     {{- end }}
@@ -53,13 +49,9 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div>saved page</div>
-    <div>regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
-    <div><a href='{{ $.URL }}'>view</a></div>
+    <div>saved page (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
-    <div>saved post</div>
-    <div>regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}</div>
-    <div><a href='{{ $.URL }}'>view</a></div>
+    <div>saved post (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else }}
     <div>saved</div>
     {{- end }}
