@@ -622,6 +622,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, userna
 				internalServerError(w, r, err)
 				return
 			}
+			response.TemplateError = *templateErrPtr.Load()
 		}
 		writeResponse(w, r, response)
 	default:
