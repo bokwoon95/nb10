@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -244,7 +245,29 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 			writeResponse(w, r, response)
 			return
 		}
+
 		seen := make(map[string]bool)
+		n := 0
+		for _, name := range request.Names {
+			if strings.Contains(name, "/") {
+				continue
+			}
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			request.Names[n] = name
+			n++
+		}
+		request.Names = request.Names[:n]
+		slices.Sort(request.Names)
+
+		// output/foo/bar/ files | dirs | both
+		// NOTE!! This requires knowing whether foo.html is indeed a file, and whether foo is indeed a folder. So we still need to cache the FileInfo of some sort. Maybe a custom looping construct where we evaluate the next two items at once and advance the counter one more time if both items belong to a pair (e.g. foo and foo.html).
+		// It is not enough to know that foo and foo.html exist, we must confirm that foo is a folder and foo.html is a file.
+		// Since we evaluate up to two items at once, within the same loop we can delete the outputDir since we can determine if two items belonging to a pair exist (or not).
+		// Then within this loop we can also regenerate accordingly...?
+
 		head, tail, _ := strings.Cut(response.Parent, "/")
 		response.DeleteErrors = make([]string, len(request.Names))
 		response.Files = make([]File, len(request.Names))
@@ -253,6 +276,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		// - the map value need to indicate whether it was the file or folder that was deleted, or both
 		// map that keeps track of which pages or posts or post list needs to be regenerated.
 		// deleting a page or post should first involve deleting the source file (and replacing it if it is a permanent file), deleting the contents of the outputDir, then regenerating the parent page if head is pages, regenerating the post list if head is posts.
+		pageFiles := make(map[string]struct{})
+		pageDirs := make(map[string]struct{})
 		for i, name := range request.Names {
 			i, name := i, filepath.ToSlash(name)
 			if strings.Contains(name, "/") {
@@ -316,6 +341,13 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 								return nil
 							}
 						}
+					}
+					if fileInfo.IsDir() {
+						outputDir := path.Join(sitePrefix, "output", tail, name)
+						pageDirs[outputDir] = struct{}{}
+					} else {
+						outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, path.Ext(name)))
+						pageFiles[outputDir] = struct{}{}
 					}
 				case "posts":
 					err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", response.Parent, strings.TrimSuffix(name, path.Ext(name))))
@@ -397,19 +429,19 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 				return nil
 			})
 		}
-		if head == "output" {
-			next, _, _ := strings.Cut(tail, "/")
-			if next == "posts" {
-				// TODO: regenerate the post list
-			}
-		}
 		err := group.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
 		}
-		n := 0
+		if head == "output" {
+			next, _, _ := strings.Cut(tail, "/")
+			if next == "posts" {
+				// TODO: regenerate the post list
+			}
+		}
+		n = 0
 		for _, file := range response.Files {
 			if file.Name == "" {
 				continue
