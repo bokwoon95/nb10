@@ -267,7 +267,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 			deleteFiles       = 1 << 0
 			deleteDirectories = 1 << 1
 		)
-		// deleteOutputDirs := make(map[string]int)
+		deleteOutputDirs := make(map[string]int)
+		_ = deleteOutputDirs
 		var (
 			restoreIndexHTML           = false
 			restore404HTML             = false
