@@ -303,28 +303,29 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 			}
 		case "pages":
 			for i := 0; i < len(request.Names); i++ {
-				nameA := request.Names[i]
-				fileInfoA, err := fs.Stat(path.Join(sitePrefix, response.Parent, nameA))
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
-					return
-				}
-				var nameB string
-				var fileInfoB fs.FileInfo
-				if i+1 < len(request.Names) {
-					nameB = request.Names[i+1]
-				}
-				if nameB != "" {
-					fileInfoB, err = fs.Stat(path.Join(sitePrefix, response.Parent, nameB))
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
-						return
-					}
-				}
+				// nameA := request.Names[i]
+				// fileInfoA, err := fs.Stat(path.Join(sitePrefix, response.Parent, nameA))
+				// if err != nil {
+				// 	getLogger(r.Context()).Error(err.Error())
+				// 	internalServerError(w, r, err)
+				// 	return
+				// }
+				// var nameB string
+				// var fileInfoB fs.FileInfo
+				// if i+1 < len(request.Names) {
+				// 	nameB = request.Names[i+1]
+				// }
+				// if nameB != "" {
+				// 	fileInfoB, err = fs.Stat(path.Join(sitePrefix, response.Parent, nameB))
+				// 	if err != nil {
+				// 		getLogger(r.Context()).Error(err.Error())
+				// 		internalServerError(w, r, err)
+				// 		return
+				// 	}
+				// }
 			}
 		case "posts":
+			group, groupctx := errgroup.WithContext(r.Context())
 			for i, name := range request.Names {
 				i, name := i, name
 				group.Go(func() error {
@@ -334,8 +335,22 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 						return nil
 					}
 					response.Files[i] = File{Name: name}
+					if !strings.HasSuffix(name, ".md") {
+						return nil
+					}
+					err = nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", response.Parent, strings.TrimSuffix(name, ".md")))
+					if err != nil {
+						getLogger(groupctx).Error(err.Error())
+						return nil
+					}
 					return nil
 				})
+			}
+			err := group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
 			}
 		case "output":
 		}
@@ -350,6 +365,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		// - the map value need to indicate whether it was the file or folder that was deleted, or both
 		// map that keeps track of which pages or posts or post list needs to be regenerated.
 		// deleting a page or post should first involve deleting the source file (and replacing it if it is a permanent file), deleting the contents of the outputDir, then regenerating the parent page if head is pages, regenerating the post list if head is posts.
+		group, groupctx := errgroup.WithContext(r.Context())
 		pageFiles := make(map[string]struct{})
 		pageDirs := make(map[string]struct{})
 		for i, name := range request.Names {

@@ -19,8 +19,11 @@ createsite.go
 deletesite.go
 createfolder.go
 createfile.go => generated page|post in xxx duration view
-delete.go
-...
+(delete.go)
+search.go
+clipboard.go
+uploadfile.go
+rename.go
 serve_http.go
 notebrew/exit.go
 notebrew/exit_windows.go
