@@ -245,10 +245,10 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 			writeResponse(w, r, response)
 			return
 		}
-
 		seen := make(map[string]bool)
 		n := 0
 		for _, name := range request.Names {
+			name := filepath.ToSlash(name)
 			if strings.Contains(name, "/") {
 				continue
 			}
@@ -262,16 +262,90 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		request.Names = request.Names[:n]
 		slices.Sort(request.Names)
 
+		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		response.DeleteErrors = make([]string, len(request.Names))
+		response.Files = make([]File, len(request.Names))
+		switch head {
+		case "notes":
+			group, groupctx := errgroup.WithContext(r.Context())
+			for i, name := range request.Names {
+				i, name := i, name
+				group.Go(func() error {
+					err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, response.Parent, name))
+					if err != nil {
+						response.DeleteErrors[i] = err.Error()
+						return nil
+					}
+					response.Files[i] = File{Name: name}
+					if !strings.HasSuffix(name, ".md") {
+						return nil
+					}
+					err = nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", response.Parent, strings.TrimSuffix(name, ".md")))
+					if err != nil {
+						getLogger(groupctx).Error(err.Error())
+						return nil
+					}
+					return nil
+				})
+			}
+			err := group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+		case "pages":
+			for i := 0; i < len(request.Names); i++ {
+				nameA := request.Names[i]
+				fileInfoA, err := fs.Stat(path.Join(sitePrefix, response.Parent, nameA))
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				var nameB string
+				var fileInfoB fs.FileInfo
+				if i+1 < len(request.Names) {
+					nameB = request.Names[i+1]
+				}
+				if nameB != "" {
+					fileInfoB, err = fs.Stat(path.Join(sitePrefix, response.Parent, nameB))
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+				}
+			}
+		case "posts":
+			for i, name := range request.Names {
+				i, name := i, name
+				group.Go(func() error {
+					err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, response.Parent, name))
+					if err != nil {
+						response.DeleteErrors[i] = err.Error()
+						return nil
+					}
+					response.Files[i] = File{Name: name}
+					return nil
+				})
+			}
+		case "output":
+		}
+
 		// output/foo/bar/ files | dirs | both
 		// NOTE!! This requires knowing whether foo.html is indeed a file, and whether foo is indeed a folder. So we still need to cache the FileInfo of some sort. Maybe a custom looping construct where we evaluate the next two items at once and advance the counter one more time if both items belong to a pair (e.g. foo and foo.html).
 		// It is not enough to know that foo and foo.html exist, we must confirm that foo is a folder and foo.html is a file.
 		// Since we evaluate up to two items at once, within the same loop we can delete the outputDir since we can determine if two items belonging to a pair exist (or not).
 		// Then within this loop we can also regenerate accordingly...?
 
-		head, tail, _ := strings.Cut(response.Parent, "/")
-		response.DeleteErrors = make([]string, len(request.Names))
-		response.Files = make([]File, len(request.Names))
-		group, groupctx := errgroup.WithContext(r.Context())
 		// map that keeps track of which outputDirs we have to delete
 		// - the map value need to indicate whether it was the file or folder that was deleted, or both
 		// map that keeps track of which pages or posts or post list needs to be regenerated.
@@ -429,11 +503,22 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 				return nil
 			})
 		}
-		err := group.Wait()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
+		if "" != "" {
+			// TODO: regenerate the post list template if head is posts
+			category := tail
+			tmpl, err := siteGen.PostListTemplate(r.Context(), category)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			_, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+
 		}
 		// NOTE: if we deleted even a single post we must regenerate the post list. If we deleted even a single page we must regenerate the parent page.
 		if head == "output" {
