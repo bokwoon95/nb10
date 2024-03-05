@@ -14,12 +14,13 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, sitePrefix string) {
+func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Request struct {
 		Parent string   `json:"parent"`
 		Names  []string `json:"names"`
@@ -94,7 +95,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentSite = nbrew.contentSite(sitePrefix)
-		response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		if response.Error != "" {
@@ -268,7 +269,10 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 			deleteDirectories bool
 		}
 		outputDirsToDelete := make(map[string]deleteAction)
+		outputDirsToDeleteMu := sync.Mutex{}
 		_ = outputDirsToDelete
+		outputDirsToDeleteMu.Lock()
+		outputDirsToDeleteMu.Unlock()
 		var (
 			restoreIndexHTML           = false
 			restore404HTML             = false

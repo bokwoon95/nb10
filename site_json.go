@@ -30,7 +30,7 @@ var chromaStyles = map[string]bool{
 	"vs": true, "vulcan": true, "witchhazel": true, "xcode-dark": true, "xcode": true,
 }
 
-func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username, sitePrefix string) {
+func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type NavigationLink struct {
 		Name string       `json:"name"`
 		URL  template.URL `json:"url"`
@@ -126,7 +126,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentSite = nbrew.contentSite(sitePrefix)
-		response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "site.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -261,7 +261,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, username
 			TimeTaken:       result.TimeTaken.String(),
 			TemplateError:   result.TemplateError,
 			ContentSite:     nbrew.contentSite(sitePrefix),
-			Username:        NullString{String: username, Valid: nbrew.DB != nil},
+			Username:        NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:      sitePrefix,
 			Title:           request.Title,
 			Emoji:           request.Emoji,

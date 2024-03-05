@@ -291,16 +291,16 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.regenerate(w, r, sitePrefix)
 			return
 		case "site.json":
-			nbrew.siteJSON(w, r, user.Username, sitePrefix)
+			nbrew.siteJSON(w, r, user, sitePrefix)
 			return
 		case "createfolder":
 			nbrew.createfolder(w, r, user, sitePrefix)
 			return
 		case "createfile":
-			// nbrew.createfile(w, r, username, sitePrefix)
+			nbrew.createfile(w, r, user, sitePrefix)
 			return
 		case "delete":
-			// nbrew.delete(w, r, username, sitePrefix)
+			nbrew.delete(w, r, user, sitePrefix)
 			return
 		case "search":
 			// nbrew.search(w, r, username, sitePrefix)
@@ -338,8 +338,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(head, "@") {
 				sitePrefix, urlPath = head, tail
 			} else if tld != "" {
-				// head is a sitePrefix only if its TLD is not a file
-				// extension.
+				// head that is a sitePrefix:     img.nbrew.io/example.com
+				// head that is NOT a sitePrefix: img.nbrew.io/example.jpg
 				_, ok := fileTypes[tld]
 				if !ok {
 					sitePrefix, urlPath = head, tail
