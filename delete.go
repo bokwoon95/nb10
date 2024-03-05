@@ -1,6 +1,7 @@
 package nb10
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -262,6 +263,47 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		request.Names = request.Names[:n]
 		slices.Sort(request.Names)
 
+		const (
+			deleteFiles       = 1 << 0
+			deleteDirectories = 1 << 1
+		)
+		// deleteOutputDirs := make(map[string]int)
+		var (
+			restoreIndexHTML           = false
+			restore404HTML             = false
+			restorePostHTML            = false
+			restorePostListHTML        = false
+			regenerateIndexHTML        = false
+			regenerate404HTML          = false
+			regenerateCategoryPosts    = sql.NullString{}
+			regenerateCategoryPostList = sql.NullString{}
+			regenerateParentPage       = sql.NullString{} // "pages/foo/bar/baz.html"
+			regenerateParentPost       = sql.NullString{} // "posts/foo/bar/baz.md"
+		)
+		var (
+			_ = restoreIndexHTML
+			_ = restore404HTML
+			_ = restorePostHTML
+			_ = restorePostListHTML
+			_ = regenerateIndexHTML
+			_ = regenerate404HTML
+			_ = regenerateCategoryPosts
+			_ = regenerateCategoryPostList
+			_ = regenerateParentPage
+			_ = regenerateParentPost
+		)
+		// 1. delete files
+		// 2. delete outputDir (if an entire post category was deleted, we also delete the entire output/posts/{category})
+		// 3. if index.html | 404.html was deleted, fill them in with embed/index.html | embed/404.html and regenerate the pages
+		// 4. if post.html was deleted, fill it in with embed/post.html and regenerate all posts for the category
+		// 5. if (postlist.html was deleted or a post was deleted), if (postlist.html was deleted) fill it in with embed/postlist.html. then, regenerate the postlist for the category
+		// 6. if a page was deleted, regenerate the parent page
+		// 7. if a page asset or page image was deleted, regenerate the page
+		// 8. if a post image was deleted, regenerate the post
+
+		// TODO: we can gate the siteGen creation behind all the booleans
+		// defined above so that if there's no need to regenerate anything we
+		// can skip the database call that NewSiteGenerator() makes.
 		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -284,14 +326,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 						return nil
 					}
 					response.Files[i] = File{Name: name}
-					if !strings.HasSuffix(name, ".md") {
-						return nil
-					}
-					err = nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", response.Parent, strings.TrimSuffix(name, ".md")))
-					if err != nil {
-						getLogger(groupctx).Error(err.Error())
-						return nil
-					}
 					return nil
 				})
 			}
