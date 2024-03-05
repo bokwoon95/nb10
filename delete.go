@@ -263,11 +263,11 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, username, 
 		request.Names = request.Names[:n]
 		slices.Sort(request.Names)
 
-		const (
-			deleteFiles       = 1 << 0
-			deleteDirectories = 1 << 1
-		)
-		outputDirsToDelete := make(map[string]int)
+		type deleteAction struct {
+			deleteFiles       bool
+			deleteDirectories bool
+		}
+		outputDirsToDelete := make(map[string]deleteAction)
 		_ = outputDirsToDelete
 		var (
 			restoreIndexHTML           = false
