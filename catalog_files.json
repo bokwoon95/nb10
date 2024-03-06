@@ -48,7 +48,7 @@
           "default": "VARCHAR(500)"
         },
         "generated": {
-          "expression": "substring_index(file_path, '/', -1);",
+          "expression": "substring_index(file_path, '/', -1)",
           "stored": true
         }
       },
