@@ -101,9 +101,14 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 		config.CodeStyle = "onedark"
 	}
 	if len(config.NavigationLinks) == 0 {
-		home := strings.TrimPrefix(sitePrefix, "@")
-		if home == "" {
+		var home string
+		siteName := strings.TrimPrefix(sitePrefix, "@")
+		if siteName == "" {
 			home = "home"
+		} else if strings.Contains(siteName, ".") {
+			home = siteName
+		} else {
+			home = siteName + "." + contentDomain
 		}
 		config.NavigationLinks = []NavigationLink{
 			{Name: home, URL: "/"},
