@@ -1505,9 +1505,9 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 }
 
 type TemplateError struct {
-	Name         string
-	Line         int
-	ErrorMessage string
+	Name         string `json:"name"`
+	Line         int    `json:"line"`
+	ErrorMessage string `json:"errorMessage"`
 }
 
 func NewTemplateError(err error) error {
