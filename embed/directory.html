@@ -324,7 +324,7 @@
     {{- range $file := $.Files }}
     <li class='bb pv2'>
       <label for='{{ $file.Name }}' class='flex items-center pointer' data-disable-click-selection>
-        <div class='mr2'>
+        <div class='mr2 flex items-center'>
           <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='pointer'>
         </div>
         <div class='br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
