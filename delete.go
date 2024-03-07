@@ -282,8 +282,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			regenerate404HTML          atomic.Bool
 			regenerateCategoryPosts    atomic.Pointer[string]
 			regenerateCategoryPostList atomic.Pointer[string]
-			regenerateParentPage       atomic.Pointer[string] // "pages/foo/bar/baz.html"
-			regenerateParentPost       atomic.Pointer[string] // "posts/foo/bar/baz.md"
+			regenerateParentPage       atomic.Pointer[string] // e.g. "pages/foo/bar/baz.html" NOTE: may not exist
+			regenerateParentPost       atomic.Pointer[string] // e.g. "posts/foo/bar/baz.md" NOTE: may not exist
 		)
 		var (
 			_ = &restoreIndexHTML
@@ -320,31 +320,33 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				case "pages":
 					isDir := fileInfo.IsDir()
 					if !fileInfo.IsDir() {
-						if tail == "" {
-							if name == "index.html" {
-								outputDir := path.Join(sitePrefix, "output")
-								outputDirsToDeleteMu.Lock()
-								outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
-								outputDirsToDeleteMu.Unlock()
-								restoreIndexHTML.Store(true)
-								regenerateIndexHTML.Store(true)
-								return nil
-							}
-							if name == "404.html" {
-								outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
-								outputDirsToDeleteMu.Lock()
-								outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
-								outputDirsToDeleteMu.Unlock()
-								restore404HTML.Store(true)
-								regenerate404HTML.Store(true)
-								return nil
-							}
+						if tail == "" && name == "index.html" {
+							outputDir := path.Join(sitePrefix, "output")
+							outputDirsToDeleteMu.Lock()
+							outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
+							outputDirsToDeleteMu.Unlock()
+							restoreIndexHTML.Store(true)
+							regenerateIndexHTML.Store(true)
+							return nil
+						}
+						if tail == "" && name == "404.html" {
+							outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
+							outputDirsToDeleteMu.Lock()
+							outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
+							outputDirsToDeleteMu.Unlock()
+							restore404HTML.Store(true)
+							regenerate404HTML.Store(true)
+							return nil
 						}
 						outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
 						outputDirsToDeleteMu.Lock()
 						outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
 						outputDirsToDeleteMu.Unlock()
 					} else {
+						outputDir := path.Join(sitePrefix, "output", tail, name)
+						outputDirsToDeleteMu.Lock()
+						outputDirsToDelete[outputDir] = deleteAction{deleteDirectories: true}
+						outputDirsToDeleteMu.Unlock()
 					}
 					if tail == "" {
 						if isDir && name == "index.html" {
