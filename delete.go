@@ -432,7 +432,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						name := dirEntry.Name()
 						subgroup.Go(func() error {
-							return nbrew.FS.WithContext(subctx).Remove(path.Join(sitePrefix, outputDir, name))
+							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
 						})
 					}
 					return subgroup.Wait()
@@ -463,7 +463,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						name := dirEntry.Name()
 						subgroup.Go(func() error {
-							return nbrew.FS.WithContext(subctx).Remove(path.Join(sitePrefix, outputDir, name))
+							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
 						})
 					}
 					return subgroup.Wait()
