@@ -275,7 +275,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		}
 		var (
 			outputDirsToDelete          = make(map[string]deleteAction)
-			outputDirsToDeleteMu        = sync.Mutex{}
+			outputDirsToDeleteMutex     = sync.Mutex{}
 			resetIndexHTML              atomic.Bool
 			reset404HTML                atomic.Bool
 			restoreCategoryPostHTML     atomic.Pointer[string]
@@ -307,28 +307,28 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				case "pages":
 					if fileInfo.IsDir() {
 						outputDir := path.Join("output", tail, name)
-						outputDirsToDeleteMu.Lock()
+						outputDirsToDeleteMutex.Lock()
 						deleteAction := outputDirsToDelete[outputDir]
 						deleteAction.deleteDirectories = true
 						outputDirsToDelete[outputDir] = deleteAction
-						outputDirsToDeleteMu.Unlock()
+						outputDirsToDeleteMutex.Unlock()
 					} else {
 						if tail == "" {
 							if name == "index.html" {
 								outputDir := "output"
-								outputDirsToDeleteMu.Lock()
+								outputDirsToDeleteMutex.Lock()
 								deleteAction := outputDirsToDelete[outputDir]
 								deleteAction.deleteFiles = true
 								outputDirsToDelete[outputDir] = deleteAction
-								outputDirsToDeleteMu.Unlock()
+								outputDirsToDeleteMutex.Unlock()
 								resetIndexHTML.Store(true)
 							} else {
 								outputDir := path.Join("output", strings.TrimSuffix(name, ".html"))
-								outputDirsToDeleteMu.Lock()
+								outputDirsToDeleteMutex.Lock()
 								deleteAction := outputDirsToDelete[outputDir]
 								deleteAction.deleteFiles = true
 								outputDirsToDelete[outputDir] = deleteAction
-								outputDirsToDeleteMu.Unlock()
+								outputDirsToDeleteMutex.Unlock()
 								if name == "404.html" {
 									reset404HTML.Store(true)
 								} else {
@@ -338,11 +338,11 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 							}
 						} else {
 							outputDir := path.Join("output", tail, strings.TrimSuffix(name, ".html"))
-							outputDirsToDeleteMu.Lock()
+							outputDirsToDeleteMutex.Lock()
 							deleteAction := outputDirsToDelete[outputDir]
 							deleteAction.deleteFiles = true
 							outputDirsToDelete[outputDir] = deleteAction
-							outputDirsToDeleteMu.Unlock()
+							outputDirsToDeleteMutex.Unlock()
 							parentPage := response.Parent + ".html"
 							regenerateParentPage.Store(&parentPage)
 						}
@@ -355,12 +355,12 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					if !strings.Contains(category, "/") {
 						if strings.HasSuffix(name, ".md") {
 							outputDir := path.Join("output/posts", tail, strings.TrimSuffix(name, ".md"))
-							outputDirsToDeleteMu.Lock()
+							outputDirsToDeleteMutex.Lock()
 							deleteAction := outputDirsToDelete[outputDir]
 							deleteAction.deleteFiles = true
 							deleteAction.deleteDirectories = true
 							outputDirsToDelete[outputDir] = deleteAction
-							outputDirsToDeleteMu.Unlock()
+							outputDirsToDeleteMutex.Unlock()
 							regenerateCategoryPostList.Store(&category)
 						} else if name == "post.html" {
 							restoreCategoryPostHTML.Store(&category)
