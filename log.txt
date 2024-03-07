@@ -45,6 +45,7 @@ TODO: for page assets, we need to include a little help link "how do I include a
         - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
     - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 TODO: once we finish porting nb9 over to nb10, look into accepting a user struct instead of username in the handlers and decide what to do if the account is disabled.
+TODO: RE: alt text is embedded into the caption and indicated by whether the first line starts with !alt
 TODO: copy a private implementation of certmagic.MatchWildcard so that notebrew itself doesn't rely on certmagic.
 
 sample template error message
