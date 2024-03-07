@@ -1,7 +1,6 @@
 package nb10
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -15,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -44,7 +44,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 	isValidParent := func(parent string) bool {
 		head, _, _ := strings.Cut(parent, "/")
 		switch head {
-		case "notes", "pages", "output":
+		case "notes", "pages", "posts", "output":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
 			if err != nil {
 				return false
@@ -274,29 +274,125 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		outputDirsToDeleteMu.Lock()
 		outputDirsToDeleteMu.Unlock()
 		var (
-			restoreIndexHTML           = false
-			restore404HTML             = false
-			restorePostHTML            = false
-			restorePostListHTML        = false
-			regenerateIndexHTML        = false
-			regenerate404HTML          = false
-			regenerateCategoryPosts    = sql.NullString{}
-			regenerateCategoryPostList = sql.NullString{}
-			regenerateParentPage       = sql.NullString{} // "pages/foo/bar/baz.html"
-			regenerateParentPost       = sql.NullString{} // "posts/foo/bar/baz.md"
+			restoreIndexHTML           atomic.Bool
+			restore404HTML             atomic.Bool
+			restorePostHTML            atomic.Bool
+			restorePostListHTML        atomic.Bool
+			regenerateIndexHTML        atomic.Bool
+			regenerate404HTML          atomic.Bool
+			regenerateCategoryPosts    atomic.Pointer[string]
+			regenerateCategoryPostList atomic.Pointer[string]
+			regenerateParentPage       atomic.Pointer[string] // "pages/foo/bar/baz.html"
+			regenerateParentPost       atomic.Pointer[string] // "posts/foo/bar/baz.md"
 		)
 		var (
-			_ = restoreIndexHTML
-			_ = restore404HTML
-			_ = restorePostHTML
-			_ = restorePostListHTML
-			_ = regenerateIndexHTML
-			_ = regenerate404HTML
-			_ = regenerateCategoryPosts
-			_ = regenerateCategoryPostList
-			_ = regenerateParentPage
-			_ = regenerateParentPost
+			_ = &restoreIndexHTML
+			_ = &restore404HTML
+			_ = &restorePostHTML
+			_ = &restorePostListHTML
+			_ = &regenerateIndexHTML
+			_ = &regenerate404HTML
+			_ = &regenerateCategoryPosts
+			_ = &regenerateCategoryPostList
+			_ = &regenerateParentPage
+			_ = &regenerateParentPost
 		)
+
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		group, groupctx := errgroup.WithContext(r.Context())
+		for i, name := range request.Names {
+			i, name := i, name
+			group.Go(func() error {
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						return nil
+					}
+					return err
+				}
+				err = nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, response.Parent, name))
+				if err != nil {
+					response.DeleteErrors[i] = err.Error()
+					return nil
+				}
+				response.Files[i] = File{Name: name}
+				switch head {
+				case "pages":
+					isDir := fileInfo.IsDir()
+					if !fileInfo.IsDir() {
+						if tail == "" {
+							if name == "index.html" {
+								outputDir := path.Join(sitePrefix, "output")
+								outputDirsToDeleteMu.Lock()
+								outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
+								outputDirsToDeleteMu.Unlock()
+								restoreIndexHTML.Store(true)
+								regenerateIndexHTML.Store(true)
+								return nil
+							}
+							if name == "404.html" {
+								outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
+								outputDirsToDeleteMu.Lock()
+								outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
+								outputDirsToDeleteMu.Unlock()
+								restore404HTML.Store(true)
+								regenerate404HTML.Store(true)
+								return nil
+							}
+						}
+						outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
+						outputDirsToDeleteMu.Lock()
+						outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true}
+						outputDirsToDeleteMu.Unlock()
+					} else {
+					}
+					if tail == "" {
+						if isDir && name == "index.html" {
+							restoreIndexHTML.Store(true)
+							regenerateIndexHTML.Store(true)
+							return nil
+						}
+						if name == "404.html" {
+							restore404HTML.Store(true)
+							regenerate404HTML.Store(true)
+						}
+					}
+					if fileInfo.IsDir() {
+					} else {
+					}
+				case "posts":
+					category := path.Dir(tail)
+					if category == "." {
+						category = ""
+					}
+					if strings.HasSuffix(name, ".md") {
+						outputDir := path.Join(sitePrefix, "output/posts", tail, strings.TrimSuffix(name, ".md"))
+						outputDirsToDeleteMu.Lock()
+						outputDirsToDelete[outputDir] = deleteAction{deleteFiles: true, deleteDirectories: true}
+						outputDirsToDeleteMu.Unlock()
+					}
+					if name == "post.html" {
+						restorePostHTML.Store(true)
+						regenerateCategoryPosts.Store(&category)
+						return nil
+					}
+					if name == "postlist.html" {
+						restorePostListHTML.Store(true)
+						regenerateCategoryPostList.Store(&category)
+						return nil
+					}
+				case "output":
+				}
+				return nil
+			})
+		}
+		err := group.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+
 		// 1. delete files
 		// 2. delete outputDir (if an entire post category was deleted, we also delete the entire output/posts/{category})
 		// 3. if index.html | 404.html was deleted, fill them in with embed/index.html | embed/404.html and regenerate the pages
@@ -316,7 +412,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
-		head, tail, _ := strings.Cut(response.Parent, "/")
 		response.DeleteErrors = make([]string, len(request.Names))
 		response.Files = make([]File, len(request.Names))
 		switch head {
