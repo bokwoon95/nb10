@@ -716,15 +716,19 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 			response.Count = 1
 		case "posts":
+			category := path.Dir(tail)
+			if category == "." {
+				category = ""
+			}
+			if !strings.HasSuffix(filePath, ".md") {
+				// TODO: we need to add special handling for post.html and postlist.html.
+				break
+			}
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
-			}
-			category := path.Dir(tail)
-			if category == "." {
-				category = ""
 			}
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
@@ -777,6 +781,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return
 			}
 			response.Count = 1
+			if templateErrPtr.Load() != nil {
+				response.TemplateError = *templateErrPtr.Load()
+			}
 		}
 		writeResponse(w, r, response)
 	default:

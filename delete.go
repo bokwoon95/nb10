@@ -32,13 +32,18 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		ModTime time.Time `json:"modTime"`
 	}
 	type Response struct {
-		Error        string     `json:"status"`
-		DeleteErrors []string   `json:"deleteErrors"`
-		ContentSite  string     `json:"contentSite"`
-		Username     NullString `json:"username"`
-		SitePrefix   string     `json:"sitePrefix"`
-		Parent       string     `json:"parent"`
-		Files        []File     `json:"files"`
+		Error         string        `json:"status"`
+		DeleteErrors  []string      `json:"deleteErrors"`
+		ContentSite   string        `json:"contentSite"`
+		Username      NullString    `json:"username"`
+		SitePrefix    string        `json:"sitePrefix"`
+		Parent        string        `json:"parent"`
+		Files         []File        `json:"files"`
+		Count         int           `json:"count"`
+		TimeTaken     string        `json:"timeTaken"`
+		TemplateError TemplateError `json:"templateError"`
+		// deleted $.(len $.Files) files ($.(len $.DeleteErrors) errors)
+		// regenerated $.Count files in $.TimeTaken
 	}
 
 	isValidParent := func(parent string) bool {
@@ -268,49 +273,31 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			deleteFiles       bool
 			deleteDirectories bool
 		}
-		outputDirsToDelete := make(map[string]deleteAction)
-		outputDirsToDeleteMu := sync.Mutex{}
-		_ = outputDirsToDelete
-		outputDirsToDeleteMu.Lock()
-		outputDirsToDeleteMu.Unlock()
 		var (
-			restoreIndexHTML           atomic.Bool
-			restore404HTML             atomic.Bool
-			restorePostHTML            atomic.Bool
-			restorePostListHTML        atomic.Bool
-			regenerateIndexHTML        atomic.Bool
-			regenerate404HTML          atomic.Bool
-			regenerateCategoryPosts    atomic.Pointer[string]
-			regenerateCategoryPostList atomic.Pointer[string]
-			regenerateParentPage       atomic.Pointer[string] // e.g. "pages/foo/bar/baz.html" NOTE: may not exist
-			regenerateParentPost       atomic.Pointer[string] // e.g. "posts/foo/bar/baz.md" NOTE: may not exist
+			outputDirsToDelete          = make(map[string]deleteAction)
+			outputDirsToDeleteMu        = sync.Mutex{}
+			resetIndexHTML              atomic.Bool
+			reset404HTML                atomic.Bool
+			restoreCategoryPostHTML     atomic.Pointer[string]
+			restoreCategoryPostListHTML atomic.Pointer[string]
+			regenerateCategoryPosts     atomic.Pointer[string]
+			regenerateCategoryPostList  atomic.Pointer[string]
+			regenerateParentPage        atomic.Pointer[string]
+			regenerateParentPost        atomic.Pointer[string]
 		)
-		var (
-			_ = &restoreIndexHTML
-			_ = &restore404HTML
-			_ = &restorePostHTML
-			_ = &restorePostListHTML
-			_ = &regenerateIndexHTML
-			_ = &regenerate404HTML
-			_ = &regenerateCategoryPosts
-			_ = &regenerateCategoryPostList
-			_ = &regenerateParentPage
-			_ = &regenerateParentPost
-		)
-
 		head, tail, _ := strings.Cut(response.Parent, "/")
-		group, groupctx := errgroup.WithContext(r.Context())
+		groupA, groupctxA := errgroup.WithContext(r.Context())
 		for i, name := range request.Names {
 			i, name := i, name
-			group.Go(func() error {
-				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
+			groupA.Go(func() error {
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxA), path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
 					return err
 				}
-				err = nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, response.Parent, name))
+				err = nbrew.FS.WithContext(groupctxA).RemoveAll(path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					response.DeleteErrors[i] = err.Error()
 					return nil
@@ -318,88 +305,173 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				response.Files[i] = File{Name: name}
 				switch head {
 				case "pages":
-					isDir := fileInfo.IsDir()
-					if !fileInfo.IsDir() {
-						if tail == "" && name == "index.html" {
-							outputDir := path.Join(sitePrefix, "output")
-							outputDirsToDeleteMu.Lock()
-							deleteAction := outputDirsToDelete[outputDir]
-							deleteAction.deleteFiles = true
-							outputDirsToDelete[outputDir] = deleteAction
-							outputDirsToDeleteMu.Unlock()
-							restoreIndexHTML.Store(true)
-							regenerateIndexHTML.Store(true)
-							return nil
-						}
-						if tail == "" && name == "404.html" {
-							outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
-							outputDirsToDeleteMu.Lock()
-							deleteAction := outputDirsToDelete[outputDir]
-							deleteAction.deleteFiles = true
-							outputDirsToDelete[outputDir] = deleteAction
-							outputDirsToDeleteMu.Unlock()
-							restore404HTML.Store(true)
-							regenerate404HTML.Store(true)
-							return nil
-						}
-						outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, ".html"))
-						outputDirsToDeleteMu.Lock()
-						deleteAction := outputDirsToDelete[outputDir]
-						deleteAction.deleteFiles = true
-						outputDirsToDelete[outputDir] = deleteAction
-						outputDirsToDeleteMu.Unlock()
-					} else {
-						outputDir := path.Join(sitePrefix, "output", tail, name)
+					if fileInfo.IsDir() {
+						outputDir := path.Join("output", tail, name)
 						outputDirsToDeleteMu.Lock()
 						deleteAction := outputDirsToDelete[outputDir]
 						deleteAction.deleteDirectories = true
 						outputDirsToDelete[outputDir] = deleteAction
 						outputDirsToDeleteMu.Unlock()
-					}
-					if tail == "" {
-						if isDir && name == "index.html" {
-							restoreIndexHTML.Store(true)
-							regenerateIndexHTML.Store(true)
-							return nil
-						}
-						if name == "404.html" {
-							restore404HTML.Store(true)
-							regenerate404HTML.Store(true)
-						}
-					}
-					if fileInfo.IsDir() {
 					} else {
+						if tail == "" {
+							if name == "index.html" {
+								outputDir := "output"
+								outputDirsToDeleteMu.Lock()
+								deleteAction := outputDirsToDelete[outputDir]
+								deleteAction.deleteFiles = true
+								outputDirsToDelete[outputDir] = deleteAction
+								outputDirsToDeleteMu.Unlock()
+								resetIndexHTML.Store(true)
+							} else {
+								outputDir := path.Join("output", strings.TrimSuffix(name, ".html"))
+								outputDirsToDeleteMu.Lock()
+								deleteAction := outputDirsToDelete[outputDir]
+								deleteAction.deleteFiles = true
+								outputDirsToDelete[outputDir] = deleteAction
+								outputDirsToDeleteMu.Unlock()
+								if name == "404.html" {
+									reset404HTML.Store(true)
+								} else {
+									parentPage := "pages/index.html"
+									regenerateParentPage.Store(&parentPage)
+								}
+							}
+						} else {
+							outputDir := path.Join("output", tail, strings.TrimSuffix(name, ".html"))
+							outputDirsToDeleteMu.Lock()
+							deleteAction := outputDirsToDelete[outputDir]
+							deleteAction.deleteFiles = true
+							outputDirsToDelete[outputDir] = deleteAction
+							outputDirsToDeleteMu.Unlock()
+							parentPage := response.Parent + ".html"
+							regenerateParentPage.Store(&parentPage)
+						}
 					}
 				case "posts":
 					category := path.Dir(tail)
 					if category == "." {
 						category = ""
 					}
-					if strings.HasSuffix(name, ".md") {
-						outputDir := path.Join(sitePrefix, "output/posts", tail, strings.TrimSuffix(name, ".md"))
-						outputDirsToDeleteMu.Lock()
-						deleteAction := outputDirsToDelete[outputDir]
-						deleteAction.deleteFiles = true
-						deleteAction.deleteDirectories = true
-						outputDirsToDelete[outputDir] = deleteAction
-						outputDirsToDeleteMu.Unlock()
-					}
-					if name == "post.html" {
-						restorePostHTML.Store(true)
-						regenerateCategoryPosts.Store(&category)
-						return nil
-					}
-					if name == "postlist.html" {
-						restorePostListHTML.Store(true)
-						regenerateCategoryPostList.Store(&category)
-						return nil
+					if !strings.Contains(category, "/") {
+						if strings.HasSuffix(name, ".md") {
+							outputDir := path.Join("output/posts", tail, strings.TrimSuffix(name, ".md"))
+							outputDirsToDeleteMu.Lock()
+							deleteAction := outputDirsToDelete[outputDir]
+							deleteAction.deleteFiles = true
+							deleteAction.deleteDirectories = true
+							outputDirsToDelete[outputDir] = deleteAction
+							outputDirsToDeleteMu.Unlock()
+							regenerateCategoryPostList.Store(&category)
+						} else if name == "post.html" {
+							restoreCategoryPostHTML.Store(&category)
+							regenerateCategoryPosts.Store(&category)
+						} else if name == "postlist.html" {
+							restoreCategoryPostListHTML.Store(&category)
+							regenerateCategoryPostList.Store(&category)
+						}
 					}
 				case "output":
+					if !fileInfo.IsDir() {
+						next, _, _ := strings.Cut(tail, "/")
+						if next == "posts" {
+							switch path.Ext(name) {
+							case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+								parentPost := path.Dir(tail) + ".md"
+								regenerateParentPost.Store(&parentPost)
+							}
+						} else if next != "themes" {
+							switch path.Ext(name) {
+							case ".jpeg", ".jpg", ".png", ".webp", ".gif", ".md":
+								parentPage := path.Join("pages", path.Dir(tail)+".html")
+								regenerateParentPage.Store(&parentPage)
+							}
+						}
+					}
 				}
 				return nil
 			})
 		}
-		err := group.Wait()
+		err := groupA.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+
+		groupB, groupctxB := errgroup.WithContext(r.Context())
+		for outputDir, deleteAction := range outputDirsToDelete {
+			outputDir, deleteAction := outputDir, deleteAction
+			groupB.Go(func() error {
+				if deleteAction.deleteFiles && deleteAction.deleteDirectories {
+					return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
+				}
+				_, tail, _ := strings.Cut(outputDir, "/")
+				if deleteAction.deleteFiles {
+					if tail != "" {
+						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), path.Join("pages", tail))
+						if err != nil {
+							if errors.Is(err, fs.ErrNotExist) {
+								return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
+							} else {
+								return err
+							}
+						} else {
+							if !fileInfo.IsDir() {
+								return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
+							}
+						}
+					}
+					dirEntries, err := nbrew.FS.WithContext(groupctxB).ReadDir(path.Join(sitePrefix, outputDir))
+					if err != nil {
+						return err
+					}
+					subgroup, subctx := errgroup.WithContext(groupctxB)
+					for _, dirEntry := range dirEntries {
+						if dirEntry.IsDir() {
+							continue
+						}
+						name := dirEntry.Name()
+						subgroup.Go(func() error {
+							return nbrew.FS.WithContext(subctx).Remove(path.Join(sitePrefix, outputDir, name))
+						})
+					}
+					return subgroup.Wait()
+				}
+				if deleteAction.deleteDirectories {
+					if tail != "" {
+						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), path.Join("pages", tail+".html"))
+						if err != nil {
+							if errors.Is(err, fs.ErrNotExist) {
+								return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
+							} else {
+								return err
+							}
+						} else {
+							if fileInfo.IsDir() {
+								return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
+							}
+						}
+					}
+					dirEntries, err := nbrew.FS.WithContext(groupctxB).ReadDir(path.Join(sitePrefix, outputDir))
+					if err != nil {
+						return err
+					}
+					subgroup, subctx := errgroup.WithContext(groupctxB)
+					for _, dirEntry := range dirEntries {
+						if !dirEntry.IsDir() {
+							continue
+						}
+						name := dirEntry.Name()
+						subgroup.Go(func() error {
+							return nbrew.FS.WithContext(subctx).Remove(path.Join(sitePrefix, outputDir, name))
+						})
+					}
+					return subgroup.Wait()
+				}
+				return nil
+			})
+		}
+		err = groupB.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
@@ -412,284 +484,294 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		// 4. if post.html was deleted, fill it in with embed/post.html and regenerate all posts for the category
 		// 5. if (postlist.html was deleted or a post was deleted), if (postlist.html was deleted) fill it in with embed/postlist.html. then, regenerate the postlist for the category
 		// 6. if a page was deleted, regenerate the parent page
-		// 7. if a page asset or page image was deleted, regenerate the page
-		// 8. if a post image was deleted, regenerate the post
-
-		// TODO: we can gate the siteGen creation behind all the booleans
-		// defined above so that if there's no need to regenerate anything we
-		// can skip the database call that NewSiteGenerator() makes.
-		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+		// 7. if a page asset (markdown file or image) was deleted, regenerate the parent page
+		// 8. if a post image was deleted, regenerate the parent post
+		groupC, groupctxC := errgroup.WithContext(r.Context())
+		var indexHTML string
+		if resetIndexHTML.Load() {
+			groupC.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
+				if err != nil {
+					return err
+				}
+				indexHTML = string(b)
+				writer, err := nbrew.FS.WithContext(groupctxC).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		var x404HTML string
+		if reset404HTML.Load() {
+			groupC.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
+				if err != nil {
+					return err
+				}
+				x404HTML = string(b)
+				writer, err := nbrew.FS.WithContext(groupctxC).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		if restoreCategoryPostHTML.Load() != nil {
+			groupC.Go(func() error {
+				category := *restoreCategoryPostHTML.Load()
+				b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctxC).OpenWriter(path.Join(sitePrefix, "posts", category, "post.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		if restoreCategoryPostListHTML.Load() != nil {
+			groupC.Go(func() error {
+				category := *restoreCategoryPostListHTML.Load()
+				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctxC).OpenWriter(path.Join(sitePrefix, "posts", category, "postlist.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		err = groupC.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
 		}
 
-		response.DeleteErrors = make([]string, len(request.Names))
-		response.Files = make([]File, len(request.Names))
-		switch head {
-		case "notes":
-			group, groupctx := errgroup.WithContext(r.Context())
-			for i, name := range request.Names {
-				i, name := i, name
-				group.Go(func() error {
-					err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, response.Parent, name))
-					if err != nil {
-						response.DeleteErrors[i] = err.Error()
-						return nil
-					}
-					response.Files[i] = File{Name: name}
-					return nil
-				})
-			}
-			err := group.Wait()
+		if resetIndexHTML.Load() ||
+			reset404HTML.Load() ||
+			regenerateCategoryPosts.Load() != nil ||
+			regenerateCategoryPostList.Load() != nil ||
+			regenerateParentPage.Load() != nil ||
+			regenerateParentPost.Load() != nil {
+			// TODO: we can gate the siteGen creation behind all the booleans
+			// defined above so that if there's no need to regenerate anything we
+			// can skip the database call that NewSiteGenerator() makes.
+			var templateErrPtr atomic.Pointer[TemplateError]
+			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
 			}
-		case "pages":
-			for i := 0; i < len(request.Names); i++ {
-				// nameA := request.Names[i]
-				// fileInfoA, err := fs.Stat(path.Join(sitePrefix, response.Parent, nameA))
-				// if err != nil {
-				// 	getLogger(r.Context()).Error(err.Error())
-				// 	internalServerError(w, r, err)
-				// 	return
-				// }
-				// var nameB string
-				// var fileInfoB fs.FileInfo
-				// if i+1 < len(request.Names) {
-				// 	nameB = request.Names[i+1]
-				// }
-				// if nameB != "" {
-				// 	fileInfoB, err = fs.Stat(path.Join(sitePrefix, response.Parent, nameB))
-				// 	if err != nil {
-				// 		getLogger(r.Context()).Error(err.Error())
-				// 		internalServerError(w, r, err)
-				// 		return
-				// 	}
-				// }
-			}
-		case "posts":
-			group, groupctx := errgroup.WithContext(r.Context())
-			for i, name := range request.Names {
-				i, name := i, name
-				group.Go(func() error {
-					err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, response.Parent, name))
+			count := atomic.Int64{}
+			startedAt := time.Now()
+			groupD, groupctxD := errgroup.WithContext(r.Context())
+			if resetIndexHTML.Load() {
+				groupD.Go(func() error {
+					err := siteGen.GeneratePage(groupctxD, "pages/index.html", indexHTML)
 					if err != nil {
-						response.DeleteErrors[i] = err.Error()
-						return nil
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
 					}
-					response.Files[i] = File{Name: name}
-					if !strings.HasSuffix(name, ".md") {
-						return nil
-					}
-					err = nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", response.Parent, strings.TrimSuffix(name, ".md")))
-					if err != nil {
-						getLogger(groupctx).Error(err.Error())
-						return nil
-					}
+					count.Add(1)
 					return nil
 				})
 			}
-			err := group.Wait()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
-				return
-			}
-		case "output":
-		}
-
-		// output/foo/bar/ files | dirs | both
-		// NOTE!! This requires knowing whether foo.html is indeed a file, and whether foo is indeed a folder. So we still need to cache the FileInfo of some sort. Maybe a custom looping construct where we evaluate the next two items at once and advance the counter one more time if both items belong to a pair (e.g. foo and foo.html).
-		// It is not enough to know that foo and foo.html exist, we must confirm that foo is a folder and foo.html is a file.
-		// Since we evaluate up to two items at once, within the same loop we can delete the outputDir since we can determine if two items belonging to a pair exist (or not).
-		// Then within this loop we can also regenerate accordingly...?
-
-		// map that keeps track of which outputDirs we have to delete
-		// - the map value need to indicate whether it was the file or folder that was deleted, or both
-		// map that keeps track of which pages or posts or post list needs to be regenerated.
-		// deleting a page or post should first involve deleting the source file (and replacing it if it is a permanent file), deleting the contents of the outputDir, then regenerating the parent page if head is pages, regenerating the post list if head is posts.
-		group, groupctx := errgroup.WithContext(r.Context())
-		pageFiles := make(map[string]struct{})
-		pageDirs := make(map[string]struct{})
-		for i, name := range request.Names {
-			i, name := i, filepath.ToSlash(name)
-			if strings.Contains(name, "/") {
-				continue
-			}
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
-			group.Go(func() error {
-				filePath := path.Join(sitePrefix, response.Parent, name)
-				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), filePath)
-				if err != nil {
-					if errors.Is(err, fs.ErrNotExist) {
-						return nil
+			if reset404HTML.Load() {
+				groupD.Go(func() error {
+					err := siteGen.GeneratePage(groupctxD, "pages/404.html", x404HTML)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
 					}
-					response.DeleteErrors[i] = err.Error()
+					count.Add(1)
 					return nil
-				}
-				_ = fileInfo
-				err = nbrew.FS.WithContext(groupctx).RemoveAll(filePath)
-				if err != nil {
-					response.DeleteErrors[i] = err.Error()
+				})
+			}
+			if regenerateCategoryPosts.Load() != nil {
+				groupD.Go(func() error {
+					// TODO: call siteGen.GeneratePosts(groupctxD, category, tmpl) here once you have defined it.
 					return nil
-				}
-				response.Files[i] = File{Name: name}
-				switch head {
-				case "pages":
-					if tail == "" && (name == "index.html" || name == "404.html") {
-						b, err := fs.ReadFile(RuntimeFS, path.Join("embed", name))
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
+				})
+			}
+			if regenerateCategoryPostList.Load() != nil {
+				groupD.Go(func() error {
+					category := *regenerateCategoryPostList.Load()
+					tmpl, err := siteGen.PostListTemplate(groupctxD, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
-						writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages", name), 0644)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						defer writer.Close()
-						_, err = writer.Write(b)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						err = writer.Close()
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						err = siteGen.GeneratePage(groupctx, path.Join("pages", name), string(b))
-						if err != nil {
-							var templateErr TemplateError
-							if !errors.As(err, &templateErr) {
-								getLogger(groupctx).Error(err.Error())
-								return nil
-							}
-						}
+						return err
 					}
-					if fileInfo.IsDir() {
-						outputDir := path.Join(sitePrefix, "output", tail, name)
-						pageDirs[outputDir] = struct{}{}
+					n, err := siteGen.GeneratePostList(groupctxD, category, tmpl)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(int64(n))
+					return nil
+				})
+			}
+			if regenerateParentPage.Load() != nil {
+				groupD.Go(func() error {
+					filePath := *regenerateParentPage.Load()
+					file, err := nbrew.FS.WithContext(groupctxD).Open(path.Join(sitePrefix, filePath))
+					if err != nil {
+						if errors.Is(err, fs.ErrNotExist) {
+							return nil
+						}
+						return err
+					}
+					defer file.Close()
+					fileInfo, err := file.Stat()
+					if err != nil {
+						return err
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						return err
+					}
+					err = siteGen.GeneratePage(groupctxD, filePath, b.String())
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(1)
+					return nil
+				})
+			}
+			if regenerateParentPost.Load() != nil {
+				groupD.Go(func() error {
+					filePath := *regenerateParentPost.Load()
+					category := path.Dir(strings.TrimPrefix(filePath, "posts/"))
+					if category == "." {
+						category = ""
+					}
+					tmpl, err := siteGen.PostTemplate(groupctxD, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					file, err := nbrew.FS.WithContext(groupctxD).Open(path.Join(sitePrefix, filePath))
+					if err != nil {
+						if errors.Is(err, fs.ErrNotExist) {
+							return nil
+						}
+						return err
+					}
+					defer file.Close()
+					fileInfo, err := file.Stat()
+					if err != nil {
+						return err
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						return err
+					}
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+						creationTime = fileInfo.CreationTime
 					} else {
-						outputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(name, path.Ext(name)))
-						pageFiles[outputDir] = struct{}{}
+						var absolutePath string
+						if localFS, ok := nbrew.FS.(*LocalFS); ok {
+							absolutePath = path.Join(localFS.RootDir, sitePrefix, filePath)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
 					}
-				case "posts":
-					err := nbrew.FS.WithContext(groupctx).RemoveAll(path.Join(sitePrefix, "output", response.Parent, strings.TrimSuffix(name, path.Ext(name))))
+					err = siteGen.GeneratePost(groupctxD, filePath, b.String(), creationTime, tmpl)
 					if err != nil {
-						getLogger(groupctx).Error(err.Error())
-						return nil
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
 					}
-					if strings.HasSuffix(name, ".md") {
-						siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						category := tail
-						tmpl, err := siteGen.PostListTemplate(r.Context(), category)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						_, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-					}
-				case "output":
-					if tail != "themes" {
-						return nil
-					}
-					switch name {
-					case "post.html":
-						file, err := RuntimeFS.Open("embed/post.html")
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						defer file.Close()
-						writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "output/themes/post.html"), 0644)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						defer writer.Close()
-						_, err = io.Copy(writer, file)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						err = writer.Close()
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-					case "postlist.html":
-						file, err := RuntimeFS.Open("embed/postlist.html")
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						defer file.Close()
-						writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "output/themes/postlist.html"), 0644)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						defer writer.Close()
-						_, err = io.Copy(writer, file)
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-						err = writer.Close()
-						if err != nil {
-							getLogger(groupctx).Error(err.Error())
-							return nil
-						}
-					}
-				}
-				return nil
-			})
+					count.Add(1)
+					return nil
+				})
+			}
+			err = groupD.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			response.Count = int(count.Load())
+			response.TimeTaken = time.Since(startedAt).String()
+			if templateErrPtr.Load() != nil {
+				response.TemplateError = *templateErrPtr.Load()
+			}
 		}
-		if "" != "" {
-			// TODO: regenerate the post list template if head is posts
-			category := tail
-			tmpl, err := siteGen.PostListTemplate(r.Context(), category)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
-				return
-			}
-			_, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
-				return
-			}
 
-		}
-		// NOTE: if we deleted even a single post we must regenerate the post list. If we deleted even a single page we must regenerate the parent page.
-		if head == "output" {
-			next, _, _ := strings.Cut(tail, "/")
-			if next == "posts" {
-				// TODO: regenerate the post list
-			}
-		}
 		n = 0
 		for _, file := range response.Files {
 			if file.Name == "" {

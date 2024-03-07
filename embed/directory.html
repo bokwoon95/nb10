@@ -61,7 +61,7 @@
   <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
     <div class='ml2'>
-      {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} deleted {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
+      deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
     </div>
   </div>
   <div class='flex-grow-1'></div>

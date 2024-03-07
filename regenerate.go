@@ -241,6 +241,9 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 						_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 					}
 					_, category, _ := strings.Cut(path.Dir(file.FilePath), "/")
+					if category == "." {
+						category = ""
+					}
 					postTemplate := postTemplates[category]
 					if postTemplate == nil {
 						return nil
@@ -386,6 +389,9 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			}
 			subgroupB.Go(func() error {
 				_, category, _ := strings.Cut(path.Dir(filePath), "/")
+				if category == "." {
+					category = ""
+				}
 				postTemplate := postTemplates[category]
 				if postTemplate == nil {
 					return nil
