@@ -728,8 +728,29 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			name := path.Base(tail)
 			if name == "post.html" {
 				startedAt := time.Now()
+				tmpl, err := siteGen.PostTemplate(r.Context(), category)
+				if err != nil {
+					if errors.As(err, &response.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				response.Count, err = siteGen.GeneratePosts(r.Context(), category, tmpl)
 				response.TimeTaken = time.Since(startedAt).String()
+				if err != nil {
+					if errors.As(err, &response.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
 			} else if name == "postlist.html" {
+				startedAt := time.Now()
 				tmpl, err := siteGen.PostListTemplate(r.Context(), category)
 				if err != nil {
 					if errors.As(err, &response.TemplateError) {
@@ -740,7 +761,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					internalServerError(w, r, err)
 					return
 				}
-				startedAt := time.Now()
 				response.Count, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
 				response.TimeTaken = time.Since(startedAt).String()
 				if err != nil {
@@ -753,6 +773,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 			} else if strings.HasSuffix(name, ".md") {
+				startedAt := time.Now()
 				tmpl, err := siteGen.PostTemplate(r.Context(), category)
 				if err != nil {
 					if errors.As(err, &response.TemplateError) {
@@ -763,7 +784,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					internalServerError(w, r, err)
 					return
 				}
-				startedAt := time.Now()
 				err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.CreationTime, tmpl)
 				response.Count = 1
 				response.TimeTaken = time.Since(startedAt).String()
