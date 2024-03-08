@@ -35,6 +35,14 @@ notebrew/open_browser.go
 
 TODO: BIG BRAIN: instead of inserting the doctype header into the template source and potentially having to fudge the line numbers to accomodate the offset, just insert it at the very end of the pipeline: template it ourselves, insert it directly into the writer before rendering the rest of the template into the writer.
     - TODO: continue what you left in site_generator.go
+TODO: tweak site_generator.go slightly so that posts/index.html and posts/1/index.html are always generated, and posts/1/index.html always looks like this:
+<!DOCTYPE html>
+<html lang='en'>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<meta http-equiv='refresh' content='0; url=/posts/'>
+<title>redirect to /posts/</title>
+<p>redirect to <a href='/posts/'>/posts/</a></p>
 TODO: (*SiteGenerator).GeneratePosts(ctx context.Context, category string, tmpl *template.Template) error
     - This will be used by file.go whenever post.html is saved (we need to regenerate all posts for that category) and by delete.go whenever post.html is deleted (we need to restore post.html and regenerate all posts in that category).
 BUG: posts/post.html should not have a "view: page", and saving it should mention the number of posts regenerated but should not link to any particular post.

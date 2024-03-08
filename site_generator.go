@@ -447,12 +447,6 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	var tmpl *template.Template
 	group, groupctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
-		text = "<!DOCTYPE html>" +
-			"\n<html lang='{{ $.Site.Lang }}'>" +
-			"\n<meta charset='utf-8'>" +
-			"\n<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-			"\n<link rel='icon' href='{{ $.Site.Favicon }}'>" +
-			"\n" + text
 		tmpl, err = siteGen.ParseTemplate(groupctx, "/"+filePath, text)
 		if err != nil {
 			return err
@@ -723,15 +717,15 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	defer writer.Close()
 	var b strings.Builder
-	b.WriteString("<!DOCTYPE html>")
-	b.WriteString("\n<html lang='")
+	b.WriteString("<!DOCTYPE html>\n")
+	b.WriteString("<html lang='")
 	template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-	b.WriteString("'>")
-	b.WriteString("\n<meta charset='utf-8'>")
-	b.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
-	b.WriteString("\n<link rel='icon' href='")
+	b.WriteString("'>\n")
+	b.WriteString("<meta charset='utf-8'>\n")
+	b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
+	b.WriteString("<link rel='icon' href='")
 	processURLOnto(string(siteGen.Site.Favicon), false, &b)
-	b.WriteString("'>")
+	b.WriteString("'>\n")
 	_, err = io.WriteString(writer, b.String())
 	if err != nil {
 		return err
@@ -934,15 +928,15 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	}
 	defer writer.Close()
 	var b strings.Builder
-	b.WriteString("<!DOCTYPE html>")
-	b.WriteString("\n<html lang='")
+	b.WriteString("<!DOCTYPE html>\n")
+	b.WriteString("<html lang='")
 	template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-	b.WriteString("'>")
-	b.WriteString("\n<meta charset='utf-8'>")
-	b.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
-	b.WriteString("\n<link rel='icon' href='")
+	b.WriteString("'>\n")
+	b.WriteString("<meta charset='utf-8'>\n")
+	b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
+	b.WriteString("<link rel='icon' href='")
 	processURLOnto(string(siteGen.Site.Favicon), false, &b)
-	b.WriteString("'>")
+	b.WriteString("'>\n")
 	if siteGen.imgDomain == "" {
 		err = tmpl.Execute(writer, &postData)
 		if err != nil {
@@ -1422,34 +1416,46 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		Posts:      posts,
 	}
 	outputDir := path.Join(siteGen.sitePrefix, "output/posts", postListData.Category)
-	if currentPage != 1 {
-		writer, err := siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, strconv.Itoa(currentPage), "index.html"), 0644)
+	var outputFile string
+	if currentPage == 1 {
+		outputFile = path.Join(outputDir, "index.html")
+	} else {
+		outputFile = path.Join(outputDir, strconv.Itoa(currentPage), "index.html")
+	}
+	groupB, groupctxB := errgroup.WithContext(ctx)
+	groupB.Go(func() error {
+		writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
-			err := siteGen.fsys.WithContext(ctx).MkdirAll(path.Join(outputDir, strconv.Itoa(currentPage)), 0755)
+			err := siteGen.fsys.WithContext(groupctxB).MkdirAll(path.Dir(outputFile), 0755)
 			if err != nil {
 				return err
 			}
-			writer, err = siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, strconv.Itoa(currentPage), "index.html"), 0644)
+			writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 			if err != nil {
 				return err
 			}
 		}
 		defer writer.Close()
 		var b strings.Builder
-		b.WriteString("<!DOCTYPE html>")
-		b.WriteString("\n<html lang='")
+		b.WriteString("<!DOCTYPE html>\n")
+		b.WriteString("<html lang='")
 		template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-		b.WriteString("'>")
-		b.WriteString("\n<meta charset='utf-8'>")
-		b.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
-		b.WriteString("\n<link rel='icon' href='")
+		b.WriteString("'>\n")
+		b.WriteString("<meta charset='utf-8'>\n")
+		b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
+		b.WriteString("<link rel='icon' href='")
 		processURLOnto(string(siteGen.Site.Favicon), false, &b)
-		b.WriteString("'>")
-		// TODO: do this!
-		// "\n<link rel='alternate' href='/" + path.Join("posts", category) + "/index.atom' type='application/atom+xml'>" +
+		b.WriteString("'>\n")
+		b.WriteString("<link rel='alternate' href='")
+		processURLOnto("/"+path.Join("posts", category)+"/index.atom", false, &b)
+		b.WriteString("' type='application/atom+xml'>\n")
+		_, err = io.WriteString(writer, b.String())
+		if err != nil {
+			return err
+		}
 		if siteGen.imgDomain == "" {
 			err = tmpl.Execute(writer, &postListData)
 			if err != nil {
@@ -1476,71 +1482,41 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			return err
 		}
 		return nil
-	}
-	groupB, groupctxB := errgroup.WithContext(ctx)
-	groupB.Go(func() error {
-		writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.html"), 0644)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				return err
-			}
-			err := siteGen.fsys.WithContext(groupctxB).MkdirAll(outputDir, 0755)
-			if err != nil {
-				return err
-			}
-			writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.html"), 0644)
-			if err != nil {
-				return err
-			}
-		}
-		defer writer.Close()
-		if siteGen.imgDomain == "" {
-			err = tmpl.Execute(writer, &postListData)
-			if err != nil {
-				return NewTemplateError(err)
-			}
-		} else {
-			pipeReader, pipeWriter := io.Pipe()
-			result := make(chan error, 1)
-			go func() {
-				result <- siteGen.rewriteURLs(writer, pipeReader, "")
-			}()
-			err = tmpl.Execute(pipeWriter, &postListData)
-			if err != nil {
-				return NewTemplateError(err)
-			}
-			pipeWriter.Close()
-			err = <-result
-			if err != nil {
-				return err
-			}
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		if lastPage > 1 {
-			file, err := siteGen.fsys.WithContext(groupctxB).Open(path.Join(outputDir, "index.html"))
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "1", "index.html"), 0644)
+	})
+	if currentPage == 1 {
+		groupB.Go(func() error {
+			outputFile := path.Join(outputDir, "1/index.html")
+			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
 					return err
 				}
-				err := siteGen.fsys.WithContext(groupctxB).MkdirAll(path.Join(outputDir, "1"), 0755)
+				err := siteGen.fsys.WithContext(groupctxB).MkdirAll(path.Dir(outputFile), 0755)
 				if err != nil {
 					return err
 				}
-				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "1", "index.html"), 0644)
+				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 				if err != nil {
 					return err
 				}
 			}
 			defer writer.Close()
-			_, err = io.Copy(writer, file)
+			urlPath := "/" + path.Join("posts", category) + "/"
+			var b strings.Builder
+			b.WriteString("<!DOCTYPE html>\n")
+			b.WriteString("<html lang='")
+			template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
+			b.WriteString("'>\n")
+			b.WriteString("<meta charset='utf-8'>\n")
+			b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
+			b.WriteString("<meta http-equiv='refresh' content='0; url=")
+			processURLOnto(urlPath, false, &b)
+			b.WriteString("'>\n")
+			b.WriteString("<title>redirect to " + urlPath + "</title>\n")
+			b.WriteString("<p>redirect to <a href='")
+			processURLOnto(urlPath, false, &b)
+			b.WriteString("'>" + urlPath + "</a></p>\n")
+			_, err = io.WriteString(writer, b.String())
 			if err != nil {
 				return err
 			}
@@ -1548,104 +1524,104 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			if err != nil {
 				return err
 			}
-		}
-		return nil
-	})
-	groupB.Go(func() error {
-		scheme := "https://"
-		var contentDomain string
-		if strings.Contains(siteGen.sitePrefix, ".") {
-			contentDomain = siteGen.sitePrefix
-		} else {
-			if siteGen.contentDomain == "localhost" || strings.HasPrefix(siteGen.contentDomain, "localhost:") {
-				scheme = "http://"
-			}
-			if siteGen.sitePrefix != "" {
-				contentDomain = strings.TrimPrefix(siteGen.sitePrefix, "@") + "." + siteGen.contentDomain
+			return nil
+		})
+		groupB.Go(func() error {
+			scheme := "https://"
+			var contentDomain string
+			if strings.Contains(siteGen.sitePrefix, ".") {
+				contentDomain = siteGen.sitePrefix
 			} else {
-				contentDomain = siteGen.contentDomain
-			}
-		}
-		feed := AtomFeed{
-			Xmlns:   "http://www.w3.org/2005/Atom",
-			ID:      scheme + contentDomain,
-			Title:   siteGen.Site.Title,
-			Updated: time.Now().UTC().Format("2006-01-02 15:04:05Z"),
-			Link: []AtomLink{{
-				Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/index.atom",
-				Rel:  "self",
-			}, {
-				Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/",
-				Rel:  "alternate",
-			}},
-			Entry: make([]AtomEntry, len(postListData.Posts)),
-		}
-		for i, post := range postListData.Posts {
-			// ID: tag:bokwoon.nbrew.io,yyyy-mm-dd:1jjdz28
-			var postID string
-			timestampPrefix, _, _ := strings.Cut(post.Name, "-")
-			if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
-				b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
-				if len(b) == 5 && err == nil {
-					var timestamp [8]byte
-					copy(timestamp[len(timestamp)-5:], b)
-					post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
-					postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + timestampPrefix
+				if siteGen.contentDomain == "localhost" || strings.HasPrefix(siteGen.contentDomain, "localhost:") {
+					scheme = "http://"
+				}
+				if siteGen.sitePrefix != "" {
+					contentDomain = strings.TrimPrefix(siteGen.sitePrefix, "@") + "." + siteGen.contentDomain
+				} else {
+					contentDomain = siteGen.contentDomain
 				}
 			}
-			if postID == "" {
-				postID = scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/"
-			}
-			feed.Entry[i] = AtomEntry{
-				ID:        postID,
-				Title:     post.Title,
-				Published: post.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
-				Updated:   post.ModificationTime.UTC().Format("2006-01-02 15:04:05Z"),
+			feed := AtomFeed{
+				Xmlns:   "http://www.w3.org/2005/Atom",
+				ID:      scheme + contentDomain,
+				Title:   siteGen.Site.Title,
+				Updated: time.Now().UTC().Format("2006-01-02 15:04:05Z"),
 				Link: []AtomLink{{
-					Href: scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/",
+					Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/index.atom",
+					Rel:  "self",
+				}, {
+					Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/",
 					Rel:  "alternate",
 				}},
-				Summary: AtomText{
-					Type:    "text",
-					Content: string(post.Preview),
-				},
-				Content: AtomCDATA{
-					Type:    "html",
-					Content: strings.ReplaceAll(string(post.Content), "]]>", "]]]]><![CDATA[>"), // https://stackoverflow.com/a/36331725
-				},
+				Entry: make([]AtomEntry, len(postListData.Posts)),
 			}
-		}
-		writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				return err
+			for i, post := range postListData.Posts {
+				// ID: tag:bokwoon.nbrew.io,yyyy-mm-dd:1jjdz28
+				var postID string
+				timestampPrefix, _, _ := strings.Cut(post.Name, "-")
+				if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
+					b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
+					if len(b) == 5 && err == nil {
+						var timestamp [8]byte
+						copy(timestamp[len(timestamp)-5:], b)
+						post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+						postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + timestampPrefix
+					}
+				}
+				if postID == "" {
+					postID = scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/"
+				}
+				feed.Entry[i] = AtomEntry{
+					ID:        postID,
+					Title:     post.Title,
+					Published: post.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+					Updated:   post.ModificationTime.UTC().Format("2006-01-02 15:04:05Z"),
+					Link: []AtomLink{{
+						Href: scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/",
+						Rel:  "alternate",
+					}},
+					Summary: AtomText{
+						Type:    "text",
+						Content: string(post.Preview),
+					},
+					Content: AtomCDATA{
+						Type:    "html",
+						Content: strings.ReplaceAll(string(post.Content), "]]>", "]]]]><![CDATA[>"), // https://stackoverflow.com/a/36331725
+					},
+				}
 			}
-			err := siteGen.fsys.WithContext(groupctxB).MkdirAll(outputDir, 0755)
+			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+				err := siteGen.fsys.WithContext(groupctxB).MkdirAll(outputDir, 0755)
+				if err != nil {
+					return err
+				}
+				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
+				if err != nil {
+					return err
+				}
+			}
+			defer writer.Close()
+			_, err = writer.Write([]byte(xml.Header))
 			if err != nil {
 				return err
 			}
-			writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
+			encoder := xml.NewEncoder(writer)
+			encoder.Indent("", "  ")
+			err = encoder.Encode(&feed)
 			if err != nil {
 				return err
 			}
-		}
-		defer writer.Close()
-		_, err = writer.Write([]byte(xml.Header))
-		if err != nil {
-			return err
-		}
-		encoder := xml.NewEncoder(writer)
-		encoder.Indent("", "  ")
-		err = encoder.Encode(&feed)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	}
 	err = groupB.Wait()
 	if err != nil {
 		return err
@@ -2211,13 +2187,6 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 		}
 		text = b.String()
 	}
-	text = "<!DOCTYPE html>" +
-		"\n<html lang='{{ $.Site.Lang }}'>" +
-		"\n<meta charset='utf-8'>" +
-		"\n<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-		"\n<link rel='icon' href='{{ $.Site.Favicon }}'>" +
-		"\n<link rel='alternate' href='/" + path.Join("posts", category) + "/index.atom' type='application/atom+xml'>" +
-		"\n" + text
 	tmpl, err := siteGen.ParseTemplate(ctx, path.Join("posts", category, "postlist.html"), text)
 	if err != nil {
 		return nil, err
@@ -2225,6 +2194,9 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 	return tmpl, nil
 }
 
+// processURLOnto appends a normalized URL corresponding to its input to b
+// and reports whether the appended content differs from s.
+//
 // copied from html/template/url.go
 func processURLOnto(s string, norm bool, b *strings.Builder) bool {
 	b.Grow(len(s) + 16)
