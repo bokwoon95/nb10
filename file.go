@@ -20,7 +20,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -716,73 +715,67 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 			response.Count = 1
 		case "posts":
-			category := path.Dir(tail)
-			if category == "." {
-				category = ""
-			}
-			if !strings.HasSuffix(filePath, ".md") {
-				// TODO: we need to add special handling for post.html and postlist.html.
-				break
-			}
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
 			}
-			var templateErrPtr atomic.Pointer[TemplateError]
-			group, groupctx := errgroup.WithContext(r.Context())
-			startedAt := time.Now()
-			group.Go(func() error {
-				var templateErr TemplateError
-				tmpl, err := siteGen.PostTemplate(groupctx, category)
-				if err != nil {
-					if errors.As(err, &templateErr) {
-						templateErrPtr.CompareAndSwap(nil, &templateErr)
-						return nil
-					}
-					return err
-				}
-				err = siteGen.GeneratePost(groupctx, filePath, response.Content, response.CreationTime, tmpl)
-				if err != nil {
-					if errors.As(err, &templateErr) {
-						templateErrPtr.CompareAndSwap(nil, &templateErr)
-						return nil
-					}
-					return err
-				}
-				return nil
-			})
-			group.Go(func() error {
-				var templateErr TemplateError
-				tmpl, err := siteGen.PostListTemplate(groupctx, category)
-				if err != nil {
-					if errors.As(err, &templateErr) {
-						templateErrPtr.CompareAndSwap(nil, &templateErr)
-						return nil
-					}
-					return err
-				}
-				_, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
-				if err != nil {
-					if errors.As(err, &templateErr) {
-						templateErrPtr.CompareAndSwap(nil, &templateErr)
-						return nil
-					}
-					return err
-				}
-				return nil
-			})
-			err = group.Wait()
-			response.TimeTaken = time.Since(startedAt).String()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
-				return
+			category := path.Dir(tail)
+			if category == "." {
+				category = ""
 			}
-			response.Count = 1
-			if templateErrPtr.Load() != nil {
-				response.TemplateError = *templateErrPtr.Load()
+			name := path.Base(tail)
+			if name == "post.html" {
+				startedAt := time.Now()
+				response.TimeTaken = time.Since(startedAt).String()
+			} else if name == "postlist.html" {
+				tmpl, err := siteGen.PostListTemplate(r.Context(), category)
+				if err != nil {
+					if errors.As(err, &response.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				startedAt := time.Now()
+				response.Count, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
+				response.TimeTaken = time.Since(startedAt).String()
+				if err != nil {
+					if errors.As(err, &response.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+			} else if strings.HasSuffix(name, ".md") {
+				tmpl, err := siteGen.PostTemplate(r.Context(), category)
+				if err != nil {
+					if errors.As(err, &response.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				startedAt := time.Now()
+				err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.CreationTime, tmpl)
+				response.Count = 1
+				response.TimeTaken = time.Since(startedAt).String()
+				if err != nil {
+					if errors.As(err, &response.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
 			}
 		}
 		writeResponse(w, r, response)
