@@ -722,21 +722,20 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
-	buf := bufPool.Get().(*bytes.Buffer)
-	defer func() {
-		buf.Reset()
-		bufPool.Put(buf)
-	}()
-	buf.WriteString("<!DOCTYPE html>")
-	buf.WriteString("\n<html lang='")
-	template.HTMLEscape(buf, []byte(siteGen.Site.Lang))
-	buf.WriteString("'>")
-	buf.WriteString("\n<meta charset='utf-8'>")
-	buf.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
-	buf.WriteString("\n<link rel='icon' href='")
-	processURLOnto(string(siteGen.Site.Favicon), false, buf)
-	buf.WriteString("'>")
-	_, err = io.WriteString(writer, "<!DOCTYPE html>\n<html lang='")
+	var b strings.Builder
+	b.WriteString("<!DOCTYPE html>")
+	b.WriteString("\n<html lang='")
+	template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
+	b.WriteString("'>")
+	b.WriteString("\n<meta charset='utf-8'>")
+	b.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
+	b.WriteString("\n<link rel='icon' href='")
+	processURLOnto(string(siteGen.Site.Favicon), false, &b)
+	b.WriteString("'>")
+	_, err = io.WriteString(writer, b.String())
+	if err != nil {
+		return err
+	}
 	if siteGen.imgDomain == "" {
 		err = tmpl.Execute(writer, &pageData)
 		if err != nil {
@@ -2205,7 +2204,7 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 }
 
 // copied from html/template/url.go
-func processURLOnto(s string, norm bool, b *bytes.Buffer) bool {
+func processURLOnto(s string, norm bool, b *strings.Builder) bool {
 	b.Grow(len(s) + 16)
 	written := 0
 	// The byte loop below assumes that all URLs use UTF-8 as the
