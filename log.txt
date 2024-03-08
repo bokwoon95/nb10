@@ -33,18 +33,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: BIG BRAIN: instead of inserting the doctype header into the template source and potentially having to fudge the line numbers to accomodate the offset, just insert it at the very end of the pipeline: template it ourselves, insert it directly into the writer before rendering the rest of the template into the writer.
-    - TODO: continue what you left in site_generator.go
-TODO: tweak site_generator.go slightly so that posts/index.html and posts/1/index.html are always generated, and posts/1/index.html always looks like this:
-<!DOCTYPE html>
-<html lang='en'>
-<meta charset='utf-8'>
-<meta name='viewport' content='width=device-width, initial-scale=1'>
-<meta http-equiv='refresh' content='0; url=/posts/'>
-<title>redirect to /posts/</title>
-<p>redirect to <a href='/posts/'>/posts/</a></p>
-TODO: (*SiteGenerator).GeneratePosts(ctx context.Context, category string, tmpl *template.Template) error
-    - This will be used by file.go whenever post.html is saved (we need to regenerate all posts for that category) and by delete.go whenever post.html is deleted (we need to restore post.html and regenerate all posts in that category).
 BUG: posts/post.html should not have a "view: page", and saving it should mention the number of posts regenerated but should not link to any particular post.
 BUG: for some reason output/posts/postlist/index.html exists, investigate what is causing it to appear and if it appears on a default site creation or site regeneration.
 TODO: oh my god, every action related to creating a page or deleting a page (that includes copying, moving and renaming pages) has to honor the same system where the outputDir /output/abc/ actually is co-owned by two files, /pages/abc.html and /pages/abc/. If we create files via copying/move/rename, we must copy only the relevant files in the outputDir. If we delete files due to a delete/move/rename, we must only delete the relevant files in the outputDir.
@@ -58,6 +46,9 @@ TODO: for page assets, we need to include a little help link "how do I include a
 TODO: once we finish porting nb9 over to nb10, look into accepting a user struct instead of username in the handlers and decide what to do if the account is disabled.
 TODO: RE: alt text is embedded into the caption and indicated by whether the first line starts with !alt
 TODO: copy a private implementation of certmagic.MatchWildcard so that notebrew itself doesn't rely on certmagic.
+
+CHECK: site regeneration works
+CHECK: saving post.html/postlist.html doesn't generate an output post
 
 sample template error message
 template: site_json.html:58:44: executing "site_json.html" at <eq $.CodeStyle $codeStyle>: error calling eq: incompatible types for comparison
