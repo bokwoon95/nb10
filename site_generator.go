@@ -722,6 +722,21 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
+	buf := bufPool.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		bufPool.Put(buf)
+	}()
+	buf.WriteString("<!DOCTYPE html>")
+	buf.WriteString("\n<html lang='")
+	template.HTMLEscape(buf, []byte(siteGen.Site.Lang))
+	buf.WriteString("'>")
+	buf.WriteString("\n<meta charset='utf-8'>")
+	buf.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
+	buf.WriteString("\n<link rel='icon' href='")
+	processURLOnto(string(siteGen.Site.Favicon), false, buf)
+	buf.WriteString("'>")
+	_, err = io.WriteString(writer, "<!DOCTYPE html>\n<html lang='")
 	if siteGen.imgDomain == "" {
 		err = tmpl.Execute(writer, &pageData)
 		if err != nil {
@@ -2187,4 +2202,63 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 		return nil, err
 	}
 	return tmpl, nil
+}
+
+// copied from html/template/url.go
+func processURLOnto(s string, norm bool, b *bytes.Buffer) bool {
+	b.Grow(len(s) + 16)
+	written := 0
+	// The byte loop below assumes that all URLs use UTF-8 as the
+	// content-encoding. This is similar to the URI to IRI encoding scheme
+	// defined in section 3.1 of  RFC 3987, and behaves the same as the
+	// EcmaScript builtin encodeURIComponent.
+	// It should not cause any misencoding of URLs in pages with
+	// Content-type: text/html;charset=UTF-8.
+	for i, n := 0, len(s); i < n; i++ {
+		c := s[i]
+		switch c {
+		// Single quote and parens are sub-delims in RFC 3986, but we
+		// escape them so the output can be embedded in single
+		// quoted attributes and unquoted CSS url(...) constructs.
+		// Single quotes are reserved in URLs, but are only used in
+		// the obsolete "mark" rule in an appendix in RFC 3986
+		// so can be safely encoded.
+		case '!', '#', '$', '&', '*', '+', ',', '/', ':', ';', '=', '?', '@', '[', ']':
+			if norm {
+				continue
+			}
+		// Unreserved according to RFC 3986 sec 2.3
+		// "For consistency, percent-encoded octets in the ranges of
+		// ALPHA (%41-%5A and %61-%7A), DIGIT (%30-%39), hyphen (%2D),
+		// period (%2E), underscore (%5F), or tilde (%7E) should not be
+		// created by URI producers
+		case '-', '.', '_', '~':
+			continue
+		case '%':
+			// When normalizing do not re-encode valid escapes.
+			if norm && i+2 < len(s) && isHex(s[i+1]) && isHex(s[i+2]) {
+				continue
+			}
+		default:
+			// Unreserved according to RFC 3986 sec 2.3
+			if 'a' <= c && c <= 'z' {
+				continue
+			}
+			if 'A' <= c && c <= 'Z' {
+				continue
+			}
+			if '0' <= c && c <= '9' {
+				continue
+			}
+		}
+		b.WriteString(s[written:i])
+		fmt.Fprintf(b, "%%%02x", c)
+		written = i + 1
+	}
+	b.WriteString(s[written:])
+	return written != 0
+}
+
+func isHex(c byte) bool {
+	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
 }
