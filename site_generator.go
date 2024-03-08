@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"text/template/parse"
 	"time"
 
@@ -944,6 +945,113 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		return err
 	}
 	return nil
+}
+
+func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string, tmpl *template.Template) (int, error) {
+	if remoteFS, ok := siteGen.fsys.(*RemoteFS); ok {
+		type File struct {
+			FilePath     string
+			Text         string
+			CreationTime time.Time
+		}
+		cursor, err := sq.FetchCursor(ctx, remoteFS.DB, sq.Query{
+			Dialect: remoteFS.Dialect,
+			Format: "SELECT {*}" +
+				" FROM files" +
+				" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
+				" AND NOT is_dir" +
+				" AND file_path LIKE '%.md'",
+			Values: []any{
+				sq.StringParam("parent", path.Join(siteGen.sitePrefix, "posts", category)),
+			},
+		}, func(row *sq.Row) File {
+			return File{
+				FilePath:     row.String("file_path"),
+				Text:         row.String("text"),
+				CreationTime: row.Time("creation_time"),
+			}
+		})
+		if err != nil {
+			return 0, err
+		}
+		defer cursor.Close()
+		var count atomic.Int64
+		group, groupctx := errgroup.WithContext(ctx)
+		for cursor.Next() {
+			file, err := cursor.Result()
+			if err != nil {
+				return 0, err
+			}
+			group.Go(func() error {
+				if siteGen.sitePrefix != "" {
+					_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
+				}
+				err = siteGen.GeneratePost(groupctx, file.FilePath, file.Text, file.CreationTime, tmpl)
+				if err != nil {
+					return err
+				}
+				count.Add(1)
+				return nil
+			})
+		}
+		err = cursor.Close()
+		if err != nil {
+			return 0, err
+		}
+		err = group.Wait()
+		if err != nil {
+			return int(count.Load()), err
+		}
+		return int(count.Load()), nil
+	}
+	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
+	if err != nil {
+		return 0, err
+	}
+	var count atomic.Int64
+	group, groupctx := errgroup.WithContext(ctx)
+	for _, dirEntry := range dirEntries {
+		if dirEntry.IsDir() {
+			continue
+		}
+		name := dirEntry.Name()
+		if !strings.HasSuffix(name, ".md") {
+			continue
+		}
+		group.Go(func() error {
+			file, err := siteGen.fsys.WithContext(groupctx).Open(path.Join(siteGen.sitePrefix, "posts", category, name))
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			fileInfo, err := file.Stat()
+			if err != nil {
+				return err
+			}
+			var b strings.Builder
+			b.Grow(int(fileInfo.Size()))
+			_, err = io.Copy(&b, file)
+			if err != nil {
+				return err
+			}
+			var absolutePath string
+			if localFS, ok := siteGen.fsys.(*LocalFS); ok {
+				absolutePath = path.Join(localFS.RootDir, siteGen.sitePrefix, "posts", category, name)
+			}
+			creationTime := CreationTime(absolutePath, fileInfo)
+			err = siteGen.GeneratePost(groupctx, path.Join("posts", category, name), b.String(), creationTime, tmpl)
+			if err != nil {
+				return err
+			}
+			count.Add(1)
+			return nil
+		})
+	}
+	err = group.Wait()
+	if err != nil {
+		return int(count.Load()), err
+	}
+	return int(count.Load()), nil
 }
 
 type Post struct {
