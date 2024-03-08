@@ -933,6 +933,16 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
+	var b strings.Builder
+	b.WriteString("<!DOCTYPE html>")
+	b.WriteString("\n<html lang='")
+	template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
+	b.WriteString("'>")
+	b.WriteString("\n<meta charset='utf-8'>")
+	b.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
+	b.WriteString("\n<link rel='icon' href='")
+	processURLOnto(string(siteGen.Site.Favicon), false, &b)
+	b.WriteString("'>")
 	if siteGen.imgDomain == "" {
 		err = tmpl.Execute(writer, &postData)
 		if err != nil {
@@ -1428,6 +1438,18 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			}
 		}
 		defer writer.Close()
+		var b strings.Builder
+		b.WriteString("<!DOCTYPE html>")
+		b.WriteString("\n<html lang='")
+		template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
+		b.WriteString("'>")
+		b.WriteString("\n<meta charset='utf-8'>")
+		b.WriteString("\n<meta name='viewport' content='width=device-width, initial-scale=1'>")
+		b.WriteString("\n<link rel='icon' href='")
+		processURLOnto(string(siteGen.Site.Favicon), false, &b)
+		b.WriteString("'>")
+		// TODO: do this!
+		// "\n<link rel='alternate' href='/" + path.Join("posts", category) + "/index.atom' type='application/atom+xml'>" +
 		if siteGen.imgDomain == "" {
 			err = tmpl.Execute(writer, &postListData)
 			if err != nil {
