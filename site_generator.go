@@ -595,7 +595,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					Parent: urlPath,
 					Name:   path.Base(row.String("file_path")),
 				}
-				// TODO: oh my god we do title detection here but what if the
+				// NOTE: oh my god we do title detection here but what if the
 				// user wants to use 1. set a custom lang or 2. use a custom
 				// favicon? Then <!DOCTYPE> has to come first :/ and we can't
 				// use <!-- #title --> anymore
@@ -716,17 +716,12 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
-	var b strings.Builder
-	b.WriteString("<!DOCTYPE html>\n")
-	b.WriteString("<html lang='")
-	template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-	b.WriteString("'>\n")
-	b.WriteString("<meta charset='utf-8'>\n")
-	b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
-	b.WriteString("<link rel='icon' href='")
-	processURLOnto(string(siteGen.Site.Favicon), false, &b)
-	b.WriteString("'>\n")
-	_, err = io.WriteString(writer, b.String())
+	_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+		"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+		"<meta charset='utf-8'>\n"+
+		"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
+		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
+	)
 	if err != nil {
 		return err
 	}
@@ -927,16 +922,15 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
-	var b strings.Builder
-	b.WriteString("<!DOCTYPE html>\n")
-	b.WriteString("<html lang='")
-	template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-	b.WriteString("'>\n")
-	b.WriteString("<meta charset='utf-8'>\n")
-	b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
-	b.WriteString("<link rel='icon' href='")
-	processURLOnto(string(siteGen.Site.Favicon), false, &b)
-	b.WriteString("'>\n")
+	_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+		"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+		"<meta charset='utf-8'>\n"+
+		"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
+		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
+	)
+	if err != nil {
+		return err
+	}
 	if siteGen.imgDomain == "" {
 		err = tmpl.Execute(writer, &postData)
 		if err != nil {
@@ -1439,20 +1433,14 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			}
 		}
 		defer writer.Close()
-		var b strings.Builder
-		b.WriteString("<!DOCTYPE html>\n")
-		b.WriteString("<html lang='")
-		template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-		b.WriteString("'>\n")
-		b.WriteString("<meta charset='utf-8'>\n")
-		b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
-		b.WriteString("<link rel='icon' href='")
-		processURLOnto(string(siteGen.Site.Favicon), false, &b)
-		b.WriteString("'>\n")
-		b.WriteString("<link rel='alternate' href='")
-		processURLOnto("/"+path.Join("posts", category)+"/index.atom", false, &b)
-		b.WriteString("' type='application/atom+xml'>\n")
-		_, err = io.WriteString(writer, b.String())
+		atomPath := "/" + path.Join("posts", category) + "/index.atom"
+		_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+			"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+			"<meta charset='utf-8'>\n"+
+			"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
+			"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n"+
+			"<link rel='alternate' href='"+template.HTMLEscapeString(atomPath)+"' type='application/atom+xml'>\n",
+		)
 		if err != nil {
 			return err
 		}
@@ -1502,21 +1490,14 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			}
 			defer writer.Close()
 			urlPath := "/" + path.Join("posts", category) + "/"
-			var b strings.Builder
-			b.WriteString("<!DOCTYPE html>\n")
-			b.WriteString("<html lang='")
-			template.HTMLEscape(&b, []byte(siteGen.Site.Lang))
-			b.WriteString("'>\n")
-			b.WriteString("<meta charset='utf-8'>\n")
-			b.WriteString("<meta name='viewport' content='width=device-width, initial-scale=1'>\n")
-			b.WriteString("<meta http-equiv='refresh' content='0; url=")
-			processURLOnto(urlPath, false, &b)
-			b.WriteString("'>\n")
-			b.WriteString("<title>redirect to " + urlPath + "</title>\n")
-			b.WriteString("<p>redirect to <a href='")
-			processURLOnto(urlPath, false, &b)
-			b.WriteString("'>" + urlPath + "</a></p>\n")
-			_, err = io.WriteString(writer, b.String())
+			_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+				"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+				"<meta charset='utf-8'>\n"+
+				"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
+				"<meta http-equiv='refresh' content='0; url="+template.HTMLEscapeString(urlPath)+"'>\n"+
+				"<title>redirect to "+urlPath+"</title>\n"+
+				"<p>redirect to <a href='"+template.HTMLEscapeString(urlPath)+"'>"+urlPath+"</a></p>\n",
+			)
 			if err != nil {
 				return err
 			}
@@ -2192,66 +2173,4 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 		return nil, err
 	}
 	return tmpl, nil
-}
-
-// processURLOnto appends a normalized URL corresponding to its input to b
-// and reports whether the appended content differs from s.
-//
-// copied from html/template/url.go
-func processURLOnto(s string, norm bool, b *strings.Builder) bool {
-	b.Grow(len(s) + 16)
-	written := 0
-	// The byte loop below assumes that all URLs use UTF-8 as the
-	// content-encoding. This is similar to the URI to IRI encoding scheme
-	// defined in section 3.1 of  RFC 3987, and behaves the same as the
-	// EcmaScript builtin encodeURIComponent.
-	// It should not cause any misencoding of URLs in pages with
-	// Content-type: text/html;charset=UTF-8.
-	for i, n := 0, len(s); i < n; i++ {
-		c := s[i]
-		switch c {
-		// Single quote and parens are sub-delims in RFC 3986, but we
-		// escape them so the output can be embedded in single
-		// quoted attributes and unquoted CSS url(...) constructs.
-		// Single quotes are reserved in URLs, but are only used in
-		// the obsolete "mark" rule in an appendix in RFC 3986
-		// so can be safely encoded.
-		case '!', '#', '$', '&', '*', '+', ',', '/', ':', ';', '=', '?', '@', '[', ']':
-			if norm {
-				continue
-			}
-		// Unreserved according to RFC 3986 sec 2.3
-		// "For consistency, percent-encoded octets in the ranges of
-		// ALPHA (%41-%5A and %61-%7A), DIGIT (%30-%39), hyphen (%2D),
-		// period (%2E), underscore (%5F), or tilde (%7E) should not be
-		// created by URI producers
-		case '-', '.', '_', '~':
-			continue
-		case '%':
-			// When normalizing do not re-encode valid escapes.
-			if norm && i+2 < len(s) && isHex(s[i+1]) && isHex(s[i+2]) {
-				continue
-			}
-		default:
-			// Unreserved according to RFC 3986 sec 2.3
-			if 'a' <= c && c <= 'z' {
-				continue
-			}
-			if 'A' <= c && c <= 'Z' {
-				continue
-			}
-			if '0' <= c && c <= '9' {
-				continue
-			}
-		}
-		b.WriteString(s[written:i])
-		fmt.Fprintf(b, "%%%02x", c)
-		written = i + 1
-	}
-	b.WriteString(s[written:])
-	return written != 0
-}
-
-func isHex(c byte) bool {
-	return '0' <= c && c <= '9' || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
 }
