@@ -594,9 +594,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			regenerateCategoryPostList.Load() != nil ||
 			regenerateParentPage.Load() != nil ||
 			regenerateParentPost.Load() != nil {
-			// TODO: we can gate the siteGen creation behind all the booleans
-			// defined above so that if there's no need to regenerate anything we
-			// can skip the database call that NewSiteGenerator() makes.
 			var templateErrPtr atomic.Pointer[TemplateError]
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
@@ -639,7 +636,26 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			}
 			if regenerateCategoryPosts.Load() != nil {
 				groupD.Go(func() error {
-					// TODO: call siteGen.GeneratePosts(groupctxD, category, tmpl) here once you have defined it.
+					category := *regenerateCategoryPosts.Load()
+					tmpl, err := siteGen.PostTemplate(groupctxD, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					n, err := siteGen.GeneratePosts(groupctxD, category, tmpl)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(int64(n))
 					return nil
 				})
 			}
