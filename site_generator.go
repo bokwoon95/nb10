@@ -421,6 +421,9 @@ type Page struct {
 type Image struct {
 	Parent string
 	Name   string
+	// TODO: populate these.
+	AltText string
+	Caption string
 }
 
 func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text string) error {
