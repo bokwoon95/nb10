@@ -33,7 +33,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: rename Files to DeletedFiles in the delete.go response struct AND tweak the HTML to fix.
 TODO: instead of putting Count/TimeTaken/TemplateError fields in every response where we potentially regenerate files, put a single RegenerationStats field. Tweak all html files to accomodate.
 BUG: creating a new post category does not seem to populate the post.html and postlist.html files inside.
 BUG: for some reason output/posts/postlist/index.html exists, investigate what is causing it to appear and if it appears on a default site creation or site regeneration.

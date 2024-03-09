@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"path"
 	"strings"
+
+	"github.com/bokwoon95/nb10/sq"
 )
 
 var chromaStyles = map[string]bool{
@@ -44,19 +46,21 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any   `json:"postRedirectGet"`
-		Count           int              `json:"count"`
-		TimeTaken       string           `json:"timeTaken"`
-		TemplateError   TemplateError    `json:"templateError"`
-		ContentSite     string           `json:"contentSite"`
-		Username        NullString       `json:"username"`
-		SitePrefix      string           `json:"sitePrefix"`
-		Title           string           `json:"title"`
-		Emoji           string           `json:"emoji"`
-		Favicon         string           `json:"favicon"`
-		CodeStyle       string           `json:"codeStyle"`
-		Description     string           `json:"description"`
-		NavigationLinks []NavigationLink `json:"navigationLinks"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		Count             int               `json:"count"`
+		TimeTaken         string            `json:"timeTaken"`
+		TemplateError     TemplateError     `json:"templateError"`
+		ContentSite       string            `json:"contentSite"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		Title             string            `json:"title"`
+		Emoji             string            `json:"emoji"`
+		Favicon           string            `json:"favicon"`
+		CodeStyle         string            `json:"codeStyle"`
+		Description       string            `json:"description"`
+		NavigationLinks   []NavigationLink  `json:"navigationLinks"`
+		StorageUsed       int64             `json:"storageUsed,omitempty"`
 	}
 	normalizeRequest := func(request Request) Request {
 		if request.Title == "" {
@@ -104,16 +108,17 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			}
 			referer := getReferer(r)
 			funcMap := map[string]any{
-				"join":         path.Join,
-				"base":         path.Base,
-				"hasPrefix":    strings.HasPrefix,
-				"trimPrefix":   strings.TrimPrefix,
-				"contains":     strings.Contains,
-				"stylesCSS":    func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS":   func() template.JS { return template.JS(baselineJS) },
-				"referer":      func() string { return referer },
-				"chromaStyles": func() map[string]bool { return chromaStyles },
-				"incr":         func(n int) int { return n + 1 },
+				"join":             path.Join,
+				"base":             path.Base,
+				"hasPrefix":        strings.HasPrefix,
+				"trimPrefix":       strings.TrimPrefix,
+				"contains":         strings.Contains,
+				"fileSizeToString": fileSizeToString,
+				"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
+				"baselineJS":       func() template.JS { return template.JS(baselineJS) },
+				"referer":          func() string { return referer },
+				"chromaStyles":     func() map[string]bool { return chromaStyles },
+				"incr":             func(n int) int { return n + 1 },
 			}
 			tmpl, err := template.New("site_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/site_json.html")
 			if err != nil {
@@ -155,6 +160,41 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.CodeStyle = request.CodeStyle
 		response.Description = request.Description
 		response.NavigationLinks = request.NavigationLinks
+		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			// notes pages posts output
+			if sitePrefix == "" {
+				response.StorageUsed, err = sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
+					Dialect: remoteFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE file_path LIKE 'notes/%' OR file_path LIKE 'pages/%' OR file_path LIKE 'posts/%' OR file_path LIKE 'output/%'",
+				}, func(row *sq.Row) int64 {
+					return row.Int64("sum(coalesce(size, 0))")
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+			} else {
+				response.StorageUsed, err = sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
+					Dialect: remoteFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE file_path LIKE {pattern} ESCAPE '\\'",
+					Values: []any{
+						sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(sitePrefix)+"/%"),
+					},
+				}, func(row *sq.Row) int64 {
+					return row.Int64("sum(coalesce(size, 0))")
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+			}
+		}
 		writeResponse(w, r, response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {

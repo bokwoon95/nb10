@@ -20,9 +20,10 @@ import (
 
 func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePrefix string) {
 	type Response struct {
-		Count         int           `json:"count"`
-		TimeTaken     string        `json:"timeTaken"`
-		TemplateError TemplateError `json:"templateError"`
+		RegenerationStats RegenerationStats
+		Count             int           `json:"count"`
+		TimeTaken         string        `json:"timeTaken"`
+		TemplateError     TemplateError `json:"templateError"`
 	}
 	referer := r.Referer()
 	if referer == "" {
@@ -74,9 +75,9 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 }
 
 type RegenerationStats struct {
-	Count         int
-	TimeTaken     time.Duration
-	TemplateError TemplateError
+	Count         int           `json:"count"`
+	TimeTaken     time.Duration `json:"timeTaken"`
+	TemplateError TemplateError `json:"templateError"`
 }
 
 func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (RegenerationStats, error) {
