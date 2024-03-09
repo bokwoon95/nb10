@@ -73,34 +73,34 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 	writeResponse(w, r, response)
 }
 
-type RegenerateSiteResult struct {
+type RegenerationStats struct {
 	Count         int
 	TimeTaken     time.Duration
 	TemplateError TemplateError
 }
 
-func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (RegenerateSiteResult, error) {
+func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (RegenerationStats, error) {
 	siteGen, err := NewSiteGenerator(ctx, nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 	if err != nil {
-		return RegenerateSiteResult{}, err
+		return RegenerationStats{}, err
 	}
 	pagesDir := path.Join(sitePrefix, "pages")
 	postsDir := path.Join(sitePrefix, "posts")
 	postTemplate, err := siteGen.PostTemplate(ctx, "")
 	if err != nil {
-		return RegenerateSiteResult{}, err
+		return RegenerationStats{}, err
 	}
 	postTemplates := map[string]*template.Template{
 		"": postTemplate,
 	}
 	postListTemplate, err := siteGen.PostListTemplate(ctx, "")
 	if err != nil {
-		return RegenerateSiteResult{}, err
+		return RegenerationStats{}, err
 	}
 	postListTemplates := map[string]*template.Template{
 		"": postListTemplate,
 	}
-	var result RegenerateSiteResult
+	var result RegenerationStats
 	var count atomic.Int64
 	startedAt := time.Now()
 
@@ -280,7 +280,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		err = group.Wait()
 		if err != nil {
 			if !errors.As(err, &result.TemplateError) {
-				return RegenerateSiteResult{}, nil
+				return RegenerationStats{}, nil
 			}
 		}
 		result.Count = int(count.Load())
@@ -445,7 +445,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	err = group.Wait()
 	if err != nil {
 		if !errors.As(err, &result.TemplateError) {
-			return RegenerateSiteResult{}, err
+			return RegenerationStats{}, err
 		}
 	}
 	result.Count = int(count.Load())

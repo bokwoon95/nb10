@@ -38,7 +38,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		Username      NullString    `json:"username"`
 		SitePrefix    string        `json:"sitePrefix"`
 		Parent        string        `json:"parent"`
-		Files         []File        `json:"files"`
+		DeletedFiles  []File        `json:"deletedFiles"`
 		Count         int           `json:"count"`
 		TimeTaken     string        `json:"timeTaken"`
 		TemplateError TemplateError `json:"templateError"`
@@ -115,7 +115,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		seen := make(map[string]bool)
 		group, groupctx := errgroup.WithContext(r.Context())
 		names := r.Form["name"]
-		response.Files = make([]File, len(names))
+		response.DeletedFiles = make([]File, len(names))
 		for i, name := range names {
 			i, name := i, filepath.ToSlash(name)
 			if strings.Contains(name, "/") {
@@ -133,7 +133,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					}
 					return err
 				}
-				response.Files[i] = File{
+				response.DeletedFiles[i] = File{
 					Name:    fileInfo.Name(),
 					IsDir:   fileInfo.IsDir(),
 					Size:    fileInfo.Size(),
@@ -149,14 +149,14 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 		n := 0
-		for _, file := range response.Files {
+		for _, file := range response.DeletedFiles {
 			if file.Name == "" {
 				continue
 			}
-			response.Files[n] = file
+			response.DeletedFiles[n] = file
 			n++
 		}
-		response.Files = response.Files[:n]
+		response.DeletedFiles = response.DeletedFiles[:n]
 		writeResponse(w, r, response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -183,7 +183,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":       "delete",
-					"numDeleted": len(response.Files),
+					"numDeleted": len(response.DeletedFiles),
 					"numErrors":  len(response.DeleteErrors),
 				},
 			})
@@ -287,6 +287,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		)
 		head, tail, _ := strings.Cut(response.Parent, "/")
 		groupA, groupctxA := errgroup.WithContext(r.Context())
+		response.DeleteErrors = make([]string, len(request.Names))
+		response.DeletedFiles = make([]File, len(request.Names))
 		for i, name := range request.Names {
 			i, name := i, name
 			groupA.Go(func() error {
@@ -302,7 +304,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					response.DeleteErrors[i] = err.Error()
 					return nil
 				}
-				response.Files[i] = File{Name: name}
+				response.DeletedFiles[i] = File{Name: name}
 				switch head {
 				case "pages":
 					if fileInfo.IsDir() {
@@ -789,14 +791,14 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		n = 0
-		for _, file := range response.Files {
+		for _, file := range response.DeletedFiles {
 			if file.Name == "" {
 				continue
 			}
-			response.Files[n] = file
+			response.DeletedFiles[n] = file
 			n++
 		}
-		response.Files = response.Files[:n]
+		response.DeletedFiles = response.DeletedFiles[:n]
 		n = 0
 		for _, errmsg := range response.DeleteErrors {
 			if errmsg == "" {

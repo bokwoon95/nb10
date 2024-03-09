@@ -33,7 +33,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-BUG: uh oh /posts/1/ is not redirecting to /posts/ properly, seems like /posts/ gets incorrectly encoded.
 BUG: creating a new post category does not seem to populate the post.html and postlist.html files inside.
 BUG: posts/post.html should not have a "view: page", and saving it should mention the number of posts regenerated but should not link to any particular post.
 BUG: for some reason output/posts/postlist/index.html exists, investigate what is causing it to appear and if it appears on a default site creation or site regeneration.

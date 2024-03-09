@@ -49,9 +49,15 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div>saved page (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+    <div>saved (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
-    <div>saved post (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+      {{- if eq (ext $.FilePath) ".md" }}
+      <div>saved post (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+      {{- else if eq (base $.FilePath) "post.html" "postlist.html" }}
+      <div>saved (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }})</div>
+      {{- else }}
+      <div>saved</div>
+      {{- end }}
     {{- else }}
     <div>saved</div>
     {{- end }}
