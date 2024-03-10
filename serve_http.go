@@ -418,7 +418,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: remoteFS.Dialect,
 			Format:  "UPDATE files SET serve_count = coalesce(serve_count, 0) + 1 WHERE file_path = {filePath}",
 			Values: []any{

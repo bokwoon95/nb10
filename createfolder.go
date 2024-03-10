@@ -293,6 +293,26 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 				}
 				return nil
 			})
+			group.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, response.Parent, category, "postlist.json"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
 			err = group.Wait()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
