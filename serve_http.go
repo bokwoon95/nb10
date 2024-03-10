@@ -420,7 +420,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
 			Debug:   true,
 			Dialect: remoteFS.Dialect,
-			Format:  "UPDATE files SET serve_count = serve_count + 1 WHERE file_path = {filePath}",
+			Format:  "UPDATE files SET serve_count = coalesce(serve_count, 0) + 1 WHERE file_path = {filePath}",
 			Values: []any{
 				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
 			},
