@@ -48,9 +48,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 	type Response struct {
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		Count             int               `json:"count"`
-		TimeTaken         string            `json:"timeTaken"`
-		TemplateError     TemplateError     `json:"templateError"`
 		ContentSite       string            `json:"contentSite"`
 		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
@@ -212,9 +209,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				"postRedirectGet": map[string]any{
 					"from": "site.json",
 				},
-				"count":         response.Count,
-				"timeTaken":     response.TimeTaken,
-				"templateError": response.TemplateError,
+				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -295,25 +290,23 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			internalServerError(w, r, err)
 			return
 		}
-		result, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
+		regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
 		}
 		response := Response{
-			Count:           result.Count,
-			TimeTaken:       result.TimeTaken.String(),
-			TemplateError:   result.TemplateError,
-			ContentSite:     nbrew.contentSite(sitePrefix),
-			Username:        NullString{String: user.Username, Valid: nbrew.DB != nil},
-			SitePrefix:      sitePrefix,
-			Title:           request.Title,
-			Emoji:           request.Emoji,
-			Favicon:         request.Favicon,
-			CodeStyle:       request.CodeStyle,
-			Description:     request.Description,
-			NavigationLinks: request.NavigationLinks,
+			RegenerationStats: regenerationStats,
+			ContentSite:       nbrew.contentSite(sitePrefix),
+			Username:          NullString{String: user.Username, Valid: nbrew.DB != nil},
+			SitePrefix:        sitePrefix,
+			Title:             request.Title,
+			Emoji:             request.Emoji,
+			Favicon:           request.Favicon,
+			CodeStyle:         request.CodeStyle,
+			Description:       request.Description,
+			NavigationLinks:   request.NavigationLinks,
 		}
 		writeResponse(w, r, response)
 	default:
