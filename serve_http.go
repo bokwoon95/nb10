@@ -306,7 +306,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.search(w, r, user, sitePrefix)
 			return
 		case "uploadfile":
-			// nbrew.uploadfile(w, r, username, sitePrefix)
+			nbrew.uploadfile(w, r, user, sitePrefix)
 			return
 		case "rename":
 			nbrew.rename(w, r, user, sitePrefix)
