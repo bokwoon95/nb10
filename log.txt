@@ -20,8 +20,8 @@ deletesite.go
 createfolder.go
 createfile.go => generated page|post in xxx duration view
 delete.go
-(search.go)
-clipboard.go
+search.go
+(clipboard.go)
 uploadfile.go
 rename.go
 serve_http.go
