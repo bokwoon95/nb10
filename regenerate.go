@@ -69,7 +69,7 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 
 type RegenerationStats struct {
 	Count         int           `json:"count"`
-	TimeTaken     time.Duration `json:"timeTaken"`
+	TimeTaken     string        `json:"timeTaken"`
 	TemplateError TemplateError `json:"templateError"`
 }
 
@@ -278,7 +278,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			}
 		}
 		result.Count = int(count.Load())
-		result.TimeTaken = time.Since(startedAt)
+		result.TimeTaken = time.Since(startedAt).String()
 		return result, nil
 	}
 
@@ -443,6 +443,6 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		}
 	}
 	result.Count = int(count.Load())
-	result.TimeTaken = time.Since(startedAt)
+	result.TimeTaken = time.Since(startedAt).String()
 	return result, nil
 }

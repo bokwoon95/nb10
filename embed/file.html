@@ -23,9 +23,9 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div>created page (generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+    <div>created page (generated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
-    <div>created post (generated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+    <div>created post (generated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else }}
     <div>created file</div>
     {{- end }}
@@ -49,12 +49,12 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div>saved (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+    <div>saved (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
       {{- if eq (ext $.FilePath) ".md" }}
-      <div>saved post (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+      <div>saved post (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
       {{- else if eq (base $.FilePath) "post.html" "postlist.html" }}
-      <div>saved (regenerated {{ $.Count }} file{{ if ne $.Count 1 }}s{{ end }} in {{ $.TimeTaken }})</div>
+      <div>saved (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }})</div>
       {{- else }}
       <div>saved</div>
       {{- end }}
@@ -92,10 +92,13 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
   {{- $numErrors := index $.PostRedirectGet "numErrors" }}
+  {{- $regenerationStats := index $.PostRedirectGet "regenerationStats" }}
   <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
     <span class='ml2'>
-      {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }} deleted {{ if $numErrors }}({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
+      {{ $numDeleted }} file{{ if ne $numDeleted "1" }}s{{ end }} deleted
+      {{ if $numErrors }} ({{ $numErrors }} error{{ if ne $numErrors "1" }}s{{ end }}){{ end }}
+      {{ if $regenerationStats.count.Int }} (regenerated {{ $regenerationStats.count }} file{{ if ne $regenerationStats.count "1" }}s{{ end }} in {{ $regenerationStats.timeTaken }}){{ end }}
     </span>
   </div>
   <div class='flex-grow-1'></div>
@@ -268,21 +271,17 @@
   {{- end }}
 </div>
 <form method='post' enctype='multipart/form-data' class='mv2'>
-  {{- if $.TemplateError.ErrorMessage }}
+  {{- if $.RegenerationStats.TemplateError.ErrorMessage }}
   <div class='mv2 invalid-red'>
     <span class='b'>template error: </span>
-    {{- $path := "" }}
-    {{- if $.TemplateError.Name }}
-      {{- if hasPrefix $.TemplateError.Name "/themes/" }}
-      {{- $path = join "files" $.SitePrefix "output" $.TemplateError.Name }}
+    {{- if $.RegenerationStats.TemplateError.Name }}
+      {{- if hasPrefix $.RegenerationStats.TemplateError.Name "/themes/" }}
+      <a href='/{{ join "files" $.SitePrefix "output" $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}#L{{ $.RegenerationStats.TemplateError.Line }}{{ end }}'>{{ $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}:{{ $.RegenerationStats.TemplateError.Line }}{{ end }}</a>: {{ $.RegenerationStats.TemplateError.ErrorMessage }}
       {{- else }}
-      {{- $path = join "files" $.SitePrefix $.TemplateError.Name }}
+      <a href='/{{ join "files" $.SitePrefix $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}#L{{ $.RegenerationStats.TemplateError.Line }}{{ end }}'>{{ $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}:{{ $.RegenerationStats.TemplateError.Line }}{{ end }}</a>: {{ $.RegenerationStats.TemplateError.ErrorMessage }}
       {{- end }}
-    {{- end }}
-    {{- if $path }}
-    <a href='/{{ $path }}{{ if $.TemplateError.Line }}#L{{ $.TemplateError.Line }}{{ end }}'>{{ $.TemplateError.Name }}{{ if $.TemplateError.Line }}:{{ $.TemplateError.Line }}{{ end }}</a>: {{ $.TemplateError.ErrorMessage }}
     {{- else }}
-    {{ $.TemplateError.ErrorMessage }}
+    {{ $.RegenerationStats.TemplateError.ErrorMessage }}
     {{- end }}
   </div>
   {{- end }}

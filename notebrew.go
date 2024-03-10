@@ -240,7 +240,6 @@ func (nbrew *Notebrew) getSession(r *http.Request, name string, valuePtr any) (o
 		}
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
 	err = decoder.Decode(valuePtr)
 	if err != nil {
 		return false, err

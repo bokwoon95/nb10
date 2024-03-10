@@ -32,18 +32,14 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		ModTime time.Time `json:"modTime"`
 	}
 	type Response struct {
-		Error         string        `json:"status"`
-		DeleteErrors  []string      `json:"deleteErrors"`
-		ContentSite   string        `json:"contentSite"`
-		Username      NullString    `json:"username"`
-		SitePrefix    string        `json:"sitePrefix"`
-		Parent        string        `json:"parent"`
-		Files         []File        `json:"files"`
-		Count         int           `json:"count"`
-		TimeTaken     string        `json:"timeTaken"`
-		TemplateError TemplateError `json:"templateError"`
-		// deleted $.(len $.Files) files ($.(len $.DeleteErrors) errors)
-		// regenerated $.Count files in $.TimeTaken
+		Error             string            `json:"status"`
+		DeleteErrors      []string          `json:"deleteErrors"`
+		ContentSite       string            `json:"contentSite"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		Parent            string            `json:"parent"`
+		Files             []File            `json:"files"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -182,9 +178,10 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":       "delete",
-					"numDeleted": len(response.Files),
-					"numErrors":  len(response.DeleteErrors),
+					"from":              "delete",
+					"numDeleted":        len(response.Files),
+					"numErrors":         len(response.DeleteErrors),
+					"regenerationStats": response.RegenerationStats,
 				},
 			})
 			if err != nil {
@@ -783,10 +780,10 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				internalServerError(w, r, err)
 				return
 			}
-			response.Count = int(count.Load())
-			response.TimeTaken = time.Since(startedAt).String()
+			response.RegenerationStats.Count = int(count.Load())
+			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			if templateErrPtr.Load() != nil {
-				response.TemplateError = *templateErrPtr.Load()
+				response.RegenerationStats.TemplateError = *templateErrPtr.Load()
 			}
 		}
 

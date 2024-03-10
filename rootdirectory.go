@@ -32,7 +32,6 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 	type Response struct {
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
-		TemplateError   TemplateError  `json:"templateError"`
 		ContentSite     string         `json:"contentSite"`
 		Username        NullString     `json:"username"`
 		SitePrefix      string         `json:"sitePrefix"`

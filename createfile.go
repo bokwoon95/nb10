@@ -31,19 +31,17 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		Content string
 	}
 	type Response struct {
-		Error         string        `json:"error"`
-		FormErrors    url.Values    `json:"formErrors"`
-		ContentSite   string        `json:"contentSite"`
-		Username      NullString    `json:"username"`
-		SitePrefix    string        `json:"sitePrefix"`
-		Parent        string        `json:"parent"`
-		Name          string        `json:"name"`
-		Ext           string        `json:"ext"`
-		Content       string        `json:"content"`
-		FilesTooBig   []string      `json:"filesTooBig"`
-		Count         int           `json:"count"`
-		TimeTaken     string        `json:"timeTaken"`
-		TemplateError TemplateError `json:"templateError"`
+		Error             string            `json:"error"`
+		FormErrors        url.Values        `json:"formErrors"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		ContentSite       string            `json:"contentSite"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		Parent            string            `json:"parent"`
+		Name              string            `json:"name"`
+		Ext               string            `json:"ext"`
+		Content           string            `json:"content"`
+		FilesTooBig       []string          `json:"filesTooBig"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -180,10 +178,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				"postRedirectGet": map[string]any{
 					"from": "createfile",
 				},
-				"count":         response.Count,
-				"timeTaken":     response.TimeTaken,
-				"templateError": response.TemplateError,
-				"filesTooBig":   response.FilesTooBig,
+				"regenerationStats": response.RegenerationStats,
+				"filesTooBig":       response.FilesTooBig,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -563,14 +559,14 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			startedAt := time.Now()
 			err = siteGen.GeneratePage(r.Context(), path.Join(response.Parent, response.Name+response.Ext), response.Content)
 			if err != nil {
-				if !errors.As(err, &response.TemplateError) {
+				if !errors.As(err, &response.RegenerationStats.TemplateError) {
 					getLogger(r.Context()).Error(err.Error())
 					internalServerError(w, r, err)
 					return
 				}
 			}
-			response.Count = 1
-			response.TimeTaken = time.Since(startedAt).String()
+			response.RegenerationStats.Count = 1
+			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		case "posts":
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
@@ -632,8 +628,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				internalServerError(w, r, err)
 				return
 			}
-			response.Count = int(count.Load())
-			response.TemplateError = *templateErrPtr.Load()
+			response.RegenerationStats.Count = int(count.Load())
+			response.RegenerationStats.TemplateError = *templateErrPtr.Load()
 		}
 		writeResponse(w, r, response)
 	default:

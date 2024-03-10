@@ -20,15 +20,13 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		PostsPerPage int `json:"postsPerPage"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet"`
-		Count           int            `json:"count"`
-		TimeTaken       string         `json:"timeTaken"`
-		TemplateError   TemplateError  `json:"templateError"`
-		ContentSite     string         `json:"contentSite"`
-		Category        string         `json:"category"`
-		Username        NullString     `json:"username"`
-		SitePrefix      string         `json:"sitePrefix"`
-		PostsPerPage    int            `json:"postsPerPage"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		ContentSite       string            `json:"contentSite"`
+		Category          string            `json:"category"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		PostsPerPage      int               `json:"postsPerPage"`
 	}
 	normalizeRequest := func(request Request) Request {
 		if request.PostsPerPage <= 0 {
@@ -114,9 +112,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 				"postRedirectGet": map[string]any{
 					"from": "postlist.json",
 				},
-				"count":         response.Count,
-				"timeTaken":     response.TimeTaken,
-				"templateError": response.TemplateError,
+				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -204,14 +200,14 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		}
 		count, err := siteGen.GeneratePostList(r.Context(), category, postListTemplate)
 		if err != nil {
-			if !errors.As(err, &response.TemplateError) {
+			if !errors.As(err, &response.RegenerationStats.TemplateError) {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
 			}
 		}
-		response.Count = count
-		response.TimeTaken = time.Since(startedAt).String()
+		response.RegenerationStats.Count = count
+		response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		writeResponse(w, r, response)
 	default:
 		methodNotAllowed(w, r)
