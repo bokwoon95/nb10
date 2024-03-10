@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"path"
 	"strings"
+
+	"golang.org/x/sync/errgroup"
 )
 
 func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
@@ -234,30 +236,68 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			internalServerError(w, r, err)
 			return
 		}
-		if head == "posts" && tail == "" {
-			var templateErr TemplateError
+		if response.Parent == "posts" {
+			category := response.Name
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
-				if !errors.Is(err, &templateErr) {
-					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
-					return
-				}
-			} else {
-				category := response.Name
-				tmpl, err := siteGen.PostListTemplate(r.Context(), category)
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 				if err != nil {
-					if !errors.Is(err, &templateErr) {
-						getLogger(r.Context()).Error(err.Error())
-					}
-				} else {
-					err = siteGen.GeneratePostListPage(r.Context(), category, tmpl, 1, 1, nil)
-					if err != nil {
-						if !errors.Is(err, &templateErr) {
-							getLogger(r.Context()).Error(err.Error())
-						}
-					}
+					return err
 				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, response.Parent, category, "post.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			group.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, response.Parent, category, "postlist.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "postlist.html"), string(b))
+				if err != nil {
+					return err
+				}
+				err = siteGen.GeneratePostListPage(groupctx, category, tmpl, 1, 1, nil)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			err = group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
 			}
 		}
 		writeResponse(w, r, response)
