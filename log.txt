@@ -33,8 +33,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-BUG: uploading a file into notes/ causes a 500 when trying to render the session in the next template
-    - template: directory.html:300:24: executing "directory.html" at <index $.PostRedirectGet "regenerationStats" "templateError">: error calling index: index of nil pointer
 TODO: oh my god, every action related to creating a page or deleting a page (that includes copying, moving and renaming pages) has to honor the same system where the outputDir /output/abc/ actually is co-owned by two files, /pages/abc.html and /pages/abc/. If we create files via copying/move/rename, we must copy only the relevant files in the outputDir. If we delete files due to a delete/move/rename, we must only delete the relevant files in the outputDir.
 TODO: modify file.go such that it handles displaying image files in a image viewer page that also lets you write to the text field (which is also fulltext indexed 👀)
 TODO: for page assets, we need to include a little help link "how do I include assets?" that directs users to the guide for linking to assets in HTML.
