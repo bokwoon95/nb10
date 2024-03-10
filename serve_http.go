@@ -282,7 +282,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.file(w, r, user, sitePrefix, urlPath)
 			return
 		case "clipboard":
-			// nbrew.clipboard(w, r, username, sitePrefix, tail)
+			nbrew.clipboard(w, r, user, sitePrefix, tail)
 			return
 		}
 
