@@ -19,8 +19,8 @@ createsite.go
 deletesite.go
 createfolder.go
 createfile.go => generated page|post in xxx duration view
-(delete.go)
-search.go
+delete.go
+(search.go)
 clipboard.go
 uploadfile.go
 rename.go
@@ -33,9 +33,8 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-BUG: creating a new post category does not seem to populate the post.html and postlist.html files inside.
-TODO: before going further, modify file.go such that it handles displaying image files in a image viewer page that also lets you write to the text field (which is also fulltext indexed 👀)
 TODO: oh my god, every action related to creating a page or deleting a page (that includes copying, moving and renaming pages) has to honor the same system where the outputDir /output/abc/ actually is co-owned by two files, /pages/abc.html and /pages/abc/. If we create files via copying/move/rename, we must copy only the relevant files in the outputDir. If we delete files due to a delete/move/rename, we must only delete the relevant files in the outputDir.
+TODO: modify file.go such that it handles displaying image files in a image viewer page that also lets you write to the text field (which is also fulltext indexed 👀)
 TODO: in serveFile we can actually track the number of times a resource was requested (done in a goroutine so as to not affect serving the file). This lets us do rudimentary bandwidth calculations by multiplying count * size in case we notice too much bandwidth is being consumed. It also serves as a rough estimate of page popularity. Bytes served by the CDN/S3 will not be tracked, but hopefully we can impose usage caps to prevent runaway costs from bankrupting us.
 TODO: for page assets, we need to include a little help link "how do I include assets?" that directs users to the guide for linking to assets in HTML.
     - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"

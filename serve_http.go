@@ -303,7 +303,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.delete(w, r, user, sitePrefix)
 			return
 		case "search":
-			// nbrew.search(w, r, username, sitePrefix)
+			nbrew.search(w, r, user, sitePrefix)
 			return
 		case "uploadfile":
 			// nbrew.uploadfile(w, r, username, sitePrefix)
@@ -415,6 +415,21 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	default:
 		cacheControl = "no-cache, stale-while-revalidate, max-age=120" /* 2 minutes */
+	}
+	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
+			Debug:   true,
+			Dialect: remoteFS.Dialect,
+			Format:  "UPDATE files SET serve_count = serve_count + 1 WHERE file_path = {filePath}",
+			Values: []any{
+				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
 	}
 	serveFile(w, r, file, fileInfo, fileType, cacheControl)
 }
