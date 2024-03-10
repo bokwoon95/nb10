@@ -296,7 +296,22 @@
   </div>
   {{- end }}
 </div>
-{{- if eq (index $.PostRedirectGet "from") "regenerate" "uploadfile" }}
+{{- if eq (index $.PostRedirectGet "from") "regenerate" }}
+  {{- $templateError := index $.PostRedirectGet "regenerationStats" "templateError" }}
+  {{- if $templateError.errorMessage }}
+  <div class='mv2 invalid-red'>
+    <span class='b'>template error: </span>
+    {{- if not $templateError.name }}
+    {{ $templateError.errorMessage }}
+    {{- else if hasPrefix $templateError.name "/themes/" }}
+    <a href='/{{ join "files" $.SitePrefix "output" $templateError.name }}{{ if $templateError.line }}#L{{ $templateError.line }}{{ end }}'>{{ $templateError.name }}{{ if $templateError.line }}:{{ $templateError.line }}{{ end }}</a>: {{ $templateError.errorMessage }}
+    {{- else }}
+    <a href='/{{ join "files" $.SitePrefix $templateError.name }}{{ if $templateError.line }}#L{{ $templateError.line }}{{ end }}'>{{ $templateError.name }}{{ if $templateError.line }}:{{ $templateError.line }}{{ end }}</a>: {{ $templateError.errorMessage }}
+    {{- end }}
+  </div>
+  {{- end }}
+{{- end }}
+{{- if eq (index $.PostRedirectGet "from") "uploadfile" }}
   {{- $templateError := index $.PostRedirectGet "regenerationStats" "templateError" }}
   {{- if $templateError.errorMessage }}
   <div class='mv2 invalid-red'>

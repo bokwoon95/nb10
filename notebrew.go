@@ -431,7 +431,8 @@ func executeTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Temp
 
 	err := tmpl.Execute(gzipWriter, data)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error(), slog.String("data", fmt.Sprintf("%#v", data)))
+		getLogger(r.Context()).Error(err.Error())
+		fmt.Printf(fmt.Sprintf("%#v", data))
 		internalServerError(w, r, err)
 		return
 	}

@@ -21,16 +21,15 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-
 func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Response struct {
-		Error         string        `json:"error,omitempty"`
-		Parent        string        `json:"parent"`
-		Count         int           `json:"count"`
-		Size          int           `json:"size"`
-		FilesExist    []string      `json:"fileExist,omitempty"`
-		FilesTooBig   []string      `json:"filesTooBig,omitempty"`
-		TemplateError TemplateError `json:"templateError"`
+		Error             string            `json:"error,omitempty"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		Parent            string            `json:"parent"`
+		Count             int               `json:"count"`
+		Size              int               `json:"size"`
+		FilesExist        []string          `json:"fileExist,omitempty"`
+		FilesTooBig       []string          `json:"filesTooBig,omitempty"`
 	}
 	if r.Method != "POST" {
 		methodNotAllowed(w, r)
@@ -49,13 +48,13 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		err := nbrew.setSession(w, r, "flash", map[string]any{
 			"postRedirectGet": map[string]any{
-				"from":          "uploadfile",
-				"error":         response.Error,
-				"count":         response.Count,
-				"size":          response.Size,
-				"templateError": response.TemplateError,
-				"filesExist":    response.FilesExist,
-				"filesTooBig":   response.FilesTooBig,
+				"from":              "uploadfile",
+				"regenerationStats": response.RegenerationStats,
+				"error":             response.Error,
+				"count":             response.Count,
+				"size":              response.Size,
+				"filesExist":        response.FilesExist,
+				"filesTooBig":       response.FilesTooBig,
 			},
 		})
 		if err != nil {
@@ -159,7 +158,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		return
 	}
 
-	var count, size atomic.Int64
+	var count, regenerationCount, size atomic.Int64
 	writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
 		writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
 		if err != nil {
@@ -186,6 +185,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		return
 	}
 	group, groupctx := errgroup.WithContext(r.Context())
+	startedAt := time.Now()
 	for {
 		part, err := reader.NextPart()
 		if err != nil {
@@ -285,6 +285,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					}
 					templateErrPtr.CompareAndSwap(nil, &templateErr)
 				}
+				regenerationCount.Add(1)
 				return nil
 			})
 			continue
@@ -329,6 +330,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					}
 					templateErrPtr.CompareAndSwap(nil, &templateErr)
 				}
+				regenerationCount.Add(1)
 				return nil
 			})
 			continue
@@ -434,6 +436,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		internalServerError(w, r, err)
 		return
 	}
+	timeTaken := time.Since(startedAt)
 	if head == "posts" {
 		category := tail
 		err := func() error {
@@ -459,9 +462,12 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	}
 	response.Count = int(count.Load())
 	response.Size = int(size.Load())
-	templateErr := templateErrPtr.Load()
-	if templateErr != nil {
-		response.TemplateError = *templateErr
+	response.RegenerationStats.Count = int(regenerationCount.Load())
+	if response.RegenerationStats.Count != 0 {
+		response.RegenerationStats.TimeTaken = timeTaken.String()
+	}
+	if templateErrPtr.Load() != nil {
+		response.RegenerationStats.TemplateError = *templateErrPtr.Load()
 	}
 	writeResponse(w, r, response)
 }
