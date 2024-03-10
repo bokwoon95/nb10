@@ -49,9 +49,10 @@
 {{- end }}
 
 {{- if eq (index $.PostRedirectGet "from") "regenerate" }}
+  {{- $regenerationStats := index $.PostRedirectGet "regenerationStats" }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
     <div class='pv1'>
-      <div>regenerated site ({{ index $.PostRedirectGet "count" }} file{{ if ne (index $.PostRedirectGet "count") 1.0 }}s{{ end }} in {{ index $.PostRedirectGet "timeTaken" }}): <a href='{{ $.ContentSite }}'>view</a></div>
+      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentSite }}'>view</a></div>
     </div>
     <div class='flex-grow-1'></div>
     <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -123,22 +124,18 @@
   {{- end }}
 </div>
 {{- if eq (index $.PostRedirectGet "from") "regenerate" }}
-  {{- $templateError := index $.PostRedirectGet "templateError" }}
-  {{- if $templateError.ErrorMessage }}
+  {{- $templateError := index $.PostRedirectGet "regenerationStats" "templateError" }}
+  {{- if $templateError.errorMessage }}
   <div class='mv2 invalid-red'>
     <span class='b'>template error: </span>
-    {{- $path := "" }}
-    {{- if $templateError.Name }}
-      {{- if hasPrefix $templateError.Name "/themes/" }}
-      {{- $path = join "files" $.SitePrefix "output" $templateError.Name }}
+    {{- if $templateError.name }}
+      {{- if hasPrefix $templateError.name "/themes/" }}
+      <a href='/{{ join "files" $.SitePrefix "output" $templateError.name }}{{ if $templateError.Line }}#L{{ $templateError.Line }}{{ end }}'>{{ $templateError.name }}{{ if $ats.templateError.line }}:{{ $templateError.line }}{{ end }}</a>: {{ $templateError.errorMessage }}
       {{- else }}
-      {{- $path = join "files" $.SitePrefix $templateError.Name }}
+      <a href='/{{ join "files" $.SitePrefix $templateError.name }}{{ if $templateError.line }}#L{{ $templateError.line }}{{ end }}'>{{ $templateError.name }}{{ if $templateError.line }}:{{ $templateError.line }}{{ end }}</a>: {{ $templateError.errorMessage }}
       {{- end }}
-    {{- end }}
-    {{- if $path }}
-    <a href='/{{ $path }}{{ if $templateError.Line }}#L{{ $templateError.Line }}{{ end }}'>{{ $templateError.Name }}{{ if $templateError.Line }}:{{ $templateError.Line }}{{ end }}</a>: {{ $templateError.ErrorMessage }}
     {{- else }}
-    {{ $templateError.ErrorMessage }}
+    {{ $templateError.errorMessage }}
     {{- end }}
   </div>
   {{- end }}

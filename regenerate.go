@@ -21,9 +21,6 @@ import (
 func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePrefix string) {
 	type Response struct {
 		RegenerationStats RegenerationStats
-		Count             int           `json:"count"`
-		TimeTaken         string        `json:"timeTaken"`
-		TemplateError     TemplateError `json:"templateError"`
 	}
 	referer := r.Referer()
 	if referer == "" {
@@ -43,10 +40,8 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 		}
 		err := nbrew.setSession(w, r, "flash", map[string]any{
 			"postRedirectGet": map[string]any{
-				"from":          "regenerate",
-				"count":         response.Count,
-				"timeTaken":     response.TimeTaken,
-				"templateError": response.TemplateError,
+				"from":              "regenerate",
+				"regenerationStats": response.RegenerationStats,
 			},
 		})
 		if err != nil {
@@ -60,16 +55,14 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 		methodNotAllowed(w, r)
 		return
 	}
-	result, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
+	regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 		internalServerError(w, r, err)
 		return
 	}
 	response := Response{
-		Count:         result.Count,
-		TimeTaken:     result.TimeTaken.String(),
-		TemplateError: result.TemplateError,
+		RegenerationStats: regenerationStats,
 	}
 	writeResponse(w, r, response)
 }

@@ -211,7 +211,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 		internalName := tmpl.Name()
 		if strings.HasSuffix(internalName, ".html") && internalName != name {
 			return nil, TemplateError{
-				Valid:        true,
 				Name:         name,
 				ErrorMessage: "define " + strconv.Quote(internalName) + ": internal template name cannot end with .html",
 			}
@@ -243,7 +242,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 				if strings.HasSuffix(node.Name, ".html") {
 					if !strings.HasPrefix(node.Name, "/themes/") {
 						return nil, TemplateError{
-							Valid:        true,
 							Name:         name,
 							ErrorMessage: "template " + strconv.Quote(node.Name) + ": external template name must start with /themes/",
 						}
@@ -265,7 +263,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			n := slices.Index(callers, externalName)
 			if n > 0 {
 				return TemplateError{
-					Valid:        true,
 					Name:         externalName,
 					ErrorMessage: "circular template reference: " + strings.Join(callers[n:], "=>") + " => " + externalName,
 				}
@@ -326,7 +323,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 				// externalTemplateErrs list.
 				if errors.Is(err, fs.ErrNotExist) {
 					return TemplateError{
-						Valid:        true,
 						Name:         name,
 						ErrorMessage: "template " + strconv.Quote(externalName) + " does not exist",
 					}
@@ -345,7 +341,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 				// (associating it with the current template) instead of adding
 				// it to the externalTemplateErrs list.
 				return TemplateError{
-					Valid:        true,
 					Name:         name,
 					ErrorMessage: strconv.Quote(externalName) + " is a folder",
 				}
@@ -389,7 +384,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			_, err = finalTemplate.AddParseTree(tmpl.Name(), tmpl.Tree)
 			if err != nil {
 				return nil, TemplateError{
-					Valid:        true,
 					Name:         name,
 					ErrorMessage: fmt.Sprintf("%s: add %s: %s", externalNames[i], tmpl.Name(), err),
 				}
@@ -400,7 +394,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 		_, err = finalTemplate.AddParseTree(tmpl.Name(), tmpl.Tree)
 		if err != nil {
 			return nil, TemplateError{
-				Valid:        true,
 				Name:         name,
 				ErrorMessage: fmt.Sprintf("add %s: %s", tmpl.Name(), err),
 			}
@@ -1621,7 +1614,6 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 }
 
 type TemplateError struct {
-	Valid        bool   `json:"valid"`
 	Name         string `json:"name"`
 	Line         int    `json:"line"`
 	ErrorMessage string `json:"errorMessage"`
@@ -1633,15 +1625,11 @@ func NewTemplateError(err error) error {
 	// message as well as adjusts all line numbers in the error message
 	// accordingly if it is in pages/*.html or posts/*.html.
 	return TemplateError{
-		Valid:        true,
 		ErrorMessage: err.Error(),
 	}
 }
 
 func (templateErr TemplateError) Error() string {
-	if !templateErr.Valid {
-		return ""
-	}
 	if templateErr.Name == "" {
 		return templateErr.ErrorMessage
 	}

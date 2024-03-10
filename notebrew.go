@@ -239,7 +239,9 @@ func (nbrew *Notebrew) getSession(r *http.Request, name string, valuePtr any) (o
 			return false, err
 		}
 	}
-	err = json.Unmarshal(data, valuePtr)
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	err = decoder.Decode(valuePtr)
 	if err != nil {
 		return false, err
 	}
@@ -829,8 +831,8 @@ func internalServerError(w http.ResponseWriter, r *http.Request, serverErr error
 }
 
 type NullString struct {
-	String string `json:"string"`
 	Valid  bool   `json:"valid"`
+	String string `json:"string"`
 }
 
 func WriteFile(ctx context.Context, fsys FS, filePath string, reader io.Reader) error {
