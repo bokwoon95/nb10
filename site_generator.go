@@ -1620,12 +1620,26 @@ type TemplateError struct {
 }
 
 func NewTemplateError(err error) error {
-	// TODO: once we are able to start inducing template errors, rewrite this
-	// so that it parses the template name and line number from the error
-	// message as well as adjusts all line numbers in the error message
-	// accordingly if it is in pages/*.html or posts/*.html.
+	sections := strings.SplitN(err.Error(), ":", 4)
+	if len(sections) < 4 || strings.TrimSpace(sections[0]) != "template" {
+		return TemplateError{
+			ErrorMessage: err.Error(),
+		}
+	}
+	templateName := strings.TrimSpace(sections[1])
+	lineNo, _ := strconv.Atoi(strings.TrimSpace(sections[2]))
+	errorMessage := strings.TrimSpace(sections[3])
+	i := strings.Index(errorMessage, ":")
+	if i > 0 {
+		colNo, _ := strconv.Atoi(strings.TrimSpace(errorMessage[:i]))
+		if colNo > 0 {
+			errorMessage = strings.TrimSpace(errorMessage[i+1:])
+		}
+	}
 	return TemplateError{
-		ErrorMessage: err.Error(),
+		Name:         templateName,
+		Line:         lineNo,
+		ErrorMessage: errorMessage,
 	}
 }
 
