@@ -96,9 +96,9 @@
   <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
     <span class='ml2'>
-      {{ $numDeleted }} file{{ if ne $numDeleted "1" }}s{{ end }} deleted
-      {{ if $numErrors }} ({{ $numErrors }} error{{ if ne $numErrors "1" }}s{{ end }}){{ end }}
-      {{ if $regenerationStats.count.Int }} (regenerated {{ $regenerationStats.count }} file{{ if ne $regenerationStats.count "1" }}s{{ end }} in {{ $regenerationStats.timeTaken }}){{ end }}
+      deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
+      {{ if $numErrors }} ({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
+      {{ if $regenerationStats.count }} (regenerated {{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}){{ end }}
     </span>
   </div>
   <div class='flex-grow-1'></div>

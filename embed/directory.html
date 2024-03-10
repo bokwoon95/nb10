@@ -30,7 +30,7 @@
   {{- if not $regenerationStats.templateError.errorMessage }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
     <div class='pv1'>
-      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count "1" }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentSite }}'>view</a></div>
+      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentSite }}'>view</a></div>
     </div>
     <div class='flex-grow-1'></div>
     <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -60,9 +60,9 @@
   <div class='pv1 flex items-center'>
     {{ template "heroicons-trash" }}
     <div class='ml2'>
-      {{ $numDeleted }} file{{ if ne $numDeleted "1" }}s{{ end }} deleted
-      {{ if $numErrors }} ({{ $numErrors }} error{{ if ne $numErrors "1" }}s{{ end }}){{ end }}
-      {{ if $regenerationStats.count.Int }} (regenerated {{ $regenerationStats.count }} file{{ if ne $regenerationStats.count "1" }}s{{ end }} in {{ $regenerationStats.timeTaken }}){{ end }}
+      deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
+      {{ if $numErrors }} ({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
+      {{ if $regenerationStats.count }} (regenerated {{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}){{ end }}
     </div>
   </div>
   <div class='flex-grow-1'></div>
@@ -134,7 +134,7 @@
   {{- $filesTooBig := index $.PostRedirectGet "filesTooBig" }}
   {{- $size := float64ToInt64 (index $.PostRedirectGet "size") }}
   <div class='pv1'>
-    <div>{{ $count }} file{{ if ne $count "1" }}s{{ end }} uploaded ({{ fileSizeToString $size }} total)</div>
+    <div>{{ $count }} file{{ if ne $count 1.0 }}s{{ end }} uploaded ({{ fileSizeToString $size }} total)</div>
     {{- if $filesExist }}
     <br>
     <div>
