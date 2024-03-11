@@ -1,0 +1,47 @@
+<style>
+html { max-width: 80ch; padding: 3em 1em; margin: auto; line-height: 1.75; font-size: 1.25em; background-color: #fafafa; }
+p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
+.w-100 { width: 100%; }
+.w-70 { width: 70%; }
+.w-80 { width: 80%; }
+@media screen and (min-width: 30em) and (max-width: 60em) {
+  .w-60-m { width: 60%; }
+  .w-70-m { width: 70%; }
+  .w-80-m { width: 80%; }
+}
+@media screen and (min-width: 60em) {
+  .w-50-l { width: 50%; }
+  .w-60-l { width: 60%; }
+  .w-70-l { width: 70%; }
+}
+.flex { display: flex; }
+.flex-grow-1 { flex-grow: 1; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-wrap { flex-wrap: wrap; }
+</style>
+<title>{{ if $.Title }}{{ $.Title }}{{ else }}Untitled{{ end }}</title>
+<nav>
+  {{ range $i, $navigationLink := $.Site.NavigationLinks }}
+  {{ if $i }}&boxv; {{ end }}<a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a>
+  {{ end }}
+</nav>
+<hr>
+<div style='font-size: 0.875rem; color: #555555;'>{{ $.CreationTime.Format "2006-01-02" }}</div>
+{{ $.Content }}
+<ul style='margin: 0; padding: 0; list-style: none;'>
+  {{ range $image := $.Images }}
+  <li>
+    <div class='w-70-l w-80-m w-100' style='margin-left: auto; margin-right: auto; padding: 0;'>
+      <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' style='display: block; max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+      <div class='flex flex-wrap justify-center' style='font-size: 0.875rem;'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
+    </div>
+    <p>{{ $image.Caption }}</p>
+  </li>
+  {{ end }}
+</ul>
+<hr>
+<div style='font-size: 0.875rem; color: #555555;'>last modified {{ $.ModificationTime.Format "2006-01-02 15:04:05 UTC" }}</div>
