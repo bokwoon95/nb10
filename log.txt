@@ -33,13 +33,13 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+- The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
+- The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
+- Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
+    - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
+- Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
+
 TODO: modify file.go such that it handles displaying image files in a image viewer page that also lets you write to the text field (which is also fulltext indexed 👀)
-TODO: for page assets, we need to include a little help link "how do I include assets?" that directs users to the guide for linking to assets in HTML.
-    - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
-    - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
-    - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
-        - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
-    - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 TODO: RE: alt text is embedded into the caption and indicated by whether the first line starts with !alt
     - Actually, even better if we always take the first line (up to 100 characters) as the alt text. So images will always have alt text if there is a caption
         - Actually Actually, don't do this. Don't make the first line of the caption implicitly alt text. This is because alt text can be very different from the caption, and people who are using the caption will already be displaying it in a <figcaption> so alt text isn't even needed. No, people who are alt-text sensitive should specifically start the first line of a caption with !alt to make it crystal clear to the machine that this is an alt text and should not be included in the caption.

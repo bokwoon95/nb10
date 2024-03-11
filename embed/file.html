@@ -317,10 +317,12 @@
 {{- if eq (head $.FilePath) "pages" "posts" }}
   <div class='flex items-center'>
     {{- if eq (head $.FilePath) "pages" }}
-    <span class='b'>assets</span>
+    <div class='b'>assets</div>
     <div class='ma2'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap'>create file</a></div>
+    <div class='flex-grow-1'></div>
+    <div class='ma2 f6'><a href=''>how do I include assets?</a></div>
     {{- else }}
-    <span class='b'>images</span>
+    <div class='b'>images</div>
     {{- end }}
   </div>
   {{- if $.Assets }}
