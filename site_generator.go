@@ -419,9 +419,8 @@ type Page struct {
 }
 
 type Image struct {
-	Parent string
-	Name   string
-	// TODO: populate these.
+	Parent  string
+	Name    string
 	AltText string
 	Caption string
 }
@@ -477,17 +476,13 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				Values: []any{
 					sq.StringParam("outputDir", outputDir),
 				},
-			}, func(row *sq.Row) *RemoteFile {
-				file := &RemoteFile{
-					ctx:  groupctx,
-					info: &RemoteFileInfo{},
-				}
-				file.info.FilePath = row.String("file_path")
-				b := row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "CASE WHEN file_path LIKE '%.md' THEN text ELSE NULL END")
-				if b != nil {
-					file.buf = bytes.NewBuffer(b)
-				}
-				return file
+			}, func(row *sq.Row) (result struct {
+				FilePath string
+				Text     []byte
+			}) {
+				result.FilePath = row.String("file_path")
+				result.Text = row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "text")
+				return result
 			})
 			if err != nil {
 				return err
@@ -495,23 +490,38 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			defer cursor.Close()
 			subgroup, subctx := errgroup.WithContext(groupctx)
 			for cursor.Next() {
-				file, err := cursor.Result()
+				result, err := cursor.Result()
 				if err != nil {
 					return err
 				}
-				name := path.Base(file.info.FilePath)
-				switch path.Ext(file.info.FilePath) {
+				name := path.Base(result.FilePath)
+				switch path.Ext(result.FilePath) {
 				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-					pageData.Images = append(pageData.Images, Image{Parent: urlPath, Name: name})
+					image := Image{
+						Parent:  urlPath,
+						Name:    name,
+						Caption: string(bytes.TrimSpace(result.Text)),
+					}
+					result.Text = result.Text[:0]
+					bufPool.Put(bytes.NewBuffer(result.Text))
+					if strings.HasPrefix(image.Caption, "!alt ") {
+						image.AltText, image.Caption, _ = strings.Cut(image.Caption, "\n")
+						image.AltText = strings.TrimSpace(strings.TrimPrefix(image.AltText, "!alt "))
+						image.Caption = strings.TrimSpace(image.Caption)
+					}
+					pageData.Images = append(pageData.Images, image)
 				case ".md":
 					subgroup.Go(func() error {
 						err := subctx.Err()
 						if err != nil {
 							return err
 						}
-						defer file.Close()
+						defer func() {
+							result.Text = result.Text[:0]
+							bufPool.Put(bytes.NewBuffer(result.Text))
+						}()
 						var b strings.Builder
-						err = siteGen.markdown.Convert(file.buf.Bytes(), &b)
+						err = siteGen.markdown.Convert(result.Text, &b)
 						if err != nil {
 							return err
 						}
@@ -867,22 +877,40 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			Values: []any{
 				sq.StringParam("outputDir", outputDir),
 			},
-		}, func(row *sq.Row) string {
-			return path.Base(row.String("file_path"))
+		}, func(row *sq.Row) (result struct {
+			FilePath string
+			Text     []byte
+		}) {
+			result.FilePath = row.String("file_path")
+			result.Text = row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "text")
+			return result
 		})
 		if err != nil {
 			return err
 		}
 		defer cursor.Close()
 		for cursor.Next() {
-			name, err := cursor.Result()
+			result, err := cursor.Result()
 			if err != nil {
 				return err
 			}
+			name := path.Base(result.FilePath)
 			if _, ok := imgIsMentioned[name]; ok {
 				continue
 			}
-			postData.Images = append(postData.Images, Image{Parent: urlPath, Name: name})
+			image := Image{
+				Parent:  urlPath,
+				Name:    name,
+				Caption: string(bytes.TrimSpace(result.Text)),
+			}
+			result.Text = result.Text[:0]
+			bufPool.Put(bytes.NewBuffer(result.Text))
+			if strings.HasPrefix(image.Caption, "!alt ") {
+				image.AltText, image.Caption, _ = strings.Cut(image.Caption, "\n")
+				image.AltText = strings.TrimSpace(strings.TrimPrefix(image.AltText, "!alt "))
+				image.Caption = strings.TrimSpace(image.Caption)
+			}
+			postData.Images = append(postData.Images, image)
 		}
 		err = cursor.Close()
 		if err != nil {

@@ -185,10 +185,12 @@ details[open] summary.button { background-color: white; }
 @media screen and (min-width: 30em) and (max-width: 60em) {
   .w-60-m { width: 60%; }
   .w-70-m { width: 70%; }
+  .w-80-m { width: 80%; }
 }
 @media screen and (min-width: 60em) {
   .w-50-l { width: 50%; }
   .w-60-l { width: 60%; }
+  .w-70-l { width: 70%; }
 }
 
 /* display and positioning */

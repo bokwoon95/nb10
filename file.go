@@ -826,19 +826,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 
 func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet"`
-		ContentSite     string         `json:"contentSite"`
-		Username        NullString     `json:"username"`
-		SitePrefix      string         `json:"sitePrefix"`
-		FilePath        string         `json:"filePath"`
-		IsDir           bool           `json:"isDir"`
-		ModTime         time.Time      `json:"modTime"`
-		CreationTime    time.Time      `json:"creationTime"`
-		Content         string         `json:"content"`
-		URL             template.URL   `json:"url,omitempty"`
-		BelongsTo       string         `json:"belongsTo"`
-		FilesExist      []string       `json:"filesExist"`
-		FilesTooBig     []string       `json:"filesTooBig"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		ContentSite       string            `json:"contentSite"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		FilePath          string            `json:"filePath"`
+		IsDir             bool              `json:"isDir"`
+		CaptionSupported  bool              `json:"captionSupported"`
+		ModTime           time.Time         `json:"modTime"`
+		CreationTime      time.Time         `json:"creationTime"`
+		Content           string            `json:"content"`
+		AltText           string            `json:"altText"`
+		URL               template.URL      `json:"url,omitempty"`
+		BelongsTo         string            `json:"belongsTo"`
 	}
 
 	isS3Storage := false
@@ -910,7 +911,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				internalServerError(w, r, err)
 				return
 			}
-			response.Content = content
+			response.Content = strings.TrimSpace(content)
+			if strings.HasPrefix(response.Content, "!alt ") {
+				altText, _, _ := strings.Cut(response.Content, "\n")
+				response.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+			}
+			response.CaptionSupported = true
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
 		if head == "output" {
@@ -1029,7 +1035,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			return
 		}
 
-		response.Content = request.Content
+		response.Content = strings.TrimSpace(request.Content)
 		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
 			Dialect: remoteFS.Dialect,
 			Format:  "UPDATE files SET text = {content} WHERE file_path = {filePath}",

@@ -50,6 +50,7 @@ TODO: RE: alt text is embedded into the caption and indicated by whether the fir
     - Actually, even better if we always take the first line (up to 100 characters) as the alt text. So images will always have alt text if there is a caption
         - Actually Actually, don't do this. Don't make the first line of the caption implicitly alt text. This is because alt text can be very different from the caption, and people who are using the caption will already be displaying it in a <figcaption> so alt text isn't even needed. No, people who are alt-text sensitive should specifically start the first line of a caption with !alt to make it crystal clear to the machine that this is an alt text and should not be included in the caption.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
+TODO: search.html should display image previews if the result is an image
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 
 sample template error message

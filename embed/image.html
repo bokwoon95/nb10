@@ -59,10 +59,11 @@
     {{- end }}
   {{- end }}
 </div>
-<figure class='mv2 w-60-l w-70-m w-100 center'>
+<figure class='mv2 w-70-l w-80-m w-100 center'>
   <figcaption class='flex flex-wrap justify-center'><a href='{{ $.URL }}'>{{ base $.FilePath }}</a></figcaption>
-  <img src='{{ $.URL }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+  <img src='{{ $.URL }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
 </figure>
+{{- if $.CaptionSupported }}
 <form method='post' enctype='multipart/form-data' class='mv2'>
   <div class='flex mv2'>
     <label for='content' class='b'>Caption</label>
@@ -81,3 +82,4 @@
   </div>
   <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
 </form>
+{{- end }}
