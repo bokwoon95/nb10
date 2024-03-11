@@ -60,5 +60,10 @@
   {{- end }}
 </div>
 <div>
-  <img src='?raw' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+  <img src='{{ $.URL }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
 </div>
+<form method='post' enctype='multipart/form-data' class='mv2'>
+  <div data-codemirror='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap"}'>
+    <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
+  </div>
+</form>

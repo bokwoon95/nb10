@@ -46,7 +46,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		ModTime           time.Time         `json:"modTime"`
 		CreationTime      time.Time         `json:"creationTime"`
 		Content           string            `json:"content"`
-		URL               string            `json:"url,omitempty"`
+		URL               template.URL      `json:"url,omitempty"`
 		BelongsTo         string            `json:"belongsTo"`
 		AssetDir          string            `json:"assetDir"`
 		Assets            []Asset           `json:"assets"`
@@ -187,10 +187,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		switch head {
 		case "pages":
 			if tail == "index.html" {
-				response.URL = response.ContentSite
+				response.URL = template.URL(response.ContentSite)
 				response.AssetDir = "output"
 			} else {
-				response.URL = response.ContentSite + "/" + strings.TrimSuffix(tail, ".html") + "/"
+				response.URL = template.URL(response.ContentSite + "/" + strings.TrimSuffix(tail, ".html") + "/")
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
 			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
@@ -261,7 +261,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 		case "posts":
-			response.URL = response.ContentSite + "/" + strings.TrimSuffix(filePath, ".md") + "/"
+			response.URL = template.URL(response.ContentSite + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
 			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 				response.Assets, err = sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
@@ -835,7 +835,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		ModTime         time.Time      `json:"modTime"`
 		CreationTime    time.Time      `json:"creationTime"`
 		Content         string         `json:"content"`
-		URL             string         `json:"url,omitempty"`
+		URL             template.URL   `json:"url,omitempty"`
 		BelongsTo       string         `json:"belongsTo"`
 		FilesExist      []string       `json:"filesExist"`
 		FilesTooBig     []string       `json:"filesTooBig"`
@@ -845,7 +845,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 		_, isS3Storage = remoteFS.Storage.(*S3Storage)
 	}
-	_ = isS3Storage
 
 	switch r.Method {
 	case "GET":
@@ -883,12 +882,18 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.ModTime = fileInfo.ModTime()
 		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
 			response.CreationTime = fileInfo.CreationTime
+			if nbrew.ImgDomain != "" && isS3Storage {
+				response.URL = template.URL("https://" + nbrew.ImgDomain + "/" + encodeUUID(fileInfo.FileID) + path.Ext(filePath))
+			} else {
+				response.URL = "?raw"
+			}
 		} else {
 			var absolutePath string
 			if localFS, ok := nbrew.FS.(*LocalFS); ok {
 				absolutePath = path.Join(localFS.RootDir, sitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
+			response.URL = "?raw"
 		}
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			content, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
@@ -906,9 +911,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return
 			}
 			response.Content = content
-		}
-		if nbrew.ImgDomain != "" && isS3Storage {
-			response.URL = ""
 		}
 		referer := getReferer(r)
 		funcMap := map[string]any{
