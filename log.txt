@@ -39,8 +39,10 @@ notebrew/open_browser.go
     - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
-TODO: nbrew.image() and image.html which simply displays a rudimentary image viewer first and the raw image if ?raw is present.
-    - We'll add the caption textbox later once we get this right.
+BUG: createfile for post does not work. why?
+    - It panics but the file itself is actually created successfully. figure out why.
+TODO: when grabbing the image caption in the image viewer, derive its alt text and inject it if present.
+    - Likewise, generating a page or post should also fetch the caption and try to derive its alt text if present.
 TODO: how do we tweak file.go such that it rewrites all img URLs to use the ImgDomain if present?
     - and if ImgDomain is not present, we fall back to ?raw links instead.
 TODO: modify directory.html such that it displays image previews if a file is an image. Needs to dynamically src from either the ImgDomain or a ?raw image link.
