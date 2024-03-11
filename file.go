@@ -75,7 +75,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			nbrew.directory(w, r, user.Username, sitePrefix, filePath, fileInfo.ModTime())
 			return
 		}
-		nbrew.image(w, r, user, sitePrefix, filePath)
+		nbrew.image(w, r, user, sitePrefix, filePath, fileInfo)
 		return
 	}
 	file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, filePath))
@@ -824,60 +824,121 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	}
 }
 
-func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string) {
+func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type Response struct {
-		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
-		ContentSite       string            `json:"contentSite"`
-		Username          NullString        `json:"username"`
-		SitePrefix        string            `json:"sitePrefix"`
-		FilePath          string            `json:"filePath"`
-		IsDir             bool              `json:"isDir"`
-		ModTime           time.Time         `json:"modTime"`
-		CreationTime      time.Time         `json:"creationTime"`
-		Content           string            `json:"content"`
-		URL               string            `json:"url,omitempty"`
-		BelongsTo         string            `json:"belongsTo"`
-		FilesExist        []string          `json:"filesExist"`
-		FilesTooBig       []string          `json:"filesTooBig"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
+		ContentSite     string         `json:"contentSite"`
+		Username        NullString     `json:"username"`
+		SitePrefix      string         `json:"sitePrefix"`
+		FilePath        string         `json:"filePath"`
+		IsDir           bool           `json:"isDir"`
+		ModTime         time.Time      `json:"modTime"`
+		CreationTime    time.Time      `json:"creationTime"`
+		Content         string         `json:"content"`
+		URL             string         `json:"url,omitempty"`
+		BelongsTo       string         `json:"belongsTo"`
+		FilesExist      []string       `json:"filesExist"`
+		FilesTooBig     []string       `json:"filesTooBig"`
 	}
 
-	file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, filePath))
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			notFound(w, r)
-			return
-		}
-		getLogger(r.Context()).Error(err.Error())
-		internalServerError(w, r, err)
-		return
+	isS3Storage := false
+	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+		_, isS3Storage = remoteFS.Storage.(*S3Storage)
 	}
-	defer file.Close()
-	fileInfo, err := file.Stat()
-	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		internalServerError(w, r, err)
-		return
-	}
-	if fileInfo.IsDir() {
-		if r.Method != "GET" {
-			methodNotAllowed(w, r)
-			return
-		}
-		nbrew.directory(w, r, user.Username, sitePrefix, filePath, fileInfo.ModTime())
-		return
-	}
-	fileType, ok := fileTypes[path.Ext(filePath)]
-	if !ok {
-		notFound(w, r)
-		return
-	}
+	_ = isS3Storage
 
 	switch r.Method {
 	case "GET":
 		if r.Form.Has("raw") {
+			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, filePath))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					notFound(w, r)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			defer file.Close()
+			fileType, ok := fileTypes[path.Ext(filePath)]
+			if !ok {
+				notFound(w, r)
+				return
+			}
 			serveFile(w, r, file, fileInfo, fileType, "no-store")
 			return
 		}
+		var response Response
+		_, err := nbrew.getSession(r, "flash", &response)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+		}
+		nbrew.clearSession(w, r, "flash")
+		response.ContentSite = nbrew.contentSite(sitePrefix)
+		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		response.SitePrefix = sitePrefix
+		response.FilePath = filePath
+		response.IsDir = fileInfo.IsDir()
+		response.ModTime = fileInfo.ModTime()
+		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+			response.CreationTime = fileInfo.CreationTime
+		} else {
+			var absolutePath string
+			if localFS, ok := nbrew.FS.(*LocalFS); ok {
+				absolutePath = path.Join(localFS.RootDir, sitePrefix, response.FilePath)
+			}
+			response.CreationTime = CreationTime(absolutePath, fileInfo)
+		}
+		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			content, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
+				Dialect: remoteFS.Dialect,
+				Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
+				Values: []any{
+					sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+				},
+			}, func(row *sq.Row) string {
+				return row.String("text")
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			response.Content = content
+		}
+		referer := getReferer(r)
+		funcMap := map[string]any{
+			"join":             path.Join,
+			"dir":              path.Dir,
+			"base":             path.Base,
+			"ext":              path.Ext,
+			"hasPrefix":        strings.HasPrefix,
+			"hasSuffix":        strings.HasSuffix,
+			"trimPrefix":       strings.TrimPrefix,
+			"trimSuffix":       strings.TrimSuffix,
+			"fileSizeToString": fileSizeToString,
+			"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
+			"baselineJS":       func() template.JS { return template.JS(baselineJS) },
+			"referer":          func() string { return referer },
+			"safeHTML":         func(s string) template.HTML { return template.HTML(s) },
+			"head": func(s string) string {
+				head, _, _ := strings.Cut(s, "/")
+				return head
+			},
+			"tail": func(s string) string {
+				_, tail, _ := strings.Cut(s, "/")
+				return tail
+			},
+		}
+		tmpl, err := template.New("image.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/image.html")
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		executeTemplate(w, r, tmpl, &response)
 	case "POST":
 		var request struct {
 			Content string
