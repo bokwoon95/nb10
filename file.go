@@ -916,7 +916,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		if head == "output" {
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "posts" {
-				response.BelongsTo = path.Join("posts", path.Dir(tail)+".md")
+				response.BelongsTo = path.Dir(tail) + ".md"
 			} else if next != "themes" {
 				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
 			}

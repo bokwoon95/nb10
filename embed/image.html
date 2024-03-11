@@ -45,7 +45,7 @@
     {{- if $.BelongsTo }}
     <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
     <span>&boxv;</span>
-    belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}/'>{{ base $.BelongsTo }}</a>
+    belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}'>{{ base $.BelongsTo }}</a>
     {{- else }}
       {{- if ne (dir $.FilePath) "output/themes" }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
@@ -66,6 +66,7 @@
 <form method='post' enctype='multipart/form-data' class='mv2'>
   <div class='flex mv2'>
     <label for='content' class='b'>Caption</label>
+    <div class='mh2 f6 flex items-center'><a href=''>how do I include alt text?</a></div>
     <div class='flex-grow-1'></div>
     <button type='button' class='button ba br2 mh2 pointer'>
       <label for='wordwrap' class='pointer flex items-center'>
