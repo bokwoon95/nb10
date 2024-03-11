@@ -907,6 +907,9 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			response.Content = content
 		}
+		if nbrew.ImgDomain != "" && isS3Storage {
+			response.URL = ""
+		}
 		referer := getReferer(r)
 		funcMap := map[string]any{
 			"join":             path.Join,
