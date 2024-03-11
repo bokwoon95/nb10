@@ -1,6 +1,30 @@
 <style>
 html { max-width: 80ch; padding: 3em 1em; margin: auto; line-height: 1.75; font-size: 1.25em; background-color: #fafafa; }
 p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
+.m-0 { margin: 0px; }
+.my-1 { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.ml-2 { margin-left: 0.5rem; }
+.mr-1 { margin-right: 0.25rem; }
+.p-0 { padding: 0px; }
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-center { justify-content: center; }
+.gray-600 { color: #4b5563; }
+.font-bold { font-weight: bold; }
+.text-sm { font-size: 0.875rem; }
+.h-100 { height: 100%; }
+.w-100 { width: 100%; }
+@media screen and (min-width: 30em) and (max-width: 60em) {
+  .w-80-m { width: 80%; }
+}
+@media screen and (min-width: 60em) {
+  .w-70-l { width: 70%; }
+}
+.block { display: block; }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-none { list-style: none; }
+.object-cover { object-fit: cover; }
 </style>
 <title>{{ if $.Title }}{{ $.Title }}{{ else }}Untitled{{ end }}</title>
 <nav>
@@ -9,17 +33,18 @@ p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
   {{ end }}
 </nav>
 <hr>
-<div style='font-size: 0.875rem; color: #555555;'>{{ $.CreationTime.Format "2006-01-02" }}</div>
+<div class='text-sm gray-600'>{{ $.CreationTime.Format "2006-01-02" }}</div>
 {{ $.Content }}
-<ul style='display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 0.25fr)); grid-gap: 0.5rem; margin: 0; padding: 0; list-style: none;'>
+<ul class='m-0 p-0 list-none'>
   {{ range $image := $.Images }}
   <li>
-    <figure style='margin: 0; padding: 0;'>
-      <img src='{{ $image.Name }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
-      <figcaption style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.875rem;'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></figcaption>
-    </figure>
+    <div class='w-70-l w-80-m w-100 mx-auto'>
+      <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block h-100 w-100 object-cover' loading='lazy'>
+      <div class='flex flex-wrap justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
+    </div>
+    <p>{{ $image.Caption }}</p>
   </li>
   {{ end }}
 </ul>
 <hr>
-<div style='font-size: 0.875rem; color: #555555;'>last modified {{ $.ModificationTime.Format "2006-01-02 15:04:05 UTC" }}</div>
+<div class='text-sm gray-600'>last modified {{ $.ModificationTime.Format "2006-01-02 15:04:05 UTC" }}</div>

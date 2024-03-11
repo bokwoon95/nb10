@@ -19,6 +19,7 @@ import (
 
 func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, username, sitePrefix, filePath string, modTime time.Time) {
 	type File struct {
+		FileID       [16]byte  `json:"-"`
 		Name         string    `json:"name"`
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
@@ -81,6 +82,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 				}
 			}
 		}
+		isS3Storage := false
+		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			_, isS3Storage = remoteFS.Storage.(*S3Storage)
+		}
 		funcMap := map[string]any{
 			"join":             path.Join,
 			"dir":              path.Dir,
@@ -121,6 +126,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 				}
 				b.WriteString(" /")
 				return template.HTML(b.String())
+			},
+			"imgURL": func(file File) template.URL {
+				if nbrew.ImgDomain != "" && isS3Storage {
+					return template.URL("https://" + nbrew.ImgDomain + "/" + encodeUUID(file.FileID) + path.Ext(file.Name))
+				}
+				return template.URL("/" + path.Join("files", response.SitePrefix, response.FilePath, file.Name) + "?raw")
 			},
 			"isInClipboard": func(name string) bool {
 				if sitePrefix != clipboard.Get("sitePrefix") {
@@ -366,6 +377,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 					},
 				}, func(row *sq.Row) File {
 					return File{
+						FileID:       row.UUID("file_id"),
 						Name:         path.Base(row.String("file_path")),
 						Size:         row.Int64("size"),
 						ModTime:      row.Time("mod_time"),
@@ -463,6 +475,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 					},
 				}, func(row *sq.Row) File {
 					return File{
+						FileID:       row.UUID("file_id"),
 						Name:         path.Base(row.String("file_path")),
 						Size:         row.Int64("size"),
 						ModTime:      row.Time("mod_time"),
@@ -586,6 +599,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 					},
 				}, func(row *sq.Row) File {
 					return File{
+						FileID:       row.UUID("file_id"),
 						Name:         path.Base(row.String("file_path")),
 						Size:         row.Int64("size"),
 						ModTime:      row.Time("mod_time"),
@@ -716,6 +730,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 					},
 				}, func(row *sq.Row) File {
 					return File{
+						FileID:       row.UUID("file_id"),
 						Name:         path.Base(row.String("file_path")),
 						Size:         row.Int64("size"),
 						ModTime:      row.Time("mod_time"),
@@ -846,6 +861,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 		},
 	}, func(row *sq.Row) File {
 		return File{
+			FileID:       row.UUID("file_id"),
 			Name:         path.Base(row.String("file_path")),
 			Size:         row.Int64("size"),
 			ModTime:      row.Time("mod_time"),

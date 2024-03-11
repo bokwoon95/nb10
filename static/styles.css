@@ -137,7 +137,7 @@ details[open] summary.button { background-color: white; }
 .alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
 .color-success { color: #155724; }
 
-/* Fonts */
+/* fonts */
 .b { font-weight: bold; }
 .f3 { font-size: 1.5rem; }
 .f4 { font-size: 1.25rem; }
@@ -177,11 +177,13 @@ details[open] summary.button { background-color: white; }
 .h-100 { height: 100% }
 .min-h5 { min-height: 16rem; }
 .h2 { height: 2rem; }
+.h3 { height: 4rem; }
 
 /* width */
 .w-100 { width: 100%; }
 .w-70 { width: 70%; }
 .w-80 { width: 80%; }
+.w3 { width: 4rem; }
 @media screen and (min-width: 30em) and (max-width: 60em) {
   .w-60-m { width: 60%; }
   .w-70-m { width: 70%; }

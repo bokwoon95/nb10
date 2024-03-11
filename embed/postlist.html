@@ -1,6 +1,30 @@
 <style>
 html { max-width: 80ch; padding: 3em 1em; margin: auto; line-height: 1.75; font-size: 1.25em; background-color: #fafafa; }
 p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
+.m-0 { margin: 0px; }
+.my-1 { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.ml-2 { margin-left: 0.5rem; }
+.mr-1 { margin-right: 0.25rem; }
+.p-0 { padding: 0px; }
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.justify-center { justify-content: center; }
+.gray-600 { color: #4b5563; }
+.font-bold { font-weight: bold; }
+.text-sm { font-size: 0.875rem; }
+.h-100 { height: 100%; }
+.w-100 { width: 100%; }
+@media screen and (min-width: 30em) and (max-width: 60em) {
+  .w-80-m { width: 80%; }
+}
+@media screen and (min-width: 60em) {
+  .w-70-l { width: 70%; }
+}
+.block { display: block; }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-none { list-style: none; }
+.object-cover { object-fit: cover; }
 </style>
 <title>{{ if $.Category }}{{ $.Category }}{{ else }}posts{{ end }}</title>
 <nav>
@@ -11,14 +35,14 @@ p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
 <hr>
 <h1>{{ if $.Category }}{{ $.Category }}{{ else }}posts{{ end }}</h1>
 {{ if $.Posts }}
-  <ul style='padding-left: 1rem; padding-right: 1rem;'>
+  <ul class='m-0 p-0 list-none'>
     {{ range $post := $.Posts }}
     <li>
       <div>
-        <a href='{{ $post.Name }}/' style='font-weight: bold;'>{{ $post.Title }}</a>
-        <span style='margin-left: 0.5rem; font-size: 0.875rem; color: #555555;'>{{ $post.CreationTime.Format "2006-01-02" }}</span>
+        <a href='{{ $post.Name }}/' class='font-bold'>{{ $post.Title }}</a>
+        <span class='ml-2 text-sm gray-600'>{{ $post.CreationTime.Format "2006-01-02" }}</span>
       </div>
-      <div title='{{ $post.Preview }}' style='margin: 0.25rem 0; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>
+      <div title='{{ $post.Preview }}' class='my-1 text-sm truncate'>
         {{ $post.Preview }}
       </div>
     </li>
@@ -27,19 +51,19 @@ p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
   {{ if ne $.Pagination.First $.Pagination.Last }}
   <div>
     {{ if ne $.Pagination.Current $.Pagination.First }}
-    <a href='{{ $.Pagination.First }}/' class='mr1'>first</a>
+    <a href='{{ $.Pagination.First }}/' class='mr-1'>first</a>
     {{ end }}
     {{ if $.Pagination.Previous }}
-    <a href='{{ $.Pagination.Previous }}/' class='mr1'>previous</a>
+    <a href='{{ $.Pagination.Previous }}/' class='mr-1'>previous</a>
     {{ end }}
     {{ range $number := $.Pagination.Numbers }}
-    <a href='{{ $number }}/' class='mr1{{ if eq $number $.Pagination.Current }} b{{ end }}'>{{ $number }}</a>
+    <a href='{{ $number }}/' class='mr-1{{ if eq $number $.Pagination.Current }} font-bold{{ end }}'>{{ $number }}</a>
     {{ end }}
     {{ if $.Pagination.Next }}
-    <a href='{{ $.Pagination.Next }}/' class='mr1'>next</a>
+    <a href='{{ $.Pagination.Next }}/' class='mr-1'>next</a>
     {{ end }}
     {{ if ne $.Pagination.Current $.Pagination.Last }}
-    <a href='{{ $.Pagination.Last }}/' class='mr1'>last</a>
+    <a href='{{ $.Pagination.Last }}/' class='mr-1'>last</a>
     {{ end }}
   </div>
   {{ end }}

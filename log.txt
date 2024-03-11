@@ -40,11 +40,8 @@ notebrew/open_browser.go
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
 TODO: file.go/image: if saving the caption for an image, regenerate the page or post that the image belongs to.
-TODO: directory.html: figure out how to display a small image preview that looks natural in list view.
-    - NOTE: make use of ImgDomain + isS3Storage if present.
-TODO: figure out a way to display the caption (actually the best way is probably display images one after another top down, no grid. That way we can seamlessly display filenames and captions as well).
-    - In fact people can bodge interspersing images and text by having text display under the image as if it were part of the post.
-- TODO: allow people to browse next image and previous image when in the image viewer.
+TODO: replace all uses of imgURL with manually calculating the asset/file's URL, so that even the api has access to the S3 URL is necessary.
+TODO: allow people to browse next image and previous image when in the image viewer.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: search.html should display image previews if the result is an image
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
