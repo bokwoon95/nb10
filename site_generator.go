@@ -2071,6 +2071,7 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 	var found bool
 	if remoteFS, ok := siteGen.fsys.(*RemoteFS); ok {
 		result, err := sq.FetchOne(ctx, remoteFS.DB, sq.Query{
+			Debug:   true,
 			Dialect: remoteFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 			Values: []any{

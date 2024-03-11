@@ -1763,7 +1763,8 @@ func isFulltextIndexed(filePath string) bool {
 	case "pages":
 		return ext == ".html"
 	case "posts":
-		return ext == ".md"
+		name := path.Base(filePath)
+		return name == "post.html" || name == "postlist.html" || ext == ".md"
 	case "output":
 		next, _, _ := strings.Cut(tail, "/")
 		switch next {

@@ -146,10 +146,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 
 	switch r.Method {
 	case "GET":
-		if r.Form.Has("raw") {
-			serveFile(w, r, file, fileInfo, fileType, "no-store")
-			return
-		}
 		var response Response
 		_, err = nbrew.getSession(r, "flash", &response)
 		if err != nil {
