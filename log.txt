@@ -39,12 +39,16 @@ notebrew/open_browser.go
     - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
-BUG: createfile for post does not work. why?
+BUG: createfile for post does not work (with or without companion images). why?
     - It panics but the file itself is actually created successfully. figure out why.
+BUG: deleting images from a post does not cause the parent post to be regenerated.
 TODO: when grabbing the image caption in the image viewer, derive its alt text and inject it if present.
     - Likewise, generating a page or post should also fetch the caption and try to derive its alt text if present.
 TODO: directory.html: figure out how to display a small image preview that looks natural in list view.
     - NOTE: make use of ImgDomain + isS3Storage if present.
+TODO: figure out a way to display the caption (actually the best way is probably display images one after another top down, no grid. That way we can seamlessly display filenames and captions as well).
+    - In fact people can bodge interspersing images and text by having text display under the image as if it were part of the post.
+    - TODO: BUT: this requires people being able to seamlessly navigating to the next file, previous file, etc. Do we want to only implement pagination for images? Or files in general? I can't see a use case for paginating between files, but at the same time paginating between only images feels very arbitrary and unnatural.
 TODO: RE: alt text is embedded into the caption and indicated by whether the first line starts with !alt
     - Actually, even better if we always take the first line (up to 100 characters) as the alt text. So images will always have alt text if there is a caption
         - Actually Actually, don't do this. Don't make the first line of the caption implicitly alt text. This is because alt text can be very different from the caption, and people who are using the caption will already be displaying it in a <figcaption> so alt text isn't even needed. No, people who are alt-text sensitive should specifically start the first line of a caption with !alt to make it crystal clear to the machine that this is an alt text and should not be included in the caption.
