@@ -164,7 +164,7 @@
   {{ $newName := index $.PostRedirectGet "newName" }}
   {{ $isDir := index $.PostRedirectGet "isDir" }}
   <div class='pv1'>
-    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>
+    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} to <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -355,7 +355,7 @@
           </div>
         </label>
         <div style='overflow-wrap: break-word;'>
-          <span class='b mr2 mb2'>{{ $asset.Name }} loremipsumdolorsitamet</span>
+          <span class='b mr2 mb2'>{{ $asset.Name }}</span>
           <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='dib mr2 mb2'>edit</a>
           <a href='' class='dib mr2 mb2'>rename</a>
           <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 pa2 mr2 mb2'>cut</button>

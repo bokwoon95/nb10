@@ -123,20 +123,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	switch r.Method {
 	case "GET":
 		if r.Form.Has("raw") {
-			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-				_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
-					Format:  "UPDATE files SET serve_count = coalesce(serve_count, 0) + 1 WHERE file_path = {filePath}",
-					Values: []any{
-						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-					},
-				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
-					return
-				}
-			}
 			serveFile(w, r, file, fileInfo, fileType, "no-store")
 			return
 		}
@@ -339,20 +325,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		if !isEditable {
-			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-				_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
-					Format:  "UPDATE files SET serve_count = coalesce(serve_count, 0) + 1 WHERE file_path = {filePath}",
-					Values: []any{
-						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-					},
-				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
-					return
-				}
-			}
 			serveFile(w, r, file, fileInfo, fileType, "no-store")
 			return
 		}
@@ -957,4 +929,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			getLogger(r.Context()).Error(err.Error())
 		}
 	}
+}
+
+func (nbrew *Notebrew) image() {
 }
