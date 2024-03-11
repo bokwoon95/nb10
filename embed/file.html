@@ -23,9 +23,9 @@
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
     {{- if eq (head $.FilePath) "pages" }}
-    <div>created page (generated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+    <div>created page (generated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else if eq (head $.FilePath) "posts" }}
-    <div>created post (generated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.URL }}'>view</a></div>
+    <div>created post (generated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }}): <a href='{{ $.URL }}'>view</a></div>
     {{- else }}
     <div>created file</div>
     {{- end }}

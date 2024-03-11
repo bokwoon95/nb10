@@ -39,8 +39,6 @@ notebrew/open_browser.go
     - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
-BUG: createfile for post does not work (with or without companion images). why?
-    - It panics but the file itself is actually created successfully. figure out why.
 BUG: deleting images from a post does not cause the parent post to be regenerated.
 TODO: when grabbing the image caption in the image viewer, derive its alt text and inject it if present.
     - Likewise, generating a page or post should also fetch the caption and try to derive its alt text if present.

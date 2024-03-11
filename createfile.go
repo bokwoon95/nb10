@@ -629,7 +629,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			response.RegenerationStats.Count = int(count.Load())
-			response.RegenerationStats.TemplateError = *templateErrPtr.Load()
+			if templateErrPtr.Load() != nil {
+				response.RegenerationStats.TemplateError = *templateErrPtr.Load()
+			}
 		}
 		writeResponse(w, r, response)
 	default:
