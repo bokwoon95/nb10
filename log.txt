@@ -41,6 +41,7 @@ notebrew/open_browser.go
 
 TODO: file.go/image: if saving the caption for an image, regenerate the page or post that the image belongs to.
 TODO: replace all uses of imgURL with manually calculating the asset/file's URL, so that even the api has access to the S3 URL is necessary.
+    - TODO: do the same with delete.go so that when prompted with a list of files to delete, the user can see a thumbnail preview of if the file is an image.
 TODO: allow people to browse next image and previous image when in the image viewer.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: search.html should display image previews if the result is an image
