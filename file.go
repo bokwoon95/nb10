@@ -912,6 +912,25 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			response.Content = content
 		}
+		head, tail, _ := strings.Cut(filePath, "/")
+		if head == "output" {
+			next, _, _ := strings.Cut(tail, "/")
+			if next == "posts" {
+				response.BelongsTo = path.Join("posts", path.Dir(tail)+".md")
+			} else if next != "themes" {
+				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
+			}
+		}
+		if r.Form.Has("api") {
+			w.Header().Set("Content-Type", "application/json")
+			encoder := json.NewEncoder(w)
+			encoder.SetEscapeHTML(false)
+			err := encoder.Encode(&response)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+			}
+			return
+		}
 		referer := getReferer(r)
 		funcMap := map[string]any{
 			"join":             path.Join,
@@ -945,11 +964,86 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
 		executeTemplate(w, r, tmpl, &response)
 	case "POST":
+		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
+			if r.Form.Has("api") {
+				w.Header().Set("Content-Type", "application/json")
+				encoder := json.NewEncoder(w)
+				encoder.SetEscapeHTML(false)
+				err := encoder.Encode(&response)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+				}
+				return
+			}
+			err := nbrew.setSession(w, r, "flash", map[string]any{
+				"postRedirectGet": map[string]any{
+					"from": "image",
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, filePath), http.StatusFound)
+		}
+
+		response := Response{}
+		remoteFS, ok := nbrew.FS.(*RemoteFS)
+		if !ok {
+			writeResponse(w, r, response)
+			return
+		}
+
 		var request struct {
 			Content string
 		}
-		_ = request
-		// NOTE: We never allow user to overwrite the image! We only read from "content", which is to replace the caption text for the image.
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
+		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		switch contentType {
+		case "application/json":
+			decoder := json.NewDecoder(r.Body)
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&request)
+			if err != nil {
+				badRequest(w, r, err)
+				return
+			}
+		case "application/x-www-form-urlencoded", "multipart/form-data":
+			if contentType == "multipart/form-data" {
+				err := r.ParseMultipartForm(1 << 20 /* 1 MB */)
+				if err != nil {
+					badRequest(w, r, err)
+					return
+				}
+			} else {
+				err := r.ParseForm()
+				if err != nil {
+					badRequest(w, r, err)
+					return
+				}
+			}
+			request.Content = r.Form.Get("content")
+		default:
+			unsupportedContentType(w, r)
+			return
+		}
+
+		response.Content = request.Content
+		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
+			Dialect: remoteFS.Dialect,
+			Format:  "UPDATE files SET text = {content} WHERE file_path = {filePath}",
+			Values: []any{
+				sq.StringParam("content", response.Content),
+				sq.StringParam("filePath", filePath),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+		writeResponse(w, r, response)
 	default:
 		methodNotAllowed(w, r)
 	}
