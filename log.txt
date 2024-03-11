@@ -23,7 +23,7 @@ delete.go
 search.go
 rename.go
 uploadfile.go
-(clipboard.go)
+clipboard.go
 serve_http.go
 notebrew/exit.go
 notebrew/exit_windows.go
