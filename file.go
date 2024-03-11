@@ -54,7 +54,31 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		FilesTooBig       []string          `json:"filesTooBig"`
 	}
 
-	file, err := nbrew.FS.Open(path.Join(".", sitePrefix, filePath))
+	ext := path.Ext(filePath)
+	switch ext {
+	case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+		fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, filePath))
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				notFound(w, r)
+				return
+			}
+			getLogger(r.Context()).Error(err.Error())
+			internalServerError(w, r, err)
+			return
+		}
+		if fileInfo.IsDir() {
+			if r.Method != "GET" {
+				methodNotAllowed(w, r)
+				return
+			}
+			nbrew.directory(w, r, user.Username, sitePrefix, filePath, fileInfo.ModTime())
+			return
+		}
+		nbrew.image(w, r, user, sitePrefix, filePath)
+		return
+	}
+	file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, filePath))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			notFound(w, r)
@@ -79,7 +103,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		nbrew.directory(w, r, user.Username, sitePrefix, filePath, fileInfo.ModTime())
 		return
 	}
-	fileType, ok := fileTypes[path.Ext(filePath)]
+	fileType, ok := fileTypes[ext]
 	if !ok {
 		notFound(w, r)
 		return
@@ -800,6 +824,71 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	}
 }
 
+func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string) {
+	type Response struct {
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
+		ContentSite       string            `json:"contentSite"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		FilePath          string            `json:"filePath"`
+		IsDir             bool              `json:"isDir"`
+		ModTime           time.Time         `json:"modTime"`
+		CreationTime      time.Time         `json:"creationTime"`
+		Content           string            `json:"content"`
+		URL               string            `json:"url,omitempty"`
+		BelongsTo         string            `json:"belongsTo"`
+		FilesExist        []string          `json:"filesExist"`
+		FilesTooBig       []string          `json:"filesTooBig"`
+	}
+
+	file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, filePath))
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			notFound(w, r)
+			return
+		}
+		getLogger(r.Context()).Error(err.Error())
+		internalServerError(w, r, err)
+		return
+	}
+	defer file.Close()
+	fileInfo, err := file.Stat()
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		internalServerError(w, r, err)
+		return
+	}
+	if fileInfo.IsDir() {
+		if r.Method != "GET" {
+			methodNotAllowed(w, r)
+			return
+		}
+		nbrew.directory(w, r, user.Username, sitePrefix, filePath, fileInfo.ModTime())
+		return
+	}
+	fileType, ok := fileTypes[path.Ext(filePath)]
+	if !ok {
+		notFound(w, r)
+		return
+	}
+
+	switch r.Method {
+	case "GET":
+		if r.Form.Has("raw") {
+			serveFile(w, r, file, fileInfo, fileType, "no-store")
+			return
+		}
+	case "POST":
+		var request struct {
+			Content string
+		}
+		_ = request
+		// NOTE: We never allow user to overwrite the image! We only read from "content", which is to replace the caption text for the image.
+	default:
+		methodNotAllowed(w, r)
+	}
+}
+
 func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs.FileInfo, fileType FileType, cacheControl string) {
 	// .jpeg .jpg .png .webp .gif .woff .woff2
 	if !fileType.IsGzippable {
@@ -929,7 +1018,4 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			getLogger(r.Context()).Error(err.Error())
 		}
 	}
-}
-
-func (nbrew *Notebrew) image() {
 }
