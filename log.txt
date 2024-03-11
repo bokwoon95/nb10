@@ -43,6 +43,7 @@ BUG: createfile for post does not work. why?
     - It panics but the file itself is actually created successfully. figure out why.
 TODO: when grabbing the image caption in the image viewer, derive its alt text and inject it if present.
     - Likewise, generating a page or post should also fetch the caption and try to derive its alt text if present.
+TODO: directory.html: figure out how to display a small image preview that looks natural in list view.
 TODO: how do we tweak file.go such that it rewrites all img URLs to use the ImgDomain if present?
     - and if ImgDomain is not present, we fall back to ?raw links instead.
 TODO: modify directory.html such that it displays image previews if a file is an image. Needs to dynamically src from either the ImgDomain or a ?raw image link.
