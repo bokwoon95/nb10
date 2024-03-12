@@ -479,8 +479,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 						continue
 					}
 					id := NewID()
-					inputPath := path.Join(tempDir, encodeUUID(id)+"-input"+ext)
-					outputPath := path.Join(tempDir, encodeUUID(id)+"-output"+ext)
+					inputPath := path.Join(tempDir, id.String()+"-input"+ext)
+					outputPath := path.Join(tempDir, id.String()+"-output"+ext)
 					input, err := os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 					if err != nil {
 						if !errors.Is(err, fs.ErrNotExist) {

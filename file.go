@@ -29,7 +29,7 @@ import (
 
 func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string) {
 	type Asset struct {
-		FileID       [16]byte  `json:"-"`
+		FileID       ID        `json:"id"`
 		Name         string    `json:"name"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
@@ -399,7 +399,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			},
 			"imgURL": func(asset Asset) template.URL {
 				if nbrew.ImgDomain != "" && isS3Storage {
-					return template.URL("https://" + nbrew.ImgDomain + "/" + encodeUUID(asset.FileID) + path.Ext(asset.Name))
+					return template.URL("https://" + nbrew.ImgDomain + "/" + asset.FileID.String() + path.Ext(asset.Name))
 				}
 				return template.URL("/" + path.Join("files", response.SitePrefix, response.AssetDir, asset.Name) + "?raw")
 			},
@@ -641,8 +641,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						continue
 					}
 					id := NewID()
-					inputPath := path.Join(tempDir, encodeUUID(id)+"-input"+ext)
-					outputPath := path.Join(tempDir, encodeUUID(id)+"-output"+ext)
+					inputPath := path.Join(tempDir, id.String()+"-input"+ext)
+					outputPath := path.Join(tempDir, id.String()+"-output"+ext)
 					input, err := os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 					if err != nil {
 						if !errors.Is(err, fs.ErrNotExist) {
@@ -880,7 +880,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
 			response.CreationTime = fileInfo.CreationTime
 			if nbrew.ImgDomain != "" && isS3Storage {
-				response.URL = template.URL("https://" + nbrew.ImgDomain + "/" + encodeUUID(fileInfo.FileID) + path.Ext(filePath))
+				response.URL = template.URL("https://" + nbrew.ImgDomain + "/" + fileInfo.FileID.String() + path.Ext(filePath))
 			} else {
 				response.URL = "?raw"
 			}

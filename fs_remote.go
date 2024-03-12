@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -135,7 +133,7 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 	}
 	file.isFulltextIndexed = isFulltextIndexed(file.info.FilePath)
 	if fileType.IsObject {
-		file.readCloser, err = file.storage.Get(file.ctx, encodeUUID(file.info.FileID)+path.Ext(file.info.FilePath))
+		file.readCloser, err = file.storage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +201,7 @@ func (fsys *RemoteFS) Stat(name string) (fs.FileInfo, error) {
 }
 
 type RemoteFileInfo struct {
-	FileID       [16]byte
+	FileID       ID
 	FilePath     string
 	isDir        bool
 	size         int64
@@ -348,7 +346,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 				sq.StringParam("filePath", file.filePath),
 			},
 		}, func(row *sq.Row) (result struct {
-			fileID [16]byte
+			fileID ID
 			isDir  bool
 		}) {
 			result.fileID = row.UUID("file_id")
@@ -374,7 +372,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 				sq.StringParam("filePath", file.filePath),
 			},
 		}, func(row *sq.Row) (result struct {
-			fileID   [16]byte
+			fileID   ID
 			filePath string
 			isDir    bool
 		}) {
@@ -400,11 +398,11 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 				file.parentID = result.fileID
 			}
 		}
-		if file.parentID == [16]byte{} {
+		if file.parentID.IsZero() {
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
 		}
 	}
-	if file.fileID == [16]byte{} {
+	if file.fileID.IsZero() {
 		file.fileID = NewID()
 	} else {
 		file.exists = true
@@ -414,7 +412,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 		file.storageWriter = pipeWriter
 		file.storageResult = make(chan error, 1)
 		go func() {
-			file.storageResult <- fsys.Storage.Put(file.ctx, encodeUUID(file.fileID)+path.Ext(file.filePath), pipeReader)
+			file.storageResult <- fsys.Storage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
 			close(file.storageResult)
 		}()
 	} else {
@@ -437,8 +435,8 @@ type RemoteFileWriter struct {
 	dialect           string
 	storage           Storage
 	exists            bool
-	fileID            [16]byte
-	parentID          [16]byte
+	fileID            ID
+	parentID          ID
 	filePath          string
 	size              int64
 	buf               *bytes.Buffer
@@ -538,7 +536,7 @@ func (file *RemoteFileWriter) Close() error {
 	}
 	if file.writeFailed {
 		if file.fileType.IsObject {
-			_ = file.storage.Delete(file.ctx, encodeUUID(file.fileID)+path.Ext(file.filePath))
+			_ = file.storage.Delete(file.ctx, file.fileID.String()+path.Ext(file.filePath))
 		}
 		return nil
 	}
@@ -612,7 +610,7 @@ func (file *RemoteFileWriter) Close() error {
 			},
 		})
 		if err != nil {
-			go file.storage.Delete(context.Background(), encodeUUID(file.fileID)+path.Ext(file.filePath))
+			go file.storage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
 			return err
 		}
 	} else {
@@ -896,7 +894,7 @@ func (fsys *RemoteFS) Remove(name string) error {
 			sq.StringParam("name", name),
 		},
 	}, func(row *sq.Row) (file struct {
-		fileID      [16]byte
+		fileID      ID
 		filePath    string
 		isDir       bool
 		hasChildren bool
@@ -918,7 +916,7 @@ func (fsys *RemoteFS) Remove(name string) error {
 	}
 	switch path.Ext(name) {
 	case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-		err = fsys.Storage.Delete(fsys.Context, encodeUUID(file.fileID)+path.Ext(file.filePath))
+		err = fsys.Storage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
 			return err
 		}
@@ -965,7 +963,7 @@ func (fsys *RemoteFS) RemoveAll(name string) error {
 			sq.StringParam("pattern", pattern),
 		},
 	}, func(row *sq.Row) (file struct {
-		fileID   [16]byte
+		fileID   ID
 		filePath string
 	}) {
 		file.fileID = row.UUID("file_id")
@@ -985,7 +983,7 @@ func (fsys *RemoteFS) RemoveAll(name string) error {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			err := fsys.Storage.Delete(fsys.Context, encodeUUID(file.fileID)+path.Ext(file.filePath))
+			err := fsys.Storage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
 				fsys.Logger.Error(err.Error())
 			}
@@ -1154,7 +1152,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 	if !fs.ValidPath(destName) || strings.Contains(destName, "\\") {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrInvalid}
 	}
-	var srcFileID [16]byte
+	var srcFileID ID
 	var srcIsDir bool
 	var destExists bool
 	fileInfos, err := sq.FetchAll(fsys.Context, fsys.DB, sq.Query{
@@ -1167,7 +1165,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 		},
 	}, func(row *sq.Row) (fileInfo struct {
 		FilePath string
-		FileID   [16]byte
+		FileID   ID
 		IsDir    bool
 	}) {
 		fileInfo.FilePath = row.String("file_path")
@@ -1187,7 +1185,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 			destExists = true
 		}
 	}
-	if srcFileID == [16]byte{} {
+	if srcFileID.IsZero() {
 		return fs.ErrNotExist
 	}
 	if destExists {
@@ -1227,7 +1225,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 		ext := path.Ext(srcFilePath)
 		fileType := fileTypes[ext]
 		if fileType.IsObject {
-			err := fsys.Storage.Copy(fsys.Context, encodeUUID(srcFileID)+ext, encodeUUID(destFileID)+ext)
+			err := fsys.Storage.Copy(fsys.Context, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
 			}
@@ -1243,7 +1241,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 			sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(srcName)+"/%"),
 		},
 	}, func(row *sq.Row) (srcFile struct {
-		FileID   [16]byte
+		FileID   ID
 		FilePath string
 		IsDir    bool
 	}) {
@@ -1258,7 +1256,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 	defer cursor.Close()
 	var wg sync.WaitGroup
 	var items [][4]string // destFileID, destParentID, destParent, srcFilePath
-	fileIDs := make(map[string][16]byte)
+	fileIDs := make(map[string]ID)
 	for cursor.Next() {
 		srcFile, err := cursor.Result()
 		if err != nil {
@@ -1268,10 +1266,10 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 		destFilePath := destName + strings.TrimPrefix(srcFile.FilePath, srcName)
 		fileIDs[destFilePath] = destFileID
 		var item [4]string
-		item[0] = encodeUUID(destFileID)
+		item[0] = destFileID.String()
 		destParent := path.Dir(destFilePath)
 		if destParentID, ok := fileIDs[destParent]; ok {
-			item[1] = encodeUUID(destParentID)
+			item[1] = destParentID.String()
 		} else {
 			item[2] = destParent
 		}
@@ -1709,18 +1707,6 @@ func (storage *LocalStorage) Copy(ctx context.Context, srcKey, destKey string) e
 	return nil
 }
 
-func NewID() [16]byte {
-	var timestamp [8]byte
-	binary.BigEndian.PutUint64(timestamp[:], uint64(time.Now().Unix()))
-	var id [16]byte
-	copy(id[:5], timestamp[len(timestamp)-5:])
-	_, err := rand.Read(id[5:])
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 func IsKeyViolation(dialect string, errcode string) bool {
 	switch dialect {
 	case "sqlite":
@@ -1777,18 +1763,4 @@ func isFulltextIndexed(filePath string) bool {
 		}
 	}
 	return false
-}
-
-func encodeUUID(id [16]byte) string {
-	var b [32 + 4]byte
-	hex.Encode(b[:], id[:4])
-	b[8] = '-'
-	hex.Encode(b[9:13], id[4:6])
-	b[13] = '-'
-	hex.Encode(b[14:18], id[6:8])
-	b[18] = '-'
-	hex.Encode(b[19:23], id[8:10])
-	b[23] = '-'
-	hex.Encode(b[24:], id[10:])
-	return string(b[:])
 }

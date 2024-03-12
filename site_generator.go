@@ -44,7 +44,7 @@ type SiteGenerator struct {
 	mu                 sync.Mutex
 	templateCache      map[string]*template.Template
 	templateInProgress map[string]chan struct{}
-	imgFileIDs         map[string][16]byte
+	imgFileIDs         map[string]ID
 }
 
 type NavigationLink struct {
@@ -168,7 +168,7 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 			sq.StringParam("pattern", path.Join(siteGen.sitePrefix, "output")+"/%"),
 		},
 	}, func(row *sq.Row) (result struct {
-		FileID   [16]byte
+		FileID   ID
 		FilePath string
 	}) {
 		result.FileID = row.UUID("file_id")
@@ -179,7 +179,7 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 		return nil, err
 	}
 	defer cursor.Close()
-	siteGen.imgFileIDs = make(map[string][16]byte)
+	siteGen.imgFileIDs = make(map[string]ID)
 	for cursor.Next() {
 		result, err := cursor.Result()
 		if err != nil {
@@ -1752,7 +1752,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 								if isS3Storage {
 									filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
 									if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-										uri.Path = "/" + encodeUUID(fileID) + path.Ext(filePath)
+										uri.Path = "/" + fileID.String() + path.Ext(filePath)
 										val = []byte(uri.String())
 									}
 								} else {
@@ -1766,7 +1766,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 									if isS3Storage {
 										filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
 										if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-											uri.Path = "/" + encodeUUID(fileID) + path.Ext(filePath)
+											uri.Path = "/" + fileID.String() + path.Ext(filePath)
 											val = []byte(uri.String())
 										}
 									} else {

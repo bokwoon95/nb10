@@ -1,4 +1,5 @@
 catalog.go
+id.go
 fs.go
 fs_local.go
 fs_remote.go
@@ -39,7 +40,6 @@ notebrew/open_browser.go
 - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
-TODO: file.go/image: if saving the caption for an image, regenerate the page or post that the image belongs to.
 TODO: replace all uses of imgURL with manually calculating the asset/file's URL, so that even the api has access to the S3 URL is necessary.
     - TODO: do the same with delete.go so that when prompted with a list of files to delete, the user can see a thumbnail preview of if the file is an image.
 TODO: allow people to browse next image and previous image when in the image viewer.

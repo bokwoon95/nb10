@@ -26,10 +26,11 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		Names  []string `json:"names"`
 	}
 	type File struct {
-		Name    string    `json:"name"`
-		IsDir   bool      `json:"isDir"`
-		Size    int64     `json:"size"`
-		ModTime time.Time `json:"modTime"`
+		Name    string       `json:"name"`
+		IsDir   bool         `json:"isDir"`
+		Size    int64        `json:"size"`
+		ModTime time.Time    `json:"modTime"`
+		URL     template.URL `json:"url"`
 	}
 	type Response struct {
 		Error             string            `json:"status"`

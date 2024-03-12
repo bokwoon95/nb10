@@ -19,7 +19,7 @@ import (
 
 func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, username, sitePrefix, filePath string, modTime time.Time) {
 	type File struct {
-		FileID       [16]byte  `json:"-"`
+		FileID       ID        `json:"id"`
 		Name         string    `json:"name"`
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
@@ -129,7 +129,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 			},
 			"imgURL": func(file File) template.URL {
 				if nbrew.ImgDomain != "" && isS3Storage {
-					return template.URL("https://" + nbrew.ImgDomain + "/" + encodeUUID(file.FileID) + path.Ext(file.Name))
+					return template.URL("https://" + nbrew.ImgDomain + "/" + file.FileID.String() + path.Ext(file.Name))
 				}
 				return template.URL("/" + path.Join("files", response.SitePrefix, response.FilePath, file.Name) + "?raw")
 			},

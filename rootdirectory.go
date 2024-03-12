@@ -124,7 +124,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 	nbrew.clearSession(w, r, "flash")
 	response.ContentSite = nbrew.contentSite(sitePrefix)
-	response.Username = NullString{String: user.Username, Valid: user.UserID != [16]byte{}}
+	response.Username = NullString{String: user.Username, Valid: !user.UserID.IsZero()}
 	response.SitePrefix = sitePrefix
 	response.IsDir = true
 	_, response.SearchSupported = nbrew.FS.(*RemoteFS)

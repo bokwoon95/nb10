@@ -125,7 +125,7 @@ type Notebrew struct {
 }
 
 type User struct {
-	UserID   [16]byte
+	UserID   ID
 	Username string
 	// accountDisabled(): "you may not perform that action as your account has been disabled for the following reason"
 	DisableReason string
