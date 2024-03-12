@@ -41,6 +41,7 @@ notebrew/open_browser.go
 - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
+TODO: reorganize all the Request/Response structs to match what an end user of the JSON payload would like to see.
 TODO: allow people to browse next image and previous image when in the image viewer.
     - NOTE: should we allow LocalFS to also do the same? What use would that feature be if they can't edit the caption? The previous/next url was meant to make it easy for image owners to add captions to their images in sequential order.
 TODO: renaming a page | markdown file asset | image asset should regenerate the parent page. renaming an image asset should regenerate the parent post.
