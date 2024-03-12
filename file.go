@@ -29,7 +29,7 @@ import (
 
 func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string) {
 	type Asset struct {
-		FileID       ID        `json:"id"`
+		FileID       ID        `json:"fileID"`
 		Name         string    `json:"name"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`

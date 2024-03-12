@@ -19,7 +19,7 @@ import (
 
 func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, username, sitePrefix, filePath string, modTime time.Time) {
 	type File struct {
-		FileID       ID        `json:"id"`
+		FileID       ID        `json:"fileID"`
 		Name         string    `json:"name"`
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
