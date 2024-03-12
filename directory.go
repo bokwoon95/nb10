@@ -35,6 +35,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 		FilePath        string         `json:"filePath"`
 		IsDir           bool           `json:"isDir"`
 		SearchSupported bool           `json:"searchSupported"`
+		IsS3Storage     bool           `json:"isS3Storage"`
+		ImgDomain       string         `json:"imgDomain"`
 
 		Sort        string `json:"sort"`
 		Order       string `json:"order"`
@@ -82,10 +84,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 				}
 			}
 		}
-		isS3Storage := false
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			_, isS3Storage = remoteFS.Storage.(*S3Storage)
-		}
 		funcMap := map[string]any{
 			"join":             path.Join,
 			"dir":              path.Dir,
@@ -127,12 +125,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 				b.WriteString(" /")
 				return template.HTML(b.String())
 			},
-			"imgURL": func(file File) template.URL {
-				if nbrew.ImgDomain != "" && isS3Storage {
-					return template.URL("https://" + nbrew.ImgDomain + "/" + file.FileID.String() + path.Ext(file.Name))
-				}
-				return template.URL("/" + path.Join("files", response.SitePrefix, response.FilePath, file.Name) + "?raw")
-			},
 			"isInClipboard": func(name string) bool {
 				if sitePrefix != clipboard.Get("sitePrefix") {
 					return false
@@ -171,6 +163,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 	response.FilePath = filePath
 	response.IsDir = true
 	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
+	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+		_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
+	}
+	response.ImgDomain = nbrew.ImgDomain
 	response.Sort = strings.ToLower(strings.TrimSpace(r.Form.Get("sort")))
 	if response.Sort == "" {
 		cookie, _ := r.Cookie("sort")

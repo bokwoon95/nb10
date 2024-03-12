@@ -351,7 +351,11 @@
             <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
             {{- end }}
             {{- if eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" }}
-            <img src='{{ imgURL $file }}' class='h3 w3 mr1'>
+              {{- if and $.ImgDomain $.IsS3Storage }}
+              <img src='https://{{ $.ImgDomain }}/{{ $file.FileID }}.{{ ext $file.Name }}' class='h3 w3 mr1'>
+              {{- else }}
+              <img src='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}?raw' class='h3 w3 mr1'>
+              {{- end }}
             {{- end }}
             <a href='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
             {{- if not $file.IsDir }}
