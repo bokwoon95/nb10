@@ -43,6 +43,7 @@ notebrew/open_browser.go
 TODO: lift both image() and directory() out of file() and into serve_http. We can do it!
 TODO: allow people to browse next image and previous image when in the image viewer.
     - NOTE: should we allow LocalFS to also do the same? What use would that feature be if they can't edit the caption? The previous/next url was meant to make it easy for image owners to add captions to their images in sequential order.
+TODO: renaming a page | markdown file asset | image asset should regenerate the parent page. renaming an image asset should regenerate the parent post.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: search.html should display image previews if the result is an image
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
