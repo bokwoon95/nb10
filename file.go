@@ -376,10 +376,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 		}
-		isS3Storage := false
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			_, isS3Storage = remoteFS.Storage.(*S3Storage)
-		}
 		funcMap := map[string]any{
 			"join":             path.Join,
 			"dir":              path.Dir,
@@ -402,12 +398,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			"tail": func(s string) string {
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
-			},
-			"imgURL": func(asset Asset) template.URL {
-				if nbrew.ImgDomain != "" && isS3Storage {
-					return template.URL("https://" + nbrew.ImgDomain + "/" + asset.FileID.String() + path.Ext(asset.Name))
-				}
-				return template.URL("/" + path.Join("files", response.SitePrefix, response.AssetDir, asset.Name) + "?raw")
 			},
 			"isInClipboard": func(name string) bool {
 				if sitePrefix != clipboard.Get("sitePrefix") {

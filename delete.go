@@ -26,6 +26,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		Names  []string `json:"names"`
 	}
 	type File struct {
+		FileID  ID           `json:"fileID"`
 		Name    string       `json:"name"`
 		IsDir   bool         `json:"isDir"`
 		Size    int64        `json:"size"`
@@ -130,12 +131,16 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					}
 					return err
 				}
-				response.Files[i] = File{
+				file := File{
 					Name:    fileInfo.Name(),
 					IsDir:   fileInfo.IsDir(),
 					Size:    fileInfo.Size(),
 					ModTime: fileInfo.ModTime(),
 				}
+				if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+					file.FileID = fileInfo.FileID
+				}
+				response.Files[i] = file
 				return nil
 			})
 		}
