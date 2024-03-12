@@ -1047,10 +1047,38 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
 		if head == "output" {
-			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS,)
+			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, nbrew.ContentDomain, nbrew.ImgDomain)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "posts" {
+				var text string
+				var creationTime time.Time
 				response.BelongsTo = path.Dir(tail) + ".md"
+				if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+					result, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{}, func(row *sq.Row) (result struct {
+						Text         string
+						CreationTime time.Time
+					}) {
+						return result
+					})
+				} else {
+				}
+				category := path.Dir(strings.TrimPrefix(response.BelongsTo, "posts/"))
+				tmpl, err := siteGen.PostTemplate(r.Context(), category)
+				if err != nil {
+					if errors.As(err, &response.RegenerationStats.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				siteGen.GeneratePost()
 			} else if next != "themes" {
 				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
 			}
