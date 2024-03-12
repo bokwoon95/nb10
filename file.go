@@ -981,6 +981,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				"postRedirectGet": map[string]any{
 					"from": "image",
 				},
+				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -1047,7 +1048,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
 		if head == "output" {
-			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, nbrew.ContentDomain, nbrew.ImgDomain)
+			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
@@ -1059,15 +1060,58 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				var creationTime time.Time
 				response.BelongsTo = path.Dir(tail) + ".md"
 				if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-					result, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{}, func(row *sq.Row) (result struct {
+					result, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
+						Dialect: remoteFS.Dialect,
+						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
+						Values: []any{
+							sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),
+						},
+					}, func(row *sq.Row) (result struct {
 						Text         string
 						CreationTime time.Time
 					}) {
+						result.Text = row.String("text")
+						result.CreationTime = row.Time("creation_time")
 						return result
 					})
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					text = result.Text
+					creationTime = result.CreationTime
 				} else {
+					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, response.BelongsTo))
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					defer file.Close()
+					fileInfo, err := file.Stat()
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					var absolutePath string
+					if localFS, ok := nbrew.FS.(*LocalFS); ok {
+						absolutePath = path.Join(localFS.RootDir, sitePrefix, response.BelongsTo)
+					}
+					text = b.String()
+					creationTime = CreationTime(absolutePath, fileInfo)
 				}
 				category := path.Dir(strings.TrimPrefix(response.BelongsTo, "posts/"))
+				startedAt := time.Now()
 				tmpl, err := siteGen.PostTemplate(r.Context(), category)
 				if err != nil {
 					if errors.As(err, &response.RegenerationStats.TemplateError) {
@@ -1078,9 +1122,73 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					internalServerError(w, r, err)
 					return
 				}
-				siteGen.GeneratePost()
+				err = siteGen.GeneratePost(r.Context(), response.BelongsTo, text, creationTime, tmpl)
+				if err != nil {
+					if errors.As(err, &response.RegenerationStats.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				response.RegenerationStats.Count = 1
+				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			} else if next != "themes" {
+				var text string
 				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
+				if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+					text, err = sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
+						Dialect: remoteFS.Dialect,
+						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
+						Values: []any{
+							sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),
+						},
+					}, func(row *sq.Row) string {
+						return row.String("text")
+					})
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+				} else {
+					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, response.BelongsTo))
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					defer file.Close()
+					fileInfo, err := file.Stat()
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					text = b.String()
+				}
+				startedAt := time.Now()
+				err = siteGen.GeneratePage(r.Context(), response.BelongsTo, text)
+				if err != nil {
+					if errors.As(err, &response.RegenerationStats.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				response.RegenerationStats.Count = 1
+				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			}
 		}
 		writeResponse(w, r, response)
