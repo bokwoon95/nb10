@@ -891,6 +891,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.URL = "?raw"
 		}
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			response.CaptionSupported = true
+			// TODO: use errgroup to fetch Content, PreviousURL and NextURL concurrently.
 			content, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
 				Dialect: remoteFS.Dialect,
 				Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -910,7 +912,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				altText, _, _ := strings.Cut(response.Content, "\n")
 				response.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
 			}
-			response.CaptionSupported = true
+		} else {
+			// TODO: keep a constant previousURL reference and loop over ReadDir. When we see the current image, affix the previous URL and update the state to found (after which the first image we find is the next image and break).
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
 		if head == "output" {
