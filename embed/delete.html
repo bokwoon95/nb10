@@ -34,6 +34,13 @@
   <ul class='list-style-disc ph3'>
     {{- range $file := $.Files }}
     <li class='mv1'>
+      {{- if eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" }}
+        {{- if and $.ImgDomain $.IsS3Storage }}
+        <img src='https://{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
+        {{- else }}
+        <img src='/{{ join "files" $.SitePrefix $.Parent $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>
+        {{- end }}
+      {{- end }}
       <a href='/{{ join "files" $.SitePrefix $.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
       <input type='hidden' name='name' value='{{ $file.Name }}'>
     </li>

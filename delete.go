@@ -42,6 +42,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		Parent            string            `json:"parent"`
 		Files             []File            `json:"files"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		ImgDomain         string            `json:"imgDomain"`
+		IsS3Storage       bool              `json:"isS3Storage"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -75,6 +77,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			referer := getReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
+				"ext":        path.Ext,
 				"hasPrefix":  strings.HasPrefix,
 				"trimPrefix": strings.TrimPrefix,
 				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
@@ -101,6 +104,10 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
+		response.ImgDomain = nbrew.ImgDomain
+		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
+		}
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

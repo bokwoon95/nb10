@@ -830,8 +830,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		CreationTime      time.Time         `json:"creationTime"`
 		Content           string            `json:"content"`
 		AltText           string            `json:"altText"`
-		URL               template.URL      `json:"url,omitempty"`
 		BelongsTo         string            `json:"belongsTo"`
+		URL               template.URL      `json:"url"`
+		NextURL           template.URL      `json:"nextURL"`
+		PreviousURL       template.URL      `json:"previousURL"`
 	}
 
 	isS3Storage := false
