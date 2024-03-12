@@ -1,13 +1,9 @@
 package nb10
 
 import (
-	"bytes"
-	"compress/gzip"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"hash"
 	"html/template"
 	"io"
 	"io/fs"
@@ -23,7 +19,6 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
-	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -1195,136 +1190,5 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		writeResponse(w, r, response)
 	default:
 		methodNotAllowed(w, r)
-	}
-}
-
-func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs.FileInfo, fileType FileType, cacheControl string) {
-	// .jpeg .jpg .png .webp .gif .woff .woff2
-	if !fileType.IsGzippable {
-		if fileSeeker, ok := file.(io.ReadSeeker); ok {
-			hasher := hashPool.Get().(hash.Hash)
-			defer func() {
-				hasher.Reset()
-				hashPool.Put(hasher)
-			}()
-			_, err := io.Copy(hasher, file)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			_, err = fileSeeker.Seek(0, io.SeekStart)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			var b [blake2b.Size256]byte
-			w.Header().Set("Content-Type", fileType.ContentType)
-			w.Header().Set("Cache-Control", cacheControl)
-			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
-			return
-		}
-		w.Header().Set("Content-Type", fileType.ContentType)
-		w.Header().Set("Cache-Control", cacheControl)
-		_, err := io.Copy(w, file)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-		}
-		return
-	}
-
-	// .html .css .js .md .txt .svg .ico .eot .otf .ttf .atom .json
-
-	if remoteFile, ok := file.(*RemoteFile); ok {
-		// If file is a RemoteFile is gzippable and is not fulltext indexed,
-		// its contents are already gzipped. We can reach directly into its
-		// buffer and skip the gzipping step.
-		if remoteFile.fileType.IsGzippable && !remoteFile.isFulltextIndexed {
-			hasher := hashPool.Get().(hash.Hash)
-			defer func() {
-				hasher.Reset()
-				hashPool.Put(hasher)
-			}()
-			_, err := hasher.Write(remoteFile.buf.Bytes())
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			var b [blake2b.Size256]byte
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", fileType.ContentType)
-			w.Header().Set("Cache-Control", cacheControl)
-			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(remoteFile.buf.Bytes()))
-			return
-		}
-	}
-
-	if fileInfo.Size() <= 1<<20 /* 1 MB */ {
-		hasher := hashPool.Get().(hash.Hash)
-		defer func() {
-			hasher.Reset()
-			hashPool.Put(hasher)
-		}()
-		var buf *bytes.Buffer
-		// gzip will at least halve the size of what needs to be buffered
-		gzippedSize := fileInfo.Size() >> 1
-		if gzippedSize > maxPoolableBufferCapacity {
-			buf = bytes.NewBuffer(make([]byte, 0, fileInfo.Size()))
-		} else {
-			buf = bufPool.Get().(*bytes.Buffer)
-			defer func() {
-				buf.Reset()
-				bufPool.Put(buf)
-			}()
-		}
-		multiWriter := io.MultiWriter(buf, hasher)
-		gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-		gzipWriter.Reset(multiWriter)
-		defer func() {
-			gzipWriter.Reset(io.Discard)
-			gzipWriterPool.Put(gzipWriter)
-		}()
-		_, err := io.Copy(gzipWriter, file)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		err = gzipWriter.Close()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		var b [blake2b.Size256]byte
-		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Content-Type", fileType.ContentType)
-		w.Header().Set("Cache-Control", cacheControl)
-		w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-		http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(buf.Bytes()))
-		return
-	}
-
-	w.Header().Set("Content-Encoding", "gzip")
-	w.Header().Set("Content-Type", fileType.ContentType)
-	w.Header().Set("Cache-Control", cacheControl)
-	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-	gzipWriter.Reset(w)
-	defer func() {
-		gzipWriter.Reset(io.Discard)
-		gzipWriterPool.Put(gzipWriter)
-	}()
-	_, err := io.Copy(gzipWriter, file)
-	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-	} else {
-		err = gzipWriter.Close()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-		}
 	}
 }

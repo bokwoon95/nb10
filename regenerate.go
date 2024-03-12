@@ -94,7 +94,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	postListTemplates := map[string]*template.Template{
 		"": postListTemplate,
 	}
-	var result RegenerationStats
+	var regenerationStats RegenerationStats
 	var count atomic.Int64
 	startedAt := time.Now()
 
@@ -273,13 +273,13 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		})
 		err = group.Wait()
 		if err != nil {
-			if !errors.As(err, &result.TemplateError) {
+			if !errors.As(err, &regenerationStats.TemplateError) {
 				return RegenerationStats{}, nil
 			}
 		}
-		result.Count = int(count.Load())
-		result.TimeTaken = time.Since(startedAt).String()
-		return result, nil
+		regenerationStats.Count = int(count.Load())
+		regenerationStats.TimeTaken = time.Since(startedAt).String()
+		return regenerationStats, nil
 	}
 
 	group, groupctx := errgroup.WithContext(ctx)
@@ -438,11 +438,11 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	})
 	err = group.Wait()
 	if err != nil {
-		if !errors.As(err, &result.TemplateError) {
+		if !errors.As(err, &regenerationStats.TemplateError) {
 			return RegenerationStats{}, err
 		}
 	}
-	result.Count = int(count.Load())
-	result.TimeTaken = time.Since(startedAt).String()
-	return result, nil
+	regenerationStats.Count = int(count.Load())
+	regenerationStats.TimeTaken = time.Since(startedAt).String()
+	return regenerationStats, nil
 }

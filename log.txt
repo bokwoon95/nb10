@@ -15,6 +15,7 @@ site_json.go => regenerated site (x files in xxx duration) view
 postlist_json.go => regenerated post list (x files in xxx duration) view
 rootdirectory.go
 directory.go
+image.go
 file.go => regenerated page|post in xxx duration view
 createsite.go
 deletesite.go

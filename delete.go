@@ -36,14 +36,15 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 	type Response struct {
 		Error             string            `json:"status"`
 		DeleteErrors      []string          `json:"deleteErrors"`
-		ContentSite       string            `json:"contentSite"`
-		Username          NullString        `json:"username"`
-		SitePrefix        string            `json:"sitePrefix"`
 		Parent            string            `json:"parent"`
 		Files             []File            `json:"files"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		ImgDomain         string            `json:"imgDomain"`
-		IsS3Storage       bool              `json:"isS3Storage"`
+
+		ContentSite string     `json:"contentSite"`
+		ImgDomain   string     `json:"imgDomain"`
+		IsS3Storage bool       `json:"isS3Storage"`
+		Username    NullString `json:"username"`
+		SitePrefix  string     `json:"sitePrefix"`
 	}
 
 	isValidParent := func(parent string) bool {
