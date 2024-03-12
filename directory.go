@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
@@ -17,7 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, username, sitePrefix, filePath string, modTime time.Time) {
+func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Name         string    `json:"name"`
@@ -27,27 +28,31 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 		Size         int64     `json:"size"`
 	}
 	type Response struct {
+		FileID       ID        `json:"fileID"`
+		FilePath     string    `json:"filePath"`
+		IsDir        bool      `json:"isDir"`
+		ModTime      time.Time `json:"modTime"`
+		CreationTime time.Time `json:"creationTime"`
+		Files        []File    `json:"files"`
+		Sort         string    `json:"sort"`
+		Order        string    `json:"order"`
+		From         string    `json:"from"`
+		FromTime     string    `json:"fromTime"`
+		Before       string    `json:"before"`
+		BeforeTime   string    `json:"beforeTime"`
+		Limit        int       `json:"limit"`
+		PreviousURL  string    `json:"previousURL"`
+		NextURL      string    `json:"nextURL"`
+
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
 		TemplateError   TemplateError  `json:"templateError"`
 		ContentSite     string         `json:"contentSite"`
 		Username        NullString     `json:"username"`
 		SitePrefix      string         `json:"sitePrefix"`
-		FilePath        string         `json:"filePath"`
-		IsDir           bool           `json:"isDir"`
-		SearchSupported bool           `json:"searchSupported"`
-		IsS3Storage     bool           `json:"isS3Storage"`
-		ImgDomain       string         `json:"imgDomain"`
 
-		Sort        string `json:"sort"`
-		Order       string `json:"order"`
-		From        string `json:"from"`
-		FromTime    string `json:"fromTime"`
-		Before      string `json:"before"`
-		BeforeTime  string `json:"beforeTime"`
-		Limit       int    `json:"limit"`
-		Files       []File `json:"files"`
-		PreviousURL string `json:"previousURL"`
-		NextURL     string `json:"nextURL"`
+		SearchSupported bool   `json:"searchSupported"`
+		IsS3Storage     bool   `json:"isS3Storage"`
+		ImgDomain       string `json:"imgDomain"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.Files == nil {
@@ -144,6 +149,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
 		executeTemplate(w, r, tmpl, &response)
 	}
+	if r.Method != "GET" {
+		methodNotAllowed(w, r)
+		return
+	}
 
 	head, _, _ := strings.Cut(filePath, "/")
 	if head != "notes" && head != "pages" && head != "posts" && head != "output" {
@@ -158,7 +167,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, usernam
 	}
 	nbrew.clearSession(w, r, "flash")
 	response.ContentSite = nbrew.contentSite(sitePrefix)
-	response.Username = NullString{String: username, Valid: nbrew.DB != nil}
+	response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 	response.SitePrefix = sitePrefix
 	response.FilePath = filePath
 	response.IsDir = true

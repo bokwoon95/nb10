@@ -267,8 +267,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "":
 			nbrew.rootdirectory(w, r, user, sitePrefix, time.Time{})
 			return
-		case "posts":
-			if path.Base(tail) == "postlist.json" {
+		case "posts", "notes", "pages", "output":
+			if head == "posts" && path.Base(tail) == "postlist.json" {
 				category := path.Dir(tail)
 				if category == "." {
 					category = ""
@@ -276,10 +276,47 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.postlistJSON(w, r, user, sitePrefix, category)
 				return
 			}
-			nbrew.file(w, r, user, sitePrefix, urlPath)
-			return
-		case "notes", "pages", "output":
-			nbrew.file(w, r, user, sitePrefix, urlPath)
+			ext := path.Ext(urlPath)
+			if ext == ".jpeg" || ext == ".jpg" || ext == ".png" || ext == ".webp" || ext == ".gif" {
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, urlPath))
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						notFound(w, r)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				if fileInfo.IsDir() {
+					nbrew.directory(w, r, user, sitePrefix, urlPath, fileInfo)
+					return
+				}
+				nbrew.image(w, r, user, sitePrefix, urlPath, fileInfo)
+				return
+			}
+			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, urlPath))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					notFound(w, r)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			defer file.Close()
+			fileInfo, err := file.Stat()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			if fileInfo.IsDir() {
+				nbrew.directory(w, r, user, sitePrefix, urlPath, fileInfo)
+				return
+			}
+			nbrew.file(w, r, user, sitePrefix, urlPath, file, fileInfo)
 			return
 		case "clipboard":
 			nbrew.clipboard(w, r, user, sitePrefix, tail)

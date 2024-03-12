@@ -34,30 +34,47 @@ var chromaStyles = map[string]bool{
 
 func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type NavigationLink struct {
-		Name string       `json:"name"`
-		URL  template.URL `json:"url"`
+		Name string `json:"name"`
+
+		URL template.URL `json:"url"`
 	}
 	type Request struct {
-		Title           string           `json:"title"`
-		Emoji           string           `json:"emoji"`
-		Favicon         string           `json:"favicon"`
-		CodeStyle       string           `json:"codeStyle"`
-		Description     string           `json:"description"`
+		Title string `json:"title"`
+
+		Emoji string `json:"emoji"`
+
+		Favicon string `json:"favicon"`
+
+		CodeStyle string `json:"codeStyle"`
+
+		Description string `json:"description"`
+
 		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
 	type Response struct {
-		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
+		Title string `json:"title"`
+
+		Emoji string `json:"emoji"`
+
+		Favicon string `json:"favicon"`
+
+		CodeStyle string `json:"codeStyle"`
+
+		Description string `json:"description"`
+
+		NavigationLinks []NavigationLink `json:"navigationLinks"`
+
+		StorageUsed int64 `json:"storageUsed,omitempty"`
+
+		ContentSite string `json:"contentSite"`
+
+		Username NullString `json:"username"`
+
+		SitePrefix string `json:"sitePrefix"`
+
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		ContentSite       string            `json:"contentSite"`
-		Username          NullString        `json:"username"`
-		SitePrefix        string            `json:"sitePrefix"`
-		Title             string            `json:"title"`
-		Emoji             string            `json:"emoji"`
-		Favicon           string            `json:"favicon"`
-		CodeStyle         string            `json:"codeStyle"`
-		Description       string            `json:"description"`
-		NavigationLinks   []NavigationLink  `json:"navigationLinks"`
-		StorageUsed       int64             `json:"storageUsed,omitempty"`
+
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
 	}
 	normalizeRequest := func(request Request) Request {
 		if request.Title == "" {
