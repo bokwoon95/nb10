@@ -78,8 +78,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	if err != nil {
 		return RegenerationStats{}, err
 	}
-	pagesDir := path.Join(sitePrefix, "pages")
-	postsDir := path.Join(sitePrefix, "posts")
+	rootPagesDir := path.Join(sitePrefix, "pages")
+	rootPostsDir := path.Join(sitePrefix, "posts")
 	postTemplate, err := siteGen.PostTemplate(ctx, "")
 	if err != nil {
 		return RegenerationStats{}, err
@@ -114,7 +114,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					" AND NOT is_dir" +
 					" AND file_path LIKE '%.html'",
 				Values: []any{
-					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(pagesDir)+"/%"),
+					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(rootPagesDir)+"/%"),
 				},
 			}, func(row *sq.Row) File {
 				return File{
@@ -162,7 +162,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {postsDir})" +
 					" AND is_dir",
 				Values: []any{
-					sq.StringParam("postsDir", postsDir),
+					sq.StringParam("postsDir", rootPostsDir),
 				},
 			}, func(row *sq.Row) string {
 				return row.String("file_path")
@@ -211,7 +211,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					" AND NOT is_dir" +
 					" AND file_path LIKE '%.md'",
 				Values: []any{
-					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(postsDir)+"/%"),
+					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(rootPostsDir)+"/%"),
 				},
 			}, func(row *sq.Row) File {
 				return File{
@@ -285,11 +285,11 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	group, groupctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
 		subgroup, subctx := errgroup.WithContext(groupctx)
-		err := fs.WalkDir(nbrew.FS.WithContext(groupctx), pagesDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
+		err := fs.WalkDir(nbrew.FS.WithContext(groupctx), rootPagesDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
-			if filePath == pagesDir {
+			if filePath == rootPagesDir {
 				return nil
 			}
 			subgroup.Go(func() error {
@@ -332,7 +332,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		return nil
 	})
 	group.Go(func() error {
-		dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(postsDir)
+		dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(rootPostsDir)
 		if err != nil {
 			return err
 		}
@@ -364,7 +364,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			return err
 		}
 		subgroupB, subctxB := errgroup.WithContext(groupctx)
-		err = fs.WalkDir(nbrew.FS.WithContext(groupctx), postsDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
+		err = fs.WalkDir(nbrew.FS.WithContext(groupctx), rootPostsDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
