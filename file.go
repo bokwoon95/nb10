@@ -52,6 +52,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		Assets            []Asset           `json:"assets"`
 		FilesExist        []string          `json:"filesExist"`
 		FilesTooBig       []string          `json:"filesTooBig"`
+		ImgDomain         string            `json:"imgDomain"`
+		IsS3Storage       bool              `json:"isS3Storage"`
 	}
 
 	ext := path.Ext(filePath)
@@ -166,6 +168,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				absolutePath = path.Join(localFS.RootDir, sitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
+		}
+		response.ImgDomain = nbrew.ImgDomain
+		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
 		}
 
 		if isEditable {

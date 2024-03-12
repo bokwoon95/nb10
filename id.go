@@ -26,6 +26,9 @@ func (id ID) IsZero() bool {
 }
 
 func (id ID) String() string {
+	if id.IsZero() {
+		return ""
+	}
 	var b [32 + 4]byte
 	hex.Encode(b[:], id[:4])
 	b[8] = '-'
@@ -40,6 +43,9 @@ func (id ID) String() string {
 }
 
 func (id ID) MarshalJSON() ([]byte, error) {
+	if id.IsZero() {
+		return []byte(`""`), nil
+	}
 	var array [32 + 4 + 2]byte
 	array[0], array[len(array)-1] = '"', '"'
 	b := array[1 : len(array)-1]
