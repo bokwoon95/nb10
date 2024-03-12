@@ -24,14 +24,16 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		Term   string `json:"term"`
 	}
 	type Response struct {
-		Error       string     `json:"error,omitempty"`
-		ContentSite string     `json:"contentSite,omitempty"`
+		Error       string     `json:"error"`
+		ContentSite string     `json:"contentSite"`
 		Username    NullString `json:"username"`
 		SitePrefix  string     `json:"sitePrefix"`
-		Parent      string     `json:"parent,omitempty"`
-		Term        string     `json:"term,omitempty"`
-		Exts        []string   `json:"exts,omitempty"`
-		Matches     []Match    `json:"matches,omitempty"`
+		Parent      string     `json:"parent"`
+		Term        string     `json:"term"`
+		Exts        []string   `json:"exts"`
+		Matches     []Match    `json:"matches"`
+		ImgDomain   string     `json:"imgDomain"`
+		IsS3Storage bool       `json:"isS3Storage"`
 	}
 
 	isValidParent := func(parent string) bool {
