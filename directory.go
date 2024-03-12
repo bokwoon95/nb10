@@ -28,31 +28,29 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		Size         int64     `json:"size"`
 	}
 	type Response struct {
-		FileID       ID        `json:"fileID"`
-		FilePath     string    `json:"filePath"`
-		IsDir        bool      `json:"isDir"`
-		ModTime      time.Time `json:"modTime"`
-		CreationTime time.Time `json:"creationTime"`
-		Files        []File    `json:"files"`
-		Sort         string    `json:"sort"`
-		Order        string    `json:"order"`
-		From         string    `json:"from"`
-		FromTime     string    `json:"fromTime"`
-		Before       string    `json:"before"`
-		BeforeTime   string    `json:"beforeTime"`
-		Limit        int       `json:"limit"`
-		PreviousURL  string    `json:"previousURL"`
-		NextURL      string    `json:"nextURL"`
-
-		PostRedirectGet map[string]any `json:"postRedirectGet"`
-		TemplateError   TemplateError  `json:"templateError"`
-		ContentSite     string         `json:"contentSite"`
-		Username        NullString     `json:"username"`
+		ContentBaseURL  string         `json:"contentBaseURL"`
 		SitePrefix      string         `json:"sitePrefix"`
-
-		SearchSupported bool   `json:"searchSupported"`
-		IsS3Storage     bool   `json:"isS3Storage"`
-		ImgDomain       string `json:"imgDomain"`
+		UserID          string         `json:"userID"`
+		Username        string         `json:"username"`
+		FileID          ID             `json:"fileID"`
+		FilePath        string         `json:"filePath"`
+		IsDir           bool           `json:"isDir"`
+		ModTime         time.Time      `json:"modTime"`
+		CreationTime    time.Time      `json:"creationTime"`
+		Files           []File         `json:"files"`
+		Sort            string         `json:"sort"`
+		Order           string         `json:"order"`
+		From            string         `json:"from"`
+		FromTime        string         `json:"fromTime"`
+		Before          string         `json:"before"`
+		BeforeTime      string         `json:"beforeTime"`
+		Limit           int            `json:"limit"`
+		PreviousURL     string         `json:"previousURL"`
+		NextURL         string         `json:"nextURL"`
+		ImgDomain       string         `json:"imgDomain"`
+		IsS3Storage     bool           `json:"isS3Storage"`
+		SearchSupported bool           `json:"searchSupported"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.Files == nil {
@@ -166,16 +164,28 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		getLogger(r.Context()).Error(err.Error())
 	}
 	nbrew.clearSession(w, r, "flash")
-	response.ContentSite = nbrew.contentSite(sitePrefix)
-	response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.SitePrefix = sitePrefix
+	response.UserID = user.UserID.String()
+	response.Username = user.Username
+	if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+		response.FileID = fileInfo.FileID
+		response.ModTime = fileInfo.ModTime()
+		response.CreationTime = fileInfo.CreationTime
+	} else {
+		var absolutePath string
+		if localFS, ok := nbrew.FS.(*LocalFS); ok {
+			absolutePath = path.Join(localFS.RootDir, response.SitePrefix, response.FilePath)
+		}
+		response.CreationTime = CreationTime(absolutePath, fileInfo)
+	}
 	response.FilePath = filePath
 	response.IsDir = true
-	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
+	response.ImgDomain = nbrew.ImgDomain
 	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 		_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
 	}
-	response.ImgDomain = nbrew.ImgDomain
+	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
 	response.Sort = strings.ToLower(strings.TrimSpace(r.Form.Get("sort")))
 	if response.Sort == "" {
 		cookie, _ := r.Cookie("sort")

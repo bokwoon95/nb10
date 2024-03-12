@@ -18,10 +18,10 @@
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
   &bull;
-  <a href='{{ $.ContentSite }}' class='ma2 white'>{{ if hasPrefix $.ContentSite "https://" }}{{ trimPrefix $.ContentSite "https://" }}{{ else }}{{ trimPrefix $.ContentSite "http://" }}{{ end }}</a>
+  <a href='{{ $.ContentBaseURL }}' class='ma2 white'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}</a>
   <span class='flex-grow-1'></span>
-  {{- if $.Username.Valid }}
-  <a href='' class='ma2'>{{ if $.Username.String }}@{{ $.Username.String }}{{ else }}user{{ end }}</a>
+  {{- if $.UserID }}
+  <a href='' class='ma2'>{{ if $.Username }}@{{ $.Username }}{{ else }}user{{ end }}</a>
   <a href='/users/logout/' class='ma2'>logout</a>
   {{- end }}
 </nav>
@@ -30,7 +30,7 @@
   {{- if not $regenerationStats.templateError.errorMessage }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
     <div class='pv1'>
-      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentSite }}'>view</a></div>
+      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentBaseURL }}'>view</a></div>
     </div>
     <div class='flex-grow-1'></div>
     <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -330,7 +330,7 @@
   <div>{{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}</div>
   <div class='flex-grow-1'></div>
   {{- if eq (head $.FilePath) "posts" }}
-  <div><a href='{{ $.ContentSite }}/{{ $.FilePath }}/'>view posts</a></div>
+  <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/'>view posts</a></div>
   {{- end }}
 </div>
 {{- if $.Files }}

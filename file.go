@@ -24,54 +24,32 @@ import (
 
 func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, file fs.File, fileInfo fs.FileInfo) {
 	type Asset struct {
-		FileID ID `json:"fileID"`
-
-		Name string `json:"name"`
-
-		ModTime time.Time `json:"modTime"`
-
+		FileID       ID        `json:"fileID"`
+		Name         string    `json:"name"`
+		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
-
-		Size int64 `json:"size"`
+		Size         int64     `json:"size"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet"`
-
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-
-		ContentSite string `json:"contentSite"`
-
-		Username NullString `json:"username"`
-
-		SitePrefix string `json:"sitePrefix"`
-
-		FileID ID `json:"fileID"`
-
-		FilePath string `json:"filePath"`
-
-		IsDir bool `json:"isDir"`
-
-		ModTime time.Time `json:"modTime"`
-
-		CreationTime time.Time `json:"creationTime"`
-
-		Content string `json:"content"`
-
-		URL template.URL `json:"url,omitempty"`
-
-		BelongsTo string `json:"belongsTo"`
-
-		AssetDir string `json:"assetDir"`
-
-		Assets []Asset `json:"assets"`
-
-		FilesExist []string `json:"filesExist"`
-
-		FilesTooBig []string `json:"filesTooBig"`
-
-		ImgDomain string `json:"imgDomain"`
-
-		IsS3Storage bool `json:"isS3Storage"`
+		ContentSite       string            `json:"contentSite"`
+		Username          NullString        `json:"username"`
+		SitePrefix        string            `json:"sitePrefix"`
+		FileID            ID                `json:"fileID"`
+		FilePath          string            `json:"filePath"`
+		IsDir             bool              `json:"isDir"`
+		ModTime           time.Time         `json:"modTime"`
+		CreationTime      time.Time         `json:"creationTime"`
+		Content           string            `json:"content"`
+		URL               template.URL      `json:"url,omitempty"`
+		BelongsTo         string            `json:"belongsTo"`
+		AssetDir          string            `json:"assetDir"`
+		Assets            []Asset           `json:"assets"`
+		FilesExist        []string          `json:"filesExist"`
+		FilesTooBig       []string          `json:"filesTooBig"`
+		ImgDomain         string            `json:"imgDomain"`
+		IsS3Storage       bool              `json:"isS3Storage"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 
 	fileType, ok := fileTypes[path.Ext(filePath)]
@@ -123,7 +101,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentSite(sitePrefix)
+		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.FilePath = filePath
@@ -496,7 +474,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		response := Response{
-			ContentSite: nbrew.contentSite(sitePrefix),
+			ContentSite: nbrew.contentBaseURL(sitePrefix),
 			Username:    NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:  sitePrefix,
 			FilePath:    filePath,

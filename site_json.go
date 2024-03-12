@@ -149,7 +149,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentSite(sitePrefix)
+		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "site.json"))
@@ -315,7 +315,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		}
 		response := Response{
 			RegenerationStats: regenerationStats,
-			ContentSite:       nbrew.contentSite(sitePrefix),
+			ContentSite:       nbrew.contentBaseURL(sitePrefix),
 			Username:          NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:        sitePrefix,
 			Title:             request.Title,

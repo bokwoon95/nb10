@@ -451,7 +451,7 @@ func executeTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Temp
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
-func (nbrew *Notebrew) contentSite(sitePrefix string) string {
+func (nbrew *Notebrew) contentBaseURL(sitePrefix string) string {
 	if strings.Contains(sitePrefix, ".") {
 		return "https://" + sitePrefix
 	}

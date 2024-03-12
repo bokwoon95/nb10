@@ -74,7 +74,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentSite(sitePrefix)
+		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Category = category
@@ -179,7 +179,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			return
 		}
 		response := Response{
-			ContentSite:  nbrew.contentSite(sitePrefix),
+			ContentSite:  nbrew.contentBaseURL(sitePrefix),
 			Username:     NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:   sitePrefix,
 			PostsPerPage: request.PostsPerPage,
