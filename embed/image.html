@@ -60,17 +60,16 @@
   {{- end }}
 </div>
 <figure class='mv2 w-70-l w-80-m w-100 center'>
-  {{- if $.IsRemoteFS }}
   <figcaption class='flex flex-wrap'>
     {{- if $.PreviousImageName }}
-      {{- if $.ImgDomain }}
+      {{- if and $.ImgDomain $.IsRemoteFS }}
       <a href='{{ $.ImgDomain }}/{{ $.PreviousImageID }}{{ ext $.PreviousImageName }}'>&larr; previous</a>
       {{- else }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
       {{- end }}
     {{- end }}
     <span class='flex-grow-1'></span>
-    {{- if $.ImgDomain }}
+    {{- if and $.ImgDomain $.IsRemoteFS }}
     <a href='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a>
     {{- else }}
     <a href='?raw'>{{ base $.FilePath }}</a>
@@ -78,25 +77,16 @@
     <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
     <span class='flex-grow-1'></span>
     {{- if $.NextImageName }}
-      {{- if $.ImgDomain }}
+      {{- if and $.ImgDomain $.IsRemoteFS }}
       <a href='{{ $.ImgDomain }}/{{ $.NextImageID }}{{ ext $.NextImageName }}'>next &rarr;</a>
       {{- else }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
       {{- end }}
     {{- end }}
   </figcaption>
-    {{- if $.ImgDomain }}
-    <img src='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
-    {{- else }}
-    <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
-    {{- end }}
+  {{- if and $.ImgDomain $.IsRemoteFS }}
+  <img src='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- else }}
-  <figcaption class='flex flex-wrap'>
-    <span class='flex-grow-1'></span>
-    <a href='?raw'>{{ base $.FilePath }}</a>
-    <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
-    <span class='flex-grow-1'></span>
-  </figcaption>
   <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- end }}
 </figure>
