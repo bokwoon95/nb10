@@ -41,7 +41,6 @@ notebrew/open_browser.go
 - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 
-BUG: renaming a post doesn't seem to work.
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying one image from a post will result in "cut" instead of "copy".
