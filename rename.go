@@ -22,17 +22,18 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		To     string `json:"to"`
 	}
 	type Response struct {
-		Error          string     `json:"status"`
-		FormErrors     url.Values `json:"formErrors"`
 		ContentBaseURL string     `json:"contentBaseURL"`
-		Username       NullString `json:"username"`
 		SitePrefix     string     `json:"sitePrefix"`
+		UserID         ID         `json:"userID"`
+		Username       string     `json:"username"`
 		Parent         string     `json:"parent"`
-		Prefix         string     `json:"prefix"`
 		From           string     `json:"from"`
 		To             string     `json:"to"`
+		Prefix         string     `json:"prefix"`
 		Ext            string     `json:"ext"`
 		IsDir          bool       `json:"isDir"`
+		Error          string     `json:"status"`
+		FormErrors     url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -74,7 +75,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		response.UserID = user.UserID
+		response.Username = user.Username
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		if response.Error != "" {
@@ -233,9 +235,9 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		response := Response{
-			FormErrors: make(url.Values),
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
 			To:         request.To,
+			FormErrors: make(url.Values),
 		}
 		if request.Name == "" || strings.Contains(request.Name, "/") {
 			response.Error = "InvalidFile"

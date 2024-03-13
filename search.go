@@ -15,25 +15,28 @@ import (
 
 func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Match struct {
+		FileID       ID        `json:"fileID"`
 		FilePath     string    `json:"filePath"`
 		Preview      string    `json:"preview"`
 		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
-		Parent string `json:"parent"`
-		Term   string `json:"term"`
+		Parent string   `json:"parent"`
+		Term   string   `json:"term"`
+		Exts   []string `json:"exts"`
 	}
 	type Response struct {
-		Error          string     `json:"error"`
-		ContentBaseURL string     `json:"contentBaseURL"`
-		Username       NullString `json:"username"`
-		SitePrefix     string     `json:"sitePrefix"`
-		Parent         string     `json:"parent"`
-		Term           string     `json:"term"`
-		Exts           []string   `json:"exts"`
-		Matches        []Match    `json:"matches"`
-		ImgDomain      string     `json:"imgDomain"`
-		IsS3Storage    bool       `json:"isS3Storage"`
+		ContentBaseURL string   `json:"contentBaseURL"`
+		SitePrefix     string   `json:"sitePrefix"`
+		ImgDomain      string   `json:"imgDomain"`
+		IsRemoteFS     bool     `json:"isRemoteFS"`
+		IsS3Storage    bool     `json:"isS3Storage"`
+		UserID         ID       `json:"userID"`
+		Username       string   `json:"username"`
+		Parent         string   `json:"parent"`
+		Term           string   `json:"term"`
+		Exts           []string `json:"exts"`
+		Matches        []Match  `json:"matches"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -43,21 +46,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		if parent == "." {
 			return true
 		}
-		head, tail, _ := strings.Cut(parent, "/")
+		head, _, _ := strings.Cut(parent, "/")
 		switch head {
-		case "notes", "pages", "posts":
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		case "output":
-			next, _, _ := strings.Cut(tail, "/")
-			if next != "themes" {
-				return false
-			}
+		case "notes", "pages", "posts", "output":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
 			if err != nil {
 				return false
@@ -98,6 +89,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		funcMap := map[string]any{
 			"join":       path.Join,
+			"ext":        path.Ext,
 			"hasPrefix":  strings.HasPrefix,
 			"trimPrefix": strings.TrimPrefix,
 			"contains":   strings.Contains,
@@ -119,16 +111,29 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		executeTemplate(w, r, tmpl, &response)
 	}
 
+	request := Request{
+		Parent: r.Form.Get("parent"),
+		Term:   r.Form.Get("term"),
+		Exts:   r.Form["ext"],
+	}
+
 	var response Response
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-	response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+	response.ImgDomain = nbrew.ImgDomain
+	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+		_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
+	}
 	response.SitePrefix = sitePrefix
-	response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-	response.Term = strings.TrimSpace(r.Form.Get("term"))
-	if r.Form.Has("ext") {
-		for _, ext := range r.Form["ext"] {
+	response.UserID = user.UserID
+	response.Username = user.Username
+	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
+	response.Term = strings.TrimSpace(request.Term)
+	if len(request.Exts) > 0 {
+		for _, ext := range request.Exts {
 			switch ext {
-			case ".html", ".css", ".js", ".md", ".txt", ".json":
+			case ".html", ".css", ".js", ".md", ".txt", ".json",
+				".jpeg", ".jpg", ".png", ".webp", ".gif":
 				response.Exts = append(response.Exts, ext)
 			}
 		}
@@ -159,17 +164,20 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		extensionFilter := sq.Expr("1 = 1")
 		if len(response.Exts) > 0 {
 			var b strings.Builder
+			var args []any
 			b.WriteString("(")
 			for i, ext := range response.Exts {
 				if i > 0 {
 					b.WriteString(" OR ")
 				}
-				b.WriteString("file_path LIKE '%" + ext + "'")
+				b.WriteString("file_path LIKE {}")
+				args = append(args, "%"+ext)
 			}
 			b.WriteString(")")
-			extensionFilter = sq.Expr(b.String())
+			extensionFilter = sq.Expr(b.String(), args...)
 		}
 		response.Matches, err = sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
+			Debug:   true,
 			Dialect: remoteFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
@@ -185,6 +193,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			},
 		}, func(row *sq.Row) Match {
 			match := Match{
+				FileID:       row.UUID("files.file_id"),
 				FilePath:     row.String("files.file_path"),
 				Preview:      row.String("CASE WHEN files.file_path LIKE '%.json' THEN '' ELSE substr(files.text, 1, 500) END"),
 				CreationTime: row.Time("files.creation_time"),

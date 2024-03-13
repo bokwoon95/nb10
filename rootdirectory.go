@@ -31,23 +31,22 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		Owner string `json:"owner"`
 	}
 	type Response struct {
-		PostRedirectGet map[string]any `json:"postRedirectGet"`
-		ContentBaseURL  string         `json:"contentBaseURL"`
-		Username        NullString     `json:"username"`
-		SitePrefix      string         `json:"sitePrefix"`
-		FilePath        string         `json:"filePath"`
-		IsDir           bool           `json:"isDir"`
-		SearchSupported bool           `json:"searchSupported"`
-
-		Files []File `json:"files"`
-
+		ContentBaseURL    string            `json:"contentBaseURL"`
+		SitePrefix        string            `json:"sitePrefix"`
+		SearchSupported   bool              `json:"searchSupported"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
+		FilePath          string            `json:"filePath"`
+		IsDir             bool              `json:"isDir"`
+		Files             []File            `json:"files"`
+		Sites             []Site            `json:"sites"`
 		From              string            `json:"from"`
 		Before            string            `json:"before"`
 		Limit             int               `json:"limit"`
-		Sites             []Site            `json:"sites"`
 		PreviousURL       string            `json:"previousURL"`
 		NextURL           string            `json:"nextURL"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.Sites == nil {
@@ -85,20 +84,20 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			}
 		}
 		funcMap := map[string]any{
-			"join":             path.Join,
-			"dir":              path.Dir,
-			"base":             path.Base,
-			"ext":              path.Ext,
-			"hasPrefix":        strings.HasPrefix,
-			"hasSuffix":        strings.HasSuffix,
-			"trimPrefix":       strings.TrimPrefix,
-			"trimSuffix":       strings.TrimSuffix,
+			"join":                  path.Join,
+			"dir":                   path.Dir,
+			"base":                  path.Base,
+			"ext":                   path.Ext,
+			"hasPrefix":             strings.HasPrefix,
+			"hasSuffix":             strings.HasSuffix,
+			"trimPrefix":            strings.TrimPrefix,
+			"trimSuffix":            strings.TrimSuffix,
 			"humanReadableFileSize": humanReadableFileSize,
-			"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
-			"baselineJS":       func() template.JS { return template.JS(baselineJS) },
-			"referer":          func() string { return referer },
-			"clipboard":        func() url.Values { return clipboard },
-			"safeHTML":         func(s string) template.HTML { return template.HTML(s) },
+			"stylesCSS":             func() template.CSS { return template.CSS(stylesCSS) },
+			"baselineJS":            func() template.JS { return template.JS(baselineJS) },
+			"referer":               func() string { return referer },
+			"clipboard":             func() url.Values { return clipboard },
+			"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 			"head": func(s string) string {
 				head, _, _ := strings.Cut(s, "/")
 				return head
@@ -125,8 +124,9 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 	nbrew.clearSession(w, r, "flash")
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-	response.Username = NullString{String: user.Username, Valid: !user.UserID.IsZero()}
 	response.SitePrefix = sitePrefix
+	response.UserID = user.UserID
+	response.Username = user.Username
 	response.IsDir = true
 	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
 	if sitePrefix == "" && nbrew.DB != nil {

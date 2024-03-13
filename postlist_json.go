@@ -20,13 +20,14 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		PostsPerPage int `json:"postsPerPage"`
 	}
 	type Response struct {
-		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
-		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		ContentBaseURL    string            `json:"contentBaseURL"`
-		Category          string            `json:"category"`
-		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
+		Category          string            `json:"category"`
 		PostsPerPage      int               `json:"postsPerPage"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 	normalizeRequest := func(request Request) Request {
 		if request.PostsPerPage <= 0 {
@@ -75,7 +76,8 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		response.UserID = user.UserID
+		response.Username = user.Username
 		response.SitePrefix = sitePrefix
 		response.Category = category
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", category, "postlist.json"))
@@ -180,7 +182,6 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		}
 		response := Response{
 			ContentBaseURL: nbrew.contentBaseURL(sitePrefix),
-			Username:       NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:     sitePrefix,
 			PostsPerPage:   request.PostsPerPage,
 		}
