@@ -393,7 +393,12 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						} else if next != "themes" {
 							switch path.Ext(name) {
 							case ".jpeg", ".jpg", ".png", ".webp", ".gif", ".md":
-								parentPage := path.Join("pages", tail+".html")
+								var parentPage string
+								if tail == "" {
+									parentPage = "pages/index.html"
+								} else {
+									parentPage = path.Join("pages", tail+".html")
+								}
 								regenerateParentPage.Store(&parentPage)
 							}
 						}

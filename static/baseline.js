@@ -102,6 +102,7 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
       const file = input.files.item(i);
       dataTransfer.items.add(file);
     }
+    const files = [];
     for (let i = 0; i < event.clipboardData.files.length; i++) {
       const file = event.clipboardData.files.item(i);
       const n = file.name.lastIndexOf(".");
@@ -110,6 +111,18 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
         invalidCount++;
         continue;
       }
+      files.push(file);
+    }
+    files.sort(function(a, b) {
+      if (a.lastModified == b.lastModified) {
+        return 0;
+      }
+      if (a.lastModified < b.lastModified) {
+        return -1;
+      }
+      return 1;
+    });
+    for (const file of files) {
       dataTransfer.items.add(file);
     }
     if (invalidCount > 0) {

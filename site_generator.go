@@ -2115,12 +2115,6 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 		}
 		text = b.String()
 	}
-	text = "<!DOCTYPE html>" +
-		"\n<html lang='{{ $.Site.Lang }}'>" +
-		"\n<meta charset='utf-8'>" +
-		"\n<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-		"\n<link rel='icon' href='{{ $.Site.Favicon }}'>" +
-		"\n" + text
 	tmpl, err := siteGen.ParseTemplate(ctx, path.Join("posts", category, "post.html"), text)
 	if err != nil {
 		return nil, err

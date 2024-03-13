@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"mime"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -22,18 +24,19 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		To     string `json:"to"`
 	}
 	type Response struct {
-		ContentBaseURL string     `json:"contentBaseURL"`
-		SitePrefix     string     `json:"sitePrefix"`
-		UserID         ID         `json:"userID"`
-		Username       string     `json:"username"`
-		Parent         string     `json:"parent"`
-		From           string     `json:"from"`
-		To             string     `json:"to"`
-		Prefix         string     `json:"prefix"`
-		Ext            string     `json:"ext"`
-		IsDir          bool       `json:"isDir"`
-		Error          string     `json:"status"`
-		FormErrors     url.Values `json:"formErrors"`
+		ContentBaseURL    string            `json:"contentBaseURL"`
+		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
+		Parent            string            `json:"parent"`
+		From              string            `json:"from"`
+		To                string            `json:"to"`
+		Prefix            string            `json:"prefix"`
+		Ext               string            `json:"ext"`
+		IsDir             bool              `json:"isDir"`
+		Error             string            `json:"status"`
+		FormErrors        url.Values        `json:"formErrors"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
 
 	switch r.Method {
@@ -174,6 +177,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					"newName": response.Prefix + response.To + response.Ext,
 					"isDir":   response.IsDir,
 				},
+				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -350,11 +354,114 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			internalServerError(w, r, err)
 			return
 		}
-		if head != "pages" && head != "posts" {
-			writeResponse(w, r, response)
-			return
-		}
-		if head == "posts" {
+		switch head {
+		case "pages":
+			var counterpart string
+			if !response.IsDir {
+				counterpart = strings.TrimPrefix(oldName, ".html")
+			} else {
+				counterpart = oldName + ".html"
+			}
+			var counterpartExists bool
+			counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+			} else {
+				counterpartExists = true
+			}
+			oldOutputDir := path.Join(sitePrefix, "output", tail, response.From)
+			newOutputDir := path.Join(sitePrefix, "output", tail, response.To)
+			if !counterpartExists || counterpartFileInfo.IsDir() == response.IsDir {
+				err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				writeResponse(w, r, response)
+				return
+			}
+			err = nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(oldOutputDir)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			group, groupctx := errgroup.WithContext(r.Context())
+			for _, dirEntry := range dirEntries {
+				if dirEntry.IsDir() == response.IsDir {
+					name := dirEntry.Name()
+					group.Go(func() error {
+						return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
+					})
+				}
+			}
+			err = group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			var parentPage string
+			if response.Parent == "pages" {
+				parentPage = "pages/index.html"
+			} else {
+				parentPage = response.Parent + ".html"
+			}
+			file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			fileInfo, err := file.Stat()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			var b strings.Builder
+			b.Grow(int(fileInfo.Size()))
+			_, err = io.Copy(&b, file)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			startedAt := time.Now()
+			err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+			if err != nil {
+				if errors.As(err, &response.RegenerationStats.TemplateError) {
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			response.RegenerationStats.Count = 1
+			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+		case "posts":
 			oldOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.From)
 			newOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.To)
 			err = nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
@@ -363,64 +470,130 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				internalServerError(w, r, err)
 				return
 			}
-			writeResponse(w, r, response)
-			return
-		}
-		var counterpart string
-		if !response.IsDir {
-			counterpart = strings.TrimPrefix(oldName, ".html")
-		} else {
-			counterpart = oldName + ".html"
-		}
-		var counterpartExists bool
-		counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+		case "output":
+			if fileInfo.IsDir() {
+				writeResponse(w, r, response)
 				return
 			}
-		} else {
-			counterpartExists = true
-		}
-		oldOutputDir := path.Join(sitePrefix, "output", tail, response.From)
-		newOutputDir := path.Join(sitePrefix, "output", tail, response.To)
-		if !counterpartExists || counterpartFileInfo.IsDir() == response.IsDir {
-			err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
-				return
+			next, _, _ := strings.Cut(tail, "/")
+			if next == "posts" {
+				switch response.Ext {
+				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+					parentPost := tail + ".md"
+					file, err := nbrew.FS.WithContext(r.Context()).Open(parentPost)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					fileInfo, err := file.Stat()
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+						creationTime = fileInfo.CreationTime
+					} else {
+						var absolutePath string
+						if localFS, ok := nbrew.FS.(*LocalFS); ok {
+							absolutePath = path.Join(localFS.RootDir, sitePrefix, parentPost)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
+					}
+					siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					category := path.Dir(strings.TrimPrefix(parentPost, "posts/"))
+					if category == "." {
+						category = ""
+					}
+					startedAt := time.Now()
+					tmpl, err := siteGen.PostTemplate(r.Context(), category)
+					if err != nil {
+						if errors.As(err, &response.RegenerationStats.TemplateError) {
+							writeResponse(w, r, response)
+							return
+						}
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					err = siteGen.GeneratePost(r.Context(), parentPost, b.String(), creationTime, tmpl)
+					if err != nil {
+						if errors.As(err, &response.RegenerationStats.TemplateError) {
+							writeResponse(w, r, response)
+							return
+						}
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					response.RegenerationStats.Count = 1
+					response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+				}
+			} else if next != "themes" {
+				switch response.Ext {
+				case ".jpeg", ".jpg", ".png", ".webp", ".gif", ".md":
+					var parentPage string
+					if tail == "" {
+						parentPage = "pages/index.html"
+					} else {
+						parentPage = path.Join("pages", tail+".html")
+					}
+					file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					fileInfo, err := file.Stat()
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					startedAt := time.Now()
+					err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+					if err != nil {
+						if errors.As(err, &response.RegenerationStats.TemplateError) {
+							writeResponse(w, r, response)
+							return
+						}
+						getLogger(r.Context()).Error(err.Error())
+						internalServerError(w, r, err)
+						return
+					}
+					response.RegenerationStats.Count = 1
+					response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+				}
 			}
-			writeResponse(w, r, response)
-			return
-		}
-		err = nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
-		}
-		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(oldOutputDir)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
-		}
-		group, groupctx := errgroup.WithContext(r.Context())
-		for _, dirEntry := range dirEntries {
-			if dirEntry.IsDir() == response.IsDir {
-				name := dirEntry.Name()
-				group.Go(func() error {
-					return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
-				})
-			}
-		}
-		err = group.Wait()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
-			return
 		}
 		writeResponse(w, r, response)
 	default:

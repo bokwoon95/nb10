@@ -186,6 +186,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	}
 	group, groupctx := errgroup.WithContext(r.Context())
 	startedAt := time.Now()
+	var timeCounter atomic.Int64
 	for {
 		part, err := reader.NextPart()
 		if err != nil {
@@ -308,9 +309,11 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			text := b.String()
+			now := time.Now()
+			timeCounter.CompareAndSwap(0, now.Unix())
+			creationTime := time.Unix(max(now.Unix(), timeCounter.Add(1)), 0)
 			group.Go(func() error {
 				var timestamp [8]byte
-				creationTime := time.Now()
 				binary.BigEndian.PutUint64(timestamp[:], uint64(creationTime.Unix()))
 				prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
 				if strings.TrimSuffix(fileName, ext) != "" {
@@ -318,6 +321,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				} else {
 					fileName = prefix + fileName
 				}
+				filePath := path.Join(sitePrefix, response.Parent, fileName)
 				err := writeFile(groupctx, filePath, strings.NewReader(text))
 				if err != nil {
 					return err
