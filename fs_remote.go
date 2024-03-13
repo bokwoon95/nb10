@@ -1067,7 +1067,13 @@ func (fsys *RemoteFS) Rename(oldName, newName string) error {
 				Dialect: fsys.Dialect,
 				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
 				Values: []any{
-					sq.Param("filePath", sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1)),
+					sq.Param("filePath", sq.DialectExpression{
+						Default: sq.Expr("{} || substring(file_path, {})", newName, utf8.RuneCountInString(oldName)+1),
+						Cases: []sq.DialectCase{{
+							Dialect: "mysql",
+							Result:  sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1),
+						}},
+					}),
 					sq.TimeParam("modTime", time.Now().UTC()),
 					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(oldName)+"/%"),
 				},
@@ -1123,7 +1129,13 @@ func (fsys *RemoteFS) Rename(oldName, newName string) error {
 			Dialect: fsys.Dialect,
 			Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
 			Values: []any{
-				sq.Param("filePath", sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1)),
+				sq.Param("filePath", sq.DialectExpression{
+					Default: sq.Expr("{} || substring(file_path, {})", newName, utf8.RuneCountInString(oldName)+1),
+					Cases: []sq.DialectCase{{
+						Dialect: "mysql",
+						Result:  sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1),
+					}},
+				}),
 				sq.TimeParam("modTime", time.Now().UTC()),
 				sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(oldName)+"/%"),
 			},
@@ -1309,7 +1321,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 				" SELECT" +
 				" unhex(items.value->>0, '-') AS dest_file_id" +
 				", CASE WHEN items.value->>1 <> '' THEN unhex(items.value->>1, '-') ELSE (SELECT file_id FROM files WHERE file_path = items.value->>2) END AS dest_parent_id" +
-				", concat({destName}, substring(src_files.file_path, {start})) AS dest_file_path" +
+				", {destName} || substring(src_files.file_path, {start}) AS dest_file_path" +
 				", {modTime}" +
 				", {modTime}" +
 				", src_files.is_dir" +
@@ -1336,7 +1348,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 				" SELECT" +
 				" CAST(items.value->>0 AS UUID) AS dest_file_id" +
 				", CASE WHEN items.value->>1 <> '' THEN CAST(items.value->>1 AS UUID) ELSE (SELECT file_id FROM files WHERE file_path = items.value->>2) END AS dest_parent_id" +
-				", concat({destName}, substring(src_files.file_path, {start})) AS dest_file_path" +
+				", {destName} || substring(src_files.file_path, {start}) AS dest_file_path" +
 				", {modTime}" +
 				", {modTime}" +
 				", src_files.is_dir" +
