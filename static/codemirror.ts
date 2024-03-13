@@ -148,12 +148,14 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
   } else if (config.has("extElementName")) {
     const extElementName = config.get("extElementName");
     const extElement = form.elements[extElementName] as HTMLInputElement | HTMLSelectElement;
-    ext = extElement.value;
-    if (extElement && textarea.value.length <= 50000) {
-      configureLanguage(extElement.value);
-      extElement.addEventListener("change", function() {
+    if (extElement) {
+      ext = extElement.value;
+      if (textarea.value.length <= 50000) {
         configureLanguage(extElement.value);
-      });
+        extElement.addEventListener("change", function() {
+          configureLanguage(extElement.value);
+        });
+      }
     }
   }
 
