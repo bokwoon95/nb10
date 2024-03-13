@@ -22,17 +22,17 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		To     string `json:"to"`
 	}
 	type Response struct {
-		Error       string     `json:"status"`
-		FormErrors  url.Values `json:"formErrors,omitempty"`
-		ContentSite string     `json:"contentSite,omitempty"`
-		Username    NullString `json:"username"`
-		SitePrefix  string     `json:"sitePrefix"`
-		Parent      string     `json:"parent"`
-		Prefix      string     `json:"prefix"`
-		From        string     `json:"from"`
-		To          string     `json:"to"`
-		Ext         string     `json:"ext"`
-		IsDir       bool       `json:"isDir"`
+		Error          string     `json:"status"`
+		FormErrors     url.Values `json:"formErrors"`
+		ContentBaseURL string     `json:"contentBaseURL"`
+		Username       NullString `json:"username"`
+		SitePrefix     string     `json:"sitePrefix"`
+		Parent         string     `json:"parent"`
+		Prefix         string     `json:"prefix"`
+		From           string     `json:"from"`
+		To             string     `json:"to"`
+		Ext            string     `json:"ext"`
+		IsDir          bool       `json:"isDir"`
 	}
 
 	switch r.Method {
@@ -73,7 +73,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
+		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))

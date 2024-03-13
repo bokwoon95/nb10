@@ -22,7 +22,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 	type Response struct {
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		ContentSite       string            `json:"contentSite"`
+		ContentBaseURL    string            `json:"contentBaseURL"`
 		Category          string            `json:"category"`
 		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
@@ -74,7 +74,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
+		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Category = category
@@ -179,10 +179,10 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			return
 		}
 		response := Response{
-			ContentSite:  nbrew.contentBaseURL(sitePrefix),
-			Username:     NullString{String: user.Username, Valid: nbrew.DB != nil},
-			SitePrefix:   sitePrefix,
-			PostsPerPage: request.PostsPerPage,
+			ContentBaseURL: nbrew.contentBaseURL(sitePrefix),
+			Username:       NullString{String: user.Username, Valid: nbrew.DB != nil},
+			SitePrefix:     sitePrefix,
+			PostsPerPage:   request.PostsPerPage,
 		}
 
 		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)

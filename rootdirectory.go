@@ -32,7 +32,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 	type Response struct {
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
-		ContentSite     string         `json:"contentSite"`
+		ContentBaseURL  string         `json:"contentBaseURL"`
 		Username        NullString     `json:"username"`
 		SitePrefix      string         `json:"sitePrefix"`
 		FilePath        string         `json:"filePath"`
@@ -123,7 +123,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		getLogger(r.Context()).Error(err.Error())
 	}
 	nbrew.clearSession(w, r, "flash")
-	response.ContentSite = nbrew.contentBaseURL(sitePrefix)
+	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.Username = NullString{String: user.Username, Valid: !user.UserID.IsZero()}
 	response.SitePrefix = sitePrefix
 	response.IsDir = true

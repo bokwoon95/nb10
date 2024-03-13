@@ -40,11 +40,11 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		Files             []File            `json:"files"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 
-		ContentSite string     `json:"contentSite"`
-		ImgDomain   string     `json:"imgDomain"`
-		IsS3Storage bool       `json:"isS3Storage"`
-		Username    NullString `json:"username"`
-		SitePrefix  string     `json:"sitePrefix"`
+		ContentBaseURL string     `json:"contentBaseURL"`
+		ImgDomain      string     `json:"imgDomain"`
+		IsS3Storage    bool       `json:"isS3Storage"`
+		Username       NullString `json:"username"`
+		SitePrefix     string     `json:"sitePrefix"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -101,7 +101,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
+		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))

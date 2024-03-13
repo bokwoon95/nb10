@@ -32,7 +32,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	}
 	type Response struct {
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		ContentSite       string            `json:"contentSite"`
+		ContentBaseURL    string            `json:"contentBaseURL"`
 		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
 		FileID            ID                `json:"fileID"`
@@ -101,7 +101,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
+		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.FilePath = filePath
@@ -136,10 +136,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		switch head {
 		case "pages":
 			if tail == "index.html" {
-				response.URL = template.URL(response.ContentSite)
+				response.URL = template.URL(response.ContentBaseURL)
 				response.AssetDir = "output"
 			} else {
-				response.URL = template.URL(response.ContentSite + "/" + strings.TrimSuffix(tail, ".html") + "/")
+				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(tail, ".html") + "/")
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
 			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
@@ -210,7 +210,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 		case "posts":
-			response.URL = template.URL(response.ContentSite + "/" + strings.TrimSuffix(filePath, ".md") + "/")
+			response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
 			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 				response.Assets, err = sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
@@ -474,13 +474,13 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		response := Response{
-			ContentSite: nbrew.contentBaseURL(sitePrefix),
-			Username:    NullString{String: user.Username, Valid: nbrew.DB != nil},
-			SitePrefix:  sitePrefix,
-			FilePath:    filePath,
-			IsDir:       fileInfo.IsDir(),
-			ModTime:     fileInfo.ModTime(),
-			Content:     request.Content,
+			ContentBaseURL: nbrew.contentBaseURL(sitePrefix),
+			Username:       NullString{String: user.Username, Valid: nbrew.DB != nil},
+			SitePrefix:     sitePrefix,
+			FilePath:       filePath,
+			IsDir:          fileInfo.IsDir(),
+			ModTime:        fileInfo.ModTime(),
+			Content:        request.Content,
 		}
 		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
 			response.CreationTime = fileInfo.CreationTime

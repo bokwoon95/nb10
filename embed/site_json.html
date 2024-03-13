@@ -12,7 +12,7 @@
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
   &bull;
-  <a href='{{ $.ContentSite }}' class='ma2 white'>{{ if hasPrefix $.ContentSite "https://" }}{{ trimPrefix $.ContentSite "https://" }}{{ else }}{{ trimPrefix $.ContentSite "http://" }}{{ end }}</a>
+  <a href='{{ $.ContentBaseURL }}' class='ma2 white'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}</a>
   <span class='flex-grow-1'></span>
   {{- if $.Username.Valid }}
   <a href='' class='ma2'>{{ if $.Username.String }}@{{ $.Username.String }}{{ else }}user{{ end }}</a>
@@ -22,7 +22,7 @@
 {{- if eq (index $.PostRedirectGet "from") "site.json" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>
-    <div>saved settings (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.ContentSite }}'>view</a></div>
+    <div>saved settings (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.ContentBaseURL }}'>view</a></div>
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>

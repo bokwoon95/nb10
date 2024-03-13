@@ -19,7 +19,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 	type Response struct {
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		ContentSite       string            `json:"contentSite"`
+		ContentBaseURL    string            `json:"contentBaseURL"`
 		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
 		FilePath          string            `json:"filePath"`
@@ -68,7 +68,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.ContentSite = nbrew.contentBaseURL(sitePrefix)
+		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
 		response.FilePath = filePath

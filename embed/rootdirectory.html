@@ -17,7 +17,7 @@
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
   &bull;
-  <a href='{{ $.ContentSite }}' class='ma2 white'>{{ if hasPrefix $.ContentSite "https://" }}{{ trimPrefix $.ContentSite "https://" }}{{ else }}{{ trimPrefix $.ContentSite "http://" }}{{ end }}</a>
+  <a href='{{ $.ContentBaseURL }}' class='ma2 white'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}</a>
   <span class='flex-grow-1'></span>
   {{- if $.Username.Valid }}
   <a href='' class='ma2'>{{ if $.Username.String }}@{{ $.Username.String }}{{ else }}user{{ end }}</a>
@@ -52,7 +52,7 @@
   {{- $regenerationStats := index $.PostRedirectGet "regenerationStats" }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
     <div class='pv1'>
-      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentSite }}'>view</a></div>
+      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentBaseURL }}'>view</a></div>
     </div>
     <div class='flex-grow-1'></div>
     <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -172,7 +172,7 @@
         </summary>
         <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black; min-width: 10rem;'>
           <div class='ma2'>
-            Pages are HTML files hosted at <a href='{{ $.ContentSite }}'>{{ if hasPrefix $.ContentSite "https://" }}{{ trimPrefix $.ContentSite "https://" }}{{ else }}{{ trimPrefix $.ContentSite "http://" }}{{ end }}</a>.
+            Pages are HTML files hosted at <a href='{{ $.ContentBaseURL }}'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}</a>.
             <br><br>
             HTML pages may invoke other HTML templates defined in the <a href='output/themes/'>themes</a> folder.
             <br><br>
@@ -193,7 +193,7 @@
         </summary>
         <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black; min-width: 10rem;'>
           <div class='ma2'>
-            Posts are markdown files hosted at <a href='{{ $.ContentSite }}/posts/'>{{ if hasPrefix $.ContentSite "https://" }}{{ trimPrefix $.ContentSite "https://" }}{{ else }}{{ trimPrefix $.ContentSite "http://" }}{{ end }}/posts</a>.
+            Posts are markdown files hosted at <a href='{{ $.ContentBaseURL }}/posts/'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}/posts</a>.
           </div>
         </div>
       </details>
