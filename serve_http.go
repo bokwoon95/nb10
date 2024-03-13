@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -367,24 +368,61 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if certmagic.MatchWildcard(r.Host, "*."+nbrew.ContentDomain) {
 		subdomain = strings.TrimSuffix(r.Host, "."+nbrew.ContentDomain)
 		if subdomain == "img" {
-			// examples:
-			// img.nbrew.io/foo/bar.jpg             => sitePrefix: <none>,      urlPath: foo/bar.jpg
-			// img.nbrew.io/@username/foo/bar.jpg   => sitePrefix: @username,   urlPath: foo/bar.jpg
-			// img.nbrew.io/example.com/foo/bar.jpg => sitePrefix: example.com, urlPath: foo/bar.jpg
-			tld := path.Ext(head)
-			if strings.HasPrefix(head, "@") {
-				sitePrefix, urlPath = head, tail
-			} else if tld != "" {
-				// head that is a sitePrefix:     img.nbrew.io/example.com
-				// head that is NOT a sitePrefix: img.nbrew.io/example.jpg
-				_, ok := fileTypes[tld]
-				if !ok {
-					sitePrefix, urlPath = head, tail
-				}
+			remoteFS, ok := nbrew.FS.(*RemoteFS)
+			if !ok {
+				http.Error(w, "404 Not Found", http.StatusNotFound)
+				return
 			}
-		} else {
-			sitePrefix = "@" + subdomain
+			fileType, ok := fileTypes[path.Ext(urlPath)]
+			if !ok || !fileType.IsObject {
+				http.Error(w, "404 Not Found", http.StatusNotFound)
+				return
+			}
+			reader, err := remoteFS.Storage.Get(r.Context(), urlPath)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrInvalid) {
+					http.Error(w, "404 Not Found", http.StatusNotFound)
+					return
+				}
+				logger.Error(err.Error())
+				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			defer reader.Close()
+			if readSeeker, ok := reader.(io.ReadSeeker); ok {
+				hasher := hashPool.Get().(hash.Hash)
+				defer func() {
+					hasher.Reset()
+					hashPool.Put(hasher)
+				}()
+				_, err := io.Copy(hasher, readSeeker)
+				if err != nil {
+					logger.Error(err.Error())
+					http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				_, err = readSeeker.Seek(0, io.SeekStart)
+				if err != nil {
+					logger.Error(err.Error())
+					http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+					return
+				}
+				var b [blake2b.Size256]byte
+				w.Header().Set("Content-Type", fileType.ContentType)
+				w.Header().Set("Cache-Control", "max-age=31536000, immutable")
+				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
+				http.ServeContent(w, r, "", time.Time{}, readSeeker)
+				return
+			}
+			w.Header().Set("Content-Type", fileType.ContentType)
+			w.Header().Set("Cache-Control", "max-age=31536000, immutable")
+			_, err = io.Copy(w, reader)
+			if err != nil {
+				logger.Error(err.Error())
+			}
+			return
 		}
+		sitePrefix = "@" + subdomain
 	} else if r.Host != nbrew.ContentDomain {
 		sitePrefix = r.Host
 	}
