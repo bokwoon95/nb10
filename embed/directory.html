@@ -167,7 +167,7 @@
   {{ $newName := index $.PostRedirectGet "newName" }}
   {{ $isDir := index $.PostRedirectGet "isDir" }}
   <div class='pv1'>
-    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} to <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>
+    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} to <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>{{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
