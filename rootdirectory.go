@@ -33,7 +33,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		SitePrefix        string            `json:"sitePrefix"`
-		SearchSupported   bool              `json:"searchSupported"`
+		IsRemoteFS        bool              `json:"isRemoteFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FilePath          string            `json:"filePath"`
@@ -125,10 +125,10 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	nbrew.clearSession(w, r, "flash")
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.SitePrefix = sitePrefix
+	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.IsDir = true
-	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
 	if sitePrefix == "" && nbrew.DB != nil {
 		sites, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,

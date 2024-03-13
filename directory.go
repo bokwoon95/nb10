@@ -30,8 +30,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		ImgDomain         string            `json:"imgDomain"`
+		IsRemoteFS        bool              `json:"isRemoteFS"`
 		IsS3Storage       bool              `json:"isS3Storage"`
-		SearchSupported   bool              `json:"searchSupported"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -89,21 +89,21 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}
 		funcMap := map[string]any{
-			"join":             path.Join,
-			"dir":              path.Dir,
-			"base":             path.Base,
-			"ext":              path.Ext,
-			"hasPrefix":        strings.HasPrefix,
-			"hasSuffix":        strings.HasSuffix,
-			"trimPrefix":       strings.TrimPrefix,
-			"trimSuffix":       strings.TrimSuffix,
+			"join":                  path.Join,
+			"dir":                   path.Dir,
+			"base":                  path.Base,
+			"ext":                   path.Ext,
+			"hasPrefix":             strings.HasPrefix,
+			"hasSuffix":             strings.HasSuffix,
+			"trimPrefix":            strings.TrimPrefix,
+			"trimSuffix":            strings.TrimSuffix,
 			"humanReadableFileSize": humanReadableFileSize,
-			"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
-			"baselineJS":       func() template.JS { return template.JS(baselineJS) },
-			"referer":          func() string { return referer },
-			"clipboard":        func() url.Values { return clipboard },
-			"safeHTML":         func(s string) template.HTML { return template.HTML(s) },
-			"float64ToInt64":   func(n float64) int64 { return int64(n) },
+			"stylesCSS":             func() template.CSS { return template.CSS(stylesCSS) },
+			"baselineJS":            func() template.JS { return template.JS(baselineJS) },
+			"referer":               func() string { return referer },
+			"clipboard":             func() url.Values { return clipboard },
+			"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
+			"float64ToInt64":        func(n float64) int64 { return int64(n) },
 			"head": func(s string) string {
 				head, _, _ := strings.Cut(s, "/")
 				return head
@@ -167,10 +167,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	nbrew.clearSession(w, r, "flash")
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
+	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
 	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 		_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
 	}
-	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
