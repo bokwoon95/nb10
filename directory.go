@@ -33,7 +33,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		IsS3Storage       bool              `json:"isS3Storage"`
 		SearchSupported   bool              `json:"searchSupported"`
 		SitePrefix        string            `json:"sitePrefix"`
-		UserID            string            `json:"userID"`
+		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
@@ -172,7 +172,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	_, response.SearchSupported = nbrew.FS.(*RemoteFS)
 	response.SitePrefix = sitePrefix
-	response.UserID = user.UserID.String()
+	response.UserID = user.UserID
 	response.Username = user.Username
 	if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
 		response.FileID = fileInfo.FileID

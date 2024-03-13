@@ -32,14 +32,15 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 	}
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
-		Error             string            `json:"error"`
-		FormErrors        url.Values        `json:"formErrors"`
-		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
 		Parent            string            `json:"parent"`
 		Name              string            `json:"name"`
 		Ext               string            `json:"ext"`
 		Content           string            `json:"content"`
+		Error             string            `json:"error"`
+		FormErrors        url.Values        `json:"formErrors"`
 		FilesTooBig       []string          `json:"filesTooBig"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
@@ -119,8 +120,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
+		response.UserID = user.UserID
+		response.Username = user.Username
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		if response.Error != "" {
 			writeResponse(w, r, response)
