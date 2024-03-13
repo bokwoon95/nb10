@@ -150,7 +150,7 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
     const extElement = form.elements[extElementName] as HTMLInputElement | HTMLSelectElement;
     if (extElement && textarea.value.length <= 50000) {
       ext = extElement.value;
-      configureLanguage(ext);
+      configureLanguage(extElement.value);
       extElement.addEventListener("change", function() {
         configureLanguage(extElement.value);
       });
