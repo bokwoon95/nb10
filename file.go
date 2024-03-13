@@ -31,10 +31,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		Size         int64     `json:"size"`
 	}
 	type Response struct {
-		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		ContentBaseURL    string            `json:"contentBaseURL"`
-		Username          NullString        `json:"username"`
+		ImgDomain         string            `json:"imgDomain"`
+		IsS3Storage       bool              `json:"isS3Storage"`
 		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
@@ -47,8 +49,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		Assets            []Asset           `json:"assets"`
 		FilesExist        []string          `json:"filesExist"`
 		FilesTooBig       []string          `json:"filesTooBig"`
-		ImgDomain         string            `json:"imgDomain"`
-		IsS3Storage       bool              `json:"isS3Storage"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 
@@ -102,7 +103,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		response.UserID = user.UserID
+		response.Username = user.Username
 		response.SitePrefix = sitePrefix
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
@@ -475,7 +477,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 
 		response := Response{
 			ContentBaseURL: nbrew.contentBaseURL(sitePrefix),
-			Username:       NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SitePrefix:     sitePrefix,
 			FilePath:       filePath,
 			IsDir:          fileInfo.IsDir(),

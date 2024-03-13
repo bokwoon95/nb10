@@ -21,11 +21,12 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		SiteName string `json:"siteName"`
 	}
 	type Response struct {
-		Error         string     `json:"error"`
-		FormErrors    url.Values `json:"formErrors"`
-		Username      NullString `json:"username"`
+		UserID        ID         `json:"userID"`
+		Username      string     `json:"username"`
 		SiteName      string     `json:"siteName"`
 		UserSiteNames []string   `json:"userSiteNames"`
+		Error         string     `json:"error"`
+		FormErrors    url.Values `json:"formErrors"`
 	}
 
 	getUserSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {
@@ -102,7 +103,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		response.UserID = user.UserID
+		response.Username = user.Username
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

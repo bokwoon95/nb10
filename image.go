@@ -17,27 +17,25 @@ import (
 
 func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type Response struct {
-		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
-		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		ContentBaseURL    string            `json:"contentBaseURL"`
-		Username          NullString        `json:"username"`
 		SitePrefix        string            `json:"sitePrefix"`
+		ImgDomain         string            `json:"imgDomain"`
+		IsS3Storage       bool              `json:"isS3Storage"`
+		CaptionSupported  bool              `json:"captionSupported"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
-		CaptionSupported  bool              `json:"captionSupported"`
 		ModTime           time.Time         `json:"modTime"`
 		CreationTime      time.Time         `json:"creationTime"`
 		Content           string            `json:"content"`
 		AltText           string            `json:"altText"`
 		BelongsTo         string            `json:"belongsTo"`
 		URL               template.URL      `json:"url"`
-		NextURL           template.URL      `json:"nextURL"`
-		PreviousURL       template.URL      `json:"previousURL"`
-	}
-
-	isS3Storage := false
-	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-		_, isS3Storage = remoteFS.Storage.(*S3Storage)
+		NextURL           template.URL      `json:"nextURL"`     // TODO: NextImageName? NextImageID?
+		PreviousURL       template.URL      `json:"previousURL"` // TODO: PreviousImageName? PreviousImageID?
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 
 	switch r.Method {
@@ -69,14 +67,19 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
 		response.SitePrefix = sitePrefix
+		response.ImgDomain = nbrew.ImgDomain
+		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
+		}
+		response.UserID = user.UserID
+		response.Username = user.Username
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
 		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
 			response.CreationTime = fileInfo.CreationTime
-			if nbrew.ImgDomain != "" && isS3Storage {
+			if nbrew.ImgDomain != "" && response.IsS3Storage {
 				response.URL = template.URL("https://" + nbrew.ImgDomain + "/" + fileInfo.FileID.String() + path.Ext(filePath))
 			} else {
 				response.URL = "?raw"

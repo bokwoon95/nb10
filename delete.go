@@ -21,30 +21,29 @@ import (
 )
 
 func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
+	type File struct {
+		FileID  ID        `json:"fileID"`
+		Name    string    `json:"name"`
+		IsDir   bool      `json:"isDir"`
+		Size    int64     `json:"size"`
+		ModTime time.Time `json:"modTime"`
+	}
 	type Request struct {
 		Parent string   `json:"parent"`
 		Names  []string `json:"names"`
 	}
-	type File struct {
-		FileID  ID           `json:"fileID"`
-		Name    string       `json:"name"`
-		IsDir   bool         `json:"isDir"`
-		Size    int64        `json:"size"`
-		ModTime time.Time    `json:"modTime"`
-		URL     template.URL `json:"url"`
-	}
 	type Response struct {
-		Error             string            `json:"status"`
-		DeleteErrors      []string          `json:"deleteErrors"`
+		ContentBaseURL    string            `json:"contentBaseURL"`
+		ImgDomain         string            `json:"imgDomain"`
+		IsS3Storage       bool              `json:"isS3Storage"`
+		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
 		Parent            string            `json:"parent"`
 		Files             []File            `json:"files"`
+		Error             string            `json:"status"`
+		DeleteErrors      []string          `json:"deleteErrors"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-
-		ContentBaseURL string     `json:"contentBaseURL"`
-		ImgDomain      string     `json:"imgDomain"`
-		IsS3Storage    bool       `json:"isS3Storage"`
-		Username       NullString `json:"username"`
-		SitePrefix     string     `json:"sitePrefix"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -102,13 +101,14 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
-		response.SitePrefix = sitePrefix
-		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		response.ImgDomain = nbrew.ImgDomain
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
 		}
+		response.UserID = user.UserID
+		response.Username = user.Username
+		response.SitePrefix = sitePrefix
+		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

@@ -20,11 +20,12 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		ConfirmSiteName string `json:"confirmSiteName"`
 	}
 	type Response struct {
-		Error           string     `json:"error"`
-		FormErrors      url.Values `json:"formErrors"`
-		Username        NullString `json:"username"`
+		UserID          ID         `json:"userID"`
+		Username        string     `json:"username"`
 		SiteName        string     `json:"siteName"`
 		ConfirmSiteName string     `json:"confirmSiteName"`
+		Error           string     `json:"error"`
+		FormErrors      url.Values `json:"formErrors"`
 	}
 
 	validateSiteName := func(siteName string) bool {
@@ -105,7 +106,8 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		response.UserID = user.UserID
+		response.Username = user.Username
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
@@ -210,7 +212,6 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 
 		response := Response{
 			FormErrors:      make(url.Values),
-			Username:        NullString{String: user.Username, Valid: nbrew.DB != nil},
 			SiteName:        request.SiteName,
 			ConfirmSiteName: request.ConfirmSiteName,
 		}
