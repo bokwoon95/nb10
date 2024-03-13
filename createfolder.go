@@ -25,9 +25,9 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 		UserID         ID         `json:"userID"`
 		Username       string     `json:"username"`
 		Parent         string     `json:"parent"`
+		Name           string     `json:"name"`
 		Error          string     `json:"error"`
 		FormErrors     url.Values `json:"formErrors"`
-		Name           string     `json:"name"`
 	}
 
 	isValidParent := func(parent string) bool {
@@ -183,9 +183,9 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 		}
 
 		response := Response{
-			FormErrors: make(url.Values),
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
 			Name:       urlSafe(request.Name),
+			FormErrors: make(url.Values),
 		}
 		if !isValidParent(response.Parent) {
 			response.Error = "InvalidParent"
