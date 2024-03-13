@@ -111,6 +111,6 @@
 {{- if $.StorageUsed }}
 <div class='mv3'>
   <span class='b'>Storage Used:</span>
-  <span>{{ fileSizeToString $.StorageUsed }}<span>
+  <span>{{ humanReadableFileSize $.StorageUsed }}<span>
 </div>
 {{- end }}

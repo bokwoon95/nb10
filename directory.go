@@ -97,7 +97,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			"hasSuffix":        strings.HasSuffix,
 			"trimPrefix":       strings.TrimPrefix,
 			"trimSuffix":       strings.TrimSuffix,
-			"fileSizeToString": fileSizeToString,
+			"humanReadableFileSize": humanReadableFileSize,
 			"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
 			"baselineJS":       func() template.JS { return template.JS(baselineJS) },
 			"referer":          func() string { return referer },

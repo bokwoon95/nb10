@@ -132,7 +132,7 @@
   {{- $filesTooBig := index $.PostRedirectGet "filesTooBig" }}
   {{- $size := float64ToInt64 (index $.PostRedirectGet "size") }}
   <div class='pv1'>
-    <div>{{ $count }} file{{ if ne $count 1.0 }}s{{ end }} uploaded ({{ fileSizeToString $size }} total)</div>
+    <div>{{ $count }} file{{ if ne $count 1.0 }}s{{ end }} uploaded ({{ humanReadableFileSize $size }} total)</div>
     {{- if $filesExist }}
     <br>
     <div>
@@ -341,7 +341,7 @@
             {{- end }}
             <a href='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
             {{- if not $file.IsDir }}
-            <span class='mh1 f6 mid-gray'>{{ fileSizeToString $file.Size }}</span>
+            <span class='mh1 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
             {{- end }}
           </div>
         </div>

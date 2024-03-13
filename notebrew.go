@@ -504,7 +504,7 @@ var errorTemplate = template.Must(template.
 	ParseFS(RuntimeFS, "embed/error.html"),
 )
 
-func fileSizeToString(size int64) string {
+func humanReadableFileSize(size int64) string {
 	// https://yourbasic.org/golang/formatting-byte-size-to-human-readable-format/
 	if size < 0 {
 		return ""
@@ -525,7 +525,7 @@ func badRequest(w http.ResponseWriter, r *http.Request, serverErr error) {
 	var message string
 	var maxBytesErr *http.MaxBytesError
 	if errors.As(serverErr, &maxBytesErr) {
-		message = "the data you are sending is too big (max " + fileSizeToString(maxBytesErr.Limit) + ")"
+		message = "the data you are sending is too big (max " + humanReadableFileSize(maxBytesErr.Limit) + ")"
 	} else {
 		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if contentType == "application/json" {

@@ -127,7 +127,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				"hasPrefix":        strings.HasPrefix,
 				"trimPrefix":       strings.TrimPrefix,
 				"contains":         strings.Contains,
-				"fileSizeToString": fileSizeToString,
+				"humanReadableFileSize": humanReadableFileSize,
 				"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
 				"baselineJS":       func() template.JS { return template.JS(baselineJS) },
 				"referer":          func() string { return referer },
