@@ -192,11 +192,11 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":              "delete",
-					"numDeleted":        len(response.Files),
-					"numErrors":         len(response.DeleteErrors),
-					"regenerationStats": response.RegenerationStats,
+					"from":       "delete",
+					"numDeleted": len(response.Files),
+					"numErrors":  len(response.DeleteErrors),
 				},
+				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())

@@ -40,9 +40,9 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 		}
 		err := nbrew.setSession(w, r, "flash", map[string]any{
 			"postRedirectGet": map[string]any{
-				"from":              "regenerate",
-				"regenerationStats": response.RegenerationStats,
+				"from": "regenerate",
 			},
+			"regenerationStats": response.RegenerationStats,
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())

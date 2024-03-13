@@ -41,12 +41,13 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 
 		Files []File `json:"files"`
 
-		From        string `json:"from"`
-		Before      string `json:"before"`
-		Limit       int    `json:"limit"`
-		Sites       []Site `json:"sites"`
-		PreviousURL string `json:"previousURL"`
-		NextURL     string `json:"nextURL"`
+		From              string            `json:"from"`
+		Before            string            `json:"before"`
+		Limit             int               `json:"limit"`
+		Sites             []Site            `json:"sites"`
+		PreviousURL       string            `json:"previousURL"`
+		NextURL           string            `json:"nextURL"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.Sites == nil {

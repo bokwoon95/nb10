@@ -49,10 +49,9 @@
 {{- end }}
 
 {{- if eq (index $.PostRedirectGet "from") "regenerate" }}
-  {{- $regenerationStats := index $.PostRedirectGet "regenerationStats" }}
   <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
     <div class='pv1'>
-      <div>regenerated site ({{ $regenerationStats.count }} file{{ if ne $regenerationStats.count 1.0 }}s{{ end }} in {{ $regenerationStats.timeTaken }}): <a href='{{ $.ContentBaseURL }}'>view</a></div>
+      <div>regenerated site ({{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}): <a href='{{ $.ContentBaseURL }}'>view</a></div>
     </div>
     <div class='flex-grow-1'></div>
     <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -124,18 +123,17 @@
   {{- end }}
 </div>
 {{- if eq (index $.PostRedirectGet "from") "regenerate" }}
-  {{- $templateError := index $.PostRedirectGet "regenerationStats" "templateError" }}
-  {{- if $templateError.errorMessage }}
+  {{- if $.RegenerationStats.TemplateError.ErrorMessage }}
   <div class='mv2 invalid-red'>
     <span class='b'>template error: </span>
-    {{- if $templateError.name }}
-      {{- if hasPrefix $templateError.name "/themes/" }}
-      <a href='/{{ join "files" $.SitePrefix "output" $templateError.name }}{{ if $templateError.Line }}#L{{ $templateError.Line }}{{ end }}'>{{ $templateError.name }}{{ if $templateError.line }}:{{ $templateError.line }}{{ end }}</a>: {{ $templateError.errorMessage }}
+    {{- if $.RegenerationStats.TemplateError.Name }}
+      {{- if hasPrefix $.RegenerationStats.TemplateError.Name "/themes/" }}
+      <a href='/{{ join "files" $.SitePrefix "output" $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}#L{{ $.RegenerationStats.TemplateError.Line }}{{ end }}'>{{ $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}:{{ $.RegenerationStats.TemplateError.Line }}{{ end }}</a>: {{ $.RegenerationStats.TemplateError.ErrorMessage }}
       {{- else }}
-      <a href='/{{ join "files" $.SitePrefix $templateError.name }}{{ if $templateError.line }}#L{{ $templateError.line }}{{ end }}'>{{ $templateError.name }}{{ if $templateError.line }}:{{ $templateError.line }}{{ end }}</a>: {{ $templateError.errorMessage }}
+      <a href='/{{ join "files" $.SitePrefix $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}#L{{ $.RegenerationStats.TemplateError.Line }}{{ end }}'>{{ $.RegenerationStats.TemplateError.Name }}{{ if $.RegenerationStats.TemplateError.Line }}:{{ $.RegenerationStats.TemplateError.Line }}{{ end }}</a>: {{ $.RegenerationStats.TemplateError.ErrorMessage }}
       {{- end }}
     {{- else }}
-    {{ $templateError.errorMessage }}
+    {{ $.RegenerationStats.TemplateError.ErrorMessage }}
     {{- end }}
   </div>
   {{- end }}

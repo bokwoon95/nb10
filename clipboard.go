@@ -99,7 +99,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			FilesExist        []string          `json:"filesExist,omitempty"`
 			FilesInvalid      []string          `json:"filesInvalid,omitempty"`
 			FilesPasted       []string          `json:"filesPasted,omitmepty"`
-			TemplateError     TemplateError     `json:"templateError"`
 			RegenerationStats RegenerationStats `json:"regenerationStats"`
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -171,8 +170,8 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					"filesExist":     response.FilesExist,
 					"filesInvalid":   response.FilesInvalid,
 					"filesPasted":    response.FilesPasted,
-					"templateError":  response.TemplateError,
 				},
+				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -563,14 +562,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				srcCategory := srcTail
 				srcTemplate, err := srcSiteGen.PostListTemplate(r.Context(), srcCategory)
 				if err != nil {
-					if !errors.As(err, &response.TemplateError) {
+					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
 				_, err = srcSiteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
 				if err != nil {
-					if !errors.As(err, &response.TemplateError) {
+					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
@@ -586,14 +585,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				destCategory := destTail
 				destTemplate, err := destSiteGen.PostListTemplate(r.Context(), destCategory)
 				if err != nil {
-					if !errors.As(err, &response.TemplateError) {
+					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
 				_, err = destSiteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
 				if err != nil {
-					if !errors.As(err, &response.TemplateError) {
+					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
