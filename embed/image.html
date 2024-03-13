@@ -63,7 +63,7 @@
   <figcaption class='flex flex-wrap justify-center'><a href='{{ $.URL }}'>{{ base $.FilePath }}</a></figcaption>
   <img src='{{ $.URL }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
 </figure>
-{{- if $.CaptionSupported }}
+{{- if $.IsRemoteFS }}
 <form method='post' enctype='multipart/form-data' class='mv2'>
   <div class='flex mv2'>
     <label for='content' class='b'>Caption</label>

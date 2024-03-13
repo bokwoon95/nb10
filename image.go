@@ -20,8 +20,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		SitePrefix        string            `json:"sitePrefix"`
 		ImgDomain         string            `json:"imgDomain"`
+		IsRemoteFS        bool              `json:"isRemoteFS"`
 		IsS3Storage       bool              `json:"isS3Storage"`
-		CaptionSupported  bool              `json:"captionSupported"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FileID            ID                `json:"fileID"`
@@ -101,7 +101,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.URL = "?raw"
 		}
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			response.CaptionSupported = true
+			response.IsRemoteFS = true
 			// TODO: use errgroup to fetch Content, PreviousURL and NextURL concurrently.
 			content, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
 				Dialect: remoteFS.Dialect,
