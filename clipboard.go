@@ -17,7 +17,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-
 func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
 	isValidParent := func(sitePrefix, parent string) bool {
 		head, _, _ := strings.Cut(parent, "/")
@@ -90,17 +89,18 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		http.Redirect(w, r, referer, http.StatusFound)
 	case "paste":
 		type Response struct {
-			Error          string        `json:"error,omitempty"`
-			IsCut          bool          `json:"isCut,omitempty"`
-			SrcSitePrefix  string        `json:"srcSitePrefix,omitempty"`
-			SrcParent      string        `json:"srcParent,omitempty"`
-			DestSitePrefix string        `json:"destSitePrefix,omitempty"`
-			DestParent     string        `json:"destParent,omitempty"`
-			FilesNotExist  []string      `json:"filesNotExist,omitempty"`
-			FilesExist     []string      `json:"filesExist,omitempty"`
-			FilesInvalid   []string      `json:"filesInvalid,omitempty"`
-			FilesPasted    []string      `json:"filesPasted,omitmepty"`
-			TemplateError  TemplateError `json:"templateError"`
+			Error             string            `json:"error,omitempty"`
+			IsCut             bool              `json:"isCut,omitempty"`
+			SrcSitePrefix     string            `json:"srcSitePrefix,omitempty"`
+			SrcParent         string            `json:"srcParent,omitempty"`
+			DestSitePrefix    string            `json:"destSitePrefix,omitempty"`
+			DestParent        string            `json:"destParent,omitempty"`
+			FilesNotExist     []string          `json:"filesNotExist,omitempty"`
+			FilesExist        []string          `json:"filesExist,omitempty"`
+			FilesInvalid      []string          `json:"filesInvalid,omitempty"`
+			FilesPasted       []string          `json:"filesPasted,omitmepty"`
+			TemplateError     TemplateError     `json:"templateError"`
+			RegenerationStats RegenerationStats `json:"regenerationStats"`
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if response.Error == "" {

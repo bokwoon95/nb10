@@ -11,7 +11,7 @@
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
   &bull;
-  <a href='{{ $.ContentSite }}' class='ma2 white'>{{ if hasPrefix $.ContentSite "https://" }}{{ trimPrefix $.ContentSite "https://" }}{{ else }}{{ trimPrefix $.ContentSite "http://" }}{{ end }}</a>
+  <a href='{{ $.ContentBaseURL }}' class='ma2 white'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}</a>
   <span class='flex-grow-1'></span>
   {{- if $.Username.Valid }}
   <a href='' class='ma2'>{{ if $.Username.String }}@{{ $.Username.String }}{{ else }}user{{ end }}</a>
