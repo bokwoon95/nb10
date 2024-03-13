@@ -46,3 +46,4 @@ TODO: convert the "how do I include assets?" and "how do I include alt text?" li
 TODO: search.html should display image previews if the result is an image
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: uploadfile: we need to enforce a monotonic time.Now() when a user uploads a ton of markdown files at once, so that the creationTime will always increase by at least one second. So that we won't get two posts with the same timestamp prefix, which would lead to the same atom ID in the atom feed.
+BUG: copying one image from a post will result in "cut" instead of "copy".
