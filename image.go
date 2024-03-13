@@ -24,6 +24,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		CaptionSupported  bool              `json:"captionSupported"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
 		ModTime           time.Time         `json:"modTime"`
@@ -32,8 +33,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		AltText           string            `json:"altText"`
 		BelongsTo         string            `json:"belongsTo"`
 		URL               template.URL      `json:"url"`
-		NextURL           template.URL      `json:"nextURL"`     // TODO: NextImageName? NextImageID?
-		PreviousURL       template.URL      `json:"previousURL"` // TODO: PreviousImageName? PreviousImageID?
+		PreviousImageID   ID                `json:"previousImageID"`
+		PreviousImageName string            `json:"previousImageName"`
+		NextImageID       ID                `json:"nextImageID"`
+		NextImageName     string            `json:"nextImageName"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
@@ -74,22 +77,27 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		response.UserID = user.UserID
 		response.Username = user.Username
+		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+			response.FileID = fileInfo.FileID
+			response.ModTime = fileInfo.ModTime()
+			response.CreationTime = fileInfo.CreationTime
+		} else {
+			var absolutePath string
+			if localFS, ok := nbrew.FS.(*LocalFS); ok {
+				absolutePath = path.Join(localFS.RootDir, response.SitePrefix, response.FilePath)
+			}
+			response.CreationTime = CreationTime(absolutePath, fileInfo)
+		}
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
 		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
-			response.CreationTime = fileInfo.CreationTime
 			if nbrew.ImgDomain != "" && response.IsS3Storage {
 				response.URL = template.URL("https://" + nbrew.ImgDomain + "/" + fileInfo.FileID.String() + path.Ext(filePath))
 			} else {
 				response.URL = "?raw"
 			}
 		} else {
-			var absolutePath string
-			if localFS, ok := nbrew.FS.(*LocalFS); ok {
-				absolutePath = path.Join(localFS.RootDir, sitePrefix, response.FilePath)
-			}
-			response.CreationTime = CreationTime(absolutePath, fileInfo)
 			response.URL = "?raw"
 		}
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
@@ -138,19 +146,19 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		referer := getReferer(r)
 		funcMap := map[string]any{
-			"join":             path.Join,
-			"dir":              path.Dir,
-			"base":             path.Base,
-			"ext":              path.Ext,
-			"hasPrefix":        strings.HasPrefix,
-			"hasSuffix":        strings.HasSuffix,
-			"trimPrefix":       strings.TrimPrefix,
-			"trimSuffix":       strings.TrimSuffix,
+			"join":                  path.Join,
+			"dir":                   path.Dir,
+			"base":                  path.Base,
+			"ext":                   path.Ext,
+			"hasPrefix":             strings.HasPrefix,
+			"hasSuffix":             strings.HasSuffix,
+			"trimPrefix":            strings.TrimPrefix,
+			"trimSuffix":            strings.TrimSuffix,
 			"humanReadableFileSize": humanReadableFileSize,
-			"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
-			"baselineJS":       func() template.JS { return template.JS(baselineJS) },
-			"referer":          func() string { return referer },
-			"safeHTML":         func(s string) template.HTML { return template.HTML(s) },
+			"stylesCSS":             func() template.CSS { return template.CSS(stylesCSS) },
+			"baselineJS":            func() template.JS { return template.JS(baselineJS) },
+			"referer":               func() string { return referer },
+			"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 			"head": func(s string) string {
 				head, _, _ := strings.Cut(s, "/")
 				return head

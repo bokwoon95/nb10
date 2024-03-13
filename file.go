@@ -106,6 +106,17 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
+		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+			response.FileID = fileInfo.FileID
+			response.ModTime = fileInfo.ModTime()
+			response.CreationTime = fileInfo.CreationTime
+		} else {
+			var absolutePath string
+			if localFS, ok := nbrew.FS.(*LocalFS); ok {
+				absolutePath = path.Join(localFS.RootDir, response.SitePrefix, response.FilePath)
+			}
+			response.CreationTime = CreationTime(absolutePath, fileInfo)
+		}
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
@@ -326,20 +337,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 		}
 		funcMap := map[string]any{
-			"join":             path.Join,
-			"dir":              path.Dir,
-			"base":             path.Base,
-			"ext":              path.Ext,
-			"hasPrefix":        strings.HasPrefix,
-			"hasSuffix":        strings.HasSuffix,
-			"trimPrefix":       strings.TrimPrefix,
-			"trimSuffix":       strings.TrimSuffix,
+			"join":                  path.Join,
+			"dir":                   path.Dir,
+			"base":                  path.Base,
+			"ext":                   path.Ext,
+			"hasPrefix":             strings.HasPrefix,
+			"hasSuffix":             strings.HasSuffix,
+			"trimPrefix":            strings.TrimPrefix,
+			"trimSuffix":            strings.TrimSuffix,
 			"humanReadableFileSize": humanReadableFileSize,
-			"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
-			"baselineJS":       func() template.JS { return template.JS(baselineJS) },
-			"referer":          func() string { return referer },
-			"clipboard":        func() url.Values { return clipboard },
-			"safeHTML":         func(s string) template.HTML { return template.HTML(s) },
+			"stylesCSS":             func() template.CSS { return template.CSS(stylesCSS) },
+			"baselineJS":            func() template.JS { return template.JS(baselineJS) },
+			"referer":               func() string { return referer },
+			"clipboard":             func() url.Values { return clipboard },
+			"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 			"head": func(s string) string {
 				head, _, _ := strings.Cut(s, "/")
 				return head
