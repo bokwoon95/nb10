@@ -33,7 +33,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		ImgDomain         string            `json:"imgDomain"`
-		IsS3Storage       bool              `json:"isS3Storage"`
+		IsRemoteFS        bool              `json:"isRemoteFS"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -130,9 +130,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
 		response.ImgDomain = nbrew.ImgDomain
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
-		}
+		_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
 
 		if isEditable {
 			var b strings.Builder

@@ -35,7 +35,7 @@
     {{- range $file := $.Files }}
     <li class='mv1'>
       {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
-        {{- if and $.ImgDomain $.IsS3Storage }}
+        {{- if and $.ImgDomain $.IsRemoteFS }}
         <img src='https://{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
         {{- else }}
         <img src='/{{ join "files" $.SitePrefix $.Parent $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>

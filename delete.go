@@ -35,7 +35,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		ImgDomain         string            `json:"imgDomain"`
-		IsS3Storage       bool              `json:"isS3Storage"`
+		IsRemoteFS        bool              `json:"isRemoteFS"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -102,9 +102,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.ImgDomain = nbrew.ImgDomain
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
-		}
+		_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix

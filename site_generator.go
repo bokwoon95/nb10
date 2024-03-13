@@ -148,10 +148,6 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 	if !ok {
 		return siteGen, nil
 	}
-	_, isS3Storage := remoteFS.Storage.(*S3Storage)
-	if !isS3Storage {
-		return siteGen, nil
-	}
 	cursor, err := sq.FetchCursor(ctx, remoteFS.DB, sq.Query{
 		Dialect: remoteFS.Dialect,
 		Format: "SELECT {*}" +
@@ -738,12 +734,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	if err != nil {
 		return err
 	}
-	if siteGen.imgDomain == "" {
-		err = tmpl.Execute(writer, &pageData)
-		if err != nil {
-			return NewTemplateError(err)
-		}
-	} else {
+	_, isRemoteFS := siteGen.fsys.(*RemoteFS)
+	if siteGen.imgDomain != "" && isRemoteFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
 		go func() {
@@ -757,6 +749,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		err = <-result
 		if err != nil {
 			return err
+		}
+	} else {
+		err = tmpl.Execute(writer, &pageData)
+		if err != nil {
+			return NewTemplateError(err)
 		}
 	}
 	err = writer.Close()
@@ -962,12 +959,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	if err != nil {
 		return err
 	}
-	if siteGen.imgDomain == "" {
-		err = tmpl.Execute(writer, &postData)
-		if err != nil {
-			return NewTemplateError(err)
-		}
-	} else {
+	_, isRemoteFS := siteGen.fsys.(*RemoteFS)
+	if siteGen.imgDomain != "" && isRemoteFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
 		go func() {
@@ -981,6 +974,11 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		err = <-result
 		if err != nil {
 			return err
+		}
+	} else {
+		err = tmpl.Execute(writer, &postData)
+		if err != nil {
+			return NewTemplateError(err)
 		}
 	}
 	err = writer.Close()
@@ -1475,12 +1473,8 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		if err != nil {
 			return err
 		}
-		if siteGen.imgDomain == "" {
-			err = tmpl.Execute(writer, &postListData)
-			if err != nil {
-				return NewTemplateError(err)
-			}
-		} else {
+		_, isRemoteFS := siteGen.fsys.(*RemoteFS)
+		if siteGen.imgDomain != "" && isRemoteFS {
 			pipeReader, pipeWriter := io.Pipe()
 			result := make(chan error, 1)
 			go func() {
@@ -1494,6 +1488,11 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			err = <-result
 			if err != nil {
 				return err
+			}
+		} else {
+			err = tmpl.Execute(writer, &postListData)
+			if err != nil {
+				return NewTemplateError(err)
 			}
 		}
 		err = writer.Close()
@@ -1682,10 +1681,6 @@ func (templateErr TemplateError) Error() string {
 }
 
 func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, urlPath string) error {
-	var isS3Storage bool
-	if remoteFS, ok := siteGen.fsys.(*RemoteFS); ok {
-		_, isS3Storage = remoteFS.Storage.(*S3Storage)
-	}
 	tokenizer := html.NewTokenizer(reader)
 	for {
 		tokenType := tokenizer.Next()
@@ -1749,28 +1744,16 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 							uri.Scheme = "https"
 							uri.Host = siteGen.imgDomain
 							if strings.HasPrefix(uri.Path, "/") {
-								if isS3Storage {
-									filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
-									if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-										uri.Path = "/" + fileID.String() + path.Ext(filePath)
-										val = []byte(uri.String())
-									}
-								} else {
-									if siteGen.sitePrefix != "" {
-										uri.Path = "/" + path.Join(siteGen.sitePrefix, uri.Path)
-									}
+								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
+								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
+									uri.Path = "/" + fileID.String() + path.Ext(filePath)
 									val = []byte(uri.String())
 								}
 							} else {
 								if urlPath != "" {
-									if isS3Storage {
-										filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
-										if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-											uri.Path = "/" + fileID.String() + path.Ext(filePath)
-											val = []byte(uri.String())
-										}
-									} else {
-										uri.Path = "/" + path.Join(siteGen.sitePrefix, urlPath, uri.Path)
+									filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
+									if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
+										uri.Path = "/" + fileID.String() + path.Ext(filePath)
 										val = []byte(uri.String())
 									}
 								}
@@ -1804,15 +1787,15 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 }
 
 var funcMap = map[string]any{
-	"join":             path.Join,
-	"base":             path.Base,
-	"ext":              path.Ext,
-	"hasPrefix":        strings.HasPrefix,
-	"hasSuffix":        strings.HasSuffix,
-	"trimPrefix":       strings.TrimPrefix,
-	"trimSuffix":       strings.TrimSuffix,
+	"join":                  path.Join,
+	"base":                  path.Base,
+	"ext":                   path.Ext,
+	"hasPrefix":             strings.HasPrefix,
+	"hasSuffix":             strings.HasSuffix,
+	"trimPrefix":            strings.TrimPrefix,
+	"trimSuffix":            strings.TrimSuffix,
 	"humanReadableFileSize": humanReadableFileSize,
-	"safeHTML":         func(s string) template.HTML { return template.HTML(s) },
+	"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 	"head": func(s string) string {
 		head, _, _ := strings.Cut(s, "/")
 		return head

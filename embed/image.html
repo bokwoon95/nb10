@@ -60,8 +60,13 @@
   {{- end }}
 </div>
 <figure class='mv2 w-70-l w-80-m w-100 center'>
-  <figcaption class='flex flex-wrap justify-center'><a href='{{ $.URL }}'>{{ base $.FilePath }}</a></figcaption>
-  <img src='{{ $.URL }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+  {{- if $.ImgDomain $.IsRemoteFS }}
+  <figcaption class='flex flex-wrap justify-center'><a href='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a></figcaption>
+  <img src='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+  {{- else }}
+  <figcaption class='flex flex-wrap justify-center'><a href='?raw'>{{ base $.FilePath }}</a></figcaption>
+  <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+  {{- end }}
 </figure>
 {{- if $.IsRemoteFS }}
 <form method='post' enctype='multipart/form-data' class='mv2'>

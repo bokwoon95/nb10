@@ -21,7 +21,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		SitePrefix        string            `json:"sitePrefix"`
 		ImgDomain         string            `json:"imgDomain"`
 		IsRemoteFS        bool              `json:"isRemoteFS"`
-		IsS3Storage       bool              `json:"isS3Storage"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FileID            ID                `json:"fileID"`
@@ -32,7 +31,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		Content           string            `json:"content"`
 		AltText           string            `json:"altText"`
 		BelongsTo         string            `json:"belongsTo"`
-		URL               template.URL      `json:"url"`
 		PreviousImageID   ID                `json:"previousImageID"`
 		PreviousImageName string            `json:"previousImageName"`
 		NextImageID       ID                `json:"nextImageID"`
@@ -72,9 +70,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
 		response.ImgDomain = nbrew.ImgDomain
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
-		}
 		response.UserID = user.UserID
 		response.Username = user.Username
 		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
@@ -91,15 +86,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
-		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
-			if nbrew.ImgDomain != "" && response.IsS3Storage {
-				response.URL = template.URL("https://" + nbrew.ImgDomain + "/" + fileInfo.FileID.String() + path.Ext(filePath))
-			} else {
-				response.URL = "?raw"
-			}
-		} else {
-			response.URL = "?raw"
-		}
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			response.IsRemoteFS = true
 			// TODO: use errgroup to fetch Content, PreviousURL and NextURL concurrently.

@@ -31,7 +31,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		ImgDomain         string            `json:"imgDomain"`
 		IsRemoteFS        bool              `json:"isRemoteFS"`
-		IsS3Storage       bool              `json:"isS3Storage"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -168,9 +167,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
 	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
-	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-		_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
-	}
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username

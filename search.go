@@ -30,7 +30,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		SitePrefix     string   `json:"sitePrefix"`
 		ImgDomain      string   `json:"imgDomain"`
 		IsRemoteFS     bool     `json:"isRemoteFS"`
-		IsS3Storage    bool     `json:"isS3Storage"`
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
@@ -121,9 +120,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
 	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
-	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-		_, response.IsS3Storage = remoteFS.Storage.(*S3Storage)
-	}
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username

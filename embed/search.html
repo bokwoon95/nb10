@@ -75,8 +75,8 @@
   <li>
     <div>
       {{- if eq (ext $match.FilePath) ".jpeg" ".jpg" ".png" ".webp" ".gif" }}
-        {{- if and $.ImgDomain $.IsS3Storage }}
-        <img src='https://{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 mr1' loading='lazy'>
+        {{- if and $.ImgDomain $.IsRemoteFS }}
+        <img src='{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 mr1' loading='lazy'>
         {{- else }}
         <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 mr1' loading='lazy'>
         {{- end }}
