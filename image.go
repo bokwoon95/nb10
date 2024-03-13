@@ -1,6 +1,7 @@
 package nb10
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"golang.org/x/sync/errgroup"
 )
 
 func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
@@ -90,25 +92,108 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.ModTime = fileInfo.ModTime()
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
 			response.IsRemoteFS = true
-			// TODO: use errgroup to fetch Content, PreviousURL and NextURL concurrently.
-			content, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
-				Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
-				Values: []any{
-					sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-				},
-			}, func(row *sq.Row) string {
-				return row.String("text")
+			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				result, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
+					Dialect: remoteFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
+						" AND file_path < {filePath}" +
+						" AND (" +
+						"file_path LIKE '%.jpeg'" +
+						" OR file_path LIKE '%.jpg'" +
+						" OR file_path LIKE '%.png'" +
+						" OR file_path LIKE '%.webp'" +
+						" OR file_path LIKE '%.gif'" +
+						")" +
+						" ORDER BY file_path DESC" +
+						" LIMIT 1",
+					Values: []any{
+						sq.StringParam("parent", path.Join(response.SitePrefix, path.Dir(response.FilePath))),
+						sq.StringParam("filePath", path.Join(response.SitePrefix, response.FilePath)),
+					},
+				}, func(row *sq.Row) (result struct {
+					FileID   ID
+					FilePath string
+				}) {
+					result.FileID = row.UUID("file_id")
+					result.FilePath = row.String("file_path")
+					return result
+				})
+				if err != nil {
+					if errors.Is(err, sql.ErrNoRows) {
+						return nil
+					}
+					return err
+				}
+				response.PreviousImageID = result.FileID
+				response.PreviousImageName = path.Base(result.FilePath)
+				return nil
 			})
+			group.Go(func() error {
+				content, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
+					Dialect: remoteFS.Dialect,
+					Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
+					Values: []any{
+						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+					},
+				}, func(row *sq.Row) string {
+					return row.String("text")
+				})
+				if err != nil {
+					return err
+				}
+				response.Content = strings.TrimSpace(content)
+				if strings.HasPrefix(response.Content, "!alt ") {
+					altText, _, _ := strings.Cut(response.Content, "\n")
+					response.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+				}
+				return nil
+			})
+			group.Go(func() error {
+				result, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
+					Dialect: remoteFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
+						" AND file_path > {filePath}" +
+						" AND (" +
+						"file_path LIKE '%.jpeg'" +
+						" OR file_path LIKE '%.jpg'" +
+						" OR file_path LIKE '%.png'" +
+						" OR file_path LIKE '%.webp'" +
+						" OR file_path LIKE '%.gif'" +
+						")" +
+						" ORDER BY file_path ASC" +
+						" LIMIT 1",
+					Values: []any{
+						sq.StringParam("parent", path.Join(response.SitePrefix, path.Dir(response.FilePath))),
+						sq.StringParam("filePath", path.Join(response.SitePrefix, response.FilePath)),
+					},
+				}, func(row *sq.Row) (result struct {
+					FileID   ID
+					FilePath string
+				}) {
+					result.FileID = row.UUID("file_id")
+					result.FilePath = row.String("file_path")
+					return result
+				})
+				if err != nil {
+					if errors.Is(err, sql.ErrNoRows) {
+						return nil
+					}
+					return err
+				}
+				response.NextImageID = result.FileID
+				response.NextImageName = path.Base(result.FilePath)
+				return nil
+			})
+			err = group.Wait()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				internalServerError(w, r, err)
 				return
-			}
-			response.Content = strings.TrimSpace(content)
-			if strings.HasPrefix(response.Content, "!alt ") {
-				altText, _, _ := strings.Cut(response.Content, "\n")
-				response.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
 			}
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
