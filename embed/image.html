@@ -60,11 +60,17 @@
   {{- end }}
 </div>
 <figure class='mv2 w-70-l w-80-m w-100 center'>
-  {{- if $.ImgDomain $.IsRemoteFS }}
-  <figcaption class='flex flex-wrap justify-center'><a href='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a></figcaption>
+  {{- if and $.ImgDomain $.IsRemoteFS }}
+  <figcaption class='flex flex-wrap justify-center'>
+    <a href='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a>
+    <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
+  </figcaption>
   <img src='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- else }}
-  <figcaption class='flex flex-wrap justify-center'><a href='?raw'>{{ base $.FilePath }}</a></figcaption>
+  <figcaption class='flex flex-wrap justify-center'>
+    <a href='?raw'>{{ base $.FilePath }}</a>
+    <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
+  </figcaption>
   <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- end }}
 </figure>

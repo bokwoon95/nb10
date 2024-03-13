@@ -26,6 +26,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
+		Size              int64             `json:"size"`
 		ModTime           time.Time         `json:"modTime"`
 		CreationTime      time.Time         `json:"creationTime"`
 		Content           string            `json:"content"`
@@ -84,6 +85,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
 		response.FilePath = filePath
+		response.Size = fileInfo.Size()
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
 		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
