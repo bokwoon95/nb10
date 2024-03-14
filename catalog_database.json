@@ -21,31 +21,6 @@
     ]
   },
   {
-    "table": "invite",
-    "columns": [
-      {
-        "column": "invite_token_hash",
-        "type": {
-          "default": "BINARY(40)",
-          "postgres": "BYTEA"
-        },
-        "primarykey": true
-      },
-      {
-        "column": "site_limit",
-        "type": {
-          "default": "BIGINT"
-        }
-      },
-      {
-        "column": "storage_limit",
-        "type": {
-          "default": "BIGINT"
-        }
-      }
-    ]
-  },
-  {
     "table": "users",
     "columns": [
       {
@@ -229,6 +204,31 @@
         "references": {
           "table": "user",
           "column": "user_id"
+        }
+      }
+    ]
+  },
+  {
+    "table": "invite",
+    "columns": [
+      {
+        "column": "invite_token_hash",
+        "type": {
+          "default": "BINARY(40)",
+          "postgres": "BYTEA"
+        },
+        "primarykey": true
+      },
+      {
+        "column": "site_limit",
+        "type": {
+          "default": "BIGINT"
+        }
+      },
+      {
+        "column": "storage_limit",
+        "type": {
+          "default": "BIGINT"
         }
       }
     ]
