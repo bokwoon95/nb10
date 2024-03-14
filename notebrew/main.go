@@ -110,14 +110,14 @@ func main() {
 		}
 		nbrew.CMSDomain = string(bytes.TrimSpace(b))
 
-		// Determine the port to listen on (can be empty).
+		// Port.
 		b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
 		}
 		port := string(bytes.TrimSpace(b))
 
-		// Determine the TCP address to listen on (based on the domain and port).
+		// Determine the TCP address to listen on (based on the CMS domain and port).
 		var addr string
 		if port != "" {
 			if nbrew.CMSDomain == "" {
@@ -797,6 +797,8 @@ func main() {
 			}
 		}
 
+		// captcha.json: verificationURL, siteKey, secretKey
+
 		// TODO:
 		// go install github.com/bokwoon95/notebrew/notebrew
 		// irm github.com/bokwoon95/notebrew/install.cmd | iex
@@ -807,7 +809,18 @@ func main() {
 			command, args := args[0], args[1:]
 			_ = args
 			switch command {
-			case "":
+			case "createinvite":
+			case "createsite":
+			case "createuser":
+			case "deleteinvite":
+			case "deletesite":
+			case "deleteuser":
+			case "hashpassword":
+			case "permissions":
+			case "resetpassword":
+			case "start":
+			case "status":
+			case "stop":
 			default:
 				return fmt.Errorf("unknown command %s", command)
 			}

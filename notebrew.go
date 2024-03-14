@@ -121,11 +121,11 @@ type Notebrew struct {
 
 	ImgDomain string
 
-	CaptchaSecretKey string
+	CaptchaVerificationURL string
 
 	CaptchaSiteKey string
 
-	CaptchaVerificationURL string
+	CaptchaSecretKey string
 
 	Logger *slog.Logger
 }

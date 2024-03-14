@@ -34,47 +34,32 @@ var chromaStyles = map[string]bool{
 
 func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type NavigationLink struct {
-		Name string `json:"name"`
-
-		URL template.URL `json:"url"`
+		Name string       `json:"name"`
+		URL  template.URL `json:"url"`
 	}
 	type Request struct {
-		Title string `json:"title"`
-
-		Emoji string `json:"emoji"`
-
-		Favicon string `json:"favicon"`
-
-		CodeStyle string `json:"codeStyle"`
-
-		Description string `json:"description"`
-
+		Title           string           `json:"title"`
+		Emoji           string           `json:"emoji"`
+		Favicon         string           `json:"favicon"`
+		CodeStyle       string           `json:"codeStyle"`
+		Description     string           `json:"description"`
 		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
 	type Response struct {
-		Title string `json:"title"`
-
-		Emoji string `json:"emoji"`
-
-		Favicon string `json:"favicon"`
-
-		CodeStyle string `json:"codeStyle"`
-
-		Description string `json:"description"`
-
-		NavigationLinks []NavigationLink `json:"navigationLinks"`
-
-		StorageUsed int64 `json:"storageUsed,omitempty"`
-
-		ContentBaseURL string `json:"contentBaseURL"`
-
-		Username NullString `json:"username"`
-
-		SitePrefix string `json:"sitePrefix"`
-
+		ContentBaseURL    string            `json:"contentBaseURL"`
+		IsRemoteFS        bool              `json:"isRemoteFS"`
+		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
+		Title             string            `json:"title"`
+		Emoji             string            `json:"emoji"`
+		Favicon           string            `json:"favicon"`
+		CodeStyle         string            `json:"codeStyle"`
+		Description       string            `json:"description"`
+		NavigationLinks   []NavigationLink  `json:"navigationLinks"`
+		StorageUsed       int64             `json:"storageUsed"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
-
-		PostRedirectGet map[string]any `json:"postRedirectGet"`
+		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 	normalizeRequest := func(request Request) Request {
 		if request.Title == "" {
@@ -122,17 +107,17 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			}
 			referer := getReferer(r)
 			funcMap := map[string]any{
-				"join":             path.Join,
-				"base":             path.Base,
-				"hasPrefix":        strings.HasPrefix,
-				"trimPrefix":       strings.TrimPrefix,
-				"contains":         strings.Contains,
+				"join":                  path.Join,
+				"base":                  path.Base,
+				"hasPrefix":             strings.HasPrefix,
+				"trimPrefix":            strings.TrimPrefix,
+				"contains":              strings.Contains,
 				"humanReadableFileSize": humanReadableFileSize,
-				"stylesCSS":        func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS":       func() template.JS { return template.JS(baselineJS) },
-				"referer":          func() string { return referer },
-				"chromaStyles":     func() map[string]bool { return chromaStyles },
-				"incr":             func(n int) int { return n + 1 },
+				"stylesCSS":             func() template.CSS { return template.CSS(stylesCSS) },
+				"baselineJS":            func() template.JS { return template.JS(baselineJS) },
+				"referer":               func() string { return referer },
+				"chromaStyles":          func() map[string]bool { return chromaStyles },
+				"incr":                  func(n int) int { return n + 1 },
 			}
 			tmpl, err := template.New("site_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/site_json.html")
 			if err != nil {
@@ -150,7 +135,9 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		response.Username = NullString{String: user.Username, Valid: nbrew.DB != nil}
+		_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+		response.UserID = user.UserID
+		response.Username = user.Username
 		response.SitePrefix = sitePrefix
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "site.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -314,9 +301,9 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			return
 		}
 		response := Response{
-			RegenerationStats: regenerationStats,
 			ContentBaseURL:    nbrew.contentBaseURL(sitePrefix),
-			Username:          NullString{String: user.Username, Valid: nbrew.DB != nil},
+			UserID:            user.UserID,
+			Username:          user.Username,
 			SitePrefix:        sitePrefix,
 			Title:             request.Title,
 			Emoji:             request.Emoji,
@@ -324,6 +311,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			CodeStyle:         request.CodeStyle,
 			Description:       request.Description,
 			NavigationLinks:   request.NavigationLinks,
+			RegenerationStats: regenerationStats,
 		}
 		writeResponse(w, r, response)
 	default:
