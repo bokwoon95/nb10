@@ -799,8 +799,8 @@ func main() {
 
 		// TODO:
 		// go install github.com/bokwoon95/notebrew/notebrew
-		// irm github.com/notebrew/notebrew/install.cmd | iex
-		// curl github.com/notebrew/notebrew/install.sh | sh
+		// irm github.com/bokwoon95/notebrew/install.cmd | iex
+		// curl github.com/bokwoon95/notebrew/install.sh | sh
 
 		args := flagset.Args()
 		if len(args) > 0 {
