@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -167,7 +166,7 @@ func main() {
 		if len(b) > 0 {
 			var databaseConfig struct {
 				Dialect  string
-				Filepath string
+				FilePath string
 				User     string
 				Password string
 				Host     string
@@ -186,14 +185,14 @@ func main() {
 			case "":
 				return fmt.Errorf("%s: missing dialect field", filepath.Join(configDir, "database.json"))
 			case "sqlite":
-				if databaseConfig.Filepath == "" {
-					databaseConfig.Filepath = filepath.Join(dataHomeDir, "notebrew-database.db")
+				if databaseConfig.FilePath == "" {
+					databaseConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-database.db")
 				}
-				databaseConfig.Filepath, err = filepath.Abs(databaseConfig.Filepath)
+				databaseConfig.FilePath, err = filepath.Abs(databaseConfig.FilePath)
 				if err != nil {
 					return fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "database.json"), err)
 				}
-				dataSourceName = databaseConfig.Filepath + "?" + sqliteQueryString(databaseConfig.Params)
+				dataSourceName = databaseConfig.FilePath + "?" + sqliteQueryString(databaseConfig.Params)
 				nbrew.Dialect = "sqlite"
 				nbrew.DB, err = sql.Open(sqliteDriverName, dataSourceName)
 				if err != nil {
@@ -297,19 +296,19 @@ func main() {
 			defer func() {
 				if nbrew.Dialect == "sqlite" {
 					nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-				}
-				ticker := time.NewTicker(4 * time.Hour)
-				go func() {
-					for {
-						<-ticker.C
-						ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-						_, err = nbrew.DB.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
-						if err != nil {
-							nbrew.Logger.Error(err.Error())
+					ticker := time.NewTicker(4 * time.Hour)
+					go func() {
+						for {
+							<-ticker.C
+							ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+							_, err = nbrew.DB.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
+							if err != nil {
+								nbrew.Logger.Error(err.Error())
+							}
+							cancel()
 						}
-						cancel()
-					}
-				}()
+					}()
+				}
 				nbrew.DB.Close()
 			}()
 		}
@@ -528,91 +527,92 @@ func main() {
 			defer func() {
 				if dialect == "sqlite" {
 					db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-				}
-				ticker := time.NewTicker(4 * time.Hour)
-				go func() {
-					for {
-						<-ticker.C
-						ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-						_, err = db.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
-						if err != nil {
-							nbrew.Logger.Error(err.Error())
+					ticker := time.NewTicker(4 * time.Hour)
+					go func() {
+						for {
+							<-ticker.C
+							ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+							_, err = db.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
+							if err != nil {
+								nbrew.Logger.Error(err.Error())
+							}
+							cancel()
 						}
-						cancel()
-					}
-				}()
+					}()
+				}
 				db.Close()
 			}()
 
 			var storage nb10.Storage
-			b, err = os.ReadFile(filepath.Join(configDir, "s3.json"))
+			b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "s3.json"), err)
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
 			}
 			b = bytes.TrimSpace(b)
+			var objectsConfig struct {
+				Provider        string
+				FilePath        string
+				Endpoint        string
+				Region          string
+				Bucket          string
+				AccessKeyID     string
+				SecretAccessKey string
+			}
 			if len(b) > 0 {
-				var s3Config struct {
-					Endpoint        string
-					Region          string
-					Bucket          string
-					AccessKeyID     string
-					SecretAccessKey string
-				}
 				decoder := json.NewDecoder(bytes.NewReader(b))
 				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&s3Config)
+				err = decoder.Decode(&objectsConfig)
 				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(configDir, "s3.json"), err)
+					return fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
 				}
-				if s3Config.Endpoint == "" {
-					return fmt.Errorf("%s: missing endpoint field", filepath.Join(configDir, "s3.json"))
-				}
-				if s3Config.Region == "" {
-					return fmt.Errorf("%s: missing region field", filepath.Join(configDir, "s3.json"))
-				}
-				if s3Config.Bucket == "" {
-					return fmt.Errorf("%s: missing bucket field", filepath.Join(configDir, "s3.json"))
-				}
-				if s3Config.AccessKeyID == "" {
-					return fmt.Errorf("%s: missing accessKeyID field", filepath.Join(configDir, "s3.json"))
-				}
-				if s3Config.SecretAccessKey == "" {
-					return fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "s3.json"))
-				}
-				s3StorageConfig := nb10.S3StorageConfig{
-					Endpoint:        s3Config.Endpoint,
-					Region:          s3Config.Region,
-					Bucket:          s3Config.Bucket,
-					AccessKeyID:     s3Config.AccessKeyID,
-					SecretAccessKey: s3Config.SecretAccessKey,
-				}
-				storage, err = nb10.NewS3Storage(context.Background(), s3StorageConfig)
-				if err != nil {
-					return err
-				}
-			} else {
-				b, err = os.ReadFile(filepath.Join(configDir, "objectsdir.txt"))
-				if err != nil && !errors.Is(err, fs.ErrNotExist) {
-					return fmt.Errorf("%s: %w", filepath.Join(configDir, "objectsdir.txt"), err)
-				}
-				objectsDir := string(bytes.TrimSpace(b))
-				if objectsDir == "" {
-					objectsDir = filepath.Join(dataHomeDir, "notebrew-objects")
-					err := os.MkdirAll(objectsDir, 0755)
+			}
+			switch objectsConfig.Provider {
+			case "", "local":
+				if objectsConfig.FilePath == "" {
+					objectsConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-objects")
+					err := os.MkdirAll(objectsConfig.FilePath, 0755)
 					if err != nil {
 						return err
 					}
 				} else {
-					objectsDir = path.Clean(objectsDir)
-					_, err := os.Stat(objectsDir)
+					objectsConfig.FilePath = filepath.Clean(objectsConfig.FilePath)
+					_, err := os.Stat(objectsConfig.FilePath)
 					if err != nil {
 						return err
 					}
 				}
-				storage, err = nb10.NewLocalStorage(objectsDir, os.TempDir())
+				storage, err = nb10.NewLocalStorage(objectsConfig.FilePath, os.TempDir())
 				if err != nil {
 					return err
 				}
+			case "s3":
+				if objectsConfig.Endpoint == "" {
+					return fmt.Errorf("%s: missing endpoint field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.Region == "" {
+					return fmt.Errorf("%s: missing region field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.Bucket == "" {
+					return fmt.Errorf("%s: missing bucket field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.AccessKeyID == "" {
+					return fmt.Errorf("%s: missing accessKeyID field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.SecretAccessKey == "" {
+					return fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
+				}
+				storage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
+					Endpoint:        objectsConfig.Endpoint,
+					Region:          objectsConfig.Region,
+					Bucket:          objectsConfig.Bucket,
+					AccessKeyID:     objectsConfig.AccessKeyID,
+					SecretAccessKey: objectsConfig.SecretAccessKey,
+				})
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("%s: unsupported provider %q (possible values: local, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
 			}
 			nbrew.FS, err = nb10.NewRemoteFS(nb10.RemoteFSConfig{
 				DB:        db,
