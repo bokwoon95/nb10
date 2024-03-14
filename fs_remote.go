@@ -1427,6 +1427,7 @@ type S3StorageConfig struct {
 	Bucket          string
 	AccessKeyID     string
 	SecretAccessKey string
+	PurgeCache      func(key string) error
 }
 
 func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3Storage, error) {
@@ -1436,7 +1437,8 @@ func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3Storage, erro
 			Region:       config.Region,
 			Credentials:  aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(config.AccessKeyID, config.SecretAccessKey, "")),
 		}),
-		Bucket: config.Bucket,
+		Bucket:     config.Bucket,
+		PurgeCache: config.PurgeCache,
 	}
 	// Ping the bucket and see if we have access.
 	_, err := storage.Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
