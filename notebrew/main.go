@@ -579,7 +579,14 @@ func main() {
 				if s3Config.SecretAccessKey == "" {
 					return fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "s3.json"))
 				}
-				storage, err = nb10.NewS3Storage(context.Background(), s3Config)
+				s3StorageConfig := nb10.S3StorageConfig{
+					Endpoint:        s3Config.Endpoint,
+					Region:          s3Config.Region,
+					Bucket:          s3Config.Bucket,
+					AccessKeyID:     s3Config.AccessKeyID,
+					SecretAccessKey: s3Config.SecretAccessKey,
+				}
+				storage, err = nb10.NewS3Storage(context.Background(), s3StorageConfig)
 				if err != nil {
 					return err
 				}
