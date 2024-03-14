@@ -797,7 +797,28 @@ func main() {
 			}
 		}
 
-		// captcha.json: verificationURL, siteKey, secretKey
+		// Captcha.
+		b, err = os.ReadFile(filepath.Join(configDir, "captcha.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
+		}
+		b = bytes.TrimSpace(b)
+		if len(b) > 0 {
+			var captchaConfig struct {
+				VerificationURL string
+				SiteKey         string
+				SecretKey       string
+			}
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&captchaConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
+			}
+			nbrew.CaptchaVerificationURL = captchaConfig.VerificationURL
+			nbrew.CaptchaSiteKey = captchaConfig.SiteKey
+			nbrew.CaptchaSecretKey = captchaConfig.SecretKey
+		}
 
 		// TODO:
 		// go install github.com/bokwoon95/notebrew/notebrew
