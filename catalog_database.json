@@ -84,6 +84,25 @@
     ]
   },
   {
+    "table": "ip_login",
+    "columns": [
+      {
+        "column": "ip",
+        "type": {
+          "default": "BINARY(16)",
+          "postgres": "BYTEA"
+        },
+        "primarykey": true
+      },
+      {
+        "column": "failed_login_attempts",
+        "type": {
+          "default": "INT"
+        }
+      }
+    ]
+  },
+  {
     "table": "site_owner",
     "columns": [
       {

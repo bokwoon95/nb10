@@ -35,6 +35,11 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+createuser
+
+ip_login.ip
+ip_login.failed_login_attempts
+
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
 - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
