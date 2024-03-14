@@ -798,7 +798,7 @@ func main() {
 		}
 
 		// TODO:
-		// go install github.com/notebrew/notebrew/notebrew
+		// go install github.com/bokwoon95/notebrew/notebrew
 		// irm github.com/notebrew/notebrew/install.cmd | iex
 		// curl github.com/notebrew/notebrew/install.sh | sh
 
