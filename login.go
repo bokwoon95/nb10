@@ -16,6 +16,6 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		RequireCaptcha      bool       `json:"requireCaptcha"`
 		CaptchaSiteKey      string     `json:"captchaSiteKey"`
 		FormErrors          url.Values `json:"formErrors"`
-		AuthenticationToken string     `json:"authenticationToken,omitempty"`
+		AuthenticationToken string     `json:"authenticationToken"`
 	}
 }

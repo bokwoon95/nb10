@@ -92,11 +92,17 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {
 		switch tail {
+		case "invite":
+			// nbrew.invite(w, r)
+			return
 		case "login":
-			// nbrew.login(w, r, ip)
+			// nbrew.login(w, r)
 			return
 		case "logout":
-			// nbrew.logout(w, r, ip)
+			// nbrew.logout(w, r)
+			return
+		case "resetpassword":
+			// nbrew.resetpassword(w, r)
 			return
 		default:
 			notFound(w, r)
