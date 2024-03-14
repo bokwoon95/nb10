@@ -204,12 +204,11 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 
 	// dynamicCertConfig manages the certificates for custom domains.
 	//
-	// If dns01Solver hasn't been configured, dynamicCertConfig will
-	// also be responsible for getting the certificates for subdomains.
-	// This approach will not scale and might end up getting rate
-	// limited by Let's Encrypt (50 certificates per week). The safest
-	// way to avoid being rate limited is to configure dns01Solver so
-	// that the wildcard certificate is available.
+	// If dns01Solver hasn't been configured, dynamicCertConfig will also be
+	// responsible for getting the certificates for subdomains. This approach
+	// might get rate limited by Let's Encrypt (up to 50 certificates per
+	// week). The safest way to avoid being rate limited is to configure
+	// dns01Solver so that the wildcard certificate is available.
 	dynamicCertConfig := certmagic.NewDefault()
 	dynamicCertConfig.Storage = certStorage
 	dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
