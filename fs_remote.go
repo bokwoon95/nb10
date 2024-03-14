@@ -1416,7 +1416,7 @@ type Storage interface {
 type S3Storage struct {
 	Client     *s3.Client
 	Bucket     string
-	PurgeCache func(key string) error
+	PurgeCache func(ctx context.Context, key string) error
 }
 
 var _ Storage = (*S3Storage)(nil)
@@ -1427,7 +1427,7 @@ type S3StorageConfig struct {
 	Bucket          string
 	AccessKeyID     string
 	SecretAccessKey string
-	PurgeCache      func(key string) error
+	PurgeCache      func(ctx context.Context, key string) error
 }
 
 func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3Storage, error) {
@@ -1489,7 +1489,7 @@ func (storage *S3Storage) Delete(ctx context.Context, key string) error {
 		return err
 	}
 	if storage.PurgeCache != nil {
-		err := storage.PurgeCache(key)
+		err := storage.PurgeCache(ctx, key)
 		if err != nil {
 			return err
 		}
