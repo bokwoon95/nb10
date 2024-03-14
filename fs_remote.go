@@ -1414,8 +1414,9 @@ type Storage interface {
 }
 
 type S3Storage struct {
-	Client *s3.Client
-	Bucket string
+	Client     *s3.Client
+	Bucket     string
+	PurgeCache func(key string) error
 }
 
 var _ Storage = (*S3Storage)(nil)
@@ -1484,6 +1485,12 @@ func (storage *S3Storage) Delete(ctx context.Context, key string) error {
 	})
 	if err != nil {
 		return err
+	}
+	if storage.PurgeCache != nil {
+		err := storage.PurgeCache(key)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
