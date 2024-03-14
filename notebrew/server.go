@@ -216,7 +216,7 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 			if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
 				return nil
 			}
-			fileInfo, err := fs.Stat(nbrew.FS, name)
+			fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
 			if err != nil {
 				return err
 			}
@@ -231,7 +231,7 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 		NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
 		GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			if clientHello.ServerName == "" {
-				return nil, fmt.Errorf("server name empty")
+				return nil, fmt.Errorf("server name required")
 			}
 			for _, domain := range domains {
 				if certmagic.MatchWildcard(clientHello.ServerName, domain) {
