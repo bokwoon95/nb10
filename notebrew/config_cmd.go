@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -13,118 +14,7 @@ import (
 	"strings"
 )
 
-type DatabaseConfig struct {
-	Dialect  string            `json:"dialect"`
-	FilePath string            `json:"filePath"`
-	User     string            `json:"user"`
-	Password string            `json:"password"`
-	Host     string            `json:"host"`
-	Port     string            `json:"port"`
-	DBName   string            `json:"dbName"`
-	Params   map[string]string `json:"params"`
-}
-
-const databaseHelp = `# == database keys == #
-# dialect  - Database dialect (possible values: sqlite, postgres, mysql).
-# filePath - File path to the sqlite file (if dialect is sqlite).
-# user     - Database user
-# password - Database password
-# host     - Database host
-# port     - Database port
-# dbName   - Database name
-# params   - Database-specific connection parameters
-`
-
-const filesHelp = `# == files keys == #
-# Choose between using the local filesystem (backed by a plain old directory) or a remote filesystem (backed by a database) to store files.
-# dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using the local filesystem).
-# filePath - Files root directory (if using the local filesystem) or file path to the sqlite file (if using sqlite).
-# user     - Database user
-# password - Database password
-# host     - Database host
-# port     - Database port
-# dbName   - Database name
-# params   - Database-specific connection parameters
-`
-
-// Please run `notebrew config database.dialect sqlite` to setup up the database.
-
-type ObjectsConfig struct {
-	Provider        string `json:"provider"`
-	FilePath        string `json:"filePath"`
-	Endpoint        string `json:"endpoint"`
-	Region          string `json:"region"`
-	Bucket          string `json:"bucket"`
-	AccessKeyID     string `json:"accessKeyID"`
-	SecretAccessKey string `json:"secretAccessKey"`
-}
-
-const objectsHelp = `# == objects keys == #
-# Choose between using the local filesystem (backed by a plain old directory) or an S3-compatible provider to store objects. Only applicable if using the remote filesytem.
-# provider        - Object storage provider (possible values: s3, local)
-# filePath        - Objects root directory (if using the local filesystem)
-# endpoint        - S3 endpoint.
-# region          - S3 region.
-# bucket          - S3 bucket.
-# accessKeyID     - S3 access key ID.
-# secretAccessKey - S3 secret access key.
-`
-
-type CaptchaConfig struct {
-	VerificationURL string `json:"verificationURL"`
-	SiteKey         string `json:"siteKey"`
-	SecretKey       string `json:"secretKey"`
-}
-
-const captchaHelp = `# == captcha keys == #
-# verificationURL - Captcha provider's verification URL to make POST requests to.
-# siteKey         - Captcha provider's site key.
-# secretKey       - Captcha provider's secret key.
-`
-
-type DNSConfig struct {
-	Provider  string `json:"provider"`
-	Username  string `json:"username"`
-	APIKey    string `json:"apiKey"`
-	APIToken  string `json:"apiToken"`
-	SecretKey string `json:"secretKey"`
-}
-
-const dnsHelp = `# == dns keys == #
-# provider  - DNS provider (possible values: namecheap, cloudflare, porkbun, godaddy)
-# username  - DNS API username   (required by: namecheap)
-# apiKey    - DNS API key        (required by: namecheap, porkbun)
-# apiToken  - DNS API token      (required by: cloudflare, godaddy)
-# secretKey - DNS API secret key (required by: porkbun)
-`
-
-type ConfigCmd struct {
-	ConfigDir string
-	Stdout    io.Writer
-	Stderr    io.Writer
-	Key       sql.NullString
-	Value     sql.NullString
-}
-
-func ConfigCommand(configDir string, args ...string) (*ConfigCmd, error) {
-	var cmd ConfigCmd
-	cmd.ConfigDir = configDir
-	if len(args) > 0 {
-		cmd.Key = sql.NullString{String: args[0], Valid: true}
-	}
-	if len(args) > 1 {
-		cmd.Value = sql.NullString{String: args[1], Valid: true}
-	}
-	if len(args) > 2 {
-		return nil, fmt.Errorf("too many arguments (max 2)")
-	}
-	return &cmd, nil
-}
-
-// port.txt cmsdomain.txt contentdomain.txt imgdomain.txt database.json files.json objects.json captcha.json dns.json certmagic.txt
-
-func (cmd *ConfigCmd) Run() error {
-	const configHelp = `Usage:
+const configHelp = `Usage:
   notebrew config [KEY] [VALUE]
   notebrew config port                            # prints the value of port
   notebrew config port 443                        # sets the value of port to 443
@@ -144,6 +34,45 @@ Keys:
   notebrew config dns           # (json) DNS provider configuration.
   notebrew config certmagic     # (txt) certmagic directory for storing SSL certificates.
 `
+
+type ConfigCmd struct {
+	ConfigDir string
+	Stdout    io.Writer
+	Stderr    io.Writer
+	Key       sql.NullString
+	Value     sql.NullString
+}
+
+func ConfigCommand(configDir string, args ...string) (*ConfigCmd, error) {
+	var cmd ConfigCmd
+	cmd.ConfigDir = configDir
+	flagset := flag.NewFlagSet("", flag.ContinueOnError)
+	flagset.Usage = func() {
+		io.WriteString(flagset.Output(), configHelp)
+	}
+	err := flagset.Parse(args)
+	if err != nil {
+		return nil, err
+	}
+	args = flagset.Args()
+	switch len(args) {
+	case 0:
+		break
+	case 1:
+		cmd.Key = sql.NullString{String: args[0], Valid: true}
+	case 2:
+		cmd.Key = sql.NullString{String: args[0], Valid: true}
+		if strings.HasPrefix(args[1], "-") {
+			return &cmd, nil
+		}
+		cmd.Value = sql.NullString{String: args[1], Valid: true}
+	default:
+		return nil, fmt.Errorf("too many arguments (max 2)")
+	}
+	return &cmd, nil
+}
+
+func (cmd *ConfigCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
@@ -165,36 +94,24 @@ Keys:
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-			if err != nil {
-				return err
-			}
 		case "cmsdomain":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "cmsdomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-			if err != nil {
-				return err
-			}
 		case "contentdomain":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "contentdomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-			if err != nil {
-				return err
-			}
 		case "imgdomain":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-			if err != nil {
-				return err
-			}
 		case "database":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -298,37 +215,115 @@ Keys:
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		case "objects":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "objects.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			var objectsConfig ObjectsConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&objectsConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "objects.json"), err)
+				}
+			}
 			switch tail {
 			case "":
+				io.WriteString(cmd.Stderr, objectsHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(objectsConfig)
+				if err != nil {
+					return err
+				}
 			case "provider":
+				io.WriteString(cmd.Stdout, objectsConfig.Provider+"\n")
 			case "filePath":
+				io.WriteString(cmd.Stdout, objectsConfig.FilePath+"\n")
 			case "endpoint":
+				io.WriteString(cmd.Stdout, objectsConfig.Endpoint+"\n")
 			case "region":
+				io.WriteString(cmd.Stdout, objectsConfig.Region+"\n")
 			case "bucket":
+				io.WriteString(cmd.Stdout, objectsConfig.Bucket+"\n")
 			case "accessKeyID":
+				io.WriteString(cmd.Stdout, objectsConfig.AccessKeyID+"\n")
 			case "secretAccessKey":
+				io.WriteString(cmd.Stdout, objectsConfig.SecretAccessKey+"\n")
 			default:
-				return fmt.Errorf("invalid key %q", cmd.Key.String)
+				io.WriteString(cmd.Stderr, objectsHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		case "captcha":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "captcha.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			var captchaConfig CaptchaConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&captchaConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "captcha.json"), err)
+				}
+			}
 			switch tail {
 			case "":
+				io.WriteString(cmd.Stderr, captchaHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(captchaConfig)
+				if err != nil {
+					return err
+				}
 			case "verificationURL":
+				io.WriteString(cmd.Stdout, captchaConfig.VerificationURL+"\n")
 			case "siteKey":
+				io.WriteString(cmd.Stdout, captchaConfig.SiteKey+"\n")
 			case "secretKey":
+				io.WriteString(cmd.Stdout, captchaConfig.SecretKey+"\n")
 			default:
-				return fmt.Errorf("invalid key %q", cmd.Key.String)
+				io.WriteString(cmd.Stderr, captchaHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		case "dns":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			var dnsConfig DNSConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&dnsConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
+				}
+			}
 			switch tail {
 			case "":
+				io.WriteString(cmd.Stderr, dnsHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(dnsConfig)
+				if err != nil {
+					return err
+				}
 			case "provider":
+				io.WriteString(cmd.Stdout, dnsConfig.Provider+"\n")
 			case "username":
+				io.WriteString(cmd.Stdout, dnsConfig.Username+"\n")
 			case "apiKey":
+				io.WriteString(cmd.Stdout, dnsConfig.APIKey+"\n")
 			case "apiToken":
+				io.WriteString(cmd.Stdout, dnsConfig.APIToken+"\n")
 			case "secretKey":
+				io.WriteString(cmd.Stdout, dnsConfig.SecretKey+"\n")
 			default:
-				return fmt.Errorf("invalid key %q", cmd.Key.String)
+				io.WriteString(cmd.Stderr, dnsHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		case "certmagic":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"))
@@ -336,19 +331,92 @@ Keys:
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-			if err != nil {
-				return err
-			}
-			return nil
 		default:
-			return fmt.Errorf("invalid key %q", cmd.Key.String)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
 		}
 	}
 	return nil
 }
 
-// config [file] # print the file contents together with each field's configuration value
-// config [file] [key]
-// config [file] [key] [value]
+type DatabaseConfig struct {
+	Dialect  string            `json:"dialect"`
+	FilePath string            `json:"filePath"`
+	User     string            `json:"user"`
+	Password string            `json:"password"`
+	Host     string            `json:"host"`
+	Port     string            `json:"port"`
+	DBName   string            `json:"dbName"`
+	Params   map[string]string `json:"params"`
+}
 
-// config 'database.dialect' sqlite
+const databaseHelp = `# == database keys == #
+# dialect  - Database dialect (possible values: sqlite, postgres, mysql).
+# filePath - File path to the sqlite file (if dialect is sqlite).
+# user     - Database user
+# password - Database password
+# host     - Database host
+# port     - Database port
+# dbName   - Database name
+# params   - Database-specific connection parameters
+`
+
+const filesHelp = `# == files keys == #
+# Choose between using the local filesystem (backed by a plain old directory) or a remote filesystem (backed by a database) to store files.
+# dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using the local filesystem).
+# filePath - Files root directory (if using the local filesystem) or file path to the sqlite file (if using sqlite).
+# user     - Database user
+# password - Database password
+# host     - Database host
+# port     - Database port
+# dbName   - Database name
+# params   - Database-specific connection parameters
+`
+
+type ObjectsConfig struct {
+	Provider        string `json:"provider"`
+	FilePath        string `json:"filePath"`
+	Endpoint        string `json:"endpoint"`
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
+	AccessKeyID     string `json:"accessKeyID"`
+	SecretAccessKey string `json:"secretAccessKey"`
+}
+
+const objectsHelp = `# == objects keys == #
+# Choose between using the local filesystem (backed by a plain old directory) or an S3-compatible provider to store objects. Only applicable if using the remote filesytem (see ` + "`notebrew config files`" + `).
+# provider        - Object storage provider (possible values: local, s3)
+# filePath        - Objects root directory (if using the local filesystem)
+# endpoint        - S3 endpoint.
+# region          - S3 region.
+# bucket          - S3 bucket.
+# accessKeyID     - S3 access key ID.
+# secretAccessKey - S3 secret access key.
+`
+
+type CaptchaConfig struct {
+	VerificationURL string `json:"verificationURL"`
+	SiteKey         string `json:"siteKey"`
+	SecretKey       string `json:"secretKey"`
+}
+
+const captchaHelp = `# == captcha keys == #
+# verificationURL - Captcha provider's verification URL to make POST requests to.
+# siteKey         - Captcha provider's site key.
+# secretKey       - Captcha provider's secret key.
+`
+
+type DNSConfig struct {
+	Provider  string `json:"provider"`
+	Username  string `json:"username"`
+	APIKey    string `json:"apiKey"`
+	APIToken  string `json:"apiToken"`
+	SecretKey string `json:"secretKey"`
+}
+
+const dnsHelp = `# == dns keys == #
+# provider  - DNS provider (possible values: namecheap, cloudflare, porkbun, godaddy)
+# username  - DNS API username   (required by: namecheap)
+# apiKey    - DNS API key        (required by: namecheap, porkbun)
+# apiToken  - DNS API token      (required by: cloudflare, godaddy)
+# secretKey - DNS API secret key (required by: porkbun)
+`
