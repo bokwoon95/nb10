@@ -335,6 +335,319 @@ func (cmd *ConfigCmd) Run() error {
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
 		}
 	}
+	switch head {
+	case "":
+		return fmt.Errorf("key cannot be empty")
+	case "port":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "port.txt"), []byte(cmd.Value.String), 0644)
+		if err != nil {
+			return err
+		}
+	case "cmsdomain":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "cmsdomain.txt"), []byte(cmd.Value.String), 0644)
+		if err != nil {
+			return err
+		}
+	case "contentdomain":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "contentdomain.txt"), []byte(cmd.Value.String), 0644)
+		if err != nil {
+			return err
+		}
+	case "imgdomain":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"), []byte(cmd.Value.String), 0644)
+		if err != nil {
+			return err
+		}
+	case "database":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var databaseConfig DatabaseConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&databaseConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "database.json"), err)
+			}
+		}
+		if databaseConfig.Params == nil {
+			databaseConfig.Params = map[string]string{}
+		}
+		switch tail {
+		case "":
+			var newDatabaseConfig DatabaseConfig
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&newDatabaseConfig)
+			if err != nil {
+				return err
+			}
+			databaseConfig = newDatabaseConfig
+		case "dialect":
+			databaseConfig.Dialect = cmd.Value.String
+		case "filePath":
+			databaseConfig.FilePath = cmd.Value.String
+		case "user":
+			databaseConfig.User = cmd.Value.String
+		case "password":
+			databaseConfig.Password = cmd.Value.String
+		case "host":
+			databaseConfig.Host = cmd.Value.String
+		case "port":
+			databaseConfig.Port = cmd.Value.String
+		case "dbName":
+			databaseConfig.DBName = cmd.Value.String
+		case "params":
+			var params map[string]string
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&params)
+			if err != nil {
+				return err
+			}
+			databaseConfig.Params = params
+		default:
+			io.WriteString(cmd.Stderr, databaseHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "database.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		err = encoder.Encode(databaseConfig)
+		if err != nil {
+			return err
+		}
+		err = file.Close()
+		if err != nil {
+			return err
+		}
+	case "files":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "files.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var filesConfig DatabaseConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&filesConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "files.json"), err)
+			}
+		}
+		if filesConfig.Params == nil {
+			filesConfig.Params = map[string]string{}
+		}
+		switch tail {
+		case "":
+			var newFilesConfig DatabaseConfig
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&newFilesConfig)
+			if err != nil {
+				return err
+			}
+			filesConfig = newFilesConfig
+		case "dialect":
+			filesConfig.Dialect = cmd.Value.String
+		case "filePath":
+			filesConfig.FilePath = cmd.Value.String
+		case "user":
+			filesConfig.User = cmd.Value.String
+		case "password":
+			filesConfig.Password = cmd.Value.String
+		case "host":
+			filesConfig.Host = cmd.Value.String
+		case "port":
+			filesConfig.Port = cmd.Value.String
+		case "dbName":
+			filesConfig.DBName = cmd.Value.String
+		case "params":
+			var params map[string]string
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&params)
+			if err != nil {
+				return err
+			}
+			filesConfig.Params = params
+		default:
+			io.WriteString(cmd.Stderr, filesHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "files.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		err = encoder.Encode(filesConfig)
+		if err != nil {
+			return err
+		}
+		err = file.Close()
+		if err != nil {
+			return err
+		}
+	case "objects":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "objects.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var objectsConfig ObjectsConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&objectsConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "objects.json"), err)
+			}
+		}
+		switch tail {
+		case "":
+			var newObjectsConfig ObjectsConfig
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&newObjectsConfig)
+			if err != nil {
+				return err
+			}
+			objectsConfig = newObjectsConfig
+		case "provider":
+			objectsConfig.Provider = cmd.Value.String
+		case "filePath":
+			objectsConfig.FilePath = cmd.Value.String
+		case "endpoint":
+			objectsConfig.Endpoint = cmd.Value.String
+		case "region":
+			objectsConfig.Region = cmd.Value.String
+		case "bucket":
+			objectsConfig.Bucket = cmd.Value.String
+		case "accessKeyID":
+			objectsConfig.AccessKeyID = cmd.Value.String
+		case "secretAccessKey":
+			objectsConfig.SecretAccessKey = cmd.Value.String
+		default:
+			io.WriteString(cmd.Stderr, objectsHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "objects.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		err = encoder.Encode(objectsConfig)
+		if err != nil {
+			return err
+		}
+		err = file.Close()
+		if err != nil {
+			return err
+		}
+	case "captcha":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "captcha.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var captchaConfig CaptchaConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&captchaConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "captcha.json"), err)
+			}
+		}
+		switch tail {
+		case "":
+			var newCaptchaConfig CaptchaConfig
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&newCaptchaConfig)
+			if err != nil {
+				return err
+			}
+			captchaConfig = newCaptchaConfig
+		case "verificationURL":
+			captchaConfig.VerificationURL = cmd.Value.String
+		case "siteKey":
+			captchaConfig.SiteKey = cmd.Value.String
+		case "secretKey":
+			captchaConfig.SecretKey = cmd.Value.String
+		default:
+			io.WriteString(cmd.Stderr, captchaHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+	case "dns":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var dnsConfig DNSConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&dnsConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
+			}
+		}
+		switch tail {
+		case "":
+			var newDNSConfig DNSConfig
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&newDNSConfig)
+			if err != nil {
+				return err
+			}
+			dnsConfig = newDNSConfig
+		case "provider":
+			dnsConfig.Provider = cmd.Value.String
+		case "username":
+			dnsConfig.Username = cmd.Value.String
+		case "apiKey":
+			dnsConfig.APIKey = cmd.Value.String
+		case "apiToken":
+			dnsConfig.APIToken = cmd.Value.String
+		case "secretKey":
+			dnsConfig.SecretKey = cmd.Value.String
+		default:
+			io.WriteString(cmd.Stderr, dnsHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "dns.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		err = encoder.Encode(dnsConfig)
+		if err != nil {
+			return err
+		}
+		err = file.Close()
+		if err != nil {
+			return err
+		}
+	case "certmagic":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"), []byte(cmd.Value.String), 0644)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
+	}
 	return nil
 }
 
