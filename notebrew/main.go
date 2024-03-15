@@ -103,6 +103,7 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
+				return nil
 			}
 		}
 		nbrew := &nb10.Notebrew{
@@ -834,17 +835,8 @@ func main() {
 
 		if len(args) > 0 {
 			switch args[0] {
-			case "config":
-				cmd, err := ConfigCommand(configDir, args[1:]...)
-				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
-				}
-				err = cmd.Run()
-				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
-				}
 			case "createinvite":
-				cmd, err := CreateinviteCommand(nbrew, args[1:]...)
+				cmd, err := CreateinviteCommand(nbrew, configDir, args[1:]...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}

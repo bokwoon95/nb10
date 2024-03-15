@@ -15,7 +15,8 @@ import (
 )
 
 const configHelp = `Usage:
-  notebrew config [KEY] [VALUE]
+  notebrew config [KEY]                           # print the value of the key
+  notebrew config [KEY] [VALUE]                   # set the value of the key
   notebrew config port                            # prints the value of port
   notebrew config port 443                        # sets the value of port to 443
   notebrew config database                        # prints the database configuration
