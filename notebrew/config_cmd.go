@@ -47,6 +47,8 @@ const filesHelp = `# == files keys == #
 # params   - Database-specific connection parameters
 `
 
+// Please run `notebrew config database.dialect sqlite` to setup up the database.
+
 type ObjectsConfig struct {
 	Provider        string `json:"provider"`
 	FilePath        string `json:"filePath"`
