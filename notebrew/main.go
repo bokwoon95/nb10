@@ -836,7 +836,7 @@ func main() {
 		if len(args) > 0 {
 			switch args[0] {
 			case "createinvite":
-				cmd, err := CreateinviteCommand(nbrew, configDir, args[1:]...)
+				cmd, err := CreateinviteCommand(configDir, nbrew, args[1:]...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
@@ -845,9 +845,17 @@ func main() {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
 			case "createsite":
+				cmd, err := CreatesiteCommand(configDir, nbrew, args[1:]...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", args[0], err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", args[0], err)
+				}
 			case "createuser":
 			case "deleteinvite":
-				cmd, err := DeleteinviteCommand(nbrew, args[1:]...)
+				cmd, err := DeleteinviteCommand(configDir, nbrew, args[1:]...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}

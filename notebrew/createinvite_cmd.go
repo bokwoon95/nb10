@@ -28,7 +28,7 @@ type CreateinviteCmd struct {
 	Count        sql.NullInt64
 }
 
-func CreateinviteCommand(nbrew *nb10.Notebrew, configDir string, args ...string) (*CreateinviteCmd, error) {
+func CreateinviteCommand(configDir string, nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd, error) {
 	if nbrew.DB == nil {
 		return nil, fmt.Errorf("%s has not been configured: to fix, run `notebrew config database.dialect sqlite`", filepath.Join(configDir, "database.json"))
 	}
