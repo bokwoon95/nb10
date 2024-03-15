@@ -158,27 +158,27 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
 		}
 		b = bytes.TrimSpace(b)
+		var databaseConfig struct {
+			Dialect  string
+			FilePath string
+			User     string
+			Password string
+			Host     string
+			Port     string
+			DBName   string
+			Params   map[string]string
+		}
 		if len(b) > 0 {
-			var databaseConfig struct {
-				Dialect  string
-				FilePath string
-				User     string
-				Password string
-				Host     string
-				Port     string
-				DBName   string
-				Params   map[string]string
-			}
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&databaseConfig)
 			if err != nil {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
 			}
+		}
+		if databaseConfig.Dialect != "" {
 			var dataSourceName string
 			switch databaseConfig.Dialect {
-			case "":
-				return fmt.Errorf("%s: missing dialect field", filepath.Join(configDir, "database.json"))
 			case "sqlite":
 				if databaseConfig.FilePath == "" {
 					databaseConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-database.db")
@@ -269,6 +269,7 @@ func main() {
 				return fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "database.json"), databaseConfig.Dialect)
 			}
 
+			err := nbrew.DB.Ping()
 			if err != nil {
 				return fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "database.json"), nbrew.Dialect, dataSourceName, err)
 			}
