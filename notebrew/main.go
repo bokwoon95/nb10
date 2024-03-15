@@ -75,6 +75,7 @@ func main() {
 		if err != nil {
 			return err
 		}
+		args := flagset.Args()
 		if configDir == "" {
 			configDir = filepath.Join(configHomeDir, "notebrew-config")
 			err := os.MkdirAll(configDir, 0755)
@@ -91,6 +92,19 @@ func main() {
 		configDir, err = filepath.Abs(filepath.FromSlash(configDir))
 		if err != nil {
 			return err
+		}
+		if len(args) > 0 {
+			command, args := args[0], args[1:]
+			if command == "config" {
+				cmd, err := ConfigCommand(configDir, args...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+			}
 		}
 		nbrew := &nb10.Notebrew{
 			Logger: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -819,7 +833,6 @@ func main() {
 		// irm github.com/bokwoon95/notebrew/install.cmd | iex
 		// curl github.com/bokwoon95/notebrew/install.sh | sh
 
-		args := flagset.Args()
 		if len(args) > 0 {
 			command, args := args[0], args[1:]
 			switch command {
