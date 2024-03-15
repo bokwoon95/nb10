@@ -107,7 +107,7 @@ func (cmd *CreateinviteCmd) Run() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/admin/signup/?token="+strings.TrimLeft(hex.EncodeToString(inviteToken[:]), "0"))
+		fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/invite/?token="+strings.TrimLeft(hex.EncodeToString(inviteToken[:]), "0"))
 	}
 	return nil
 }
