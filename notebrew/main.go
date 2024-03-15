@@ -285,7 +285,6 @@ func main() {
 				DB:             nbrew.DB,
 				Dialect:        nbrew.Dialect,
 				DestCatalog:    databaseCatalog,
-				DropObjects:    true, // TODO: turn this off when we go live.
 				AcceptWarnings: true,
 				Stderr:         io.Discard,
 			}
@@ -465,7 +464,6 @@ func main() {
 				DB:             db,
 				Dialect:        dialect,
 				DestCatalog:    filesCatalog,
-				DropObjects:    true, // TODO: turn this off when we go live.
 				AcceptWarnings: true,
 				Stderr:         io.Discard,
 			}
@@ -831,9 +829,25 @@ func main() {
 			_ = args
 			switch command {
 			case "createinvite":
+				cmd, err := CreateinviteCommand(nbrew, args...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "createsite":
 			case "createuser":
 			case "deleteinvite":
+				cmd, err := DeleteinviteCommand(nbrew, args...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "deletesite":
 			case "deleteuser":
 			case "hashpassword":
