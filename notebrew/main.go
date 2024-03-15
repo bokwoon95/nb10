@@ -37,11 +37,6 @@ type SMTPConfig struct {
 	Port     string
 }
 
-type CaptchaConfig struct {
-	SecretKey string
-	SiteKey   string
-}
-
 var (
 	open     = func(address string) {}
 	startmsg = "Running on %s\n"
@@ -51,7 +46,7 @@ var (
 // - static private: users.json, dns.json, s3.json, smtp.json (excluded)
 // - static public: files.txt cmsdomain.txt, contentdomain.txt, multisite.txt
 // - dynamic private: captcha.json
-// - dynamic public: allowsignup.txt, 503.html
+// port.txt cmsdomain.txt contentdomain.txt imgdomain.txt database.json files.json objects.json captcha.json dns.json certmagic.txt
 
 func main() {
 	// Wrap main in anonymous function to honor deferred calls.
@@ -103,19 +98,19 @@ func main() {
 			})),
 		}
 
-		// CMS domain.
-		b, err := os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "cmsdomain.txt"), err)
-		}
-		nbrew.CMSDomain = string(bytes.TrimSpace(b))
-
 		// Port.
-		b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
+		b, err := os.ReadFile(filepath.Join(configDir, "port.txt"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
 		}
 		port := string(bytes.TrimSpace(b))
+
+		// CMS domain.
+		b, err = os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "cmsdomain.txt"), err)
+		}
+		nbrew.CMSDomain = string(bytes.TrimSpace(b))
 
 		// Determine the TCP address to listen on (based on the CMS domain and port).
 		var addr string
@@ -450,7 +445,7 @@ func main() {
 					return ""
 				}
 			default:
-				return fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "database.json"), filesConfig.Dialect)
+				return fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), filesConfig.Dialect)
 			}
 			err = db.Ping()
 			if err != nil {
@@ -826,8 +821,16 @@ func main() {
 		args := flagset.Args()
 		if len(args) > 0 {
 			command, args := args[0], args[1:]
-			_ = args
 			switch command {
+			case "config":
+				cmd, err := ConfigCommand(configDir, args...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "createinvite":
 				cmd, err := CreateinviteCommand(nbrew, args...)
 				if err != nil {

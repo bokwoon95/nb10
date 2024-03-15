@@ -35,6 +35,9 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+notebrew config 'database.dialect'
+notebrew config 'database.dialect' sqlite
+
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
 - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
@@ -44,3 +47,19 @@ notebrew/open_browser.go
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
+
+$ notebrew config cmsdomain
+# CMS Domain
+cmsdomain = ""
+
+$ notebrew config database
+# Dialect is the dialect of the database
+dialect = ""
+
+# FilePath
+filePath = ""
+
+# Endpoint
+endpoint = ""
+
+notebrew config database '{"sqlite":""}'

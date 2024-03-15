@@ -1,0 +1,352 @@
+package main
+
+import (
+	"bytes"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+type DatabaseConfig struct {
+	Dialect  string            `json:"dialect"`
+	FilePath string            `json:"filePath"`
+	User     string            `json:"user"`
+	Password string            `json:"password"`
+	Host     string            `json:"host"`
+	Port     string            `json:"port"`
+	DBName   string            `json:"dbName"`
+	Params   map[string]string `json:"params"`
+}
+
+const databaseHelp = `# == database keys == #
+# dialect  - Database dialect (possible values: sqlite, postgres, mysql).
+# filePath - File path to the sqlite file (if dialect is sqlite).
+# user     - Database user
+# password - Database password
+# host     - Database host
+# port     - Database port
+# dbName   - Database name
+# params   - Database-specific connection parameters
+`
+
+const filesHelp = `# == files keys == #
+# Choose between using the local filesystem (backed by a plain old directory) or a remote filesystem (backed by a database) to store files.
+# dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using the local filesystem).
+# filePath - Files root directory (if using the local filesystem) or file path to the sqlite file (if using sqlite).
+# user     - Database user
+# password - Database password
+# host     - Database host
+# port     - Database port
+# dbName   - Database name
+# params   - Database-specific connection parameters
+`
+
+type ObjectsConfig struct {
+	Provider        string `json:"provider"`
+	FilePath        string `json:"filePath"`
+	Endpoint        string `json:"endpoint"`
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
+	AccessKeyID     string `json:"accessKeyID"`
+	SecretAccessKey string `json:"secretAccessKey"`
+}
+
+const objectsHelp = `# == objects keys == #
+# Choose between using the local filesystem (backed by a plain old directory) or an S3-compatible provider to store objects. Only applicable if using the remote filesytem.
+# provider        - Object storage provider (possible values: s3, local)
+# filePath        - Objects root directory (if using the local filesystem)
+# endpoint        - S3 endpoint.
+# region          - S3 region.
+# bucket          - S3 bucket.
+# accessKeyID     - S3 access key ID.
+# secretAccessKey - S3 secret access key.
+`
+
+type CaptchaConfig struct {
+	VerificationURL string `json:"verificationURL"`
+	SiteKey         string `json:"siteKey"`
+	SecretKey       string `json:"secretKey"`
+}
+
+const captchaHelp = `# == captcha keys == #
+# verificationURL - Captcha provider's verification URL to make POST requests to.
+# siteKey         - Captcha provider's site key.
+# secretKey       - Captcha provider's secret key.
+`
+
+type DNSConfig struct {
+	Provider  string `json:"provider"`
+	Username  string `json:"username"`
+	APIKey    string `json:"apiKey"`
+	APIToken  string `json:"apiToken"`
+	SecretKey string `json:"secretKey"`
+}
+
+const dnsHelp = `# == dns keys == #
+# provider  - DNS provider (possible values: namecheap, cloudflare, porkbun, godaddy)
+# username  - DNS API username   (required by: namecheap)
+# apiKey    - DNS API key        (required by: namecheap, porkbun)
+# apiToken  - DNS API token      (required by: cloudflare, godaddy)
+# secretKey - DNS API secret key (required by: porkbun)
+`
+
+type ConfigCmd struct {
+	ConfigDir string
+	Stdout    io.Writer
+	Stderr    io.Writer
+	Key       sql.NullString
+	Value     sql.NullString
+}
+
+func ConfigCommand(configDir string, args ...string) (*ConfigCmd, error) {
+	var cmd ConfigCmd
+	cmd.ConfigDir = configDir
+	if len(args) > 0 {
+		cmd.Key = sql.NullString{String: args[0], Valid: true}
+	}
+	if len(args) > 1 {
+		cmd.Value = sql.NullString{String: args[1], Valid: true}
+	}
+	if len(args) > 2 {
+		return nil, fmt.Errorf("too many arguments (max 2)")
+	}
+	return &cmd, nil
+}
+
+// port.txt cmsdomain.txt contentdomain.txt imgdomain.txt database.json files.json objects.json captcha.json dns.json certmagic.txt
+
+func (cmd *ConfigCmd) Run() error {
+	const configHelp = `Usage:
+  notebrew config [KEY] [VALUE]
+  notebrew config port                            # prints the value of port
+  notebrew config port 443                        # sets the value of port to 443
+  notebrew config database                        # prints the database configuration
+  notebrew config database '{"dialect":"sqlite"}' # sets the database configuration
+  notebrew config database.dialect sqlite         # sets the database dialect to sqlite
+
+Keys:
+  notebrew config port          # (txt) The port that notebrew listens on.
+  notebrew config cmsdomain     # (txt) The domain that the CMS is served on.
+  notebrew config contentdomain # (txt) The domain that the content is served on.
+  notebrew config imgdomain     # (txt) The domain that images are served on.
+  notebrew config database      # (json) Database configuration.
+  notebrew config files         # (json) File system configuration.
+  notebrew config objects       # (json) Object storage configuration.
+  notebrew config captcha       # (json) Captcha configuration.
+  notebrew config dns           # (json) DNS provider configuration.
+  notebrew config certmagic     # (txt) certmagic directory for storing SSL certificates.
+`
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
+	if cmd.Stderr == nil {
+		cmd.Stderr = os.Stderr
+	}
+	if !cmd.Key.Valid {
+		io.WriteString(cmd.Stderr, configHelp)
+		return nil
+	}
+	head, tail, _ := strings.Cut(cmd.Key.String, ".")
+	if !cmd.Value.Valid {
+		switch head {
+		case "":
+			return fmt.Errorf("key cannot be empty")
+		case "port":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "port.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
+			if err != nil {
+				return err
+			}
+		case "cmsdomain":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "cmsdomain.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
+			if err != nil {
+				return err
+			}
+		case "contentdomain":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "contentdomain.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
+			if err != nil {
+				return err
+			}
+		case "imgdomain":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
+			if err != nil {
+				return err
+			}
+		case "database":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			var databaseConfig DatabaseConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&databaseConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "database.json"), err)
+				}
+			}
+			if databaseConfig.Params == nil {
+				databaseConfig.Params = map[string]string{}
+			}
+			switch tail {
+			case "":
+				io.WriteString(cmd.Stderr, databaseHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(databaseConfig)
+				if err != nil {
+					return err
+				}
+			case "dialect":
+				io.WriteString(cmd.Stdout, databaseConfig.Dialect+"\n")
+			case "filePath":
+				io.WriteString(cmd.Stdout, databaseConfig.FilePath+"\n")
+			case "user":
+				io.WriteString(cmd.Stdout, databaseConfig.User+"\n")
+			case "password":
+				io.WriteString(cmd.Stdout, databaseConfig.Password+"\n")
+			case "host":
+				io.WriteString(cmd.Stdout, databaseConfig.Host+"\n")
+			case "port":
+				io.WriteString(cmd.Stdout, databaseConfig.Port+"\n")
+			case "dbName":
+				io.WriteString(cmd.Stdout, databaseConfig.DBName+"\n")
+			case "params":
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(databaseConfig.Params)
+				if err != nil {
+					return err
+				}
+			default:
+				io.WriteString(cmd.Stderr, databaseHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+		case "files":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "files.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			var filesConfig DatabaseConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&filesConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "files.json"), err)
+				}
+			}
+			if filesConfig.Params == nil {
+				filesConfig.Params = map[string]string{}
+			}
+			switch tail {
+			case "":
+				io.WriteString(cmd.Stderr, filesHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(filesConfig)
+				if err != nil {
+					return err
+				}
+			case "dialect":
+				io.WriteString(cmd.Stdout, filesConfig.Dialect+"\n")
+			case "filePath":
+				io.WriteString(cmd.Stdout, filesConfig.FilePath+"\n")
+			case "user":
+				io.WriteString(cmd.Stdout, filesConfig.User+"\n")
+			case "password":
+				io.WriteString(cmd.Stdout, filesConfig.Password+"\n")
+			case "host":
+				io.WriteString(cmd.Stdout, filesConfig.Host+"\n")
+			case "port":
+				io.WriteString(cmd.Stdout, filesConfig.Port+"\n")
+			case "dbName":
+				io.WriteString(cmd.Stdout, filesConfig.DBName+"\n")
+			case "params":
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(filesConfig.Params)
+				if err != nil {
+					return err
+				}
+			default:
+				io.WriteString(cmd.Stderr, filesHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+		case "objects":
+			switch tail {
+			case "":
+			case "provider":
+			case "filePath":
+			case "endpoint":
+			case "region":
+			case "bucket":
+			case "accessKeyID":
+			case "secretAccessKey":
+			default:
+				return fmt.Errorf("invalid key %q", cmd.Key.String)
+			}
+		case "captcha":
+			switch tail {
+			case "":
+			case "verificationURL":
+			case "siteKey":
+			case "secretKey":
+			default:
+				return fmt.Errorf("invalid key %q", cmd.Key.String)
+			}
+		case "dns":
+			switch tail {
+			case "":
+			case "provider":
+			case "username":
+			case "apiKey":
+			case "apiToken":
+			case "secretKey":
+			default:
+				return fmt.Errorf("invalid key %q", cmd.Key.String)
+			}
+		case "certmagic":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
+			if err != nil {
+				return err
+			}
+			return nil
+		default:
+			return fmt.Errorf("invalid key %q", cmd.Key.String)
+		}
+	}
+	return nil
+}
+
+// config [file] # print the file contents together with each field's configuration value
+// config [file] [key]
+// config [file] [key] [value]
+
+// config 'database.dialect' sqlite
