@@ -539,6 +539,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		} else {
 			dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(outputDir)
 			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil
+				}
 				return err
 			}
 			subgroup, subctx := errgroup.WithContext(groupctx)
@@ -660,8 +663,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					}
 					defer file.Close()
 					reader := readerPool.Get().(*bufio.Reader)
+					reader.Reset(file)
 					defer func() {
-						reader.Reset(file)
+						reader.Reset(empty)
 						readerPool.Put(reader)
 					}()
 					done := false

@@ -35,6 +35,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: get the local filesystem working :/
 TODO: createsite_cmd.go: mirror what createsite.go already does, plus bake in assumptions that we require the database to exist. `notebrew createsite` *requires* the database to exist, if you want to createsite without a database then use the web UI on localhost.
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.

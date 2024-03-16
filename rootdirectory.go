@@ -188,18 +188,13 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				internalServerError(w, r, err)
 				return
 			}
-			isDir := fileInfo.IsDir()
-			containsDot := strings.Contains(name, ".")
-			if (isDir && !containsDot) || (!isDir && containsDot) {
-				continue
-			}
 			var absolutePath string
 			if localFS, ok := nbrew.FS.(*LocalFS); ok {
 				absolutePath = path.Join(localFS.RootDir, sitePrefix, name)
 			}
 			response.Files = append(response.Files, File{
 				Name:         fileInfo.Name(),
-				IsDir:        true,
+				IsDir:        fileInfo.IsDir(),
 				ModTime:      fileInfo.ModTime(),
 				CreationTime: CreationTime(absolutePath, fileInfo),
 			})
