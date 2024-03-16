@@ -99,11 +99,11 @@ func main() {
 			if command == "config" {
 				cmd, err := ConfigCommand(configDir, commandArgs...)
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 				err = cmd.Run()
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 				return nil
 			}
