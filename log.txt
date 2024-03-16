@@ -38,7 +38,7 @@ notebrew/open_browser.go
 TODO: The rest of the commands, then we can setup login.go and logout.go then throw it up behind hetzner.
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
-BUG: localfs: can't create a new file entry.
+BUG: localfs: can't create a navigation link (site_json.go:299:open C:\Users\cbw\notebrew-files\@bokwoon\\output\posts: The system cannot find the file specified.).
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
 
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
