@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	texttemplate "text/template"
 
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
@@ -330,7 +331,15 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() error {
-			b, err := fs.ReadFile(RuntimeFS, "embed/site.json")
+			var home string
+			if response.SiteName == "" {
+				home = "home"
+			} else if strings.Contains(response.SiteName, ".") {
+				home = response.SiteName
+			} else {
+				home = response.SiteName + "." + nbrew.ContentDomain
+			}
+			tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil
@@ -341,7 +350,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				return nil
 			}
 			defer writer.Close()
-			_, err = writer.Write(b)
+			err = tmpl.Execute(writer, home)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil

@@ -88,20 +88,10 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 		if err != nil {
 			return nil, err
 		}
-	}
-	if config.Lang == "" {
+	} else {
 		config.Lang = "en"
-	}
-	if config.Emoji == "" {
 		config.Emoji = "☕"
-	}
-	if config.Favicon == "" {
-		config.Favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>" + config.Emoji + "</text></svg>"
-	}
-	if config.CodeStyle == "" {
 		config.CodeStyle = "onedark"
-	}
-	if len(config.NavigationLinks) == 0 {
 		var home string
 		siteName := strings.TrimPrefix(sitePrefix, "@")
 		if siteName == "" {
@@ -115,6 +105,13 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 			{Name: home, URL: "/"},
 			{Name: "posts", URL: "/posts/"},
 		}
+	}
+	if config.Favicon == "" {
+		emoji := config.Emoji
+		if emoji == "" {
+			emoji = "☕"
+		}
+		config.Favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>" + emoji + "</text></svg>"
 	}
 	siteGen.markdown = goldmark.New(
 		goldmark.WithParserOptions(parser.WithAttribute()),

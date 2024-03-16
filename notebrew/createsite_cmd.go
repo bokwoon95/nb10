@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	texttemplate "text/template"
 
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
@@ -115,7 +116,15 @@ func (cmd *CreatesiteCmd) Run() error {
 	}
 	group, groupctx := errgroup.WithContext(context.Background())
 	group.Go(func() error {
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/site.json")
+		var home string
+		if cmd.SiteName == "" {
+			home = "home"
+		} else if strings.Contains(cmd.SiteName, ".") {
+			home = cmd.SiteName
+		} else {
+			home = cmd.SiteName + "." + cmd.Notebrew.ContentDomain
+		}
+		tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
 		if err != nil {
 			return err
 		}
@@ -124,7 +133,7 @@ func (cmd *CreatesiteCmd) Run() error {
 			return err
 		}
 		defer writer.Close()
-		_, err = writer.Write(b)
+		err = tmpl.Execute(writer, home)
 		if err != nil {
 			return err
 		}

@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	texttemplate "text/template"
 	"time"
 
 	"github.com/bokwoon95/nb10"
@@ -651,7 +652,7 @@ func main() {
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
-			b, err := fs.ReadFile(nb10.RuntimeFS, "embed/site.json")
+			tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
 			if err != nil {
 				return err
 			}
@@ -660,7 +661,7 @@ func main() {
 				return err
 			}
 			defer writer.Close()
-			_, err = writer.Write(b)
+			err = tmpl.Execute(writer, "home")
 			if err != nil {
 				return err
 			}

@@ -5,5 +5,14 @@
   "favicon": "",
   "codeStyle": "onedark",
   "description": "# Hello World!\n\nWelcome to my blog.",
-  "navigationLinks": []
+  "navigationLinks": [
+    {
+      "name": "{{ $ }}",
+      "url": "/"
+    },
+    {
+      "name": "posts",
+      "url": "/posts/"
+    }
+  ]
 }
