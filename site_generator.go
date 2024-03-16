@@ -1288,6 +1288,9 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	group.Go(func() error {
 		dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(path.Join(siteGen.sitePrefix, "output/posts", category))
 		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
 			return err
 		}
 		subgroup, subctx := errgroup.WithContext(groupctx)

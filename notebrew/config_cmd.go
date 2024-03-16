@@ -333,6 +333,7 @@ func (cmd *ConfigCmd) Run() error {
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
 		default:
+			io.WriteString(cmd.Stderr, configHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
 		}
 	}

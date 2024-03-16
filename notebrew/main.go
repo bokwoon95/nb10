@@ -95,8 +95,9 @@ func main() {
 			return err
 		}
 		if len(args) > 0 {
-			if args[0] == "config" {
-				cmd, err := ConfigCommand(configDir, args[1:]...)
+			command, commandArgs := args[0], args[1:]
+			if command == "config" {
+				cmd, err := ConfigCommand(configDir, commandArgs...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
@@ -835,34 +836,35 @@ func main() {
 		// curl github.com/bokwoon95/notebrew/install.sh | sh
 
 		if len(args) > 0 {
-			switch args[0] {
+			command, commandArgs := args[0], args[1:]
+			switch command {
 			case "createinvite":
-				cmd, err := CreateinviteCommand(nbrew, args[1:]...)
+				cmd, err := CreateinviteCommand(nbrew, commandArgs...)
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 				err = cmd.Run()
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "createsite":
-				cmd, err := CreatesiteCommand(nbrew, args[1:]...)
+				cmd, err := CreatesiteCommand(nbrew, commandArgs...)
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 				err = cmd.Run()
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "createuser":
 			case "deleteinvite":
-				cmd, err := DeleteinviteCommand(nbrew, args[1:]...)
+				cmd, err := DeleteinviteCommand(nbrew, commandArgs...)
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 				err = cmd.Run()
 				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
+					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "deletesite":
 			case "deleteuser":
@@ -873,7 +875,7 @@ func main() {
 			case "status":
 			case "stop":
 			default:
-				return fmt.Errorf("unknown command %s", args[0])
+				return fmt.Errorf("unknown command %s", command)
 			}
 			return nil
 		}
