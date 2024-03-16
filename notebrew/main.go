@@ -867,6 +867,14 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "deletesite":
+				cmd, err := DeletesiteCommand(nbrew, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "deleteuser":
 			case "hashpassword":
 			case "permissions":
