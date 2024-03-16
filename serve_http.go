@@ -214,8 +214,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				result.UserID = row.UUID("users.user_id")
 				result.Username = row.String("users.username")
 				result.DisableReason = row.String("users.disable_reason")
-				result.SiteLimit = row.Int64("users.site_limit")
-				result.StorageLimit = row.Int64("users.storage_limit")
+				result.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
+				result.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
 				result.IsAuthorizedForSite = row.Bool("EXISTS (SELECT 1"+
 					" FROM site"+
 					" JOIN site_user ON site_user.site_id = site.site_id"+

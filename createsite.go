@@ -60,7 +60,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			n++
 		}
 		userSiteNames = userSiteNames[:n]
-		return userSiteNames, !unlimitedSites && len(userSiteNames) >= int(user.SiteLimit), nil
+		return userSiteNames, !unlimitedSites && user.SiteLimit >= 0 && len(userSiteNames) >= int(user.SiteLimit), nil
 	}
 
 	switch r.Method {

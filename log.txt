@@ -35,13 +35,13 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: createsite_cmd.go: mirror what createsite.go already does, plus bake in assumptions that we require the database to exist. `notebrew createsite` *requires* the database to exist, if you want to createsite without a database then use the web UI on localhost.
+TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
+TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
+BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
+
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
 - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
 - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
-
-TODO: createsite_cmd.go: mirror what createsite.go already does, plus bake in assumptions that we require the database to exist. `notebrew createsite` *requires* the database to exist, if you want to createsite without a database then use the web UI on localhost.
-TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
-TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
-BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
