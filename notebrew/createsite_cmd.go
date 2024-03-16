@@ -22,7 +22,7 @@ type CreatesiteCmd struct {
 	SiteName string
 }
 
-func CreatesiteCommand(configDir string, nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, error) {
+func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, error) {
 	var cmd CreatesiteCmd
 	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)

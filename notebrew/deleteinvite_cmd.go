@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -24,9 +23,9 @@ type DeleteinviteCmd struct {
 	After    sql.NullTime
 }
 
-func DeleteinviteCommand(configDir string, nbrew *nb10.Notebrew, args ...string) (*DeleteinviteCmd, error) {
+func DeleteinviteCommand(nbrew *nb10.Notebrew, args ...string) (*DeleteinviteCmd, error) {
 	if nbrew.DB == nil {
-		return nil, fmt.Errorf("%s has not been configured: to fix, run `notebrew config database.dialect sqlite`", filepath.Join(configDir, "database.json"))
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
 	}
 	var cmd DeleteinviteCmd
 	cmd.Notebrew = nbrew
