@@ -36,6 +36,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: The rest of the commands, then we can setup login.go and logout.go then throw it up behind hetzner.
+    - Once you get the flag design up, debug why entering the wrong password doesn't trigger a flash message nor does it add a new IP entry.
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
