@@ -22,7 +22,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"mime"
-	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -100,6 +99,8 @@ func init() {
 
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
+	Logger *slog.Logger
+
 	// FS is the file system associated with the notebrew instance.
 	FS FS
 
@@ -121,13 +122,18 @@ type Notebrew struct {
 
 	ImgDomain string
 
-	CaptchaVerificationURL string
+	CaptchaConfig struct {
+		WidgetScriptSrc template.URL
+		WidgetClass     string
+		VerificationURL string
+		SiteKey         string
+		SecretKey       string
+	}
 
-	CaptchaSiteKey string
-
-	CaptchaSecretKey string
-
-	Logger *slog.Logger
+	ProxyConfig struct {
+		RealIPHeaders map[netip.Addr]string
+		ProxyIPs      map[netip.Addr]struct{}
+	}
 }
 
 type User struct {
@@ -866,60 +872,6 @@ func WriteFile(ctx context.Context, fsys FS, filePath string, reader io.Reader) 
 		return err
 	}
 	return nil
-}
-
-func (nbrew *Notebrew) realClientIP(r *http.Request, trustedProxyHeaders map[netip.Addr]string, proxies map[netip.Addr]struct{}) string {
-	// Reference: https://adam-p.ca/blog/2022/03/x-forwarded-for/
-	// proxies.json example:
-	// {proxyIPs: ["<ip>", "<ip>", "<ip>"], forwardedIPHeaders: {"<ip>": "X-Real-IP", "<ip>": "CF-Connecting-IP"}}
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return ""
-	}
-	remoteAddr, err := netip.ParseAddr(strings.TrimSpace(ip))
-	if err != nil {
-		return ""
-	}
-	// If we don't have any proxy servers configured (i.e. we are directly
-	// connected to the internet), treat remoteAddr as the real client IP.
-	if len(trustedProxyHeaders) == 0 && len(proxies) == 0 {
-		return remoteAddr.String()
-	}
-	// If remoteAddr is trusted to populate a known header with the real client
-	// IP, look in that header.
-	if trustedHeader, ok := trustedProxyHeaders[remoteAddr]; ok {
-		ipAddr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(trustedHeader)))
-		if err != nil {
-			return ""
-		}
-		return ipAddr.String()
-	}
-	// Check X-Forwarded-For header only if remoteAddr is the IP of a proxy
-	// server.
-	_, ok := proxies[remoteAddr]
-	if !ok {
-		return remoteAddr.String()
-	}
-	// Loop over all IP addresses in X-Forwarded-For headers from right to
-	// left. We want to rightmost IP address that isn't a proxy server's IP
-	// address.
-	values := r.Header.Values("X-Forwarded-For")
-	for i := len(values) - 1; i >= 0; i-- {
-		ips := strings.Split(values[i], ",")
-		for j := len(ips) - 1; j >= 0; j-- {
-			ip := ips[j]
-			ipAddr, err := netip.ParseAddr(strings.TrimSpace(ip))
-			if err != nil {
-				continue
-			}
-			_, ok := proxies[ipAddr]
-			if ok {
-				continue
-			}
-			return ipAddr.String()
-		}
-	}
-	return ""
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs.FileInfo, fileType FileType, cacheControl string) {

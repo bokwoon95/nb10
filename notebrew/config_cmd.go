@@ -32,6 +32,7 @@ Keys:
   notebrew config files         # (json) File system configuration.
   notebrew config objects       # (json) Object storage configuration.
   notebrew config captcha       # (json) Captcha configuration.
+  notebrew config proxy         # (json) Proxy configuration.
   notebrew config dns           # (json) DNS provider configuration.
   notebrew config certmagic     # (txt) certmagic directory for storing SSL certificates.
 `
@@ -287,6 +288,47 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, captchaConfig.SecretKey+"\n")
 			default:
 				io.WriteString(cmd.Stderr, captchaHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+		case "proxy":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			var proxyConfig ProxyConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&proxyConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "proxy.json"), err)
+				}
+			}
+			switch tail {
+			case "":
+				io.WriteString(cmd.Stderr, proxyHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(proxyConfig)
+				if err != nil {
+					return err
+				}
+			case "realIPHeaders":
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(proxyConfig.RealIPHeaders)
+				if err != nil {
+					return err
+				}
+			case "proxies":
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(proxyConfig.ProxyIPs)
+				if err != nil {
+					return err
+				}
+			default:
+				io.WriteString(cmd.Stderr, proxyHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		case "dns":
@@ -589,6 +631,48 @@ func (cmd *ConfigCmd) Run() error {
 			io.WriteString(cmd.Stderr, captchaHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 		}
+	case "proxy":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var proxyConfig ProxyConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&proxyConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "proxy.json"), err)
+			}
+		}
+		switch tail {
+		case "":
+			var newProxyConfig ProxyConfig
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&newProxyConfig)
+			if err != nil {
+				return err
+			}
+			proxyConfig = newProxyConfig
+		case "realIPHeaders":
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&proxyConfig.RealIPHeaders)
+			if err != nil {
+				return err
+			}
+		case "proxies":
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&proxyConfig.ProxyIPs)
+			if err != nil {
+				return err
+			}
+		default:
+			io.WriteString(cmd.Stderr, proxyHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
 	case "dns":
 		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -648,6 +732,7 @@ func (cmd *ConfigCmd) Run() error {
 			return err
 		}
 	default:
+		io.WriteString(cmd.Stderr, configHelp)
 		return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
 	}
 	return nil
@@ -665,6 +750,7 @@ type DatabaseConfig struct {
 }
 
 const databaseHelp = `# == database keys == #
+# Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql).
 # filePath - File path to the sqlite file (if dialect is sqlite).
 # user     - Database user
@@ -672,11 +758,12 @@ const databaseHelp = `# == database keys == #
 # host     - Database host
 # port     - Database port
 # dbName   - Database name
-# params   - Database-specific connection parameters
+# params   - Database-specific connection parameters (see https://example.com for more info)
 `
 
 const filesHelp = `# == files keys == #
 # Choose between using the local filesystem (backed by a plain old directory) or a remote filesystem (backed by a database) to store files.
+# Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using the local filesystem).
 # filePath - Files root directory (if using the local filesystem) or file path to the sqlite file (if using sqlite).
 # user     - Database user
@@ -684,7 +771,7 @@ const filesHelp = `# == files keys == #
 # host     - Database host
 # port     - Database port
 # dbName   - Database name
-# params   - Database-specific connection parameters
+# params   - Database-specific connection parameters (see https://example.com for more info)
 `
 
 type ObjectsConfig struct {
@@ -699,6 +786,7 @@ type ObjectsConfig struct {
 
 const objectsHelp = `# == objects keys == #
 # Choose between using the local filesystem (backed by a plain old directory) or an S3-compatible provider to store objects. Only applicable if using the remote filesytem (see ` + "`notebrew config files`" + `).
+# Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider        - Object storage provider (possible values: local, s3)
 # filePath        - Objects root directory (if using the local filesystem)
 # endpoint        - S3 endpoint.
@@ -709,15 +797,31 @@ const objectsHelp = `# == objects keys == #
 `
 
 type CaptchaConfig struct {
+	WidgetScriptSrc string `json:"widgetScriptSrc"`
+	WidgetClass     string `json:"widgetClass"`
 	VerificationURL string `json:"verificationURL"`
 	SiteKey         string `json:"siteKey"`
 	SecretKey       string `json:"secretKey"`
 }
 
 const captchaHelp = `# == captcha keys == #
-# verificationURL - Captcha provider's verification URL to make POST requests to.
-# siteKey         - Captcha provider's site key.
-# secretKey       - Captcha provider's secret key.
+# Refer to ` + "`notebrew config`" + ` on how to get and set config values.
+# widgetScriptSrc - Captcha widget's script src.
+# widgetClass     - Captcha widget's container div class.
+# verificationURL - Captcha verification URL to make POST requests to.
+# siteKey         - Captcha site key.
+# secretKey       - Captcha secret key.
+`
+
+type ProxyConfig struct {
+	RealIPHeaders map[string]string `json:"realIPHeaders"`
+	ProxyIPs      []string          `json:"proxyIPs"`
+}
+
+const proxyHelp = `# == proxy keys == #
+# Refer to ` + "`notebrew config`" + ` on how to get and set config values.
+# realIPHeaders - Object mapping of IP addresses to HTTP Headers where the real client IP is set.
+# proxyIPs      - Array of proxy IP addresses.
 `
 
 type DNSConfig struct {
@@ -729,6 +833,7 @@ type DNSConfig struct {
 }
 
 const dnsHelp = `# == dns keys == #
+# Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider  - DNS provider (possible values: namecheap, cloudflare, porkbun, godaddy)
 # username  - DNS API username   (required by: namecheap)
 # apiKey    - DNS API key        (required by: namecheap, porkbun)

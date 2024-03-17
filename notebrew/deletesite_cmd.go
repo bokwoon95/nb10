@@ -165,18 +165,20 @@ func (cmd DeletesiteCmd) validateSiteName(siteName string) (validationError stri
 	if siteName == "" {
 		return "site name cannot be empty", nil
 	}
-	exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "SELECT 1 FROM users WHERE username = {siteName}",
-		Values: []any{
-			sq.StringParam("siteName", siteName),
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	if exists {
-		return "site is associated with a user, please use deleteuser instead", nil
+	if cmd.Notebrew.DB != nil {
+		exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM users WHERE username = {siteName}",
+			Values: []any{
+				sq.StringParam("siteName", siteName),
+			},
+		})
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return "site is associated with a user, please use deleteuser instead", nil
+		}
 	}
 	var sitePrefix string
 	if strings.Contains(siteName, ".") {
@@ -184,24 +186,28 @@ func (cmd DeletesiteCmd) validateSiteName(siteName string) (validationError stri
 	} else {
 		sitePrefix = "@" + siteName
 	}
+	var existsInFS, existsInDB bool
 	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return "site does not exist", nil
+		if !errors.Is(err, fs.ErrNotExist) {
+			return "", err
 		}
-		return "", err
+	} else {
+		existsInFS = true
 	}
-	exists, err = sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-		Values: []any{
-			sq.StringParam("siteName", siteName),
-		},
-	})
-	if err != nil {
-		return "", err
+	if cmd.Notebrew.DB != nil {
+		existsInDB, err = sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+			Values: []any{
+				sq.StringParam("siteName", siteName),
+			},
+		})
+		if err != nil {
+			return "", err
+		}
 	}
-	if !exists {
+	if !existsInFS && !existsInDB {
 		return "site does not exist", nil
 	}
 	return "", nil

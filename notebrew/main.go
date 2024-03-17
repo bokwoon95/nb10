@@ -8,11 +8,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/signal"
@@ -174,16 +176,7 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
 		}
 		b = bytes.TrimSpace(b)
-		var databaseConfig struct {
-			Dialect  string
-			FilePath string
-			User     string
-			Password string
-			Host     string
-			Port     string
-			DBName   string
-			Params   map[string]string
-		}
+		var databaseConfig DatabaseConfig
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
@@ -330,16 +323,7 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 		}
 		b = bytes.TrimSpace(b)
-		var filesConfig struct {
-			Dialect  string
-			Filepath string
-			User     string
-			Password string
-			Host     string
-			Port     string
-			DBName   string
-			Params   map[string]string
-		}
+		var filesConfig DatabaseConfig
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
@@ -349,21 +333,21 @@ func main() {
 			}
 		}
 		if filesConfig.Dialect == "" {
-			if filesConfig.Filepath == "" {
-				filesConfig.Filepath = filepath.Join(dataHomeDir, "notebrew-files")
-				err := os.MkdirAll(filesConfig.Filepath, 0755)
+			if filesConfig.FilePath == "" {
+				filesConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-files")
+				err := os.MkdirAll(filesConfig.FilePath, 0755)
 				if err != nil {
 					return err
 				}
 			} else {
-				filesConfig.Filepath = filepath.Clean(filesConfig.Filepath)
-				_, err := os.Stat(filesConfig.Filepath)
+				filesConfig.FilePath = filepath.Clean(filesConfig.FilePath)
+				_, err := os.Stat(filesConfig.FilePath)
 				if err != nil {
 					return err
 				}
 			}
 			nbrew.FS, err = nb10.NewLocalFS(nb10.LocalFSConfig{
-				RootDir: filesConfig.Filepath,
+				RootDir: filesConfig.FilePath,
 				TempDir: os.TempDir(),
 			})
 			if err != nil {
@@ -376,14 +360,14 @@ func main() {
 			var errorCode func(error) string
 			switch filesConfig.Dialect {
 			case "sqlite":
-				if filesConfig.Filepath == "" {
-					filesConfig.Filepath = filepath.Join(dataHomeDir, "notebrew-files.db")
+				if filesConfig.FilePath == "" {
+					filesConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-files.db")
 				}
-				filesConfig.Filepath, err = filepath.Abs(filesConfig.Filepath)
+				filesConfig.FilePath, err = filepath.Abs(filesConfig.FilePath)
 				if err != nil {
 					return fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "files.json"), err)
 				}
-				dataSourceName = filesConfig.Filepath + "?" + sqliteQueryString(filesConfig.Params)
+				dataSourceName = filesConfig.FilePath + "?" + sqliteQueryString(filesConfig.Params)
 				dialect = "sqlite"
 				db, err = sql.Open(sqliteDriverName, dataSourceName)
 				if err != nil {
@@ -559,15 +543,7 @@ func main() {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
 			}
 			b = bytes.TrimSpace(b)
-			var objectsConfig struct {
-				Provider        string
-				FilePath        string
-				Endpoint        string
-				Region          string
-				Bucket          string
-				AccessKeyID     string
-				SecretAccessKey string
-			}
+			var objectsConfig ObjectsConfig
 			if len(b) > 0 {
 				decoder := json.NewDecoder(bytes.NewReader(b))
 				decoder.DisallowUnknownFields()
@@ -814,20 +790,50 @@ func main() {
 		}
 		b = bytes.TrimSpace(b)
 		if len(b) > 0 {
-			var captchaConfig struct {
-				VerificationURL string
-				SiteKey         string
-				SecretKey       string
-			}
+			var captchaConfig CaptchaConfig
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&captchaConfig)
 			if err != nil {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
 			}
-			nbrew.CaptchaVerificationURL = captchaConfig.VerificationURL
-			nbrew.CaptchaSiteKey = captchaConfig.SiteKey
-			nbrew.CaptchaSecretKey = captchaConfig.SecretKey
+			nbrew.CaptchaConfig.WidgetScriptSrc = template.URL(captchaConfig.WidgetScriptSrc)
+			nbrew.CaptchaConfig.WidgetClass = captchaConfig.WidgetClass
+			nbrew.CaptchaConfig.VerificationURL = captchaConfig.VerificationURL
+			nbrew.CaptchaConfig.SiteKey = captchaConfig.SiteKey
+			nbrew.CaptchaConfig.SecretKey = captchaConfig.SecretKey
+		}
+
+		// Proxy.
+		b, err = os.ReadFile(filepath.Join(configDir, "proxy.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "proxy.json"), err)
+		}
+		b = bytes.TrimSpace(b)
+		if len(b) > 0 {
+			var proxyConfig ProxyConfig
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&proxyConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "proxy.json"), err)
+			}
+			nbrew.ProxyConfig.RealIPHeaders = make(map[netip.Addr]string)
+			for ip, header := range proxyConfig.RealIPHeaders {
+				addr, err := netip.ParseAddr(ip)
+				if err != nil {
+					return fmt.Errorf("%s: realIPHeaders: %s: %w", filepath.Join(configDir, "proxy.json"), ip, err)
+				}
+				nbrew.ProxyConfig.RealIPHeaders[addr] = header
+			}
+			nbrew.ProxyConfig.ProxyIPs = make(map[netip.Addr]struct{})
+			for _, ip := range proxyConfig.ProxyIPs {
+				addr, err := netip.ParseAddr(ip)
+				if err != nil {
+					return fmt.Errorf("%s: proxyIPs: %s: %w", filepath.Join(configDir, "proxy.json"), ip, err)
+				}
+				nbrew.ProxyConfig.ProxyIPs[addr] = struct{}{}
+			}
 		}
 
 		// TODO:
@@ -857,6 +863,14 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "createuser":
+				cmd, err := CreateuserCommand(nbrew, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "deleteinvite":
 				cmd, err := DeleteinviteCommand(nbrew, commandArgs...)
 				if err != nil {

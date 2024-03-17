@@ -96,10 +96,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// nbrew.invite(w, r)
 			return
 		case "login":
-			// nbrew.login(w, r)
+			nbrew.login(w, r)
 			return
 		case "logout":
-			// nbrew.logout(w, r)
+			nbrew.logout(w, r)
 			return
 		case "resetpassword":
 			// nbrew.resetpassword(w, r)
