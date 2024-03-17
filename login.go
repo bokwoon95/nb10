@@ -56,7 +56,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			return ""
 		}
 		head, tail, _ := strings.Cut(strings.Trim(uri.Path, "/"), "/")
-		if head != "admin" || tail == "" || tail == "login" {
+		if head != "files" || tail == "" {
 			return ""
 		}
 		uri = &url.URL{
