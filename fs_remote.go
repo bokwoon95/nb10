@@ -1404,13 +1404,13 @@ type ObjectStorage interface {
 	Copy(ctx context.Context, srcKey, destKey string) error
 }
 
-type S3Storage struct {
+type S3ObjectStorage struct {
 	Client     *s3.Client
 	Bucket     string
 	PurgeCache func(ctx context.Context, key string) error
 }
 
-var _ ObjectStorage = (*S3Storage)(nil)
+var _ ObjectStorage = (*S3ObjectStorage)(nil)
 
 type S3StorageConfig struct {
 	Endpoint        string
@@ -1421,8 +1421,8 @@ type S3StorageConfig struct {
 	PurgeCache      func(ctx context.Context, key string) error
 }
 
-func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3Storage, error) {
-	storage := &S3Storage{
+func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3ObjectStorage, error) {
+	storage := &S3ObjectStorage{
 		Client: s3.New(s3.Options{
 			BaseEndpoint: aws.String(config.Endpoint),
 			Region:       config.Region,
@@ -1442,7 +1442,7 @@ func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3Storage, erro
 	return storage, nil
 }
 
-func (storage *S3Storage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+func (storage *S3ObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	output, err := storage.Client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
@@ -1459,7 +1459,7 @@ func (storage *S3Storage) Get(ctx context.Context, key string) (io.ReadCloser, e
 	return output.Body, nil
 }
 
-func (storage *S3Storage) Put(ctx context.Context, key string, reader io.Reader) error {
+func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	_, err := storage.Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
@@ -1471,7 +1471,7 @@ func (storage *S3Storage) Put(ctx context.Context, key string, reader io.Reader)
 	return nil
 }
 
-func (storage *S3Storage) Delete(ctx context.Context, key string) error {
+func (storage *S3ObjectStorage) Delete(ctx context.Context, key string) error {
 	_, err := storage.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
@@ -1488,7 +1488,7 @@ func (storage *S3Storage) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (storage *S3Storage) Copy(ctx context.Context, srcKey, destKey string) error {
+func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
 	_, err := storage.Client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     &storage.Bucket,
 		CopySource: aws.String(srcKey),
@@ -1506,21 +1506,21 @@ func (storage *S3Storage) Copy(ctx context.Context, srcKey, destKey string) erro
 	return nil
 }
 
-type InMemoryStorage struct {
+type InMemoryObjectStorage struct {
 	mu      sync.RWMutex
 	entries map[string][]byte
 }
 
-var _ ObjectStorage = (*InMemoryStorage)(nil)
+var _ ObjectStorage = (*InMemoryObjectStorage)(nil)
 
-func NewInMemoryStorage() *InMemoryStorage {
-	return &InMemoryStorage{
+func NewInMemoryObjectStorage() *InMemoryObjectStorage {
+	return &InMemoryObjectStorage{
 		mu:      sync.RWMutex{},
 		entries: make(map[string][]byte),
 	}
 }
 
-func (storage *InMemoryStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+func (storage *InMemoryObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	storage.mu.RLock()
 	value, ok := storage.entries[key]
 	storage.mu.RUnlock()
@@ -1530,7 +1530,7 @@ func (storage *InMemoryStorage) Get(ctx context.Context, key string) (io.ReadClo
 	return io.NopCloser(bytes.NewReader(value)), nil
 }
 
-func (storage *InMemoryStorage) Put(ctx context.Context, key string, reader io.Reader) error {
+func (storage *InMemoryObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	value, err := io.ReadAll(reader)
 	if err != nil {
 		return err
@@ -1541,14 +1541,14 @@ func (storage *InMemoryStorage) Put(ctx context.Context, key string, reader io.R
 	return nil
 }
 
-func (storage *InMemoryStorage) Delete(ctx context.Context, key string) error {
+func (storage *InMemoryObjectStorage) Delete(ctx context.Context, key string) error {
 	storage.mu.Lock()
 	delete(storage.entries, key)
 	storage.mu.Unlock()
 	return nil
 }
 
-func (storage *InMemoryStorage) Copy(ctx context.Context, srcKey, destKey string) error {
+func (storage *InMemoryObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
 	storage.mu.Lock()
 	value, ok := storage.entries[srcKey]
 	if !ok {
@@ -1559,12 +1559,12 @@ func (storage *InMemoryStorage) Copy(ctx context.Context, srcKey, destKey string
 	return nil
 }
 
-type LocalStorage struct {
+type LocalObjectStorage struct {
 	rootDir string
 	tempDir string
 }
 
-func NewLocalStorage(rootDir, tempDir string) (*LocalStorage, error) {
+func NewLocalObjectStorage(rootDir, tempDir string) (*LocalObjectStorage, error) {
 	var err error
 	rootDir, err = filepath.Abs(filepath.FromSlash(rootDir))
 	if err != nil {
@@ -1574,14 +1574,14 @@ func NewLocalStorage(rootDir, tempDir string) (*LocalStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	localStorage := &LocalStorage{
+	localStorage := &LocalObjectStorage{
 		rootDir: filepath.FromSlash(rootDir),
 		tempDir: filepath.FromSlash(tempDir),
 	}
 	return localStorage, nil
 }
 
-func (storage *LocalStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+func (storage *LocalObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	err := ctx.Err()
 	if err != nil {
 		return nil, err
@@ -1599,7 +1599,7 @@ func (storage *LocalStorage) Get(ctx context.Context, key string) (io.ReadCloser
 	return file, nil
 }
 
-func (storage *LocalStorage) Put(ctx context.Context, key string, reader io.Reader) error {
+func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -1669,7 +1669,7 @@ func (storage *LocalStorage) Put(ctx context.Context, key string, reader io.Read
 	return nil
 }
 
-func (storage *LocalStorage) Delete(ctx context.Context, key string) error {
+func (storage *LocalObjectStorage) Delete(ctx context.Context, key string) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -1684,7 +1684,7 @@ func (storage *LocalStorage) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (storage *LocalStorage) Copy(ctx context.Context, srcKey, destKey string) error {
+func (storage *LocalObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
 	err := ctx.Err()
 	if err != nil {
 		return err

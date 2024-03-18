@@ -581,7 +581,7 @@ func main() {
 						return err
 					}
 				}
-				objectStorage, err = nb10.NewLocalStorage(objectsConfig.FilePath, os.TempDir())
+				objectStorage, err = nb10.NewLocalObjectStorage(objectsConfig.FilePath, os.TempDir())
 				if err != nil {
 					return err
 				}
