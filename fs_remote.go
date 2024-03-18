@@ -92,9 +92,9 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 	}
 	if name == "." {
 		file := &RemoteFile{
-			ctx:     fsys.Context,
-			storage: fsys.ObjectStorage,
-			info:    &RemoteFileInfo{FilePath: ".", isDir: true},
+			ctx:           fsys.Context,
+			objectStorage: fsys.ObjectStorage,
+			info:          &RemoteFileInfo{FilePath: ".", isDir: true},
 		}
 		return file, nil
 	}
@@ -110,10 +110,10 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 		},
 	}, func(row *sq.Row) *RemoteFile {
 		file := &RemoteFile{
-			ctx:      fsys.Context,
-			fileType: fileType,
-			storage:  fsys.ObjectStorage,
-			info:     &RemoteFileInfo{},
+			ctx:           fsys.Context,
+			fileType:      fileType,
+			objectStorage: fsys.ObjectStorage,
+			info:          &RemoteFileInfo{},
 		}
 		file.info.FileID = row.UUID("file_id")
 		file.info.FilePath = row.String("file_path")
@@ -134,7 +134,7 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 	}
 	file.isFulltextIndexed = isFulltextIndexed(file.info.FilePath)
 	if fileType.IsObject {
-		file.readCloser, err = file.storage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
+		file.readCloser, err = file.objectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +235,7 @@ type RemoteFile struct {
 	ctx               context.Context
 	fileType          FileType
 	isFulltextIndexed bool
-	storage           ObjectStorage
+	objectStorage     ObjectStorage
 	info              *RemoteFileInfo
 	buf               *bytes.Buffer
 	gzipReader        *gzip.Reader
