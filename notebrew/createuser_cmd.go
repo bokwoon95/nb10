@@ -221,7 +221,6 @@ func (cmd *CreateuserCmd) Run() error {
 		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
 			return err
 		}
-		return err
 	}
 	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
@@ -232,7 +231,13 @@ func (cmd *CreateuserCmd) Run() error {
 		},
 	})
 	if err != nil {
-		return err
+		if cmd.Notebrew.ErrorCode == nil {
+			return err
+		}
+		errorCode := cmd.Notebrew.ErrorCode(err)
+		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+			return err
+		}
 	}
 
 	var sitePrefix string
