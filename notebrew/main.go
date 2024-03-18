@@ -551,7 +551,7 @@ func main() {
 				db.Close()
 			}()
 
-			var storage nb10.Storage
+			var storage nb10.ObjectStorage
 			b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
@@ -618,7 +618,7 @@ func main() {
 				DB:        db,
 				Dialect:   dialect,
 				ErrorCode: errorCode,
-				Storage:   storage,
+				ObjectStorage:   storage,
 				Logger:    nbrew.Logger,
 			})
 			if err != nil {

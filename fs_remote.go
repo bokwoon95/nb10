@@ -43,11 +43,11 @@ var gzipWriterPool = sync.Pool{
 }
 
 type RemoteFSConfig struct {
-	DB        *sql.DB
-	Dialect   string
-	ErrorCode func(error) string
-	Storage   Storage
-	Logger    *slog.Logger
+	DB            *sql.DB
+	Dialect       string
+	ErrorCode     func(error) string
+	ObjectStorage ObjectStorage
+	Logger        *slog.Logger
 }
 
 type RemoteFS struct {
@@ -55,7 +55,7 @@ type RemoteFS struct {
 	DB        *sql.DB
 	Dialect   string
 	ErrorCode func(error) string
-	Storage   Storage
+	Storage   ObjectStorage
 	Logger    *slog.Logger
 }
 
@@ -65,7 +65,7 @@ func NewRemoteFS(config RemoteFSConfig) (*RemoteFS, error) {
 		DB:        config.DB,
 		Dialect:   config.Dialect,
 		ErrorCode: config.ErrorCode,
-		Storage:   config.Storage,
+		Storage:   config.ObjectStorage,
 		Logger:    config.Logger,
 	}
 	return remoteFS, nil
@@ -235,7 +235,7 @@ type RemoteFile struct {
 	ctx               context.Context
 	fileType          FileType
 	isFulltextIndexed bool
-	storage           Storage
+	storage           ObjectStorage
 	info              *RemoteFileInfo
 	buf               *bytes.Buffer
 	gzipReader        *gzip.Reader
@@ -435,7 +435,7 @@ type RemoteFileWriter struct {
 	isFulltextIndexed bool
 	db                *sql.DB
 	dialect           string
-	storage           Storage
+	storage           ObjectStorage
 	exists            bool
 	fileID            ID
 	parentID          ID
@@ -1397,7 +1397,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 	return nil
 }
 
-type Storage interface {
+type ObjectStorage interface {
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	Put(ctx context.Context, key string, reader io.Reader) error
 	Delete(ctx context.Context, key string) error
@@ -1410,7 +1410,7 @@ type S3Storage struct {
 	PurgeCache func(ctx context.Context, key string) error
 }
 
-var _ Storage = (*S3Storage)(nil)
+var _ ObjectStorage = (*S3Storage)(nil)
 
 type S3StorageConfig struct {
 	Endpoint        string
@@ -1511,7 +1511,7 @@ type InMemoryStorage struct {
 	entries map[string][]byte
 }
 
-var _ Storage = (*InMemoryStorage)(nil)
+var _ ObjectStorage = (*InMemoryStorage)(nil)
 
 func NewInMemoryStorage() *InMemoryStorage {
 	return &InMemoryStorage{
