@@ -51,34 +51,34 @@ type RemoteFSConfig struct {
 }
 
 type RemoteFS struct {
-	Context   context.Context
-	DB        *sql.DB
-	Dialect   string
-	ErrorCode func(error) string
-	ObjectStorage   ObjectStorage
-	Logger    *slog.Logger
+	Context       context.Context
+	DB            *sql.DB
+	Dialect       string
+	ErrorCode     func(error) string
+	ObjectStorage ObjectStorage
+	Logger        *slog.Logger
 }
 
 func NewRemoteFS(config RemoteFSConfig) (*RemoteFS, error) {
 	remoteFS := &RemoteFS{
-		Context:   context.Background(),
-		DB:        config.DB,
-		Dialect:   config.Dialect,
-		ErrorCode: config.ErrorCode,
-		ObjectStorage:   config.ObjectStorage,
-		Logger:    config.Logger,
+		Context:       context.Background(),
+		DB:            config.DB,
+		Dialect:       config.Dialect,
+		ErrorCode:     config.ErrorCode,
+		ObjectStorage: config.ObjectStorage,
+		Logger:        config.Logger,
 	}
 	return remoteFS, nil
 }
 
 func (fsys *RemoteFS) WithContext(ctx context.Context) FS {
 	return &RemoteFS{
-		Context:   ctx,
-		DB:        fsys.DB,
-		Dialect:   fsys.Dialect,
-		ErrorCode: fsys.ErrorCode,
-		ObjectStorage:   fsys.ObjectStorage,
-		Logger:    fsys.Logger,
+		Context:       ctx,
+		DB:            fsys.DB,
+		Dialect:       fsys.Dialect,
+		ErrorCode:     fsys.ErrorCode,
+		ObjectStorage: fsys.ObjectStorage,
+		Logger:        fsys.Logger,
 	}
 }
 

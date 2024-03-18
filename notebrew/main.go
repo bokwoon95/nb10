@@ -615,11 +615,11 @@ func main() {
 				return fmt.Errorf("%s: unsupported provider %q (possible values: local, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
 			}
 			nbrew.FS, err = nb10.NewRemoteFS(nb10.RemoteFSConfig{
-				DB:        db,
-				Dialect:   dialect,
-				ErrorCode: errorCode,
-				ObjectStorage:   storage,
-				Logger:    nbrew.Logger,
+				DB:            db,
+				Dialect:       dialect,
+				ErrorCode:     errorCode,
+				ObjectStorage: storage,
+				Logger:        nbrew.Logger,
 			})
 			if err != nil {
 				return err
