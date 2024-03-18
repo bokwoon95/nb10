@@ -54,6 +54,13 @@
         }
       },
       {
+        "column": "reset_token_hash",
+        "type": {
+          "default": "BINARY(40)",
+          "postgres": "BYTEA"
+        }
+      },
+      {
         "column": "failed_login_attempts",
         "type": {
           "default": "INT"

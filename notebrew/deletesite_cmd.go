@@ -56,16 +56,54 @@ Flags:`)
 	}
 	if len(args) == 1 {
 		cmd.SiteName = args[0]
-		if confirm {
-			return &cmd, nil
+		if !confirm {
+			if cmd.SiteName == "" {
+				return nil, fmt.Errorf("cannot be empty")
+			}
+			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+				Dialect: cmd.Notebrew.Dialect,
+				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+				Values: []any{
+					sq.StringParam("siteName", cmd.SiteName),
+				},
+			})
+			if err != nil {
+				return nil, err
+			}
+			if !exists {
+				return nil, fmt.Errorf("site does not exist in the database")
+			}
+			var sitePrefix string
+			if strings.Contains(cmd.SiteName, ".") {
+				sitePrefix = cmd.SiteName
+			} else {
+				sitePrefix = "@" + cmd.SiteName
+			}
+			_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil, fmt.Errorf("site does not exist in the filesystem")
+				}
+				return nil, err
+			}
+			fmt.Println("Press Ctrl+C to exit.")
+			reader := bufio.NewReader(os.Stdin)
+			for {
+				fmt.Printf("Are you sure you wish to delete site %q? This action is permanent and cannot be undone. All files within the site will be deleted.\n", cmd.SiteName)
+				fmt.Printf("Please confirm the site name that you wish to delete (%s): ", cmd.SiteName)
+				text, err := reader.ReadString('\n')
+				if err != nil {
+					return nil, err
+				}
+				text = strings.TrimSpace(text)
+				if text != cmd.SiteName {
+					fmt.Println("site name does not match")
+					continue
+				}
+				break
+			}
 		}
-		validationError, err := cmd.validateSiteName(cmd.SiteName)
-		if err != nil {
-			return nil, err
-		}
-		if validationError != "" {
-			return nil, fmt.Errorf(validationError)
-		}
+		return &cmd, nil
 	}
 	fmt.Println("Press Ctrl+C to exit.")
 	reader := bufio.NewReader(os.Stdin)
@@ -77,13 +115,37 @@ Flags:`)
 				return nil, err
 			}
 			cmd.SiteName = strings.TrimSpace(text)
-			validationError, err := cmd.validateSiteName(cmd.SiteName)
+			if cmd.SiteName == "" {
+				fmt.Println("cannot be empty")
+				continue
+			}
+			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+				Dialect: cmd.Notebrew.Dialect,
+				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+				Values: []any{
+					sq.StringParam("siteName", cmd.SiteName),
+				},
+			})
 			if err != nil {
 				return nil, err
 			}
-			if validationError != "" {
-				fmt.Println(validationError)
+			if !exists {
+				fmt.Println("site does not exist in the database")
 				continue
+			}
+			var sitePrefix string
+			if strings.Contains(cmd.SiteName, ".") {
+				sitePrefix = cmd.SiteName
+			} else {
+				sitePrefix = "@" + cmd.SiteName
+			}
+			_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					fmt.Println("site does not exist in the filesystem")
+					continue
+				}
+				return nil, err
 			}
 			break
 		}
@@ -108,37 +170,13 @@ Flags:`)
 }
 
 func (cmd *DeletesiteCmd) Run() error {
-	validationError, err := cmd.validateSiteName(cmd.SiteName)
-	if err != nil {
-		return err
+	if cmd.SiteName == "" {
+		return fmt.Errorf("site name cannot be empty")
 	}
-	if validationError != "" {
-		return fmt.Errorf(validationError)
-	}
-	if cmd.SiteName != "" {
-		var sitePrefix string
-		if strings.Contains(cmd.SiteName, ".") {
-			sitePrefix = cmd.SiteName
-		} else {
-			sitePrefix = "@" + cmd.SiteName
-		}
-		err = cmd.Notebrew.FS.RemoveAll(sitePrefix)
-		if err != nil {
-			return err
-		}
-	}
-	tx, err := cmd.Notebrew.DB.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = sq.Exec(context.Background(), tx, sq.Query{
+	_, err := sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
-		Format: "DELETE FROM site_user WHERE EXISTS (" +
-			"SELECT 1" +
-			" FROM site" +
-			" WHERE site.site_id = site_user.site_id" +
-			" AND site.site_name = {siteName}" +
+		Format: "DELETE FROM site_owner WHERE EXISTS (" +
+			"SELECT 1 FROM site WHERE site.site_id = site_owner.site_id AND site.site_name = {siteName}" +
 			")",
 		Values: []any{
 			sq.StringParam("siteName", cmd.SiteName),
@@ -147,7 +185,19 @@ func (cmd *DeletesiteCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	_, err = sq.Exec(context.Background(), tx, sq.Query{
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format: "DELETE FROM site_user WHERE EXISTS (" +
+			"SELECT 1 FROM site WHERE site.site_id = site_user.site_id AND site.site_name = {siteName}" +
+			")",
+		Values: []any{
+			sq.StringParam("siteName", cmd.SiteName),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	result, err := sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format:  "DELETE FROM site WHERE site_name = {siteName}",
 		Values: []any{
@@ -157,61 +207,25 @@ func (cmd *DeletesiteCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	err = tx.Commit()
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("site does not exist in the database")
+	}
+	var sitePrefix string
+	if strings.Contains(cmd.SiteName, ".") {
+		sitePrefix = cmd.SiteName
+	} else {
+		sitePrefix = "@" + cmd.SiteName
+	}
+	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("site does not exist in the filesystem")
+		}
+		return err
+	}
+	err = cmd.Notebrew.FS.RemoveAll(sitePrefix)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (cmd DeletesiteCmd) validateSiteName(siteName string) (validationError string, err error) {
-	if siteName == "" {
-		return "site name cannot be empty", nil
-	}
-	if cmd.Notebrew.DB != nil {
-		exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-			Dialect: cmd.Notebrew.Dialect,
-			Format:  "SELECT 1 FROM users WHERE username = {siteName}",
-			Values: []any{
-				sq.StringParam("siteName", siteName),
-			},
-		})
-		if err != nil {
-			return "", err
-		}
-		if exists {
-			return "site is associated with a user, please use deleteuser instead", nil
-		}
-	}
-	var sitePrefix string
-	if strings.Contains(siteName, ".") {
-		sitePrefix = siteName
-	} else {
-		sitePrefix = "@" + siteName
-	}
-	var existsInFS, existsInDB bool
-	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return "", err
-		}
-	} else {
-		existsInFS = true
-	}
-	if cmd.Notebrew.DB != nil {
-		existsInDB, err = sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-			Dialect: cmd.Notebrew.Dialect,
-			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-			Values: []any{
-				sq.StringParam("siteName", siteName),
-			},
-		})
-		if err != nil {
-			return "", err
-		}
-	}
-	if !existsInFS && !existsInDB {
-		return "site does not exist", nil
-	}
-	return "", nil
 }
