@@ -890,6 +890,14 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "deleteuser":
+				cmd, err := DeleteuserCommand(nbrew, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "hashpassword":
 			case "permissions":
 			case "resetpassword":

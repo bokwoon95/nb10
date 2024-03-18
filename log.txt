@@ -35,14 +35,21 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: continue porting over all the commands up to permissions_cmd.go, then use it to create a user nokbook who also has site permissions to bokwoon (but is not the owner), and see if he is able to delete a site that isn't his. Also see if users are able to delete their own sites (they shouldn't be able to).
+TODO: continue porting over all the commands up to permissions_cmd.go, then use it to create a user nokboon who also has site permissions to bokwoon (but is not the owner), and see if he is able to delete a site that isn't his. Also see if users are able to delete their own sites (they shouldn't be able to).
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
+
+should createuser only create a new user?
+- exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
+- and deleteuser will not delete the default site, just the user and and site_user and site_owner entries.
+- calling deletesite on the default site will delete notes, output, pages and posts. calling any command again will regeneratethe default site so it's fine.
 
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
 - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
 - Follow up with explaining that if you invoke an external template, all the internal templates for that external templates will also be brought into scope. If there are any template name conflicts, the local one wins.
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
+
+notebrew permissions -user $user -site $site -grant -revoke -setowner

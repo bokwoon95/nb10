@@ -87,18 +87,16 @@ Flags:`)
 	}
 	if !confirm {
 		for {
-			fmt.Printf("Delete user %[1]q? This action is irreversible. All files belonging to %[1]q will be deleted. (y/n): ", cmd.Username)
+			fmt.Printf("Are you sure you wish to delete user %[1]q? This action is permanent and cannot be undone. All files within the site %[1]q will also be deleted. (y/n): ", cmd.Username)
+			fmt.Printf("Please confirm the user/site that you wish to delete (%s): ", cmd.Username)
 			text, err := reader.ReadString('\n')
 			if err != nil {
 				return nil, err
 			}
 			text = strings.TrimSpace(text)
-			if text == "y" {
-				break
-			}
-			if text == "n" {
-				fmt.Println("cancelled")
-				return nil, flag.ErrHelp
+			if text != cmd.Username {
+				fmt.Println("username does not match")
+				continue
 			}
 		}
 	}
