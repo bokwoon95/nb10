@@ -332,7 +332,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 		isFulltextIndexed: isFulltextIndexed(name),
 		db:                fsys.DB,
 		dialect:           fsys.Dialect,
-		storage:           fsys.ObjectStorage,
+		objectStorage:     fsys.ObjectStorage,
 		filePath:          name,
 		modTime:           time.Now().UTC(),
 		logger:            fsys.Logger,
@@ -435,7 +435,7 @@ type RemoteFileWriter struct {
 	isFulltextIndexed bool
 	db                *sql.DB
 	dialect           string
-	storage           ObjectStorage
+	objectStorage     ObjectStorage
 	exists            bool
 	fileID            ID
 	parentID          ID
@@ -539,7 +539,7 @@ func (file *RemoteFileWriter) Close() error {
 	}
 	if file.writeFailed {
 		if file.fileType.IsObject {
-			err := file.storage.Delete(file.ctx, file.fileID.String()+path.Ext(file.filePath))
+			err := file.objectStorage.Delete(file.ctx, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
 				file.logger.Error(err.Error())
 			}
@@ -613,7 +613,7 @@ func (file *RemoteFileWriter) Close() error {
 		})
 		if err != nil {
 			go func() {
-				err := file.storage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
+				err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
 				if err != nil {
 					file.logger.Error(err.Error())
 				}
