@@ -551,7 +551,7 @@ func main() {
 				db.Close()
 			}()
 
-			var storage nb10.ObjectStorage
+			var objectStorage nb10.ObjectStorage
 			b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
@@ -581,7 +581,7 @@ func main() {
 						return err
 					}
 				}
-				storage, err = nb10.NewLocalStorage(objectsConfig.FilePath, os.TempDir())
+				objectStorage, err = nb10.NewLocalStorage(objectsConfig.FilePath, os.TempDir())
 				if err != nil {
 					return err
 				}
@@ -601,7 +601,7 @@ func main() {
 				if objectsConfig.SecretAccessKey == "" {
 					return fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
 				}
-				storage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
+				objectStorage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
 					Endpoint:        objectsConfig.Endpoint,
 					Region:          objectsConfig.Region,
 					Bucket:          objectsConfig.Bucket,
@@ -618,7 +618,7 @@ func main() {
 				DB:            db,
 				Dialect:       dialect,
 				ErrorCode:     errorCode,
-				ObjectStorage: storage,
+				ObjectStorage: objectStorage,
 				Logger:        nbrew.Logger,
 			})
 			if err != nil {
