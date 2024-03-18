@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
+	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgconn"
@@ -315,6 +316,19 @@ func main() {
 				}
 				nbrew.DB.Close()
 			}()
+			_, err = sq.Exec(context.Background(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, '')",
+				Values: []any{
+					sq.UUIDParam("siteID", nb10.NewID()),
+				},
+			})
+			if err != nil {
+				errorCode := nbrew.ErrorCode(err)
+				if !nb10.IsKeyViolation(nbrew.Dialect, errorCode) {
+					return err
+				}
+			}
 		}
 
 		// Files.
@@ -899,6 +913,14 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "hashpassword":
+				cmd, err := HashpasswordCommand(commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "permissions":
 			case "resetpassword":
 			case "start":

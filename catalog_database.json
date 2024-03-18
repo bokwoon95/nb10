@@ -37,11 +37,7 @@
           "default": "VARCHAR(500)"
         },
         "unique": true,
-        "notnull": true,
-        "references": {
-          "table": "site",
-          "column": "site_name"
-        }
+        "notnull": true
       },
       {
         "column": "email",

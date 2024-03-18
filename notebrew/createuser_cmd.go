@@ -4,17 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/fs"
 	"net/mail"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"syscall"
@@ -74,13 +70,30 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 				return nil, err
 			}
 			username.String = strings.TrimSpace(text)
-			validationError, err := cmd.validateUsername(username.String)
-			if err != nil {
-				return nil, err
+			if username.String == "" {
+				break
 			}
-			if validationError != "" {
-				fmt.Println(validationError)
-				continue
+			for _, char := range username.String {
+				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+					fmt.Println("username can only contain lowercase letters, numbers and hyphen")
+					continue
+				}
+			}
+			if username.String != "" {
+				exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+					Dialect: cmd.Notebrew.Dialect,
+					Format:  "SELECT 1 FROM users WHERE username = {username}",
+					Values: []any{
+						sq.StringParam("username", username.String),
+					},
+				})
+				if err != nil {
+					return nil, err
+				}
+				if exists {
+					fmt.Println("username already taken.")
+					continue
+				}
 			}
 			break
 		}
@@ -95,13 +108,30 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 				return nil, err
 			}
 			cmd.Email = strings.TrimSpace(text)
-			validationError, err := cmd.validateEmail(cmd.Email)
-			if err != nil {
-				return nil, err
-			}
-			if validationError != "" {
-				fmt.Println(validationError)
+			if cmd.Email == "" {
+				fmt.Println("email cannot be empty")
 				continue
+			}
+			_, err = mail.ParseAddress(cmd.Email)
+			if err != nil {
+				fmt.Println("invalid email address")
+				continue
+			}
+			if cmd.Username != "" {
+				exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+					Dialect: cmd.Notebrew.Dialect,
+					Format:  "SELECT 1 FROM users WHERE email = {email}",
+					Values: []any{
+						sq.StringParam("email", cmd.Email),
+					},
+				})
+				if err != nil {
+					return nil, err
+				}
+				if exists {
+					fmt.Println("email already used by an existing user account")
+					continue
+				}
 			}
 			break
 		}
@@ -115,12 +145,16 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 			if err != nil {
 				return nil, err
 			}
-			validationError, err := cmd.validatePassword(password)
+			if utf8.RuneCount(password) < 8 {
+				fmt.Println("password must be at least 8 characters")
+				continue
+			}
+			commonPasswords, err := getCommonPasswords()
 			if err != nil {
 				return nil, err
 			}
-			if validationError != "" {
-				fmt.Println(validationError)
+			if _, ok := commonPasswords[string(password)]; ok {
+				fmt.Println("password is too common")
 				continue
 			}
 			fmt.Print("Confirm password (will be hidden from view): ")
@@ -129,7 +163,7 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 			if err != nil {
 				return nil, err
 			}
-			if subtle.ConstantTimeCompare(password, confirmPassword) != 1 {
+			if !bytes.Equal(password, confirmPassword) {
 				fmt.Println("passwords do not match")
 				continue
 			}
@@ -148,21 +182,51 @@ func (cmd *CreateuserCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	validationError, err := cmd.validateUsername(cmd.Username)
+	if cmd.Username != "" {
+		for _, char := range cmd.Username {
+			if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+				return fmt.Errorf("username can only contain lowercase letters, numbers and hyphen")
+			}
+		}
+		if cmd.Username != "" {
+			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+				Dialect: cmd.Notebrew.Dialect,
+				Format:  "SELECT 1 FROM users WHERE username = {username}",
+				Values: []any{
+					sq.StringParam("username", cmd.Username),
+				},
+			})
+			if err != nil {
+				return err
+			}
+			if exists {
+				return fmt.Errorf("username already taken.")
+			}
+		}
+	}
+	if cmd.Email == "" {
+		return fmt.Errorf("email cannot be empty")
+	}
+	_, err := mail.ParseAddress(cmd.Email)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid email address")
 	}
-	if validationError != "" {
-		return fmt.Errorf(validationError)
+	if cmd.Username != "" {
+		exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM users WHERE email = {email}",
+			Values: []any{
+				sq.StringParam("email", cmd.Email),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if exists {
+			return fmt.Errorf("email already used by an existing user account")
+		}
 	}
-	validationError, err = cmd.validateEmail(cmd.Email)
-	if err != nil {
-		return err
-	}
-	if validationError != "" {
-		return fmt.Errorf(validationError)
-	}
-	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+	result, err := sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format: "INSERT INTO users (user_id, username, email, password_hash)" +
 			" VALUES ({userID}, {username}, {email}, {passwordHash})",
@@ -174,9 +238,6 @@ func (cmd *CreateuserCmd) Run() error {
 		},
 	})
 	if err != nil {
-		if cmd.Username != "" {
-			return err
-		}
 		if cmd.Notebrew.ErrorCode == nil {
 			return err
 		}
@@ -185,153 +246,96 @@ func (cmd *CreateuserCmd) Run() error {
 			return err
 		}
 	}
-	if cmd.Username != "" {
-		fmt.Fprintln(cmd.Stdout, "1 user created")
-		return nil
-	}
-	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, '')",
-		Values: []any{
-			sq.UUIDParam("siteID", nb10.NewID()),
-		},
-	})
-	if err != nil {
-		if cmd.Notebrew.ErrorCode == nil {
-			return err
+	if cmd.Username == "" {
+		_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format: "INSERT INTO site_user (site_id, user_id)" +
+				" VALUES ((SELECT site_id FROM site WHERE site_name = ''), (SELECT user_id FROM users WHERE username = {username}))",
+			Values: []any{
+				sq.StringParam("username", cmd.Username),
+			},
+		})
+		if err != nil {
+			if cmd.Notebrew.ErrorCode == nil {
+				return err
+			}
+			errorCode := cmd.Notebrew.ErrorCode(err)
+			if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+				return err
+			}
 		}
-		errorCode := cmd.Notebrew.ErrorCode(err)
-		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
-			return err
-		}
-	}
-	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format: "INSERT INTO site_user (site_id, user_id)" +
-			" VALUES ((SELECT site_id FROM site WHERE site_name = ''), (SELECT user_id FROM users WHERE username = {username}))",
-		Values: []any{
-			sq.StringParam("username", cmd.Username),
-		},
-	})
-	if err != nil {
-		if cmd.Notebrew.ErrorCode == nil {
-			return err
-		}
-		errorCode := cmd.Notebrew.ErrorCode(err)
-		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
-			return err
-		}
-	}
-	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format: "INSERT INTO site_owner (site_id, user_id)" +
-			" VALUES ((SELECT site_id FROM site WHERE site_name = ''), (SELECT user_id FROM users WHERE username = {username}))",
-		Values: []any{
-			sq.StringParam("username", cmd.Username),
-		},
-	})
-	if err != nil {
-		if cmd.Notebrew.ErrorCode == nil {
-			return err
-		}
-		errorCode := cmd.Notebrew.ErrorCode(err)
-		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
-			return err
+		_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format: "INSERT INTO site_owner (site_id, user_id)" +
+				" VALUES ((SELECT site_id FROM site WHERE site_name = ''), (SELECT user_id FROM users WHERE username = {username}))",
+			Values: []any{
+				sq.StringParam("username", cmd.Username),
+			},
+		})
+		if err != nil {
+			if cmd.Notebrew.ErrorCode == nil {
+				return err
+			}
+			errorCode := cmd.Notebrew.ErrorCode(err)
+			if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+				return err
+			}
 		}
 	}
-
-	var sitePrefix string
-	if strings.Contains(cmd.Username, ".") {
-		sitePrefix = cmd.Username
-	} else if cmd.Username != "" {
-		sitePrefix = "@" + cmd.Username
+	if result.RowsAffected == 0 {
+		fmt.Fprintln(cmd.Stdout, "user already exists")
+	} else {
+		fmt.Fprintln(cmd.Stdout, "created user")
 	}
-	if sitePrefix != "" {
-		err := cmd.Notebrew.FS.Mkdir(sitePrefix, 0755)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return err
-		}
-	}
-	dirs := []string{
-		"notes",
-		"output",
-		"output/themes",
-		"pages",
-		"posts",
-	}
-	for _, dir := range dirs {
-		err = cmd.Notebrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func (cmd *CreateuserCmd) validateUsername(username string) (validationError string, err error) {
-	for _, char := range username {
+func (cmd *CreateuserCmd) validate() (validationError string, err error) {
+	for _, char := range cmd.Username {
 		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
 			return "username can only contain lowercase letters, numbers and hyphen", nil
 		}
 	}
-	if username != "" {
-		var sitePrefix string
-		if strings.Contains(username, ".") {
-			sitePrefix = username
-		} else {
-			sitePrefix = "@" + username
-		}
-		fileInfo, err := fs.Stat(cmd.Notebrew.FS, sitePrefix)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return "", err
-		}
-		if fileInfo != nil {
-			return "username already taken", nil
-		}
-	}
-	exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "SELECT 1 FROM site WHERE site_name = {username}",
-		Values: []any{
-			sq.StringParam("username", username),
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	if exists {
-		return "username already taken.", nil
-	}
-	return "", nil
-}
-
-func (cmd *CreateuserCmd) validateEmail(email string) (validationError string, err error) {
-	if email == "" {
+	if cmd.Email == "" {
 		return "email cannot be empty", nil
 	}
 	_, err = mail.ParseAddress(cmd.Email)
 	if err != nil {
 		return "invalid email address", nil
 	}
-	exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "SELECT 1 FROM users WHERE email = {email}",
-		Values: []any{
-			sq.StringParam("email", email),
-		},
-	})
-	if err != nil {
-		return "", err
-	}
-	if exists {
-		return "email already used by an existing user account", nil
+	if cmd.Username != "" {
+		exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM users WHERE username = {username}",
+			Values: []any{
+				sq.StringParam("username", cmd.Username),
+			},
+		})
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return "username already taken.", nil
+		}
+		exists, err = sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM users WHERE email = {email}",
+			Values: []any{
+				sq.StringParam("email", cmd.Email),
+			},
+		})
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			return "email already used by an existing user account", nil
+		}
 	}
 	return "", nil
 }
 
-var getCommonPasswordHashes = sync.OnceValues(func() (map[string]struct{}, error) {
-	commonPasswordHashes := make(map[string]struct{})
+var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
+	commonPasswords := make(map[string]struct{})
 	file, err := nb10.RuntimeFS.Open("embed/top-10000-passwords.txt")
 	if err != nil {
 		return nil, err
@@ -352,18 +356,16 @@ var getCommonPasswordHashes = sync.OnceValues(func() (map[string]struct{}, error
 		if len(line) == 0 {
 			continue
 		}
-		hash := blake2b.Sum256([]byte(line))
-		encodedHash := hex.EncodeToString(hash[:])
-		commonPasswordHashes[encodedHash] = struct{}{}
+		commonPasswords[string(line)] = struct{}{}
 	}
-	return commonPasswordHashes, nil
+	return commonPasswords, nil
 })
 
-func (cmd *CreateuserCmd) validatePassword(password []byte) (validationError string, err error) {
+func validatePassword(password []byte) (validationError string, err error) {
 	if utf8.RuneCount(password) < 8 {
 		return "password must be at least 8 characters", nil
 	}
-	commonPasswordHashes, err := getCommonPasswordHashes()
+	commonPasswordHashes, err := getCommonPasswords()
 	if err != nil {
 		return "", err
 	}
