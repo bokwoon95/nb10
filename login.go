@@ -151,6 +151,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				internalServerError(w, r, err)
 				return
 			}
+			w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
 			executeTemplate(w, r, tmpl, &response)
 		}
 
