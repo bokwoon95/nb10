@@ -226,9 +226,9 @@ func (cmd *CreateuserCmd) Run() error {
 	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format: "INSERT INTO site_owner (site_id, user_id)" +
-			" VALUES ((SELECT site_id FROM site WHERE site_name = ''), {userID})",
+			" VALUES ((SELECT site_id FROM site WHERE site_name = ''), (SELECT user_id FROM users WHERE username = {username}))",
 		Values: []any{
-			sq.UUIDParam("userID", userID),
+			sq.StringParam("username", cmd.Username),
 		},
 	})
 	if err != nil {
