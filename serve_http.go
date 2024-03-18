@@ -384,7 +384,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 				return
 			}
-			reader, err := remoteFS.Storage.Get(r.Context(), urlPath)
+			reader, err := remoteFS.ObjectStorage.Get(r.Context(), urlPath)
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrInvalid) {
 					http.Error(w, "404 Not Found", http.StatusNotFound)

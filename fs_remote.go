@@ -55,7 +55,7 @@ type RemoteFS struct {
 	DB        *sql.DB
 	Dialect   string
 	ErrorCode func(error) string
-	Storage   ObjectStorage
+	ObjectStorage   ObjectStorage
 	Logger    *slog.Logger
 }
 
@@ -65,7 +65,7 @@ func NewRemoteFS(config RemoteFSConfig) (*RemoteFS, error) {
 		DB:        config.DB,
 		Dialect:   config.Dialect,
 		ErrorCode: config.ErrorCode,
-		Storage:   config.ObjectStorage,
+		ObjectStorage:   config.ObjectStorage,
 		Logger:    config.Logger,
 	}
 	return remoteFS, nil
@@ -77,7 +77,7 @@ func (fsys *RemoteFS) WithContext(ctx context.Context) FS {
 		DB:        fsys.DB,
 		Dialect:   fsys.Dialect,
 		ErrorCode: fsys.ErrorCode,
-		Storage:   fsys.Storage,
+		ObjectStorage:   fsys.ObjectStorage,
 		Logger:    fsys.Logger,
 	}
 }
@@ -93,7 +93,7 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 	if name == "." {
 		file := &RemoteFile{
 			ctx:     fsys.Context,
-			storage: fsys.Storage,
+			storage: fsys.ObjectStorage,
 			info:    &RemoteFileInfo{FilePath: ".", isDir: true},
 		}
 		return file, nil
@@ -112,7 +112,7 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 		file := &RemoteFile{
 			ctx:      fsys.Context,
 			fileType: fileType,
-			storage:  fsys.Storage,
+			storage:  fsys.ObjectStorage,
 			info:     &RemoteFileInfo{},
 		}
 		file.info.FileID = row.UUID("file_id")
@@ -332,7 +332,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 		isFulltextIndexed: isFulltextIndexed(name),
 		db:                fsys.DB,
 		dialect:           fsys.Dialect,
-		storage:           fsys.Storage,
+		storage:           fsys.ObjectStorage,
 		filePath:          name,
 		modTime:           time.Now().UTC(),
 		logger:            fsys.Logger,
@@ -414,7 +414,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 		file.storageWriter = pipeWriter
 		file.storageResult = make(chan error, 1)
 		go func() {
-			file.storageResult <- fsys.Storage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
+			file.storageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
 			close(file.storageResult)
 		}()
 	} else {
@@ -915,7 +915,7 @@ func (fsys *RemoteFS) Remove(name string) error {
 	}
 	switch path.Ext(name) {
 	case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-		err = fsys.Storage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
+		err = fsys.ObjectStorage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
 			return err
 		}
@@ -981,7 +981,7 @@ func (fsys *RemoteFS) RemoveAll(name string) error {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			err := fsys.Storage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
+			err := fsys.ObjectStorage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
 				fsys.Logger.Error(err.Error())
 				numFailures.Add(1)
@@ -1232,7 +1232,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 		ext := path.Ext(srcFilePath)
 		fileType := fileTypes[ext]
 		if fileType.IsObject {
-			err := fsys.Storage.Copy(fsys.Context, srcFileID.String()+ext, destFileID.String()+ext)
+			err := fsys.ObjectStorage.Copy(fsys.Context, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
 			}
@@ -1290,7 +1290,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := fsys.Storage.Copy(fsys.Context, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
+				err := fsys.ObjectStorage.Copy(fsys.Context, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
 				if err != nil {
 					fsys.Logger.Error(err.Error())
 				}
