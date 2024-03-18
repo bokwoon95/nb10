@@ -35,8 +35,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: The rest of the commands, then we can setup login.go and logout.go then throw it up behind hetzner.
-    - Once you get the flag design up, debug why entering the wrong password doesn't trigger a flash message nor does it add a new IP entry.
+TODO: continue porting over all the commands up to permissions_cmd.go, then use it to create a user nokbook who also has site permissions to bokwoon (but is not the owner), and see if he is able to delete a site that isn't his. Also see if users are able to delete their own sites (they shouldn't be able to).
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.

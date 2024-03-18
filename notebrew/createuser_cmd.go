@@ -29,6 +29,7 @@ import (
 
 type CreateuserCmd struct {
 	Notebrew     *nb10.Notebrew
+	Stdout       io.Writer
 	Username     string
 	Email        string
 	PasswordHash string
@@ -144,6 +145,9 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 }
 
 func (cmd *CreateuserCmd) Run() error {
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
 	validationError, err := cmd.validateUsername(cmd.Username)
 	if err != nil {
 		return err
@@ -228,10 +232,22 @@ func (cmd *CreateuserCmd) Run() error {
 	if err != nil {
 		return err
 	}
+	_, err = sq.Exec(context.Background(), tx, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format:  "INSERT INTO site_owner (site_id, user_id) VALUES ({siteID}, {userID})",
+		Values: []any{
+			sq.UUIDParam("siteID", siteID),
+			sq.UUIDParam("userID", userID),
+		},
+	})
+	if err != nil {
+		return err
+	}
 	err = tx.Commit()
 	if err != nil {
 		return err
 	}
+	fmt.Fprintln(cmd.Stdout, "1 user created")
 	return nil
 }
 

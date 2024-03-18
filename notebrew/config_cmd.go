@@ -296,6 +296,8 @@ func (cmd *ConfigCmd) Run() error {
 				return err
 			}
 			var proxyConfig ProxyConfig
+			proxyConfig.RealIPHeaders = map[string]string{}
+			proxyConfig.ProxyIPs = []string{}
 			if len(b) > 0 {
 				decoder := json.NewDecoder(bytes.NewReader(b))
 				decoder.DisallowUnknownFields()
@@ -637,6 +639,8 @@ func (cmd *ConfigCmd) Run() error {
 			return err
 		}
 		var proxyConfig ProxyConfig
+		proxyConfig.RealIPHeaders = map[string]string{}
+		proxyConfig.ProxyIPs = []string{}
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
@@ -820,7 +824,7 @@ type ProxyConfig struct {
 
 const proxyHelp = `# == proxy keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# realIPHeaders - Object mapping of IP addresses to HTTP Headers where the real client IP is set.
+# realIPHeaders - Object mapping of IP addresses to HTTP Headers which contain the real client IP.
 # proxyIPs      - Array of proxy IP addresses.
 `
 

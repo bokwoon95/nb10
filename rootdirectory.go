@@ -131,11 +131,12 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	response.IsDir = true
 	if sitePrefix == "" && nbrew.DB != nil {
 		sites, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
+			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format: "SELECT {*}" +
 				" FROM site_user" +
 				" JOIN site ON site.site_id = site_user.site_id" +
-				" JOIN users ON users.user_id = site_user.site_id" +
+				" JOIN users ON users.user_id = site_user.user_id" +
 				" LEFT JOIN site_owner ON site_owner.site_id = site_user.site_id" +
 				" LEFT JOIN users AS owner ON owner.user_id = site_owner.user_id" +
 				" WHERE users.username = {username}" +

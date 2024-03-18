@@ -36,19 +36,19 @@
         {{- end }}
     </div>
     {{- else if eq $.Error "RetryWithCaptcha" }}
-    <div role='alert' class='w-100 br2 ph3 pv2 ba alert-danger'>
+    <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
         <div>Please retry with captcha.</div>
     </div>
     {{- else if eq $.Error "CaptchaChallengeFailed" }}
-    <div role='alert' class='w-100 br2 ph3 pv2 ba alert-danger'>
+    <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
         <div>Captcha challenge failed.</div>
     </div>
     {{- else if eq $.Error "IncorrectLoginCredentials" }}
-    <div role='alert' class='w-100 br2 ph3 pv2 ba alert-danger'>
+    <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
         <div>Incorrect login credentials.</div>
     </div>
-    {{- else if eq $.Error "NB-04100" }}
-    <div role='alert' class='UserNotFound'>
+    {{- else if eq $.Error "UserNotFound" }}
+    <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
         <div>User not found.</div>
     </div>
     {{- else if eq $.Error "NotAuthenticated" }}
