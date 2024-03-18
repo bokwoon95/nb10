@@ -162,8 +162,77 @@ func (cmd *CreateuserCmd) Run() error {
 	if validationError != "" {
 		return fmt.Errorf(validationError)
 	}
-
-	if cmd.Username == "" {
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format: "INSERT INTO users (user_id, username, email, password_hash)" +
+			" VALUES ({userID}, {username}, {email}, {passwordHash})",
+		Values: []any{
+			sq.UUIDParam("userID", nb10.NewID()),
+			sq.StringParam("username", cmd.Username),
+			sq.StringParam("email", cmd.Email),
+			sq.StringParam("passwordHash", cmd.PasswordHash),
+		},
+	})
+	if err != nil {
+		if cmd.Username != "" {
+			return err
+		}
+		if cmd.Notebrew.ErrorCode == nil {
+			return err
+		}
+		errorCode := cmd.Notebrew.ErrorCode(err)
+		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+			return err
+		}
+	}
+	if cmd.Username != "" {
+		fmt.Fprintln(cmd.Stdout, "1 user created")
+		return nil
+	}
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, '')",
+		Values: []any{
+			sq.UUIDParam("siteID", nb10.NewID()),
+		},
+	})
+	if err != nil {
+		if cmd.Notebrew.ErrorCode == nil {
+			return err
+		}
+		errorCode := cmd.Notebrew.ErrorCode(err)
+		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+			return err
+		}
+	}
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format: "INSERT INTO site_user (site_id, user_id)" +
+			" VALUES ((SELECT site_id FROM site WHERE site_name = ''), (SELECT user_id FROM users WHERE username = {username}))",
+		Values: []any{
+			sq.StringParam("username", cmd.Username),
+		},
+	})
+	if err != nil {
+		if cmd.Notebrew.ErrorCode == nil {
+			return err
+		}
+		errorCode := cmd.Notebrew.ErrorCode(err)
+		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+			return err
+		}
+		return err
+	}
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format: "INSERT INTO site_owner (site_id, user_id)" +
+			" VALUES ((SELECT site_id FROM site WHERE site_name = ''), {userID})",
+		Values: []any{
+			sq.UUIDParam("userID", userID),
+		},
+	})
+	if err != nil {
+		return err
 	}
 
 	var sitePrefix string
@@ -192,65 +261,6 @@ func (cmd *CreateuserCmd) Run() error {
 		}
 	}
 
-	siteID := nb10.NewID()
-	userID := nb10.NewID()
-	tx, err := cmd.Notebrew.DB.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = sq.Exec(context.Background(), tx, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, {siteName})",
-		Values: []any{
-			sq.UUIDParam("siteID", siteID),
-			sq.StringParam("siteName", cmd.Username),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	_, err = sq.Exec(context.Background(), tx, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format: "INSERT INTO users (user_id, username, email, password_hash)" +
-			" VALUES ({userID}, {username}, {email}, {passwordHash})",
-		Values: []any{
-			sq.UUIDParam("userID", userID),
-			sq.StringParam("username", cmd.Username),
-			sq.StringParam("email", cmd.Email),
-			sq.StringParam("passwordHash", cmd.PasswordHash),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	_, err = sq.Exec(context.Background(), tx, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "INSERT INTO site_user (site_id, user_id) VALUES ({siteID}, {userID})",
-		Values: []any{
-			sq.UUIDParam("siteID", siteID),
-			sq.UUIDParam("userID", userID),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	_, err = sq.Exec(context.Background(), tx, sq.Query{
-		Dialect: cmd.Notebrew.Dialect,
-		Format:  "INSERT INTO site_owner (site_id, user_id) VALUES ({siteID}, {userID})",
-		Values: []any{
-			sq.UUIDParam("siteID", siteID),
-			sq.UUIDParam("userID", userID),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(cmd.Stdout, "1 user created")
 	return nil
 }
 
