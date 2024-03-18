@@ -163,6 +163,9 @@ func (cmd *CreateuserCmd) Run() error {
 		return fmt.Errorf(validationError)
 	}
 
+	if cmd.Username == "" {
+	}
+
 	var sitePrefix string
 	if strings.Contains(cmd.Username, ".") {
 		sitePrefix = cmd.Username

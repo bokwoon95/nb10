@@ -23,6 +23,9 @@ type CreatesiteCmd struct {
 }
 
 func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, error) {
+	if nbrew.DB == nil {
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
+	}
 	var cmd CreatesiteCmd
 	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
@@ -74,24 +77,22 @@ func (cmd *CreatesiteCmd) Run() error {
 	if errmsg != "" {
 		return fmt.Errorf(errmsg)
 	}
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, {siteName})",
+		Values: []any{
+			sq.UUIDParam("siteID", nb10.NewID()),
+			sq.StringParam("siteName", cmd.SiteName),
+		},
+	})
+	if err != nil {
+		return err
+	}
 	var sitePrefix string
 	if strings.Contains(cmd.SiteName, ".") {
 		sitePrefix = cmd.SiteName
 	} else if cmd.SiteName != "" {
 		sitePrefix = "@" + cmd.SiteName
-	}
-	if cmd.Notebrew.DB != nil {
-		_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
-			Dialect: cmd.Notebrew.Dialect,
-			Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, {siteName})",
-			Values: []any{
-				sq.UUIDParam("siteID", nb10.NewID()),
-				sq.StringParam("siteName", cmd.SiteName),
-			},
-		})
-		if err != nil {
-			return err
-		}
 	}
 	err = cmd.Notebrew.FS.Mkdir(sitePrefix, 0755)
 	if err != nil && !errors.Is(err, fs.ErrExist) {
