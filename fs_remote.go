@@ -335,6 +335,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 		storage:           fsys.Storage,
 		filePath:          name,
 		modTime:           time.Now().UTC(),
+		logger:            fsys.Logger,
 	}
 	// If parentDir is the root directory, just fetch the file information.
 	// Otherwise fetch both the parent and file information.
@@ -446,6 +447,7 @@ type RemoteFileWriter struct {
 	storageWriter     *io.PipeWriter
 	storageResult     chan error
 	writeFailed       bool
+	logger            *slog.Logger
 }
 
 func (file *RemoteFileWriter) Write(p []byte) (n int, err error) {
@@ -537,7 +539,10 @@ func (file *RemoteFileWriter) Close() error {
 	}
 	if file.writeFailed {
 		if file.fileType.IsObject {
-			_ = file.storage.Delete(file.ctx, file.fileID.String()+path.Ext(file.filePath))
+			err := file.storage.Delete(file.ctx, file.fileID.String()+path.Ext(file.filePath))
+			if err != nil {
+				file.logger.Error(err.Error())
+			}
 		}
 		return nil
 	}
@@ -607,7 +612,12 @@ func (file *RemoteFileWriter) Close() error {
 			},
 		})
 		if err != nil {
-			go file.storage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
+			go func() {
+				err := file.storage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
+				if err != nil {
+					file.logger.Error(err.Error())
+				}
+			}()
 			return err
 		}
 	} else {
