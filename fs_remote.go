@@ -411,11 +411,11 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 	}
 	if fileType.IsObject {
 		pipeReader, pipeWriter := io.Pipe()
-		file.storageWriter = pipeWriter
-		file.storageResult = make(chan error, 1)
+		file.objectStorageWriter = pipeWriter
+		file.objectStorageResult = make(chan error, 1)
 		go func() {
-			file.storageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
-			close(file.storageResult)
+			file.objectStorageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
+			close(file.objectStorageResult)
 		}()
 	} else {
 		if file.fileType.IsGzippable && !file.isFulltextIndexed {
@@ -430,24 +430,24 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 }
 
 type RemoteFileWriter struct {
-	ctx               context.Context
-	fileType          FileType
-	isFulltextIndexed bool
-	db                *sql.DB
-	dialect           string
-	objectStorage     ObjectStorage
-	exists            bool
-	fileID            ID
-	parentID          ID
-	filePath          string
-	size              int64
-	buf               *bytes.Buffer
-	gzipWriter        *gzip.Writer
-	modTime           time.Time
-	storageWriter     *io.PipeWriter
-	storageResult     chan error
-	writeFailed       bool
-	logger            *slog.Logger
+	ctx                 context.Context
+	fileType            FileType
+	isFulltextIndexed   bool
+	db                  *sql.DB
+	dialect             string
+	objectStorage       ObjectStorage
+	exists              bool
+	fileID              ID
+	parentID            ID
+	filePath            string
+	size                int64
+	buf                 *bytes.Buffer
+	gzipWriter          *gzip.Writer
+	modTime             time.Time
+	objectStorageWriter *io.PipeWriter
+	objectStorageResult chan error
+	writeFailed         bool
+	logger              *slog.Logger
 }
 
 func (file *RemoteFileWriter) Write(p []byte) (n int, err error) {
@@ -457,7 +457,7 @@ func (file *RemoteFileWriter) Write(p []byte) (n int, err error) {
 		return 0, err
 	}
 	if file.fileType.IsObject {
-		n, err = file.storageWriter.Write(p)
+		n, err = file.objectStorageWriter.Write(p)
 	} else {
 		if file.fileType.IsGzippable && !file.isFulltextIndexed {
 			n, err = file.gzipWriter.Write(p)
@@ -479,7 +479,7 @@ func (file *RemoteFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 		return 0, err
 	}
 	if file.fileType.IsObject {
-		n, err = io.Copy(file.storageWriter, r)
+		n, err = io.Copy(file.objectStorageWriter, r)
 	} else {
 		if file.fileType.IsGzippable && !file.isFulltextIndexed {
 			n, err = io.Copy(file.gzipWriter, r)
@@ -496,12 +496,12 @@ func (file *RemoteFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (file *RemoteFileWriter) Close() error {
 	if file.fileType.IsObject {
-		if file.storageWriter == nil {
+		if file.objectStorageWriter == nil {
 			return fs.ErrClosed
 		}
-		file.storageWriter.Close()
-		file.storageWriter = nil
-		err := <-file.storageResult
+		file.objectStorageWriter.Close()
+		file.objectStorageWriter = nil
+		err := <-file.objectStorageResult
 		if err != nil {
 			return err
 		}
