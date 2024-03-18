@@ -37,6 +37,7 @@ notebrew/open_browser.go
 
 TODO: createsite.go, deletesite.go: must be idempotent. e.g. "create site in database", "site already exists in filesystem" or "site already exists" if it is present in both the database and filesystem.
 TODO: check if a user is able to delete their own site, and if so prevent it
+TODO: rename RemoteFS/remoteFS to DatabaseFS/databaseFS
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
