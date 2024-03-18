@@ -114,7 +114,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					" AND NOT is_dir" +
 					" AND file_path LIKE '%.html'",
 				Values: []any{
-					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(rootPagesDir)+"/%"),
+					sq.StringParam("pattern", wildcardReplacer.Replace(rootPagesDir)+"/%"),
 				},
 			}, func(row *sq.Row) File {
 				return File{
@@ -211,7 +211,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					" AND NOT is_dir" +
 					" AND file_path LIKE '%.md'",
 				Values: []any{
-					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(rootPostsDir)+"/%"),
+					sq.StringParam("pattern", wildcardReplacer.Replace(rootPostsDir)+"/%"),
 				},
 			}, func(row *sq.Row) File {
 				return File{

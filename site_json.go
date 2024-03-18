@@ -184,7 +184,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 						" FROM files" +
 						" WHERE file_path LIKE {pattern} ESCAPE '\\'",
 					Values: []any{
-						sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(sitePrefix)+"/%"),
+						sq.StringParam("pattern", wildcardReplacer.Replace(sitePrefix)+"/%"),
 					},
 				}, func(row *sq.Row) int64 {
 					return row.Int64("sum(coalesce(size, 0))")

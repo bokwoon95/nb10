@@ -341,7 +341,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 								Dialect: remoteFS.Dialect,
 								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} AND NOT is_dir AND file_path NOT LIKE '%.html'",
 								Values: []any{
-									sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(srcFilePath)+"/%"),
+									sq.StringParam("pattern", wildcardReplacer.Replace(srcFilePath)+"/%"),
 								},
 							})
 							if err != nil {
@@ -382,7 +382,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 								Dialect: remoteFS.Dialect,
 								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} AND NOT is_dir AND file_path NOT LIKE '%.md'",
 								Values: []any{
-									sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(srcFilePath)+"/%"),
+									sq.StringParam("pattern", wildcardReplacer.Replace(srcFilePath)+"/%"),
 								},
 							})
 							if err != nil {

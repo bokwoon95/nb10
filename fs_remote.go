@@ -30,6 +30,8 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 )
 
+var wildcardReplacer = strings.NewReplacer("%", "\\%", "_", "\\_")
+
 var gzipReaderPool = sync.Pool{}
 
 var gzipWriterPool = sync.Pool{
@@ -901,7 +903,7 @@ func (fsys *RemoteFS) Remove(name string) error {
 		file.fileID = row.UUID("file_id")
 		file.filePath = row.String("file_path")
 		file.isDir = row.Bool("is_dir")
-		file.hasChildren = row.Bool("EXISTS (SELECT 1 FROM files WHERE file_path LIKE {pattern} ESCAPE '\\')", sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(name)+"/%"))
+		file.hasChildren = row.Bool("EXISTS (SELECT 1 FROM files WHERE file_path LIKE {pattern} ESCAPE '\\')", sq.StringParam("pattern", wildcardReplacer.Replace(name)+"/%"))
 		return file
 	})
 	if err != nil {
@@ -941,7 +943,7 @@ func (fsys *RemoteFS) RemoveAll(name string) error {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") || name == "." {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
 	}
-	pattern := strings.NewReplacer("%", "\\%", "_", "\\_").Replace(name) + "/%"
+	pattern := wildcardReplacer.Replace(name) + "/%"
 	cursor, err := sq.FetchCursor(fsys.Context, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format: "SELECT {*}" +
@@ -1074,7 +1076,7 @@ func (fsys *RemoteFS) Rename(oldName, newName string) error {
 						}},
 					}),
 					sq.TimeParam("modTime", time.Now().UTC()),
-					sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(oldName)+"/%"),
+					sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
 				},
 			})
 			if err != nil {
@@ -1134,7 +1136,7 @@ func (fsys *RemoteFS) Rename(oldName, newName string) error {
 					}},
 				}),
 				sq.TimeParam("modTime", time.Now().UTC()),
-				sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(oldName)+"/%"),
+				sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
 			},
 		})
 		if err != nil {
@@ -1244,7 +1246,7 @@ func (fsys *RemoteFS) Copy(srcName, destName string) error {
 		Format:  "SELECT {*} FROM files WHERE file_path = {srcName} OR file_path LIKE {pattern} ORDER BY file_path",
 		Values: []any{
 			sq.StringParam("srcName", srcName),
-			sq.StringParam("pattern", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(srcName)+"/%"),
+			sq.StringParam("pattern", wildcardReplacer.Replace(srcName)+"/%"),
 		},
 	}, func(row *sq.Row) (srcFile struct {
 		FileID   ID

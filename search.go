@@ -155,7 +155,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				" OR file_path LIKE 'output/%'" +
 				" OR parent_id IS NULL)")
 		} else {
-			parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", strings.NewReplacer("%", "\\%", "_", "\\_").Replace(parent)+"/%")
+			parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
 		}
 		extensionFilter := sq.Expr("1 = 1")
 		if len(response.Exts) > 0 {
