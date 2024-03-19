@@ -47,6 +47,48 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 	}
 	if len(args) == 1 {
 		cmd.SiteName = args[0]
+		if cmd.SiteName == "" {
+			return nil, fmt.Errorf("cannot be empty")
+		}
+		if cmd.SiteName == "www" || cmd.SiteName == "img" || cmd.SiteName == "video" || cmd.SiteName == "cdn" {
+			return nil, fmt.Errorf("site name not allowed")
+		}
+		for _, char := range cmd.SiteName {
+			if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' && char != '.' {
+				return nil, fmt.Errorf("only lowercase letters, numbers, hyphen and dot allowed")
+			}
+		}
+		if len(cmd.SiteName) > 30 {
+			return nil, fmt.Errorf("cannot exceed 30 characters")
+		}
+		existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+			Values: []any{
+				sq.StringParam("siteName", cmd.SiteName),
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		var sitePrefix string
+		if strings.Contains(cmd.SiteName, ".") {
+			sitePrefix = cmd.SiteName
+		} else {
+			sitePrefix = "@" + cmd.SiteName
+		}
+		var existsInFS bool
+		_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return nil, err
+			}
+		} else {
+			existsInFS = true
+		}
+		if existsInDB && existsInFS {
+			return nil, fmt.Errorf("site already exists in the filesystem")
+		}
 		return &cmd, nil
 	}
 	fmt.Println("Press Ctrl+C to exit.")
@@ -76,7 +118,7 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 			fmt.Println("cannot exceed 30 characters")
 			continue
 		}
-		exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+		existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
 			Dialect: cmd.Notebrew.Dialect,
 			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
 			Values: []any{
@@ -86,21 +128,22 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 		if err != nil {
 			return nil, err
 		}
-		if exists {
-			fmt.Println("site already exists in the database")
-			continue
-		}
 		var sitePrefix string
 		if strings.Contains(cmd.SiteName, ".") {
 			sitePrefix = cmd.SiteName
 		} else {
 			sitePrefix = "@" + cmd.SiteName
 		}
-		fileInfo, err := fs.Stat(cmd.Notebrew.FS, sitePrefix)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+		var existsInFS bool
+		_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return nil, err
+			}
+		} else {
+			existsInFS = true
 		}
-		if fileInfo != nil {
+		if existsInDB && existsInFS {
 			fmt.Println("site already exists in the filesystem")
 			continue
 		}
