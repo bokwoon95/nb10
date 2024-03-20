@@ -33,7 +33,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		SitePrefix        string            `json:"sitePrefix"`
-		IsRemoteFS        bool              `json:"isRemoteFS"`
+		IsDatabaseFS        bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FilePath          string            `json:"filePath"`
@@ -125,7 +125,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	nbrew.clearSession(w, r, "flash")
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.SitePrefix = sitePrefix
-	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.IsDir = true
@@ -177,7 +177,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		response.Sites = response.Sites[:len(response.Sites)-1]
 	}
 
-	remoteFS, ok := nbrew.FS.(*RemoteFS)
+	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
 		for _, name := range []string{"notes", "pages", "posts", "output/themes", "output", "site.json"} {
 			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, name))
@@ -225,8 +225,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 
-	files, err := sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
-		Dialect: remoteFS.Dialect,
+	files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
 			" WHERE file_path IN ({notes}, {pages}, {posts}, {themes}, {output}, {sitejson})" +
@@ -280,8 +280,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	if response.From != "" {
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() error {
-			sites, err := sq.FetchAll(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			sites, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
@@ -316,8 +316,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			return nil
 		})
 		group.Go(func() error {
-			hasPreviousSite, err := sq.FetchExists(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			hasPreviousSite, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT 1" +
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
@@ -356,8 +356,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	if response.Before != "" {
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() error {
-			response.Sites, err = sq.FetchAll(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			response.Sites, err = sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
@@ -391,8 +391,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			return nil
 		})
 		group.Go(func() error {
-			nextSite, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			nextSite, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
@@ -431,8 +431,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 
-	sites, err := sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
-		Dialect: remoteFS.Dialect,
+	sites, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
 			" WHERE parent_id IS NULL" +

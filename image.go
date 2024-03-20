@@ -22,7 +22,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		SitePrefix        string            `json:"sitePrefix"`
 		ImgDomain         string            `json:"imgDomain"`
-		IsRemoteFS        bool              `json:"isRemoteFS"`
+		IsDatabaseFS        bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FileID            ID                `json:"fileID"`
@@ -75,7 +75,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.ImgDomain = nbrew.ImgDomain
 		response.UserID = user.UserID
 		response.Username = user.Username
-		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.FileID = fileInfo.FileID
 			response.ModTime = fileInfo.ModTime()
 			response.CreationTime = fileInfo.CreationTime
@@ -90,12 +90,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.Size = fileInfo.Size()
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-			response.IsRemoteFS = true
+		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+			response.IsDatabaseFS = true
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
-				result, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
@@ -132,8 +132,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return nil
 			})
 			group.Go(func() error {
-				content, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+				content, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
@@ -152,8 +152,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return nil
 			})
 			group.Go(func() error {
-				result, err := sq.FetchOne(groupctx, remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
@@ -274,7 +274,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 
 		response := Response{}
-		remoteFS, ok := nbrew.FS.(*RemoteFS)
+		databaseFS, ok := nbrew.FS.(*DatabaseFS)
 		if !ok {
 			writeResponse(w, r, response)
 			return
@@ -315,8 +315,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 
 		response.Content = strings.TrimSpace(request.Content)
-		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
-			Dialect: remoteFS.Dialect,
+		_, err := sq.Exec(r.Context(), databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
 			Format:  "UPDATE files SET text = {content} WHERE file_path = {filePath}",
 			Values: []any{
 				sq.StringParam("content", response.Content),
@@ -341,9 +341,9 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				var text string
 				var creationTime time.Time
 				response.BelongsTo = path.Dir(tail) + ".md"
-				if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-					result, err := sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
-						Dialect: remoteFS.Dialect,
+				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+					result, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
 						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 						Values: []any{
 							sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),
@@ -419,9 +419,9 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			} else if next != "themes" {
 				var text string
 				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
-				if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-					text, err = sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
-						Dialect: remoteFS.Dialect,
+				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+					text, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
 						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 						Values: []any{
 							sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),

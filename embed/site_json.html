@@ -108,7 +108,7 @@
   </div>
   <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
 </form>
-{{- if $.IsRemoteFS }}
+{{- if $.IsDatabaseFS }}
 <div class='mv3'>
   <span class='b'>Storage Used:</span>
   <span>{{ humanReadableFileSize $.StorageUsed }}<span>

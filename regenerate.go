@@ -98,7 +98,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	var count atomic.Int64
 	startedAt := time.Now()
 
-	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 		type File struct {
 			FilePath     string
 			Text         string
@@ -106,8 +106,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		}
 		group, groupctx := errgroup.WithContext(ctx)
 		group.Go(func() error {
-			cursor, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			cursor, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE file_path LIKE {pattern} ESCAPE '\\'" +
@@ -155,8 +155,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			return nil
 		})
 		group.Go(func() error {
-			cursorA, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			cursorA, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {postsDir})" +
@@ -203,8 +203,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			if err != nil {
 				return err
 			}
-			cursorB, err := sq.FetchCursor(groupctx, remoteFS.DB, sq.Query{
-				Dialect: remoteFS.Dialect,
+			cursorB, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE file_path LIKE {pattern} ESCAPE '\\'" +

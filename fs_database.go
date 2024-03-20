@@ -44,7 +44,7 @@ var gzipWriterPool = sync.Pool{
 	},
 }
 
-type RemoteFSConfig struct {
+type DatabaseFSConfig struct {
 	DB            *sql.DB
 	Dialect       string
 	ErrorCode     func(error) string
@@ -52,7 +52,7 @@ type RemoteFSConfig struct {
 	Logger        *slog.Logger
 }
 
-type RemoteFS struct {
+type DatabaseFS struct {
 	Context       context.Context
 	DB            *sql.DB
 	Dialect       string
@@ -61,8 +61,8 @@ type RemoteFS struct {
 	Logger        *slog.Logger
 }
 
-func NewRemoteFS(config RemoteFSConfig) (*RemoteFS, error) {
-	remoteFS := &RemoteFS{
+func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
+	databaseFS := &DatabaseFS{
 		Context:       context.Background(),
 		DB:            config.DB,
 		Dialect:       config.Dialect,
@@ -70,11 +70,11 @@ func NewRemoteFS(config RemoteFSConfig) (*RemoteFS, error) {
 		ObjectStorage: config.ObjectStorage,
 		Logger:        config.Logger,
 	}
-	return remoteFS, nil
+	return databaseFS, nil
 }
 
-func (fsys *RemoteFS) WithContext(ctx context.Context) FS {
-	return &RemoteFS{
+func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
+	return &DatabaseFS{
 		Context:       ctx,
 		DB:            fsys.DB,
 		Dialect:       fsys.Dialect,
@@ -84,7 +84,7 @@ func (fsys *RemoteFS) WithContext(ctx context.Context) FS {
 	}
 }
 
-func (fsys *RemoteFS) Open(name string) (fs.File, error) {
+func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -93,10 +93,10 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
 	}
 	if name == "." {
-		file := &RemoteFile{
+		file := &DatabaseFile{
 			ctx:           fsys.Context,
 			objectStorage: fsys.ObjectStorage,
-			info:          &RemoteFileInfo{FilePath: ".", isDir: true},
+			info:          &DatabaseFileInfo{FilePath: ".", isDir: true},
 		}
 		return file, nil
 	}
@@ -110,12 +110,12 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 		Values: []any{
 			sq.StringParam("name", name),
 		},
-	}, func(row *sq.Row) *RemoteFile {
-		file := &RemoteFile{
+	}, func(row *sq.Row) *DatabaseFile {
+		file := &DatabaseFile{
 			ctx:           fsys.Context,
 			fileType:      fileType,
 			objectStorage: fsys.ObjectStorage,
-			info:          &RemoteFileInfo{},
+			info:          &DatabaseFileInfo{},
 		}
 		file.info.FileID = row.UUID("file_id")
 		file.info.FilePath = row.String("file_path")
@@ -167,7 +167,7 @@ func (fsys *RemoteFS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
-func (fsys *RemoteFS) Stat(name string) (fs.FileInfo, error) {
+func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (fsys *RemoteFS) Stat(name string) (fs.FileInfo, error) {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
 	}
 	if name == "." {
-		return &RemoteFileInfo{FilePath: ".", isDir: true}, nil
+		return &DatabaseFileInfo{FilePath: ".", isDir: true}, nil
 	}
 	fileInfo, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
@@ -184,8 +184,8 @@ func (fsys *RemoteFS) Stat(name string) (fs.FileInfo, error) {
 		Values: []any{
 			sq.StringParam("name", name),
 		},
-	}, func(row *sq.Row) *RemoteFileInfo {
-		fileInfo := &RemoteFileInfo{}
+	}, func(row *sq.Row) *DatabaseFileInfo {
+		fileInfo := &DatabaseFileInfo{}
 		fileInfo.FileID = row.UUID("file_id")
 		fileInfo.FilePath = row.String("file_path")
 		fileInfo.isDir = row.Bool("is_dir")
@@ -203,7 +203,7 @@ func (fsys *RemoteFS) Stat(name string) (fs.FileInfo, error) {
 	return fileInfo, nil
 }
 
-type RemoteFileInfo struct {
+type DatabaseFileInfo struct {
 	FileID       ID
 	FilePath     string
 	isDir        bool
@@ -212,43 +212,43 @@ type RemoteFileInfo struct {
 	CreationTime time.Time
 }
 
-func (fileInfo *RemoteFileInfo) Name() string { return path.Base(fileInfo.FilePath) }
+func (fileInfo *DatabaseFileInfo) Name() string { return path.Base(fileInfo.FilePath) }
 
-func (fileInfo *RemoteFileInfo) Size() int64 { return fileInfo.size }
+func (fileInfo *DatabaseFileInfo) Size() int64 { return fileInfo.size }
 
-func (fileInfo *RemoteFileInfo) ModTime() time.Time { return fileInfo.modTime }
+func (fileInfo *DatabaseFileInfo) ModTime() time.Time { return fileInfo.modTime }
 
-func (fileInfo *RemoteFileInfo) IsDir() bool { return fileInfo.isDir }
+func (fileInfo *DatabaseFileInfo) IsDir() bool { return fileInfo.isDir }
 
-func (fileInfo *RemoteFileInfo) Sys() any { return nil }
+func (fileInfo *DatabaseFileInfo) Sys() any { return nil }
 
-func (fileInfo *RemoteFileInfo) Type() fs.FileMode { return fileInfo.Mode().Type() }
+func (fileInfo *DatabaseFileInfo) Type() fs.FileMode { return fileInfo.Mode().Type() }
 
-func (fileInfo *RemoteFileInfo) Info() (fs.FileInfo, error) { return fileInfo, nil }
+func (fileInfo *DatabaseFileInfo) Info() (fs.FileInfo, error) { return fileInfo, nil }
 
-func (fileInfo *RemoteFileInfo) Mode() fs.FileMode {
+func (fileInfo *DatabaseFileInfo) Mode() fs.FileMode {
 	if fileInfo.isDir {
 		return fs.ModeDir
 	}
 	return 0
 }
 
-type RemoteFile struct {
+type DatabaseFile struct {
 	ctx               context.Context
 	fileType          FileType
 	isFulltextIndexed bool
 	objectStorage     ObjectStorage
-	info              *RemoteFileInfo
+	info              *DatabaseFileInfo
 	buf               *bytes.Buffer
 	gzipReader        *gzip.Reader
 	readCloser        io.ReadCloser
 }
 
-func (file *RemoteFile) Stat() (fs.FileInfo, error) {
+func (file *DatabaseFile) Stat() (fs.FileInfo, error) {
 	return file.info, nil
 }
 
-func (file *RemoteFile) Read(p []byte) (n int, err error) {
+func (file *DatabaseFile) Read(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		return 0, err
@@ -273,7 +273,7 @@ var empty = (*emptyReader)(nil)
 
 func (empty *emptyReader) Read(p []byte) (n int, err error) { return 0, io.EOF }
 
-func (file *RemoteFile) Close() error {
+func (file *DatabaseFile) Close() error {
 	if file.info.isDir {
 		return nil
 	}
@@ -313,7 +313,7 @@ func (file *RemoteFile) Close() error {
 	return nil
 }
 
-func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
+func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -328,7 +328,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 	if ext := path.Ext(name); ext != "" {
 		fileType = fileTypes[ext]
 	}
-	file := &RemoteFileWriter{
+	file := &DatabaseFileWriter{
 		ctx:               fsys.Context,
 		fileType:          fileType,
 		isFulltextIndexed: isFulltextIndexed(name),
@@ -431,7 +431,7 @@ func (fsys *RemoteFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, er
 	return file, nil
 }
 
-type RemoteFileWriter struct {
+type DatabaseFileWriter struct {
 	ctx                 context.Context
 	fileType            FileType
 	isFulltextIndexed   bool
@@ -452,7 +452,7 @@ type RemoteFileWriter struct {
 	logger              *slog.Logger
 }
 
-func (file *RemoteFileWriter) Write(p []byte) (n int, err error) {
+func (file *DatabaseFileWriter) Write(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
@@ -474,7 +474,7 @@ func (file *RemoteFileWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (file *RemoteFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
+func (file *DatabaseFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
@@ -496,7 +496,7 @@ func (file *RemoteFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, err
 }
 
-func (file *RemoteFileWriter) Close() error {
+func (file *DatabaseFileWriter) Close() error {
 	if file.fileType.IsObject {
 		if file.objectStorageWriter == nil {
 			return fs.ErrClosed
@@ -662,7 +662,7 @@ func (file *RemoteFileWriter) Close() error {
 	return nil
 }
 
-func (fsys *RemoteFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -685,7 +685,7 @@ func (fsys *RemoteFS) ReadDir(name string) ([]fs.DirEntry, error) {
 			sq.Param("condition", condition),
 		},
 	}, func(row *sq.Row) fs.DirEntry {
-		file := &RemoteFileInfo{}
+		file := &DatabaseFileInfo{}
 		file.FileID = row.UUID("file_id")
 		file.FilePath = row.String("file_path")
 		file.isDir = row.Bool("is_dir")
@@ -700,7 +700,7 @@ func (fsys *RemoteFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return dirEntries, nil
 }
 
-func (fsys *RemoteFS) Mkdir(name string, _ fs.FileMode) error {
+func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -760,7 +760,7 @@ func (fsys *RemoteFS) Mkdir(name string, _ fs.FileMode) error {
 	return nil
 }
 
-func (fsys *RemoteFS) MkdirAll(name string, _ fs.FileMode) error {
+func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -880,7 +880,7 @@ func (fsys *RemoteFS) MkdirAll(name string, _ fs.FileMode) error {
 	return nil
 }
 
-func (fsys *RemoteFS) Remove(name string) error {
+func (fsys *DatabaseFS) Remove(name string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -935,7 +935,7 @@ func (fsys *RemoteFS) Remove(name string) error {
 	return nil
 }
 
-func (fsys *RemoteFS) RemoveAll(name string) error {
+func (fsys *DatabaseFS) RemoveAll(name string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -1012,7 +1012,7 @@ func (fsys *RemoteFS) RemoveAll(name string) error {
 	return nil
 }
 
-func (fsys *RemoteFS) Rename(oldName, newName string) error {
+func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -1152,7 +1152,7 @@ func (fsys *RemoteFS) Rename(oldName, newName string) error {
 	return nil
 }
 
-func (fsys *RemoteFS) Copy(srcName, destName string) error {
+func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err

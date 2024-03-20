@@ -278,7 +278,7 @@
     </details>
   </div>
   {{- end }}
-  {{- if $.IsRemoteFS }}
+  {{- if $.IsDatabaseFS }}
   <div class='flex items-center'>
     <details class='relative ml2' data-autoclose-details>
       <summary role='button' title='Search' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
@@ -333,7 +333,7 @@
             <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
             {{- end }}
             {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
-              {{- if and $.ImgDomain $.IsRemoteFS }}
+              {{- if and $.ImgDomain $.IsDatabaseFS }}
               <img src='{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
               {{- else }}
               <img src='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}?raw' class='h3 w3 mr1'>

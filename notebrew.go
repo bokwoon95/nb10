@@ -913,17 +913,17 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 
 	// .html .css .js .md .txt .svg .ico .eot .otf .ttf .atom .json
 
-	if remoteFile, ok := file.(*RemoteFile); ok {
-		// If file is a RemoteFile is gzippable and is not fulltext indexed,
-		// its contents are already gzipped. We can reach directly into its
-		// buffer and skip the gzipping step.
-		if remoteFile.fileType.IsGzippable && !remoteFile.isFulltextIndexed {
+	if databaseFile, ok := file.(*DatabaseFile); ok {
+		// If file is a DatabaseFile that is gzippable and is not fulltext
+		// indexed, its contents are already gzipped. We can reach directly
+		// into its buffer and skip the gzipping step.
+		if databaseFile.fileType.IsGzippable && !databaseFile.isFulltextIndexed {
 			hasher := hashPool.Get().(hash.Hash)
 			defer func() {
 				hasher.Reset()
 				hashPool.Put(hasher)
 			}()
-			_, err := hasher.Write(remoteFile.buf.Bytes())
+			_, err := hasher.Write(databaseFile.buf.Bytes())
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
@@ -934,7 +934,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(remoteFile.buf.Bytes()))
+			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
 			return
 		}
 	}

@@ -35,7 +35,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		ImgDomain         string            `json:"imgDomain"`
-		IsRemoteFS        bool              `json:"isRemoteFS"`
+		IsDatabaseFS        bool              `json:"isDatabaseFS"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -102,7 +102,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.ImgDomain = nbrew.ImgDomain
-		_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
@@ -143,7 +143,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					Size:    fileInfo.Size(),
 					ModTime: fileInfo.ModTime(),
 				}
-				if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 					file.FileID = fileInfo.FileID
 				}
 				response.Files[i] = file
@@ -769,7 +769,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						return err
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 						creationTime = fileInfo.CreationTime
 					} else {
 						var absolutePath string

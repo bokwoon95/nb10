@@ -374,7 +374,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if certmagic.MatchWildcard(r.Host, "*."+nbrew.ContentDomain) {
 		subdomain = strings.TrimSuffix(r.Host, "."+nbrew.ContentDomain)
 		if subdomain == "img" {
-			remoteFS, ok := nbrew.FS.(*RemoteFS)
+			databaseFS, ok := nbrew.FS.(*DatabaseFS)
 			if !ok {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 				return
@@ -384,7 +384,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 				return
 			}
-			reader, err := remoteFS.ObjectStorage.Get(r.Context(), urlPath)
+			reader, err := databaseFS.ObjectStorage.Get(r.Context(), urlPath)
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrInvalid) {
 					http.Error(w, "404 Not Found", http.StatusNotFound)
@@ -487,9 +487,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		cacheControl = "no-cache, stale-while-revalidate, max-age=120" /* 2 minutes */
 	}
-	if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-		_, err := sq.Exec(r.Context(), remoteFS.DB, sq.Query{
-			Dialect: remoteFS.Dialect,
+	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+		_, err := sq.Exec(r.Context(), databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
 			Format:  "UPDATE files SET serve_count = coalesce(serve_count, 0) + 1 WHERE file_path = {filePath}",
 			Values: []any{
 				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
@@ -513,12 +513,12 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
-	if remoteFile, ok := file.(*RemoteFile); ok {
+	if databaseFile, ok := file.(*DatabaseFile); ok {
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusNotFound)
-		_, err := io.Copy(w, bytes.NewReader(remoteFile.buf.Bytes()))
+		_, err := io.Copy(w, bytes.NewReader(databaseFile.buf.Bytes()))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}

@@ -47,7 +47,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 	}
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
-		IsRemoteFS        bool              `json:"isRemoteFS"`
+		IsDatabaseFS        bool              `json:"isDatabaseFS"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -135,7 +135,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		}
 		nbrew.clearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-		_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
@@ -161,11 +161,11 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.CodeStyle = request.CodeStyle
 		response.Description = request.Description
 		response.NavigationLinks = request.NavigationLinks
-		if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
+		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 			// notes pages posts output
 			if sitePrefix == "" {
-				response.StorageUsed, err = sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+				response.StorageUsed, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE file_path LIKE 'notes/%' OR file_path LIKE 'pages/%' OR file_path LIKE 'posts/%' OR file_path LIKE 'output/%'",
@@ -178,8 +178,8 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 					return
 				}
 			} else {
-				response.StorageUsed, err = sq.FetchOne(r.Context(), remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+				response.StorageUsed, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE file_path LIKE {pattern} ESCAPE '\\'",

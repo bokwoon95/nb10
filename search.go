@@ -29,7 +29,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		ContentBaseURL string   `json:"contentBaseURL"`
 		SitePrefix     string   `json:"sitePrefix"`
 		ImgDomain      string   `json:"imgDomain"`
-		IsRemoteFS     bool     `json:"isRemoteFS"`
+		IsDatabaseFS     bool     `json:"isDatabaseFS"`
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
@@ -64,7 +64,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		return
 	}
 
-	remoteFS, ok := nbrew.FS.(*RemoteFS)
+	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
 		notFound(w, r)
 		return
@@ -119,7 +119,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	var response Response
 	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
-	_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
@@ -144,7 +144,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		return
 	}
 	var err error
-	switch remoteFS.Dialect {
+	switch databaseFS.Dialect {
 	case "sqlite":
 		var parentFilter sq.Expression
 		parent := path.Join(sitePrefix, response.Parent)
@@ -172,8 +172,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			b.WriteString(")")
 			extensionFilter = sq.Expr(b.String(), args...)
 		}
-		response.Matches, err = sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
-			Dialect: remoteFS.Dialect,
+		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
 				" JOIN files_fts5 ON files_fts5.rowid = files.rowid" +

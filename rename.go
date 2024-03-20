@@ -501,7 +501,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						return
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 						creationTime = fileInfo.CreationTime
 					} else {
 						var absolutePath string

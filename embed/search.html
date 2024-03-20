@@ -49,7 +49,7 @@
       <input id='ext.json' type='checkbox' name='ext' value='.json' class='pointer'{{ if hasExt ".json" }} checked{{ end }}>
       <label for='ext.json' class='mr3 pointer'>.json</label>
     </div>
-    {{- if $.IsRemoteFS }}
+    {{- if $.IsDatabaseFS }}
     <div class='flex items-center'>
       <input id='ext.jpeg' type='checkbox' name='ext' value='.jpeg' class='pointer'{{ if hasExt ".jpeg" }} checked{{ end }}>
       <label for='ext.jpeg' class='mr3 pointer'>.jpeg</label>
@@ -75,7 +75,7 @@
   <li>
     <div>
       {{- if eq (ext $match.FilePath) ".jpeg" ".jpg" ".png" ".webp" ".gif" }}
-        {{- if and $.ImgDomain $.IsRemoteFS }}
+        {{- if and $.ImgDomain $.IsDatabaseFS }}
         <img src='{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 mr1' loading='lazy'>
         {{- else }}
         <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 mr1' loading='lazy'>

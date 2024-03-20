@@ -33,7 +33,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		ImgDomain         string            `json:"imgDomain"`
-		IsRemoteFS        bool              `json:"isRemoteFS"`
+		IsDatabaseFS        bool              `json:"isDatabaseFS"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
@@ -106,7 +106,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
-		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.FileID = fileInfo.FileID
 			response.ModTime = fileInfo.ModTime()
 			response.CreationTime = fileInfo.CreationTime
@@ -120,7 +120,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
-		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
@@ -130,7 +130,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
 		response.ImgDomain = nbrew.ImgDomain
-		_, response.IsRemoteFS = nbrew.FS.(*RemoteFS)
+		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 
 		if isEditable {
 			var b strings.Builder
@@ -153,9 +153,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(tail, ".html") + "/")
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
-			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-				response.Assets, err = sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+				response.Assets, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
@@ -223,9 +223,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		case "posts":
 			response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
-			if remoteFS, ok := nbrew.FS.(*RemoteFS); ok {
-				response.Assets, err = sq.FetchAll(r.Context(), remoteFS.DB, sq.Query{
-					Dialect: remoteFS.Dialect,
+			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+				response.Assets, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
@@ -492,7 +492,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			ModTime:        fileInfo.ModTime(),
 			Content:        request.Content,
 		}
-		if fileInfo, ok := fileInfo.(*RemoteFileInfo); ok {
+		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string

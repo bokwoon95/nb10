@@ -62,14 +62,14 @@
 <figure class='mv2 w-70-l w-80-m w-100 center'>
   <figcaption class='flex flex-wrap'>
     {{- if $.PreviousImageName }}
-      {{- if and $.ImgDomain $.IsRemoteFS }}
+      {{- if and $.ImgDomain $.IsDatabaseFS }}
       <a href='{{ $.ImgDomain }}/{{ $.PreviousImageID }}{{ ext $.PreviousImageName }}'>&larr; previous</a>
       {{- else }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
       {{- end }}
     {{- end }}
     <span class='flex-grow-1'></span>
-    {{- if and $.ImgDomain $.IsRemoteFS }}
+    {{- if and $.ImgDomain $.IsDatabaseFS }}
     <a href='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a>
     {{- else }}
     <a href='?raw'>{{ base $.FilePath }}</a>
@@ -77,20 +77,20 @@
     <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
     <span class='flex-grow-1'></span>
     {{- if $.NextImageName }}
-      {{- if and $.ImgDomain $.IsRemoteFS }}
+      {{- if and $.ImgDomain $.IsDatabaseFS }}
       <a href='{{ $.ImgDomain }}/{{ $.NextImageID }}{{ ext $.NextImageName }}'>next &rarr;</a>
       {{- else }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
       {{- end }}
     {{- end }}
   </figcaption>
-  {{- if and $.ImgDomain $.IsRemoteFS }}
+  {{- if and $.ImgDomain $.IsDatabaseFS }}
   <img src='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- else }}
   <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- end }}
 </figure>
-{{- if $.IsRemoteFS }}
+{{- if $.IsDatabaseFS }}
 <form method='post' enctype='multipart/form-data' class='mv2'>
   <div class='flex mv2'>
     <label for='content' class='b'>Caption</label>
