@@ -84,6 +84,26 @@ func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 	}
 }
 
+type DatabaseFileInfo struct {
+	FileID       ID
+	FilePath     string
+	isDir        bool
+	size         int64
+	modTime      time.Time
+	CreationTime time.Time
+}
+
+type DatabaseFile struct {
+	ctx               context.Context
+	fileType          FileType
+	isFulltextIndexed bool
+	objectStorage     ObjectStorage
+	info              *DatabaseFileInfo
+	buf               *bytes.Buffer
+	gzipReader        *gzip.Reader
+	readCloser        io.ReadCloser
+}
+
 func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	err := fsys.Context.Err()
 	if err != nil {
@@ -203,15 +223,6 @@ func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 	return fileInfo, nil
 }
 
-type DatabaseFileInfo struct {
-	FileID       ID
-	FilePath     string
-	isDir        bool
-	size         int64
-	modTime      time.Time
-	CreationTime time.Time
-}
-
 func (fileInfo *DatabaseFileInfo) Name() string { return path.Base(fileInfo.FilePath) }
 
 func (fileInfo *DatabaseFileInfo) Size() int64 { return fileInfo.size }
@@ -231,17 +242,6 @@ func (fileInfo *DatabaseFileInfo) Mode() fs.FileMode {
 		return fs.ModeDir
 	}
 	return 0
-}
-
-type DatabaseFile struct {
-	ctx               context.Context
-	fileType          FileType
-	isFulltextIndexed bool
-	objectStorage     ObjectStorage
-	info              *DatabaseFileInfo
-	buf               *bytes.Buffer
-	gzipReader        *gzip.Reader
-	readCloser        io.ReadCloser
 }
 
 func (file *DatabaseFile) Stat() (fs.FileInfo, error) {
@@ -311,6 +311,27 @@ func (file *DatabaseFile) Close() error {
 		}
 	}
 	return nil
+}
+
+type DatabaseFileWriter struct {
+	ctx                 context.Context
+	fileType            FileType
+	isFulltextIndexed   bool
+	db                  *sql.DB
+	dialect             string
+	objectStorage       ObjectStorage
+	exists              bool
+	fileID              ID
+	parentID            ID
+	filePath            string
+	size                int64
+	buf                 *bytes.Buffer
+	gzipWriter          *gzip.Writer
+	modTime             time.Time
+	objectStorageWriter *io.PipeWriter
+	objectStorageResult chan error
+	writeFailed         bool
+	logger              *slog.Logger
 }
 
 func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
@@ -429,27 +450,6 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		}
 	}
 	return file, nil
-}
-
-type DatabaseFileWriter struct {
-	ctx                 context.Context
-	fileType            FileType
-	isFulltextIndexed   bool
-	db                  *sql.DB
-	dialect             string
-	objectStorage       ObjectStorage
-	exists              bool
-	fileID              ID
-	parentID            ID
-	filePath            string
-	size                int64
-	buf                 *bytes.Buffer
-	gzipWriter          *gzip.Writer
-	modTime             time.Time
-	objectStorageWriter *io.PipeWriter
-	objectStorageResult chan error
-	writeFailed         bool
-	logger              *slog.Logger
 }
 
 func (file *DatabaseFileWriter) Write(p []byte) (n int, err error) {
