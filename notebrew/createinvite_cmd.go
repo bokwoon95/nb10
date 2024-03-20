@@ -37,7 +37,7 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 	flagset.Func("site-limit", "", func(s string) error {
 		siteLimit, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
-			return fmt.Errorf("%q is not a valid count", s)
+			return fmt.Errorf("%q is not a valid integer", s)
 		}
 		cmd.SiteLimit = sql.NullInt64{Int64: siteLimit, Valid: true}
 		return nil
@@ -45,7 +45,7 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 	flagset.Func("storage-limit", "", func(s string) error {
 		storageLimit, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
-			return fmt.Errorf("%q is not a valid count", s)
+			return fmt.Errorf("%q is not a valid integer", s)
 		}
 		cmd.StorageLimit = sql.NullInt64{Int64: storageLimit, Valid: true}
 		return nil
@@ -53,7 +53,7 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 	flagset.Func("count", "", func(s string) error {
 		count, err := strconv.ParseInt(s, 10, 64)
 		if err != nil {
-			return fmt.Errorf("%q is not a valid count", s)
+			return fmt.Errorf("%q is not a valid integer", s)
 		}
 		cmd.Count = sql.NullInt64{Int64: count, Valid: true}
 		return nil

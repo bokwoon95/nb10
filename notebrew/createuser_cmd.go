@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"io"
 	"net/mail"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -26,6 +28,8 @@ type CreateuserCmd struct {
 	Username     string
 	Email        string
 	PasswordHash string
+	SiteLimit    sql.NullInt64
+	StorageLimit sql.NullInt64
 }
 
 func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, error) {
@@ -49,6 +53,22 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 	flagset.Func("password-hash", "", func(s string) error {
 		passwordHashProvided = true
 		cmd.PasswordHash = strings.TrimSpace(s)
+		return nil
+	})
+	flagset.Func("site-limit", "", func(s string) error {
+		siteLimit, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%q is not a valid integer", s)
+		}
+		cmd.SiteLimit = sql.NullInt64{Int64: siteLimit, Valid: true}
+		return nil
+	})
+	flagset.Func("storage-limit", "", func(s string) error {
+		storageLimit, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return fmt.Errorf("%q is not a valid integer", s)
+		}
+		cmd.StorageLimit = sql.NullInt64{Int64: storageLimit, Valid: true}
 		return nil
 	})
 	err := flagset.Parse(args)
@@ -220,13 +240,15 @@ func (cmd *CreateuserCmd) Run() error {
 	defer tx.Rollback()
 	_, err = sq.Exec(context.Background(), tx, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
-		Format: "INSERT INTO users (user_id, username, email, password_hash)" +
-			" VALUES ({userID}, {username}, {email}, {passwordHash})",
+		Format: "INSERT INTO users (user_id, username, email, password_hash, site_limit, storage_limit)" +
+			" VALUES ({userID}, {username}, {email}, {passwordHash}, {siteLimit}, {storageLimit})",
 		Values: []any{
 			sq.UUIDParam("userID", nb10.NewID()),
 			sq.StringParam("username", cmd.Username),
 			sq.StringParam("email", cmd.Email),
 			sq.StringParam("passwordHash", cmd.PasswordHash),
+			sq.Param("siteLimit", cmd.SiteLimit),
+			sq.Param("storageLimit", cmd.StorageLimit),
 		},
 	})
 	if err != nil {
