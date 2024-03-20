@@ -120,6 +120,10 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
 		}
 		port := string(bytes.TrimSpace(b))
+		_, err = strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("%s: %q is not a valid integer", filepath.Join(configDir, "port.txt"), port)
+		}
 
 		// CMS domain.
 		b, err = os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
