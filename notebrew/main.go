@@ -962,6 +962,14 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "stop":
+				cmd, err := StopCommand(nbrew, configDir, addr, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			default:
 				return fmt.Errorf("unknown command: %s", command)
 			}
