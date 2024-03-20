@@ -181,7 +181,12 @@ func (cmd *DeletesiteCmd) Run() error {
 	if cmd.SiteName == "" {
 		return fmt.Errorf("site name cannot be empty")
 	}
-	_, err := sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+	tx, err := cmd.Notebrew.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = sq.Exec(context.Background(), tx, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format: "DELETE FROM site_owner WHERE EXISTS (" +
 			"SELECT 1 FROM site WHERE site.site_id = site_owner.site_id AND site.site_name = {siteName}" +
@@ -193,7 +198,7 @@ func (cmd *DeletesiteCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+	_, err = sq.Exec(context.Background(), tx, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format: "DELETE FROM site_user WHERE EXISTS (" +
 			"SELECT 1 FROM site WHERE site.site_id = site_user.site_id AND site.site_name = {siteName}" +
@@ -205,7 +210,7 @@ func (cmd *DeletesiteCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	result, err := sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+	result, err := sq.Exec(context.Background(), tx, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format:  "DELETE FROM site WHERE site_name = {siteName}",
 		Values: []any{
@@ -215,10 +220,14 @@ func (cmd *DeletesiteCmd) Run() error {
 	if err != nil {
 		return err
 	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	if result.RowsAffected == 0 {
 		fmt.Fprintln(cmd.Stdout, "site does not exist in the database")
 	} else {
-		fmt.Fprintln(cmd.Stdout, "site deleted from the database")
+		fmt.Fprintln(cmd.Stdout, "deleted site from the database")
 	}
 	var sitePrefix string
 	if strings.Contains(cmd.SiteName, ".") {
@@ -237,7 +246,7 @@ func (cmd *DeletesiteCmd) Run() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cmd.Stdout, "site deleted from the filesystem")
+		fmt.Fprintln(cmd.Stdout, "deleted site from the filesystem")
 	}
 	return nil
 }

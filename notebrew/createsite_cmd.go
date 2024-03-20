@@ -28,134 +28,94 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 	if nbrew.DB == nil {
 		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
 	}
-	var cmd CreatesiteCmd
-	cmd.Notebrew = nbrew
+	cmd := CreatesiteCmd{
+		Notebrew: nbrew,
+		Stdout:   os.Stdout,
+	}
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
 		fmt.Fprintln(flagset.Output(), `Usage:
   lorem ipsum dolor sit amet
   consectetur adipiscing elit`)
 	}
+	var siteNameProvided bool
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		siteNameProvided = true
+		cmd.SiteName = strings.TrimSpace(args[0])
+		args = args[1:]
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err
 	}
-	args = flagset.Args()
-	if len(args) > 1 {
+	if flagset.NArg() > 0 {
 		flagset.Usage()
-		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(args[1:], " "))
+		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
-	if len(args) == 1 {
-		cmd.SiteName = args[0]
-		if cmd.SiteName == "" {
-			return nil, fmt.Errorf("cannot be empty")
-		}
-		if cmd.SiteName == "www" || cmd.SiteName == "img" || cmd.SiteName == "video" || cmd.SiteName == "cdn" {
-			return nil, fmt.Errorf("site name not allowed")
-		}
-		for _, char := range cmd.SiteName {
-			if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' && char != '.' {
-				return nil, fmt.Errorf("only lowercase letters, numbers, hyphen and dot allowed")
-			}
-		}
-		if len(cmd.SiteName) > 30 {
-			return nil, fmt.Errorf("cannot exceed 30 characters")
-		}
-		existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-			Dialect: cmd.Notebrew.Dialect,
-			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-			Values: []any{
-				sq.StringParam("siteName", cmd.SiteName),
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-		var sitePrefix string
-		if strings.Contains(cmd.SiteName, ".") {
-			sitePrefix = cmd.SiteName
-		} else {
-			sitePrefix = "@" + cmd.SiteName
-		}
-		var existsInFS bool
-		_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
+	if !siteNameProvided {
+		fmt.Println("Press Ctrl+C to exit.")
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			fmt.Print("Site name: ")
+			text, err := reader.ReadString('\n')
+			if err != nil {
 				return nil, err
 			}
-		} else {
-			existsInFS = true
-		}
-		if existsInDB && existsInFS {
-			return nil, fmt.Errorf("site already exists")
-		}
-		return &cmd, nil
-	}
-	fmt.Println("Press Ctrl+C to exit.")
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("Site name: ")
-		text, err := reader.ReadString('\n')
-		if err != nil {
-			return nil, err
-		}
-		cmd.SiteName = strings.TrimSpace(text)
-		if cmd.SiteName == "" {
-			fmt.Println("cannot be empty")
-			continue
-		}
-		if cmd.SiteName == "www" || cmd.SiteName == "img" || cmd.SiteName == "video" || cmd.SiteName == "cdn" {
-			fmt.Println("site name not allowed")
-			continue
-		}
-		for _, char := range cmd.SiteName {
-			if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' && char != '.' {
-				fmt.Println("only lowercase letters, numbers, hyphen and dot allowed")
+			cmd.SiteName = strings.TrimSpace(text)
+			if cmd.SiteName == "" {
+				fmt.Println("site name cannot be empty")
 				continue
 			}
-		}
-		if len(cmd.SiteName) > 30 {
-			fmt.Println("cannot exceed 30 characters")
-			continue
-		}
-		existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-			Dialect: cmd.Notebrew.Dialect,
-			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-			Values: []any{
-				sq.StringParam("siteName", cmd.SiteName),
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-		var sitePrefix string
-		if strings.Contains(cmd.SiteName, ".") {
-			sitePrefix = cmd.SiteName
-		} else {
-			sitePrefix = "@" + cmd.SiteName
-		}
-		var existsInFS bool
-		_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
+			if cmd.SiteName == "www" || cmd.SiteName == "img" || cmd.SiteName == "video" || cmd.SiteName == "cdn" {
+				fmt.Println("site name not allowed")
+				continue
+			}
+			for _, char := range cmd.SiteName {
+				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' && char != '.' {
+					fmt.Println("only lowercase letters, numbers, hyphen and dot allowed in site name")
+					continue
+				}
+			}
+			if len(cmd.SiteName) > 30 {
+				fmt.Println("cannot exceed 30 characters")
+				continue
+			}
+			existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+				Dialect: cmd.Notebrew.Dialect,
+				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+				Values: []any{
+					sq.StringParam("siteName", cmd.SiteName),
+				},
+			})
+			if err != nil {
 				return nil, err
 			}
-		} else {
-			existsInFS = true
+			var sitePrefix string
+			if strings.Contains(cmd.SiteName, ".") {
+				sitePrefix = cmd.SiteName
+			} else {
+				sitePrefix = "@" + cmd.SiteName
+			}
+			var existsInFS bool
+			_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return nil, err
+				}
+			} else {
+				existsInFS = true
+			}
+			if existsInDB && existsInFS {
+				fmt.Println("site already exists")
+				continue
+			}
+			break
 		}
-		if existsInDB && existsInFS {
-			fmt.Println("site already exists")
-			continue
-		}
-		break
 	}
 	return &cmd, nil
 }
 
 func (cmd *CreatesiteCmd) Run() error {
-	if cmd.Stdout == nil {
-		cmd.Stdout = os.Stdout
-	}
 	if cmd.SiteName == "" {
 		return fmt.Errorf("site name cannot be empty")
 	}
@@ -170,7 +130,35 @@ func (cmd *CreatesiteCmd) Run() error {
 	if len(cmd.SiteName) > 30 {
 		return fmt.Errorf("site name cannot exceed 30 characters")
 	}
-	_, err := sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
+	existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+		Dialect: cmd.Notebrew.Dialect,
+		Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+		Values: []any{
+			sq.StringParam("siteName", cmd.SiteName),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	var sitePrefix string
+	if strings.Contains(cmd.SiteName, ".") {
+		sitePrefix = cmd.SiteName
+	} else {
+		sitePrefix = "@" + cmd.SiteName
+	}
+	var existsInFS bool
+	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	} else {
+		existsInFS = true
+	}
+	if existsInDB && existsInFS {
+		return fmt.Errorf("site already exists")
+	}
+	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
 		Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, {siteName})",
 		Values: []any{
@@ -188,20 +176,12 @@ func (cmd *CreatesiteCmd) Run() error {
 		}
 		fmt.Fprintln(cmd.Stdout, "site already exists in the database")
 	} else {
-		fmt.Fprintln(cmd.Stdout, "site created in the database")
+		fmt.Fprintln(cmd.Stdout, "created site in the database")
 	}
-	var sitePrefix string
-	if strings.Contains(cmd.SiteName, ".") {
-		sitePrefix = cmd.SiteName
+	if existsInFS {
+		fmt.Fprintln(cmd.Stdout, "site already exists in the filesystem")
 	} else {
-		sitePrefix = "@" + cmd.SiteName
-	}
-	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		err := cmd.Notebrew.FS.Mkdir(sitePrefix, 0755)
+		err = cmd.Notebrew.FS.Mkdir(sitePrefix, 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			return err
 		}
@@ -371,9 +351,7 @@ func (cmd *CreatesiteCmd) Run() error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintln(cmd.Stdout, "site created in the filesystem")
-	} else {
-		fmt.Fprintln(cmd.Stdout, "site already exists in the filesystem")
+		fmt.Fprintln(cmd.Stdout, "created site in the filesystem")
 	}
 	return nil
 }

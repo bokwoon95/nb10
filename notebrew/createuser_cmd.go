@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"io"
@@ -33,16 +32,27 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 	if nbrew.DB == nil {
 		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
 	}
-	var cmd CreateuserCmd
-	cmd.Notebrew = nbrew
-	var username sql.NullString
+	cmd := CreateuserCmd{
+		Notebrew: nbrew,
+		Stdout:   os.Stdout,
+	}
+	var usernameProvided, emailProvided, passwordHashProvided bool
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Func("username", "", func(s string) error {
-		username = sql.NullString{String: s, Valid: true}
+		usernameProvided = true
+		cmd.Username = strings.TrimSpace(s)
 		return nil
 	})
-	flagset.StringVar(&cmd.Email, "email", "", "")
-	flagset.StringVar(&cmd.PasswordHash, "password-hash", "", "")
+	flagset.Func("email", "", func(s string) error {
+		emailProvided = true
+		cmd.Email = strings.TrimSpace(s)
+		return nil
+	})
+	flagset.Func("password-hash", "", func(s string) error {
+		passwordHashProvided = true
+		cmd.PasswordHash = strings.TrimSpace(s)
+		return nil
+	})
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err
@@ -52,123 +62,111 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 		flagset.Usage()
 		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagArgs, " "))
 	}
-	cmd.Username = strings.TrimSpace(username.String)
-	cmd.Email = strings.TrimSpace(cmd.Email)
-	if username.Valid && cmd.Email != "" && cmd.PasswordHash != "" {
-		return &cmd, nil
-	}
-	fmt.Println("Press Ctrl+C to exit.")
-	reader := bufio.NewReader(os.Stdin)
-
-	if !username.Valid {
-		for {
-			fmt.Print("Username (leave blank for the default user): ")
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				return nil, err
-			}
-			username.String = strings.TrimSpace(text)
-			if username.String == "" {
-				break
-			}
-			for _, char := range username.String {
-				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
-					fmt.Println("username can only contain lowercase letters, numbers and hyphen")
-					continue
+	if !usernameProvided || !emailProvided || !passwordHashProvided {
+		fmt.Println("Press Ctrl+C to exit.")
+		reader := bufio.NewReader(os.Stdin)
+		if !usernameProvided {
+			for {
+				fmt.Print("Username (leave blank for the default user): ")
+				text, err := reader.ReadString('\n')
+				if err != nil {
+					return nil, err
 				}
-			}
-			if username.String != "" {
+				cmd.Username = strings.TrimSpace(text)
+				for _, char := range cmd.Username {
+					if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+						fmt.Println("username can only contain lowercase letters, numbers and hyphen")
+						continue
+					}
+				}
 				exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
 					Dialect: cmd.Notebrew.Dialect,
 					Format:  "SELECT 1 FROM users WHERE username = {username}",
 					Values: []any{
-						sq.StringParam("username", username.String),
+						sq.StringParam("username", cmd.Username),
 					},
 				})
 				if err != nil {
 					return nil, err
 				}
 				if exists {
-					fmt.Println("username already taken.")
+					fmt.Println("username already used by an existing user account")
 					continue
 				}
+				break
 			}
-			break
 		}
-	}
-	cmd.Username = username.String
-
-	if cmd.Email == "" {
-		for {
-			fmt.Print("Email: ")
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				return nil, err
+		if !emailProvided {
+			for {
+				fmt.Print("Email: ")
+				text, err := reader.ReadString('\n')
+				if err != nil {
+					return nil, err
+				}
+				cmd.Email = strings.TrimSpace(text)
+				if cmd.Email == "" {
+					fmt.Println("email cannot be empty")
+					continue
+				}
+				_, err = mail.ParseAddress(cmd.Email)
+				if err != nil {
+					fmt.Println("invalid email address")
+					continue
+				}
+				exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+					Dialect: cmd.Notebrew.Dialect,
+					Format:  "SELECT 1 FROM users WHERE email = {email}",
+					Values: []any{
+						sq.StringParam("email", cmd.Email),
+					},
+				})
+				if err != nil {
+					return nil, err
+				}
+				if exists {
+					fmt.Println("email already used by an existing user account")
+					continue
+				}
+				break
 			}
-			cmd.Email = strings.TrimSpace(text)
-			if cmd.Email == "" {
-				fmt.Println("email cannot be empty")
-				continue
-			}
-			_, err = mail.ParseAddress(cmd.Email)
-			if err != nil {
-				fmt.Println("invalid email address")
-				continue
-			}
-			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-				Dialect: cmd.Notebrew.Dialect,
-				Format:  "SELECT 1 FROM users WHERE email = {email}",
-				Values: []any{
-					sq.StringParam("email", cmd.Email),
-				},
-			})
-			if err != nil {
-				return nil, err
-			}
-			if exists {
-				fmt.Println("email already used by an existing user account")
-				continue
-			}
-			break
 		}
-	}
-
-	if cmd.PasswordHash == "" {
-		for {
-			fmt.Print("Password (will be hidden from view): ")
-			password, err := term.ReadPassword(int(syscall.Stdin))
-			fmt.Println()
-			if err != nil {
-				return nil, err
+		if !passwordHashProvided {
+			for {
+				fmt.Print("Password (will be hidden from view): ")
+				password, err := term.ReadPassword(int(syscall.Stdin))
+				fmt.Println()
+				if err != nil {
+					return nil, err
+				}
+				if utf8.RuneCount(password) < 8 {
+					fmt.Println("password must be at least 8 characters")
+					continue
+				}
+				commonPasswords, err := getCommonPasswords()
+				if err != nil {
+					return nil, err
+				}
+				if _, ok := commonPasswords[string(password)]; ok {
+					fmt.Println("password is too common")
+					continue
+				}
+				fmt.Print("Confirm password (will be hidden from view): ")
+				confirmPassword, err := term.ReadPassword(int(syscall.Stdin))
+				fmt.Println()
+				if err != nil {
+					return nil, err
+				}
+				if !bytes.Equal(password, confirmPassword) {
+					fmt.Println("passwords do not match")
+					continue
+				}
+				b, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+				if err != nil {
+					return nil, err
+				}
+				cmd.PasswordHash = string(b)
+				break
 			}
-			if utf8.RuneCount(password) < 8 {
-				fmt.Println("password must be at least 8 characters")
-				continue
-			}
-			commonPasswords, err := getCommonPasswords()
-			if err != nil {
-				return nil, err
-			}
-			if _, ok := commonPasswords[string(password)]; ok {
-				fmt.Println("password is too common")
-				continue
-			}
-			fmt.Print("Confirm password (will be hidden from view): ")
-			confirmPassword, err := term.ReadPassword(int(syscall.Stdin))
-			fmt.Println()
-			if err != nil {
-				return nil, err
-			}
-			if !bytes.Equal(password, confirmPassword) {
-				fmt.Println("passwords do not match")
-				continue
-			}
-			b, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
-			if err != nil {
-				return nil, err
-			}
-			cmd.PasswordHash = string(b)
-			break
 		}
 	}
 	return &cmd, nil

@@ -31,8 +31,10 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 	if nbrew.DB == nil {
 		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
 	}
-	var cmd CreateinviteCmd
-	cmd.Notebrew = nbrew
+	cmd := CreateinviteCmd{
+		Notebrew: nbrew,
+		Stdout:   os.Stdout,
+	}
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Func("site-limit", "", func(s string) error {
 		siteLimit, err := strconv.ParseInt(s, 10, 64)
@@ -58,22 +60,25 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 		cmd.Count = sql.NullInt64{Int64: count, Valid: true}
 		return nil
 	})
+	flagset.Usage = func() {
+		fmt.Fprintln(flagset.Output(), `Usage:
+  lorem ipsum dolor sit amet
+  consectetur adipiscing elit
+Flags:`)
+		flagset.PrintDefaults()
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err
 	}
-	flagArgs := flagset.Args()
-	if len(flagArgs) > 0 {
+	if flagset.NArg() > 0 {
 		flagset.Usage()
-		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagArgs, " "))
+		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
 	return &cmd, nil
 }
 
 func (cmd *CreateinviteCmd) Run() error {
-	if cmd.Stdout == nil {
-		cmd.Stdout = os.Stdout
-	}
 	count := 1
 	if cmd.Count.Valid {
 		count = int(cmd.Count.Int64)
