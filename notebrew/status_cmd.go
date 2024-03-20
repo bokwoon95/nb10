@@ -227,35 +227,43 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "proxy         = %s\n", strings.Join(proxies, ", "))
 	}
 
-	// DNS.
-	b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-	b = bytes.TrimSpace(b)
-	if len(b) == 0 {
-		fmt.Fprintf(cmd.Stdout, "dns           = <not configured>\n")
-	} else {
-		var dnsConfig DNSConfig
-		decoder := json.NewDecoder(bytes.NewReader(b))
-		decoder.DisallowUnknownFields()
-		err = decoder.Decode(&dnsConfig)
-		if err != nil {
-			return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
+	if cmd.Port == 443 {
+		// DNS.
+		b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
 		}
-		fmt.Fprintf(cmd.Stdout, "dns           = %s\n", dnsConfig.Provider)
-	}
+		b = bytes.TrimSpace(b)
+		if len(b) == 0 {
+			fmt.Fprintf(cmd.Stdout, "dns           = <not configured>\n")
+		} else {
+			var dnsConfig DNSConfig
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&dnsConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
+			}
+			fmt.Fprintf(cmd.Stdout, "dns           = %s\n", dnsConfig.Provider)
+		}
 
-	// Certmagic.
-	b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"))
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-	b = bytes.TrimSpace(b)
-	if len(b) == 0 {
-		fmt.Fprintf(cmd.Stdout, "certmagic     = <not configured>\n")
-	} else {
-		fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", string(b))
+		// Certmagic.
+		b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		b = bytes.TrimSpace(b)
+		if len(b) == 0 {
+			fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", filepath.Join(cmd.ConfigDir, "certmagic"))
+		} else {
+			var filePath string
+			cleaned := filepath.Clean(string(b))
+			filePath, err := filepath.Abs(cleaned)
+			if err != nil {
+				filePath = cleaned
+			}
+			fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", filePath)
+		}
 	}
 	fmt.Fprintf(cmd.Stdout, "To configure the above settings, run `notebrew config`.")
 	return nil
