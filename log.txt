@@ -35,7 +35,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: createsite.go, deletesite.go: must be idempotent. e.g. "create site in database", "site already exists in filesystem" or "site already exists" if it is present in both the database and filesystem.
+TODO: convert createuser to also remove its validateUsername method and do it man-mode inline.
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: rename DatabaseFS/databaseFS to DatabaseFS/databaseFS
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
