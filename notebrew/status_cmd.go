@@ -265,6 +265,6 @@ func (cmd *StatusCmd) Run() error {
 			fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", filePath)
 		}
 	}
-	fmt.Fprintf(cmd.Stdout, "To configure the above settings, run `notebrew config`.")
+	fmt.Fprintf(cmd.Stdout, "To configure the above settings, run `notebrew config`.\n")
 	return nil
 }
