@@ -36,7 +36,7 @@ Flags:`)
 	var usernameProvided bool
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		usernameProvided = true
-		cmd.Username = args[0]
+		cmd.Username = strings.TrimSpace(args[0])
 		args = args[1:]
 	}
 	err := flagset.Parse(args)

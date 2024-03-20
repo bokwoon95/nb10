@@ -28,10 +28,8 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 	if nbrew.DB == nil {
 		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
 	}
-	cmd := CreatesiteCmd{
-		Notebrew: nbrew,
-		Stdout:   os.Stdout,
-	}
+	var cmd CreatesiteCmd
+	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
 		fmt.Fprintln(flagset.Output(), `Usage:
@@ -116,6 +114,9 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 }
 
 func (cmd *CreatesiteCmd) Run() error {
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
 	if cmd.SiteName == "" {
 		return fmt.Errorf("site name cannot be empty")
 	}

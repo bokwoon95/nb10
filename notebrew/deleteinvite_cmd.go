@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 
 type DeleteinviteCmd struct {
 	Notebrew *nb10.Notebrew
+	Stdout   io.Writer
 	Before   sql.NullTime
 	After    sql.NullTime
 }
@@ -78,6 +80,9 @@ func DeleteinviteCommand(nbrew *nb10.Notebrew, args ...string) (*DeleteinviteCmd
 }
 
 func (cmd *DeleteinviteCmd) Run() error {
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
 	var exprs []string
 	var args []any
 	if cmd.Before.Valid {
@@ -107,9 +112,9 @@ func (cmd *DeleteinviteCmd) Run() error {
 		return err
 	}
 	if result.RowsAffected == 1 {
-		fmt.Println("1 invite deleted")
+		fmt.Fprintln(cmd.Stdout, "1 invite deleted")
 	} else {
-		fmt.Println(strconv.FormatInt(result.RowsAffected, 10) + " invites deleted")
+		fmt.Fprintln(cmd.Stdout, strconv.FormatInt(result.RowsAffected, 10) + " invites deleted")
 	}
 	return nil
 }

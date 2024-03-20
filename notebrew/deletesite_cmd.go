@@ -37,59 +37,53 @@ func DeletesiteCommand(nbrew *nb10.Notebrew, args ...string) (*DeletesiteCmd, er
 Flags:`)
 		flagset.PrintDefaults()
 	}
+	var siteNameProvided bool
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		siteNameProvided = true
+		cmd.SiteName = strings.TrimSpace(args[0])
+		args = args[1:]
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err
 	}
-	args = flagset.Args()
-	for i, arg := range args {
-		if strings.HasPrefix(arg, "-") {
-			err := flagset.Parse(args[i:])
-			if err != nil {
-				return nil, err
-			}
-			args = args[:i]
-			break
-		}
-	}
-	if len(args) > 1 {
+	if flagset.NArg() > 0 {
 		flagset.Usage()
-		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(args[1:], " "))
+		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
-	if len(args) == 1 {
-		cmd.SiteName = args[0]
-		if !confirm {
-			if cmd.SiteName == "" {
-				return nil, fmt.Errorf("cannot be empty")
-			}
-			existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
-				Dialect: cmd.Notebrew.Dialect,
-				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-				Values: []any{
-					sq.StringParam("siteName", cmd.SiteName),
-				},
-			})
-			if err != nil {
+	if siteNameProvided {
+		if cmd.SiteName == "" {
+			return nil, fmt.Errorf("site name cannot be empty")
+		}
+		existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			Dialect: cmd.Notebrew.Dialect,
+			Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+			Values: []any{
+				sq.StringParam("siteName", cmd.SiteName),
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		var sitePrefix string
+		if strings.Contains(cmd.SiteName, ".") {
+			sitePrefix = cmd.SiteName
+		} else {
+			sitePrefix = "@" + cmd.SiteName
+		}
+		var existsInFS bool
+		_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
 				return nil, err
 			}
-			var sitePrefix string
-			if strings.Contains(cmd.SiteName, ".") {
-				sitePrefix = cmd.SiteName
-			} else {
-				sitePrefix = "@" + cmd.SiteName
-			}
-			var existsInFS bool
-			_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					return nil, err
-				}
-			} else {
-				existsInFS = true
-			}
-			if !existsInDB && !existsInFS {
-				return nil, fmt.Errorf("site does not exist")
-			}
+		} else {
+			existsInFS = true
+		}
+		if !existsInDB && !existsInFS {
+			return nil, fmt.Errorf("site does not exist")
+		}
+		if !confirm {
 			fmt.Println("Press Ctrl+C to exit.")
 			reader := bufio.NewReader(os.Stdin)
 			for {
@@ -107,11 +101,9 @@ Flags:`)
 				break
 			}
 		}
-		return &cmd, nil
-	}
-	fmt.Println("Press Ctrl+C to exit.")
-	reader := bufio.NewReader(os.Stdin)
-	if len(args) == 0 {
+	} else {
+		fmt.Println("Press Ctrl+C to exit.")
+		reader := bufio.NewReader(os.Stdin)
 		for {
 			fmt.Print("Site name: ")
 			text, err := reader.ReadString('\n')
@@ -120,7 +112,7 @@ Flags:`)
 			}
 			cmd.SiteName = strings.TrimSpace(text)
 			if cmd.SiteName == "" {
-				fmt.Println("cannot be empty")
+				fmt.Println("site name cannot be empty")
 				continue
 			}
 			existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
@@ -154,21 +146,21 @@ Flags:`)
 			}
 			break
 		}
-	}
-	if !confirm {
-		for {
-			fmt.Printf("Are you sure you wish to delete site %q? This action is permanent and cannot be undone. All files within the site will be deleted.\n", cmd.SiteName)
-			fmt.Printf("Please confirm the site name that you wish to delete (%s): ", cmd.SiteName)
-			text, err := reader.ReadString('\n')
-			if err != nil {
-				return nil, err
+		if !confirm {
+			for {
+				fmt.Printf("Are you sure you wish to delete site %q? This action is permanent and cannot be undone. All files within the site will be deleted.\n", cmd.SiteName)
+				fmt.Printf("Please confirm the site name that you wish to delete (%s): ", cmd.SiteName)
+				text, err := reader.ReadString('\n')
+				if err != nil {
+					return nil, err
+				}
+				text = strings.TrimSpace(text)
+				if text != cmd.SiteName {
+					fmt.Println("site name does not match")
+					continue
+				}
+				break
 			}
-			text = strings.TrimSpace(text)
-			if text != cmd.SiteName {
-				fmt.Println("site name does not match")
-				continue
-			}
-			break
 		}
 	}
 	return &cmd, nil

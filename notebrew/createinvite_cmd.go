@@ -31,10 +31,8 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 	if nbrew.DB == nil {
 		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
 	}
-	cmd := CreateinviteCmd{
-		Notebrew: nbrew,
-		Stdout:   os.Stdout,
-	}
+	var cmd CreateinviteCmd
+	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Func("site-limit", "", func(s string) error {
 		siteLimit, err := strconv.ParseInt(s, 10, 64)
@@ -79,6 +77,9 @@ Flags:`)
 }
 
 func (cmd *CreateinviteCmd) Run() error {
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
 	count := 1
 	if cmd.Count.Valid {
 		count = int(cmd.Count.Int64)
