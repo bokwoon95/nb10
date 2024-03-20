@@ -97,19 +97,16 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if len(args) > 0 {
-			command, commandArgs := args[0], args[1:]
-			if command == "config" {
-				cmd, err := ConfigCommand(configDir, commandArgs...)
-				if err != nil {
-					return fmt.Errorf("%s: %w", command, err)
-				}
-				err = cmd.Run()
-				if err != nil {
-					return fmt.Errorf("%s: %w", command, err)
-				}
-				return nil
+		if len(args) > 0 && args[0] == "config" {
+			cmd, err := ConfigCommand(configDir, args[1:]...)
+			if err != nil {
+				return fmt.Errorf("config: %w", err)
 			}
+			err = cmd.Run()
+			if err != nil {
+				return fmt.Errorf("config: %w", err)
+			}
+			return nil
 		}
 		nbrew := &nb10.Notebrew{
 			Logger: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
