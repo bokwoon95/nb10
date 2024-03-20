@@ -56,7 +56,7 @@ func ResetpasswordCommand(nbrew *nb10.Notebrew, args ...string) (*ResetpasswordC
 		flagset.Usage()
 		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
-	if !userProvided || !passwordHashProvided {
+	if !userProvided || (!cmd.ResetLink && !passwordHashProvided) {
 		fmt.Println("Press Ctrl+C to exit.")
 		reader := bufio.NewReader(os.Stdin)
 		if !userProvided {
@@ -103,10 +103,7 @@ func ResetpasswordCommand(nbrew *nb10.Notebrew, args ...string) (*ResetpasswordC
 				break
 			}
 		}
-		if cmd.ResetLink {
-			return &cmd, nil
-		}
-		if !passwordHashProvided {
+		if !cmd.ResetLink && !passwordHashProvided {
 			for {
 				fmt.Print("Password (will be hidden from view, leave blank to generate password reset link): ")
 				password, err := term.ReadPassword(int(syscall.Stdin))
@@ -156,10 +153,6 @@ func (cmd *ResetpasswordCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	name := cmd.User
-	if name == "" {
-		name = "default user"
-	}
 	if cmd.ResetLink {
 		var resetToken [8 + 16]byte
 		binary.BigEndian.PutUint64(resetToken[:8], uint64(time.Now().Unix()))
@@ -197,7 +190,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 				return err
 			}
 		}
-		fmt.Fprintf(os.Stderr, "Password reset link generated for %s:\n", name)
+		fmt.Fprintln(os.Stderr, "generated password reset link:")
 		scheme := "https://"
 		if cmd.Notebrew.CMSDomain == "localhost" || strings.HasPrefix(cmd.Notebrew.CMSDomain, "localhost:") {
 			scheme = "http://"
@@ -268,6 +261,6 @@ func (cmd *ResetpasswordCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "password reset for %s\n", name)
+	fmt.Fprintln(os.Stderr, "reset password")
 	return nil
 }

@@ -931,6 +931,14 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "resetpassword":
+				cmd, err := ResetpasswordCommand(nbrew, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "start":
 			case "status":
 			case "stop":
