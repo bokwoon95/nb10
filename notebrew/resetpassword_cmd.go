@@ -190,15 +190,11 @@ func (cmd *ResetpasswordCmd) Run() error {
 				return err
 			}
 		}
-		fmt.Fprintln(os.Stderr, "generated password reset link:")
 		scheme := "https://"
 		if cmd.Notebrew.CMSDomain == "localhost" || strings.HasPrefix(cmd.Notebrew.CMSDomain, "localhost:") {
 			scheme = "http://"
 		}
-		_, err = fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/admin/resetpassword/?token="+url.QueryEscape(strings.TrimLeft(hex.EncodeToString(resetToken[:]), "0")))
-		if err != nil {
-			return err
-		}
+		fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/resetpassword/?token="+url.QueryEscape(strings.TrimLeft(hex.EncodeToString(resetToken[:]), "0")))
 		return nil
 	}
 	tx, err := cmd.Notebrew.DB.Begin()
