@@ -30,6 +30,8 @@ github.com/bokwoon95/sqddl v0.4.11 h1:GeHL0ykSoigpEUBWY8NKRVqSswD3Qu0dbfy/pS8Vo3
 github.com/bokwoon95/sqddl v0.4.11/go.mod h1:OKDpMxJCGMMtn52HdgltLH7M7zHrLo/lxGbnIkG6nQo=
 github.com/caddyserver/certmagic v0.20.0 h1:bTw7LcEZAh9ucYCRXyCpIrSAGplplI0vGYJ4BpCQ/Fc=
 github.com/caddyserver/certmagic v0.20.0/go.mod h1:N4sXgpICQUskEWpj7zVzvWD41p3NYacrNoZYiRM2jTg=
+github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5 h1:BjkPE3785EwPhhyuFkbINB+2a1xATwk8SNDWnJiD41g=
+github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5/go.mod h1:jtAfVaU/2cu1+wdSRPWE2c1N2qeAA3K4RH9pYgqwets=
 github.com/cockroachdb/apd v1.1.0/go.mod h1:8Sl8LxpKi29FqWXR16WEFZRNSz3SoPzUzeMeY4+DwBQ=
 github.com/coreos/go-systemd v0.0.0-20190321100706-95778dfbb74e/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=
 github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f/go.mod h1:F5haX7vjVVG0kc13fIWeqUViNPyEJxv/OmvnBo0Yme4=

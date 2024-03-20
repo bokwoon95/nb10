@@ -48,6 +48,13 @@ func DeleteinviteCommand(nbrew *nb10.Notebrew, args ...string) (*DeleteinviteCmd
 		cmd.After = after
 		return nil
 	})
+	flagset.Usage = func() {
+		fmt.Fprintln(flagset.Output(), `Usage:
+  lorem ipsum dolor sit amet
+  consectetur adipiscing elit
+Flags:`)
+		flagset.PrintDefaults()
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err

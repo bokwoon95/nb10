@@ -27,6 +27,9 @@ type PermissionsCmd struct {
 }
 
 func PermissionsCommand(nbrew *nb10.Notebrew, args ...string) (*PermissionsCmd, error) {
+	if nbrew.DB == nil {
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
+	}
 	var cmd PermissionsCmd
 	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
@@ -41,6 +44,13 @@ func PermissionsCommand(nbrew *nb10.Notebrew, args ...string) (*PermissionsCmd, 
 	flagset.BoolVar(&cmd.Grant, "grant", false, "")
 	flagset.BoolVar(&cmd.Revoke, "revoke", false, "")
 	flagset.BoolVar(&cmd.SetOwner, "setowner", false, "")
+	flagset.Usage = func() {
+		fmt.Fprintln(flagset.Output(), `Usage:
+  lorem ipsum dolor sit amet
+  consectetur adipiscing elit
+Flags:`)
+		flagset.PrintDefaults()
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err

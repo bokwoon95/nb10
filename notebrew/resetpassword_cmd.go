@@ -33,6 +33,9 @@ type ResetpasswordCmd struct {
 }
 
 func ResetpasswordCommand(nbrew *nb10.Notebrew, args ...string) (*ResetpasswordCmd, error) {
+	if nbrew.DB == nil {
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
+	}
 	var cmd ResetpasswordCmd
 	cmd.Notebrew = nbrew
 	var userProvided, passwordHashProvided bool
@@ -48,6 +51,13 @@ func ResetpasswordCommand(nbrew *nb10.Notebrew, args ...string) (*ResetpasswordC
 		return nil
 	})
 	flagset.BoolVar(&cmd.ResetLink, "reset-link", false, "")
+	flagset.Usage = func() {
+		fmt.Fprintln(flagset.Output(), `Usage:
+  lorem ipsum dolor sit amet
+  consectetur adipiscing elit
+Flags:`)
+		flagset.PrintDefaults()
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err

@@ -554,6 +554,7 @@ func main() {
 				db.Close()
 			}()
 
+			// Objects.
 			var objectStorage nb10.ObjectStorage
 			b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -943,7 +944,23 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "start":
+				cmd, err := StartCommand(nbrew, configDir, addr, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "status":
+				cmd, err := StatusCommand(nbrew, configDir, addr, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "stop":
 			default:
 				return fmt.Errorf("unknown command: %s", command)
@@ -981,17 +998,6 @@ func main() {
 			}
 			return err
 		}
-
-		// Swallow SIGHUP so that we can keep running even when the (SSH)
-		// session ends (the user should use `notebrew stop` to stop the
-		// process).
-		// ch := make(chan os.Signal, 1)
-		// signal.Notify(ch, syscall.SIGHUP)
-		// go func() {
-		// 	for {
-		// 		<-ch
-		// 	}
-		// }()
 
 		wait := make(chan os.Signal, 1)
 		signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)

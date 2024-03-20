@@ -71,14 +71,20 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 		cmd.StorageLimit = sql.NullInt64{Int64: storageLimit, Valid: true}
 		return nil
 	})
+	flagset.Usage = func() {
+		fmt.Fprintln(flagset.Output(), `Usage:
+  lorem ipsum dolor sit amet
+  consectetur adipiscing elit
+Flags:`)
+		flagset.PrintDefaults()
+	}
 	err := flagset.Parse(args)
 	if err != nil {
 		return nil, err
 	}
-	flagArgs := flagset.Args()
-	if len(flagArgs) > 0 {
+	if flagset.NArg() > 0 {
 		flagset.Usage()
-		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagArgs, " "))
+		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
 	if usernameProvided && emailProvided && passwordHashProvided {
 		return &cmd, nil

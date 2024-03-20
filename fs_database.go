@@ -1562,8 +1562,8 @@ func (storage *InMemoryObjectStorage) Copy(ctx context.Context, srcKey, destKey 
 }
 
 type LocalObjectStorage struct {
-	rootDir string
-	tempDir string
+	RootDir string
+	TempDir string
 }
 
 func NewLocalObjectStorage(rootDir, tempDir string) (*LocalObjectStorage, error) {
@@ -1577,8 +1577,8 @@ func NewLocalObjectStorage(rootDir, tempDir string) (*LocalObjectStorage, error)
 		return nil, err
 	}
 	localStorage := &LocalObjectStorage{
-		rootDir: filepath.FromSlash(rootDir),
-		tempDir: filepath.FromSlash(tempDir),
+		RootDir: filepath.FromSlash(rootDir),
+		TempDir: filepath.FromSlash(tempDir),
 	}
 	return localStorage, nil
 }
@@ -1591,7 +1591,7 @@ func (storage *LocalObjectStorage) Get(ctx context.Context, key string) (io.Read
 	if len(key) < 4 {
 		return nil, &fs.PathError{Op: "get", Path: key, Err: fs.ErrInvalid}
 	}
-	file, err := os.Open(filepath.Join(storage.rootDir, key[:4], key))
+	file, err := os.Open(filepath.Join(storage.RootDir, key[:4], key))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, &fs.PathError{Op: "get", Path: key, Err: fs.ErrNotExist}
@@ -1610,16 +1610,16 @@ func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader i
 		return &fs.PathError{Op: "put", Path: key, Err: fs.ErrInvalid}
 	}
 	if runtime.GOOS == "windows" {
-		file, err := os.OpenFile(filepath.Join(storage.rootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		file, err := os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
-			err = os.Mkdir(filepath.Join(storage.rootDir, key[:4]), 0755)
+			err = os.Mkdir(filepath.Join(storage.RootDir, key[:4]), 0755)
 			if err != nil && !errors.Is(err, fs.ErrExist) {
 				return err
 			}
-			file, err = os.OpenFile(filepath.Join(storage.rootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			file, err = os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
 				return err
 			}
@@ -1630,7 +1630,7 @@ func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader i
 		}
 		return nil
 	}
-	tempDir := storage.tempDir
+	tempDir := storage.TempDir
 	if tempDir == "" {
 		tempDir = os.TempDir()
 	}
@@ -1643,7 +1643,7 @@ func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader i
 		return err
 	}
 	tempFilePath := filepath.Join(tempDir, fileInfo.Name())
-	destFilePath := filepath.Join(storage.rootDir, key[:4], key)
+	destFilePath := filepath.Join(storage.RootDir, key[:4], key)
 	defer os.Remove(tempFilePath)
 	defer tempFile.Close()
 	_, err = io.Copy(tempFile, reader)
@@ -1659,7 +1659,7 @@ func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader i
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
-		err := os.Mkdir(filepath.Join(storage.rootDir, key[:4]), 0755)
+		err := os.Mkdir(filepath.Join(storage.RootDir, key[:4]), 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			return err
 		}
@@ -1679,7 +1679,7 @@ func (storage *LocalObjectStorage) Delete(ctx context.Context, key string) error
 	if len(key) < 4 {
 		return &fs.PathError{Op: "delete", Path: key, Err: fs.ErrInvalid}
 	}
-	err = os.Remove(filepath.Join(storage.rootDir, key[:4], key))
+	err = os.Remove(filepath.Join(storage.RootDir, key[:4], key))
 	if err != nil {
 		return err
 	}
@@ -1697,7 +1697,7 @@ func (storage *LocalObjectStorage) Copy(ctx context.Context, srcKey, destKey str
 	if len(destKey) < 4 {
 		return &fs.PathError{Op: "copy", Path: destKey, Err: fs.ErrInvalid}
 	}
-	srcFile, err := os.Open(filepath.Join(storage.rootDir, srcKey[:4], srcKey))
+	srcFile, err := os.Open(filepath.Join(storage.RootDir, srcKey[:4], srcKey))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
@@ -1705,7 +1705,7 @@ func (storage *LocalObjectStorage) Copy(ctx context.Context, srcKey, destKey str
 		return err
 	}
 	defer srcFile.Close()
-	destFile, err := os.OpenFile(filepath.Join(storage.rootDir, destKey[:4], destKey), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	destFile, err := os.OpenFile(filepath.Join(storage.RootDir, destKey[:4], destKey), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
