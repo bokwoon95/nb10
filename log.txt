@@ -36,6 +36,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: use cakturk/go-netstat to get the pid of the port
+    TODO: move over to shirou/gopsutil instead because go-netstat doesn't work for macOS.
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.

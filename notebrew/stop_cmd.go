@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/bokwoon95/nb10"
-	"github.com/cakturk/go-netstat/netstat"
+	"github.com/bokwoon95/nb10/netstat"
 )
 
 type StopCmd struct {
