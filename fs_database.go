@@ -1721,31 +1721,31 @@ func (storage *LocalObjectStorage) Copy(ctx context.Context, srcKey, destKey str
 	return nil
 }
 
-func IsKeyViolation(dialect string, errcode string) bool {
+func IsKeyViolation(dialect string, errorCode string) bool {
 	switch dialect {
 	case "sqlite":
-		return errcode == "1555" || errcode == "2067" // SQLITE_CONSTRAINT_PRIMARYKEY, SQLITE_CONSTRAINT_UNIQUE
+		return errorCode == "1555" || errorCode == "2067" // SQLITE_CONSTRAINT_PRIMARYKEY, SQLITE_CONSTRAINT_UNIQUE
 	case "postgres":
-		return errcode == "23505" // unique_violation
+		return errorCode == "23505" // unique_violation
 	case "mysql":
-		return errcode == "1062" // ER_DUP_ENTRY
+		return errorCode == "1062" // ER_DUP_ENTRY
 	case "sqlserver":
-		return errcode == "2627"
+		return errorCode == "2627"
 	default:
 		return false
 	}
 }
 
-func IsForeignKeyViolation(dialect string, errcode string) bool {
+func IsForeignKeyViolation(dialect string, errorCode string) bool {
 	switch dialect {
 	case "sqlite":
-		return errcode == "787" //  SQLITE_CONSTRAINT_FOREIGNKEY
+		return errorCode == "787" //  SQLITE_CONSTRAINT_FOREIGNKEY
 	case "postgres":
-		return errcode == "23503" // foreign_key_violation
+		return errorCode == "23503" // foreign_key_violation
 	case "mysql":
-		return errcode == "1216" // ER_NO_REFERENCED_ROW
+		return errorCode == "1216" // ER_NO_REFERENCED_ROW
 	case "sqlserver":
-		return errcode == "547"
+		return errorCode == "547"
 	default:
 		return false
 	}

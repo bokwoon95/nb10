@@ -922,12 +922,20 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "permissions":
+				cmd, err := PermissionsCommand(nbrew, commandArgs...)
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
+				err = cmd.Run()
+				if err != nil {
+					return fmt.Errorf("%s: %w", command, err)
+				}
 			case "resetpassword":
 			case "start":
 			case "status":
 			case "stop":
 			default:
-				return fmt.Errorf("unknown command %s", command)
+				return fmt.Errorf("unknown command: %s", command)
 			}
 			return nil
 		}
