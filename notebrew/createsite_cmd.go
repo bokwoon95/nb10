@@ -87,7 +87,7 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 			existsInFS = true
 		}
 		if existsInDB && existsInFS {
-			return nil, fmt.Errorf("site already exists in the filesystem")
+			return nil, fmt.Errorf("site already exists")
 		}
 		return &cmd, nil
 	}
@@ -144,7 +144,7 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 			existsInFS = true
 		}
 		if existsInDB && existsInFS {
-			fmt.Println("site already exists in the filesystem")
+			fmt.Println("site already exists")
 			continue
 		}
 		break
@@ -183,10 +183,12 @@ func (cmd *CreatesiteCmd) Run() error {
 			return err
 		}
 		errorCode := cmd.Notebrew.ErrorCode(err)
-		if nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
-			return fmt.Errorf("site already exists in the database")
+		if !nb10.IsKeyViolation(cmd.Notebrew.Dialect, errorCode) {
+			return err
 		}
-		return err
+		fmt.Fprintln(cmd.Stdout, "site already exists in the database")
+	} else {
+		fmt.Fprintln(cmd.Stdout, "site created in the database")
 	}
 	var sitePrefix string
 	if strings.Contains(cmd.SiteName, ".") {
@@ -194,183 +196,184 @@ func (cmd *CreatesiteCmd) Run() error {
 	} else {
 		sitePrefix = "@" + cmd.SiteName
 	}
-	fileInfo, err := fs.Stat(cmd.Notebrew.FS, sitePrefix)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
-	}
-	if fileInfo != nil {
-		return fmt.Errorf("site already exists in the filesystem")
-	}
-	err = cmd.Notebrew.FS.Mkdir(sitePrefix, 0755)
-	if err != nil && !errors.Is(err, fs.ErrExist) {
-		return err
-	}
-	dirs := []string{
-		"notes",
-		"output",
-		"output/themes",
-		"pages",
-		"posts",
-	}
-	for _, dir := range dirs {
-		err = cmd.Notebrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
+	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		err := cmd.Notebrew.FS.Mkdir(sitePrefix, 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			return err
 		}
+		dirs := []string{
+			"notes",
+			"output",
+			"output/themes",
+			"pages",
+			"posts",
+		}
+		for _, dir := range dirs {
+			err = cmd.Notebrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
+			if err != nil && !errors.Is(err, fs.ErrExist) {
+				return err
+			}
+		}
+		siteGen, err := nb10.NewSiteGenerator(context.Background(), cmd.Notebrew.FS, sitePrefix, cmd.Notebrew.ContentDomain, cmd.Notebrew.ImgDomain)
+		if err != nil {
+			return err
+		}
+		group, groupctx := errgroup.WithContext(context.Background())
+		group.Go(func() error {
+			var home string
+			if cmd.SiteName == "" {
+				home = "home"
+			} else if strings.Contains(cmd.SiteName, ".") {
+				home = cmd.SiteName
+			} else {
+				home = cmd.SiteName + "." + cmd.Notebrew.ContentDomain
+			}
+			tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
+			if err != nil {
+				return err
+			}
+			writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			err = tmpl.Execute(writer, home)
+			if err != nil {
+				return err
+			}
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.json")
+			if err != nil {
+				return err
+			}
+			writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.json"), 0644)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				return err
+			}
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(nb10.RuntimeFS, "embed/index.html")
+			if err != nil {
+				return err
+			}
+			writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				return err
+			}
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(nb10.RuntimeFS, "embed/404.html")
+			if err != nil {
+				return err
+			}
+			writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				return err
+			}
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(nb10.RuntimeFS, "embed/post.html")
+			if err != nil {
+				return err
+			}
+			writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/post.html"), 0644)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				return err
+			}
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.html")
+			if err != nil {
+				return err
+			}
+			writer, err := cmd.Notebrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				return err
+			}
+			err = writer.Close()
+			if err != nil {
+				return err
+			}
+			tmpl, err := siteGen.PostListTemplate(context.Background(), "")
+			if err != nil {
+				return err
+			}
+			_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		err = group.Wait()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.Stdout, "site created in the filesystem")
+	} else {
+		fmt.Fprintln(cmd.Stdout, "site already exists in the filesystem")
 	}
-	siteGen, err := nb10.NewSiteGenerator(context.Background(), cmd.Notebrew.FS, sitePrefix, cmd.Notebrew.ContentDomain, cmd.Notebrew.ImgDomain)
-	if err != nil {
-		return err
-	}
-	group, groupctx := errgroup.WithContext(context.Background())
-	group.Go(func() error {
-		var home string
-		if cmd.SiteName == "" {
-			home = "home"
-		} else if strings.Contains(cmd.SiteName, ".") {
-			home = cmd.SiteName
-		} else {
-			home = cmd.SiteName + "." + cmd.Notebrew.ContentDomain
-		}
-		tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
-		if err != nil {
-			return err
-		}
-		writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		err = tmpl.Execute(writer, home)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	group.Go(func() error {
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.json")
-		if err != nil {
-			return err
-		}
-		writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.json"), 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	group.Go(func() error {
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/index.html")
-		if err != nil {
-			return err
-		}
-		writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	group.Go(func() error {
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/404.html")
-		if err != nil {
-			return err
-		}
-		writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	group.Go(func() error {
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/post.html")
-		if err != nil {
-			return err
-		}
-		writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/post.html"), 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	group.Go(func() error {
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.html")
-		if err != nil {
-			return err
-		}
-		writer, err := cmd.Notebrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
-		if err != nil {
-			return err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return err
-		}
-		err = writer.Close()
-		if err != nil {
-			return err
-		}
-		tmpl, err := siteGen.PostListTemplate(context.Background(), "")
-		if err != nil {
-			return err
-		}
-		_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	err = group.Wait()
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(cmd.Stdout, "created site")
 	return nil
 }

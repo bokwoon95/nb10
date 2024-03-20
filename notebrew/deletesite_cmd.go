@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 type DeletesiteCmd struct {
 	Notebrew *nb10.Notebrew
+	Stdout   io.Writer
 	SiteName string
 }
 
@@ -60,7 +62,7 @@ Flags:`)
 			if cmd.SiteName == "" {
 				return nil, fmt.Errorf("cannot be empty")
 			}
-			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
 				Dialect: cmd.Notebrew.Dialect,
 				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
 				Values: []any{
@@ -70,21 +72,23 @@ Flags:`)
 			if err != nil {
 				return nil, err
 			}
-			if !exists {
-				return nil, fmt.Errorf("site does not exist in the database")
-			}
 			var sitePrefix string
 			if strings.Contains(cmd.SiteName, ".") {
 				sitePrefix = cmd.SiteName
 			} else {
 				sitePrefix = "@" + cmd.SiteName
 			}
+			var existsInFS bool
 			_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
 			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					return nil, fmt.Errorf("site does not exist in the filesystem")
+				if !errors.Is(err, fs.ErrNotExist) {
+					return nil, err
 				}
-				return nil, err
+			} else {
+				existsInFS = true
+			}
+			if !existsInDB && !existsInFS {
+				return nil, fmt.Errorf("site does not exist")
 			}
 			fmt.Println("Press Ctrl+C to exit.")
 			reader := bufio.NewReader(os.Stdin)
@@ -119,7 +123,7 @@ Flags:`)
 				fmt.Println("cannot be empty")
 				continue
 			}
-			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
+			existsInDB, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
 				Dialect: cmd.Notebrew.Dialect,
 				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
 				Values: []any{
@@ -129,23 +133,24 @@ Flags:`)
 			if err != nil {
 				return nil, err
 			}
-			if !exists {
-				fmt.Println("site does not exist in the database")
-				continue
-			}
 			var sitePrefix string
 			if strings.Contains(cmd.SiteName, ".") {
 				sitePrefix = cmd.SiteName
 			} else {
 				sitePrefix = "@" + cmd.SiteName
 			}
+			var existsInFS bool
 			_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
 			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					fmt.Println("site does not exist in the filesystem")
-					continue
+				if !errors.Is(err, fs.ErrNotExist) {
+					return nil, err
 				}
-				return nil, err
+			} else {
+				existsInFS = true
+			}
+			if !existsInDB && !existsInFS {
+				fmt.Println("site does not exist")
+				continue
 			}
 			break
 		}
@@ -170,6 +175,9 @@ Flags:`)
 }
 
 func (cmd *DeletesiteCmd) Run() error {
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
 	if cmd.SiteName == "" {
 		return fmt.Errorf("site name cannot be empty")
 	}
@@ -208,7 +216,9 @@ func (cmd *DeletesiteCmd) Run() error {
 		return err
 	}
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("site does not exist in the database")
+		fmt.Fprintln(cmd.Stdout, "site does not exist in the database")
+	} else {
+		fmt.Fprintln(cmd.Stdout, "site deleted from the database")
 	}
 	var sitePrefix string
 	if strings.Contains(cmd.SiteName, ".") {
@@ -218,14 +228,16 @@ func (cmd *DeletesiteCmd) Run() error {
 	}
 	_, err = fs.Stat(cmd.Notebrew.FS, sitePrefix)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("site does not exist in the filesystem")
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
 		}
-		return err
-	}
-	err = cmd.Notebrew.FS.RemoveAll(sitePrefix)
-	if err != nil {
-		return err
+		fmt.Fprintln(cmd.Stdout, "site does not exist in the filesystem")
+	} else {
+		err = cmd.Notebrew.FS.RemoveAll(sitePrefix)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.Stdout, "site deleted from the filesystem")
 	}
 	return nil
 }
