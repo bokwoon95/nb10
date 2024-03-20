@@ -37,7 +37,6 @@ notebrew/open_browser.go
 
 TODO: convert createuser to also remove its validateUsername method and do it man-mode inline.
 TODO: check if a user is able to delete their own site, and if so prevent it
-TODO: rename DatabaseFS/databaseFS to DatabaseFS/databaseFS
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
