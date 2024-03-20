@@ -2058,7 +2058,6 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 	var found bool
 	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 		result, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 			Values: []any{

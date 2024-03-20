@@ -33,7 +33,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		SitePrefix        string            `json:"sitePrefix"`
-		IsDatabaseFS        bool              `json:"isDatabaseFS"`
+		IsDatabaseFS      bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FilePath          string            `json:"filePath"`
@@ -131,7 +131,6 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	response.IsDir = true
 	if sitePrefix == "" && nbrew.DB != nil {
 		sites, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
-			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format: "SELECT {*}" +
 				" FROM site_user" +
