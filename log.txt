@@ -39,6 +39,7 @@ TODO: use cakturk/go-netstat to get the pid of the port
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
+TODO: to avoid needlessly hammering LetsEncrypt due to misconfigured DNS, we need to check within NewServer() whether the static domains we are managing resolve to the current machine's IP address. If it doesn't match, we should fail fast and refuse to call ManageSync().
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
 
 should createuser only create a new user?
