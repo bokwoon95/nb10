@@ -41,9 +41,15 @@ TODO: use cakturk/go-netstat to get the pid of the port
 TODO: in NewServer(), if we are about to call ManageSync (i.e. port is 443), use net.LookupIP() to do DNS resolution to make sure each domain's DNS entry resolves to the current machine's IP (use icanhazip.com). If any of the domains don't resolve to the current machine's IP, DON'T PROCEED and inform the user about the offending domains.
     - Once this is implemented, point the certmagic at a different directory and try triggering LetsEncrypt afresh.
 TODO: check if a user is able to delete their own site, and if so prevent it
-TODO: start on the user accounts soon, then we can throw it up behind Hetzner.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
+BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.
+BUG: Edit notebrew.com's index.html doesn't seem to change its output.
+
+TODO: directory.html: for posts, the "regenerate site" dropdown will veer off to the side. Think of a way to fix it.
+TODO: fix ugly squishing of text:
+    - directory.html: file name, file size, file creation date
+    - file.html: file name, word wrap, save
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
