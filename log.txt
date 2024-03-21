@@ -45,11 +45,16 @@ TODO: convert the "how do I include assets?" and "how do I include alt text?" li
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
 BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
+BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
 
 TODO: directory.html: for posts, the "regenerate site" dropdown will veer off to the side. Think of a way to fix it.
 TODO: fix ugly squishing of text:
     - directory.html: file name, file size, file creation date
     - file.html: file name, word wrap, save
+TODO: fix ugly borderless buttons:
+    - directory.html: regenerate site, upload, search
+    - file.html: word wrap, save, save
+    - createfile.html: word wrap, create X, ext dropdown, create X
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
