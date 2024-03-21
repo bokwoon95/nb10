@@ -48,6 +48,7 @@ BUG: Edit notebrew.com's index.html doesn't seem to change its output.
 BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
 
 TODO: directory.html: for posts, the "regenerate site" dropdown will veer off to the side. Think of a way to fix it.
+    - Dumbest solution: remove the regenerate button entirely. Users will still be able to do whole-site regeneration by going into site.json and hitting save. Brilliant!
 TODO: fix ugly squishing of text:
     - directory.html: file name, file size, file creation date
     - file.html: file name, word wrap, save
