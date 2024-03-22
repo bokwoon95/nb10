@@ -40,6 +40,8 @@ TODO: use cakturk/go-netstat to get the pid of the port
     - Once this works, hopefully `notebrew status` will actually show it running on the port on linux.
 TODO: in NewServer(), if we are about to call ManageSync (i.e. port is 443), use net.LookupIP() to do DNS resolution to make sure each domain's DNS entry resolves to the current machine's IP (use icanhazip.com). If any of the domains don't resolve to the current machine's IP, DON'T PROCEED and inform the user about the offending domains.
     - Once this is implemented, point the certmagic at a different directory and try triggering LetsEncrypt afresh.
+TODO: if our port is 443 (we need to make port a field in the Notebrew struct), when a user creates a new site with a TLD e.g. bokwoon.com we need to run a DNS resolution check to see if that domain really does point to our current IP address. If not, we reject the name and ask the user to try again (together with a link to a page explaining how add a new CNAME record for your custom domain).
+    - And as part of the site creation step, we call StaticCertConfig.ManageAsync() to provision a certificate for the newly created site in the background (need to make the certmagic struct a field in our Notebrew struct so that we can call ManageAsync on it).
 TODO: move google/uuid dependency into sq itself, so it's only 4 files
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
