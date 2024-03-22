@@ -53,6 +53,7 @@ BUG: can't create a note with the full lorem ipsum text in the file name
 BUG: can't delete notebrew.com site
     - {"time":"2024-03-22T18:49:39.739177776+01:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).deletesite","file":"/root/nb10/deletesite.go","line":297},"msg":"constraint failed: FOREIGN KEY constraint failed (787)","method":"POST","url":"https://notebrew.com/files/deletesite/?name=notebrew.com","username":""}
 BUG: creating a .com site seems to make it empty? Where are my files?
+BUG: why is my html lang=''? I thought the default was "en"?
 
 TODO: fix ugly squishing of text:
     - directory.html: file name, file size, file creation date
