@@ -35,7 +35,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: remove the default "Hello World! Welcome to my blog." from the basic index.html template (it confused me hard as fuck after i made changes to it in the template but it didnt reflect the changes because it was actually defined in site.json)
 TODO: use cakturk/go-netstat to get the pid of the port
     TODO: move over to shirou/gopsutil instead because go-netstat doesn't work for macOS.
     - Once this works, hopefully `notebrew status` will actually show it running on the port on linux.
@@ -51,6 +50,7 @@ BUG: visiting /users/login/ when you're already logged in doesn't indicate that 
 
 TODO: directory.html: for posts, the "regenerate site" dropdown will veer off to the side. Think of a way to fix it.
     - Dumbest solution: remove the regenerate button entirely. Users will still be able to do whole-site regeneration by going into site.json and hitting save. Brilliant!
+TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 TODO: fix ugly squishing of text:
     - directory.html: file name, file size, file creation date
     - file.html: file name, word wrap, save
