@@ -40,6 +40,7 @@ TODO: use cakturk/go-netstat to get the pid of the port
     - Once this works, hopefully `notebrew status` will actually show it running on the port on linux.
 TODO: in NewServer(), if we are about to call ManageSync (i.e. port is 443), use net.LookupIP() to do DNS resolution to make sure each domain's DNS entry resolves to the current machine's IP (use icanhazip.com). If any of the domains don't resolve to the current machine's IP, DON'T PROCEED and inform the user about the offending domains.
     - Once this is implemented, point the certmagic at a different directory and try triggering LetsEncrypt afresh.
+TODO: move google/uuid dependency into sq itself, so it's only 4 files
 TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
