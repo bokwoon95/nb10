@@ -881,7 +881,13 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 
 	// .jpeg .jpg .png .webp .gif .woff .woff2
 	if !fileType.IsGzippable {
-		if fileSeeker, ok := file.(io.ReadSeeker); ok && !hasMaxAge {
+		if fileSeeker, ok := file.(io.ReadSeeker); ok {
+			if !hasMaxAge {
+				w.Header().Set("Content-Type", fileType.ContentType)
+				w.Header().Set("Cache-Control", cacheControl)
+				http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
+				return
+			}
 			hasher := hashPool.Get().(hash.Hash)
 			defer func() {
 				hasher.Reset()
