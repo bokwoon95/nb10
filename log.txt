@@ -1,4 +1,4 @@
-catalog.go
+schema.go
 id.go
 fs.go
 fs_local.go

@@ -35,18 +35,18 @@ type rawTable struct {
 	}
 }
 
-//go:embed catalog_files.json
-var filesCatalogBytes []byte
+//go:embed schema_files.json
+var filesSchemaBytes []byte
 
 func FilesCatalog(dialect string) (*ddl.Catalog, error) {
-	return unmarshalCatalog(dialect, filesCatalogBytes)
+	return unmarshalCatalog(dialect, filesSchemaBytes)
 }
 
-//go:embed catalog_database.json
-var catalogDatabaseBytes []byte
+//go:embed schema_database.json
+var databaseSchemaBytes []byte
 
 func DatabaseCatalog(dialect string) (*ddl.Catalog, error) {
-	return unmarshalCatalog(dialect, catalogDatabaseBytes)
+	return unmarshalCatalog(dialect, databaseSchemaBytes)
 }
 
 func unmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
