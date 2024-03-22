@@ -18,7 +18,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -974,7 +973,6 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	}
 	defer cursor.Close()
 	var waitGroup sync.WaitGroup
-	var numFailures atomic.Int64
 	for cursor.Next() {
 		file, err := cursor.Result()
 		if err != nil {
@@ -986,7 +984,6 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			err := fsys.ObjectStorage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
 				fsys.Logger.Error(err.Error())
-				numFailures.Add(1)
 			}
 		}()
 	}
@@ -995,9 +992,6 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return err
 	}
 	waitGroup.Wait()
-	if numFailures.Load() > 0 {
-		return fmt.Errorf("failed to delete %d objects", numFailures.Load())
-	}
 	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
