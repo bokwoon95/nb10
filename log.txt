@@ -35,6 +35,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: temporarily remove the 3rd party script block, use web inspector to figure out if codemirror.js is ever getting cached.
 TODO: use cakturk/go-netstat to get the pid of the port
     TODO: move over to shirou/gopsutil instead because go-netstat doesn't work for macOS.
     - Once this works, hopefully `notebrew status` will actually show it running on the port on linux.
