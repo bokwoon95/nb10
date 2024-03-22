@@ -1,7 +1,8 @@
 // To build this file:
 // - Navigate to the project root where package.json is located.
 // - Run npm install
-// - Run ./node_modules/.bin/esbuild ./static/codemirror.ts --outfile=./static/codemirror.js --bundle --minify
+// - Run ./node_modules/.bin/esbuild ./static/codemirror-xxxxxxxx.ts --outfile=./static/codemirror-xxxxxxxx.js --bundle --minify
+// - Replace xxxxxxxx with the first 8 characters of the SHA256 hash of the file contents (normalize all \r\n to \n)
 import { EditorState, Prec, Compartment, TransactionSpec } from '@codemirror/state';
 import { EditorView, lineNumbers, keymap } from '@codemirror/view';
 import { indentWithTab, history, defaultKeymap, historyKeymap } from '@codemirror/commands';

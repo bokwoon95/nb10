@@ -141,7 +141,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				internalServerError(w, r, err)
 				return
 			}
-			serveFile(w, r, file, fileInfo, fileType, "max-age: 2592000, stale-while-revalidate" /* 30 days */)
+			serveFile(w, r, file, fileInfo, fileType, "max-age: 31536000, immutable" /* 1 year */)
 			return
 		}
 

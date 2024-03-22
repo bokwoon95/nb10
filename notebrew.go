@@ -875,9 +875,13 @@ func WriteFile(ctx context.Context, fsys FS, filePath string, reader io.Reader) 
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs.FileInfo, fileType FileType, cacheControl string) {
+	// If max-age is present in Cache-Control, don't set the ETag because that
+	// would override max-age. https://stackoverflow.com/a/51257030
+	hasMaxAge := strings.Contains(cacheControl, "max-age=")
+
 	// .jpeg .jpg .png .webp .gif .woff .woff2
 	if !fileType.IsGzippable {
-		if fileSeeker, ok := file.(io.ReadSeeker); ok {
+		if fileSeeker, ok := file.(io.ReadSeeker); ok && !hasMaxAge {
 			hasher := hashPool.Get().(hash.Hash)
 			defer func() {
 				hasher.Reset()
@@ -933,13 +937,15 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Content-Encoding", "gzip")
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
-			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
+			if !hasMaxAge {
+				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
+			}
 			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
 			return
 		}
 	}
 
-	if fileInfo.Size() <= 1<<20 /* 1 MB */ {
+	if fileInfo.Size() <= 1<<20 /* 1 MB */ && !hasMaxAge {
 		hasher := hashPool.Get().(hash.Hash)
 		defer func() {
 			hasher.Reset()
