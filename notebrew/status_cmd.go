@@ -72,10 +72,10 @@ func (cmd *StatusCmd) Run() error {
 		return err
 	}
 	if len(sockTabEntries) == 0 {
-		fmt.Fprintf(cmd.Stdout, "❌ notebrew is not running\n")
+		fmt.Fprintf(cmd.Stdout, "❌ no process found listening on port %d\n", cmd.Port)
 	} else {
 		sockTabEntry := sockTabEntries[0]
-		fmt.Fprintf(cmd.Stdout, "✔  notebrew is running (pid %d)\n", sockTabEntry.Process.Pid)
+		fmt.Fprintf(cmd.Stdout, "✔️ %s (pid %d) is listening on port %d\n", sockTabEntry.Process.Name, sockTabEntry.Process.Pid, cmd.Port)
 	}
 	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Port)
 	fmt.Fprintf(cmd.Stdout, "cmsdomain     = %s\n", cmd.Notebrew.CMSDomain)
