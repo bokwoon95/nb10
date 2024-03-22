@@ -53,6 +53,10 @@
   <div><a href='/{{ join "files" $.SitePrefix }}{{ if not (contains $.SitePrefix ".") }}/{{ end }}'>&larr; back</a></div>
   {{- end }}
   <h1 class='f3 mv3 b'>site.json (Site Settings)</h1>
+  <div class='flex mv2'>
+    <div class='flex-grow-1'></div>
+    <button type='submit' class='button ba ph3 pv1 br2 b--black'>save</button>
+  </div>
   <div class='mv3'>
     <div><label for='title' class='b'>Title:</label></div>
     <input id='title' name='title' value='{{ $.Title }}' class='pv1 ph2 br2 ba w-100' required>

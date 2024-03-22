@@ -51,14 +51,6 @@ BUG: visiting /users/login/ when you're already logged in doesn't indicate that 
 TODO: fix ugly squishing of text:
     - directory.html: file name, file size, file creation date
     - file.html: file name, word wrap, save
-TODO: fix ugly borderless buttons:
-    - directory.html: regenerate site, upload, search
-    - file.html: word wrap, save, save
-    - createfile.html: word wrap, create X, ext dropdown, create X
-    - search.html: search
-    - site_json.html: add item, remove item, save
-        - change add item and remove item to rectangular buttons
-    - postlist_json.html: save
 TODO: search.html: flex-wrap the checkboxes so that they don't go offscreen
 TODO: site_json.html: add a new "regenerate site" button at the top.
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
