@@ -190,17 +190,17 @@
   {{- if eq $.FilePath "pages/index.html" }}
   <form method='post' action='/{{ join "files" $.SitePrefix "clipboard/paste" }}/' class='ml2'>
     <input type='hidden' name='parent' value='/output/'>
-    <button type='submit' class='button ba br2 pv2 ph2'>paste</button>
+    <button type='submit' class='button ba br2 b--black pv2 ph2'>paste</button>
   </form>
   {{- else if eq (head $.FilePath) "pages" }}
   <form method='post' action='/{{ join "files" $.SitePrefix "clipboard/paste" }}/' class='ml2'>
     <input type='hidden' name='parent' value='/{{ join "output" (trimSuffix (tail $.FilePath) ".html") }}/'>
-    <button type='submit' class='button ba br2 pv2 ph2'>paste</button>
+    <button type='submit' class='button ba br2 b--black pv2 ph2'>paste</button>
   </form>
   {{- else if eq (head $.FilePath) "posts" }}
   <form method='post' action='/{{ join "files" $.SitePrefix "clipboard/paste" }}/' class='ml2'>
     <input type='hidden' name='parent' value='/{{ join "output" (trimSuffix $.FilePath ".md") }}/'>
-    <button type='submit' class='button ba br2 pv2 ph2'>paste</button>
+    <button type='submit' class='button ba br2 b--black pv2 ph2'>paste</button>
   </form>
   {{- end }}
   <form method='post' action='/{{ join "files" $.SitePrefix "clipboard/clear" }}/' class='ml2'>
@@ -287,7 +287,7 @@
   <div class='flex mv2'>
     <label for='content' class='b'>{{ base $.FilePath }}</label>
     <div class='flex-grow-1'></div>
-    <button type='button' class='button ba br2 mh2 pointer'>
+    <button type='button' class='button ba br2 b--black mh2 pointer'>
       <label for='wordwrap' class='pointer flex items-center'>
         <input id='wordwrap' type='checkbox' class='pointer'>
         <span class='ml1'>word wrap</span>
@@ -311,7 +311,7 @@
     {{- end }}
   </div>
   {{- end }}
-  <button type='submit' class='button ba br2 pa2 mv3 w-100'>save</button>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
 </form>
 {{- if eq (head $.FilePath) "pages" "posts" }}
   <div class='flex items-center'>
@@ -343,8 +343,8 @@
           <label for='{{ $asset.Name }}' class='b mr2 mb2'>{{ $asset.Name }}</label>
           <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='dib mr2 mb2'>view</a>
           <a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.AssetDir }}&name={{ $asset.Name }}' class='dib mr2 mb2'>rename</a>
-          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 pa2 mr2 mb2'>cut</button>
-          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 pa2 mr2 mb2'>copy</button>
+          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 mr2 mb2'>cut</button>
+          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 mr2 mb2'>copy</button>
           <button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $asset.Name }}' class='button-danger ba br2 b--dark-red pa2 mr2 mb2'>delete</button>
         </div>
         {{- else }}
@@ -361,8 +361,8 @@
           <span class='b mr2 mb2'>{{ $asset.Name }}</span>
           <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='dib mr2 mb2'>edit</a>
           <a href='' class='dib mr2 mb2'>rename</a>
-          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 pa2 mr2 mb2'>cut</button>
-          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 pa2 mr2 mb2'>copy</button>
+          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 mr2 mb2'>cut</button>
+          <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 mr2 mb2'>copy</button>
           <button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $asset.Name }}' class='button-danger ba br2 b--dark-red pa2 mr2 mb2'>delete</button>
         </div>
         {{- end }}
