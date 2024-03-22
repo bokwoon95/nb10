@@ -57,6 +57,8 @@ TODO: fix ugly borderless buttons:
     - directory.html: regenerate site, upload, search
     - file.html: word wrap, save, save
     - createfile.html: word wrap, create X, ext dropdown, create X
+    - search.html: search
+TODO: search.html: flex-wrap the checkboxes so that they don't go offscreen
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
