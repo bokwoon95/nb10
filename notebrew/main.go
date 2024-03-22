@@ -308,12 +308,7 @@ func main() {
 					go func() {
 						for {
 							<-ticker.C
-							ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-							_, err = nbrew.DB.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
-							if err != nil {
-								nbrew.Logger.Error(err.Error())
-							}
-							cancel()
+							nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
 						}
 					}()
 				}
@@ -542,12 +537,7 @@ func main() {
 					go func() {
 						for {
 							<-ticker.C
-							ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-							_, err = db.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
-							if err != nil {
-								nbrew.Logger.Error(err.Error())
-							}
-							cancel()
+							db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
 						}
 					}()
 				}
