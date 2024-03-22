@@ -35,7 +35,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: temporarily remove the 3rd party script block, use web inspector to figure out if codemirror.js is ever getting cached.
+TODO: remove the default "Hello World! Welcome to my blog." from the basic index.html template (it confused me hard as fuck after i made changes to it in the template but it didnt reflect the changes because it was actually defined in site.json)
 TODO: use cakturk/go-netstat to get the pid of the port
     TODO: move over to shirou/gopsutil instead because go-netstat doesn't work for macOS.
     - Once this works, hopefully `notebrew status` will actually show it running on the port on linux.
