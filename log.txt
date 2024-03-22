@@ -47,6 +47,7 @@ BUG: copying images in a post will result in an invalid link when you click the 
 BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
 BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
+BUG: visiting /users/login/ when you're already logged in doesn't indicate that you are already logged in (nor does it prevent you from logging in again).
 
 TODO: directory.html: for posts, the "regenerate site" dropdown will veer off to the side. Think of a way to fix it.
     - Dumbest solution: remove the regenerate button entirely. Users will still be able to do whole-site regeneration by going into site.json and hitting save. Brilliant!
@@ -62,6 +63,7 @@ TODO: fix ugly borderless buttons:
         - change add item and remove item to rectangular buttons
     - postlist_json.html: save
 TODO: search.html: flex-wrap the checkboxes so that they don't go offscreen
+TODO: site_json.html: add a new "regenerate site" button at the top.
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
