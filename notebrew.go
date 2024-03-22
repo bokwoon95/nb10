@@ -878,7 +878,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 	// If max-age is present in Cache-Control, don't set the ETag because that
 	// would override max-age. https://stackoverflow.com/a/51257030
 	hasMaxAge := strings.Contains(cacheControl, "max-age=")
-	fmt.Printf("name=%s, Cache-Control=%s, hasMaxAge=%v\n", fileInfo.Name(), cacheControl, hasMaxAge)
 
 	// .jpeg .jpg .png .webp .gif .woff .woff2
 	if !fileType.IsGzippable {
