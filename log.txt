@@ -48,6 +48,8 @@ BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
 BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
 BUG: visiting /users/login/ when you're already logged in doesn't indicate that you are already logged in (nor does it prevent you from logging in again).
+BUG: can't create a note with the full lorem ipsum text in the file name
+    - {"time":"2024-03-23T01:13:56.838076+08:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).createfile","file":"github.com/bokwoon95/nb10/createfile.go","line":387},"msg":"CreateFile C:\\Users\\cbw\\notebrew-files\\notes\\Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum..txt: The filename, directory name, or volume label syntax is incorrect.","method":"POST","url":"http://localhost:6444/files/createfile/"}
 
 TODO: fix ugly squishing of text:
     - directory.html: file name, file size, file creation date
