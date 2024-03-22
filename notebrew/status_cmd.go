@@ -102,7 +102,10 @@ func (cmd *StatusCmd) Run() error {
 			if err != nil {
 				fmt.Fprintf(cmd.Stdout, "database      = <error: %s: %s>\n", filepath.Join(cmd.ConfigDir, "database.json"), err)
 			} else {
-				if databaseConfig.Dialect == "sqlite" {
+				switch databaseConfig.Dialect {
+				case "":
+					fmt.Fprintf(cmd.Stdout, "database      = <not configured>\n")
+				case "sqlite":
 					var filePath string
 					if databaseConfig.FilePath == "" {
 						filePath = filepath.Join(dataHomeDir, "notebrew-database.db")
@@ -114,7 +117,7 @@ func (cmd *StatusCmd) Run() error {
 						}
 					}
 					fmt.Fprintf(cmd.Stdout, "database      = %s (%s)\n", databaseConfig.Dialect, filePath)
-				} else {
+				default:
 					fmt.Fprintf(cmd.Stdout, "database      = %s (%s:%s/%s)\n", databaseConfig.Dialect, databaseConfig.Host, databaseConfig.Port, databaseConfig.DBName)
 				}
 			}

@@ -58,6 +58,9 @@ TODO: fix ugly borderless buttons:
     - file.html: word wrap, save, save
     - createfile.html: word wrap, create X, ext dropdown, create X
     - search.html: search
+    - site_json.html: add item, remove item, save
+        - change add item and remove item to rectangular buttons
+    - postlist_json.html: save
 TODO: search.html: flex-wrap the checkboxes so that they don't go offscreen
 
 should createuser only create a new user?
