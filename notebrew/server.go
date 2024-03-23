@@ -262,9 +262,6 @@ func NewServer(nbrew *nb10.Notebrew, configDir string) (*http.Server, error) {
 			domains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
 		}
 	}
-	if dns01Solver != nil {
-		domains = append(domains, "*."+nbrew.ContentDomain)
-	}
 	fmt.Printf("notebrew static domains: %v\n", strings.Join(domains, ", "))
 	err = staticCertConfig.ManageSync(context.Background(), domains)
 	if err != nil {

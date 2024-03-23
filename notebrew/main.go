@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -29,9 +30,17 @@ import (
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/sqddl/ddl"
+	"github.com/caddyserver/certmagic"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/klauspost/cpuid/v2"
+	"github.com/libdns/cloudflare"
+	"github.com/libdns/godaddy"
+	"github.com/libdns/namecheap"
+	"github.com/libdns/porkbun"
+	"github.com/mholt/acmez"
+	"golang.org/x/sync/errgroup"
 )
 
 type SMTPConfig struct {
@@ -848,6 +857,267 @@ func main() {
 			}
 		}
 
+		if nbrew.Port == 443 {
+			// IP4 and IP6.
+			client := &http.Client{
+				Timeout: 10 * time.Second,
+			}
+			group, groupctx := errgroup.WithContext(context.Background())
+			group.Go(func() error {
+				request, err := http.NewRequest("GET", "https://ipv4.icanhazip.com", nil)
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+				}
+				response, err := client.Do(request.WithContext(groupctx))
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+				}
+				defer response.Body.Close()
+				var b strings.Builder
+				_, err = io.Copy(&b, response.Body)
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+				}
+				err = response.Body.Close()
+				if err != nil {
+					return err
+				}
+				s := strings.TrimSpace(b.String())
+				if s == "" {
+					return nil
+				}
+				ip, err := netip.ParseAddr(s)
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %q is not an IP address", s)
+				}
+				if ip.Is4() {
+					nbrew.IP4 = ip
+				}
+				return nil
+			})
+			group.Go(func() error {
+				request, err := http.NewRequest("GET", "https://ipv6.icanhazip.com", nil)
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+				}
+				response, err := client.Do(request.WithContext(groupctx))
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+				}
+				defer response.Body.Close()
+				var b strings.Builder
+				_, err = io.Copy(&b, response.Body)
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+				}
+				err = response.Body.Close()
+				if err != nil {
+					return err
+				}
+				s := strings.TrimSpace(b.String())
+				if s == "" {
+					return nil
+				}
+				ip, err := netip.ParseAddr(s)
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %q is not an IP address", s)
+				}
+				if ip.Is6() {
+					nbrew.IP6 = ip
+				}
+				return nil
+			})
+			err := group.Wait()
+			if err != nil {
+				return err
+			}
+			if !nbrew.IP4.IsValid() && !nbrew.IP6.IsValid() {
+				return fmt.Errorf("unable to determine the IP address of the current machine")
+			}
+
+			// DNS.
+			var dns01Solver acmez.Solver
+			b, err := os.ReadFile(filepath.Join(configDir, "dns.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+			}
+			b = bytes.TrimSpace(b)
+			if len(b) > 0 {
+				var dnsConfig struct {
+					Provider  string
+					Username  string
+					APIKey    string
+					APIToken  string
+					SecretKey string
+				}
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&dnsConfig)
+				if err != nil {
+					return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+				}
+				switch dnsConfig.Provider {
+				case "namecheap":
+					if dnsConfig.Username == "" {
+						return fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
+					}
+					if dnsConfig.APIKey == "" {
+						return fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
+					}
+					if !nbrew.IP4.IsValid() {
+						return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
+					}
+					dns01Solver = &certmagic.DNS01Solver{
+						DNSProvider: &namecheap.Provider{
+							APIKey:      dnsConfig.APIKey,
+							User:        dnsConfig.Username,
+							APIEndpoint: "https://api.namecheap.com/xml.response",
+							ClientIP:    nbrew.IP4.String(),
+						},
+					}
+				case "cloudflare":
+					if dnsConfig.APIToken == "" {
+						return fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
+					}
+					dns01Solver = &certmagic.DNS01Solver{
+						DNSProvider: &cloudflare.Provider{
+							APIToken: dnsConfig.APIToken,
+						},
+					}
+				case "porkbun":
+					if dnsConfig.APIKey == "" {
+						return fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
+					}
+					if dnsConfig.SecretKey == "" {
+						return fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
+					}
+					dns01Solver = &certmagic.DNS01Solver{
+						DNSProvider: &porkbun.Provider{
+							APIKey:       dnsConfig.APIKey,
+							APISecretKey: dnsConfig.SecretKey,
+						},
+					}
+				case "godaddy":
+					if dnsConfig.APIToken == "" {
+						return fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
+					}
+					dns01Solver = &certmagic.DNS01Solver{
+						DNSProvider: &godaddy.Provider{
+							APIToken: dnsConfig.APIToken,
+						},
+					}
+				case "":
+					return fmt.Errorf("%s: missing provider field", filepath.Join(configDir, "dns.json"))
+				default:
+					return fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
+				}
+			}
+
+			// Certmagic.
+			b, err = os.ReadFile(filepath.Join(configDir, "certmagic.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
+			}
+			certmagicDir := string(bytes.TrimSpace(b))
+			if certmagicDir == "" {
+				certmagicDir = filepath.Join(configDir, "certmagic")
+				err := os.MkdirAll(certmagicDir, 0755)
+				if err != nil {
+					return err
+				}
+			} else {
+				certmagicDir = filepath.Clean(certmagicDir)
+				_, err := os.Stat(certmagicDir)
+				if err != nil {
+					return err
+				}
+			}
+			if nbrew.CMSDomain == nbrew.ContentDomain {
+				if dns01Solver != nil {
+					nbrew.StaticDomains = []string{nbrew.CMSDomain, "*." + nbrew.CMSDomain}
+				} else {
+					nbrew.StaticDomains = []string{nbrew.CMSDomain, "img." + nbrew.CMSDomain, "www." + nbrew.CMSDomain}
+				}
+			} else {
+				if dns01Solver != nil {
+					nbrew.StaticDomains = []string{nbrew.ContentDomain, "*." + nbrew.ContentDomain, nbrew.CMSDomain, "*." + nbrew.CMSDomain}
+				} else {
+					nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
+				}
+			}
+			// staticCertConfig manages the certificate for the main domain, content domain
+			// and wildcard subdomain.
+			nbrew.StaticCertConfig = certmagic.NewDefault()
+			nbrew.StaticCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
+			nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
+				// Create a new ACME issuer with the dns01Solver because this cert
+				// config potentially has to issue wildcard certificates which only the
+				// DNS-01 challenge solver is capable of.
+				certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
+					CA:          certmagic.DefaultACME.CA,
+					TestCA:      certmagic.DefaultACME.TestCA,
+					Logger:      certmagic.DefaultACME.Logger,
+					HTTPProxy:   certmagic.DefaultACME.HTTPProxy,
+					DNS01Solver: dns01Solver,
+				}),
+			}
+			nbrew.DynamicCertConfig = certmagic.NewDefault()
+			nbrew.DynamicCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
+			nbrew.DynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
+				DecisionFunc: func(ctx context.Context, name string) error {
+					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+						return nil
+					}
+					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
+					if err != nil {
+						return err
+					}
+					if !fileInfo.IsDir() {
+						return fmt.Errorf("%q is not a directory", name)
+					}
+					return nil
+				},
+			}
+			nbrew.TLSConfig = &tls.Config{
+				NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
+				GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					if clientHello.ServerName == "" {
+						return nil, fmt.Errorf("server name required")
+					}
+					for _, domain := range nbrew.StaticDomains {
+						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+							return nbrew.StaticCertConfig.GetCertificate(clientHello)
+						}
+					}
+					return nbrew.DynamicCertConfig.GetCertificate(clientHello)
+				},
+				MinVersion: tls.VersionTLS12,
+				CurvePreferences: []tls.CurveID{
+					tls.X25519,
+					tls.CurveP256,
+				},
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				},
+				PreferServerCipherSuites: true,
+			}
+			if cpuid.CPU.Supports(cpuid.AESNI) {
+				nbrew.TLSConfig.CipherSuites = []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				}
+			}
+		}
+
 		// TODO:
 		// go install github.com/bokwoon95/notebrew/notebrew
 		// irm github.com/bokwoon95/notebrew/install.cmd | iex
@@ -970,9 +1240,21 @@ func main() {
 			return nil
 		}
 
-		server, err := NewServer(nbrew, configDir)
-		if err != nil {
-			return err
+		server := &http.Server{}
+		switch nbrew.Port {
+		case 443:
+			server.Addr = ":443"
+			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
+			server.TLSConfig = nbrew.TLSConfig
+			server.ReadTimeout = 60 * time.Second
+			server.WriteTimeout = 60 * time.Second
+			server.IdleTimeout = 120 * time.Second
+		case 80:
+			server.Addr = ":80"
+			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
+		default:
+			server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
+			server.Handler = nbrew
 		}
 
 		// Manually acquire a listener instead of using the more convenient

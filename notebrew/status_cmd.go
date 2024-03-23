@@ -258,6 +258,19 @@ func (cmd *StatusCmd) Run() error {
 			}
 			fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", filePath)
 		}
+
+		// IP4.
+		if cmd.Notebrew.IP4.IsValid() {
+			fmt.Fprintf(cmd.Stdout, "IPv4          = %s\n", cmd.Notebrew.IP4.String())
+		}
+
+		// IP6.
+		if cmd.Notebrew.IP6.IsValid() {
+			fmt.Fprintf(cmd.Stdout, "IPv6          = %s\n", cmd.Notebrew.IP6.String())
+		}
+
+		// Static domains.
+		fmt.Fprintf(cmd.Stdout, "staticdomains = %s\n", strings.Join(cmd.Notebrew.StaticDomains, ", "))
 	}
 	fmt.Fprintf(cmd.Stdout, "To configure the above settings, run `notebrew config`.\n")
 	return nil

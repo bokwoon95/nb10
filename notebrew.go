@@ -143,7 +143,7 @@ type Notebrew struct {
 
 	IP6 netip.Addr
 
-	ManagingDomains []string
+	StaticDomains []string
 
 	StaticCertConfig *certmagic.Config
 
