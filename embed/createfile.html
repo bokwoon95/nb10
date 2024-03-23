@@ -32,7 +32,7 @@
   {{- else }}
   <div><a href='/{{ join "files" $.SitePrefix $.Parent }}/'>&larr; back</a></div>
   {{- end }}
-  <div class='flex mv3'>
+  <div class='flex flex-wrap mv3'>
     <h1 class='f3 b mv0'>
       {{- if eq (head $.Parent) "notes" }}
       Create a new note in <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}/</a>
