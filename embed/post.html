@@ -40,7 +40,7 @@ p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
   <li>
     <div class='w-70-l w-80-m w-100 mx-auto'>
       <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block h-100 w-100 object-cover' loading='lazy'>
-      <div class='flex flex-wrap justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
+      <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
     </div>
     <p>{{ $image.Caption }}</p>
   </li>

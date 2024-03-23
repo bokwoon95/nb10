@@ -60,7 +60,7 @@
   {{- end }}
 </div>
 <figure class='mv2 w-70-l w-80-m w-100 center'>
-  <figcaption class='flex flex-wrap mv2'>
+  <figcaption class='flex flex-wrap break-word mv2'>
     {{- if $.PreviousImageName }}
       {{- if and $.ImgDomain $.IsDatabaseFS }}
       <a href='{{ $.ImgDomain }}/{{ $.PreviousImageID }}{{ ext $.PreviousImageName }}'>&larr; previous</a>
