@@ -337,7 +337,7 @@
           <img src='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}?raw' class='w-100' loading='lazy'>
           {{- end }}
         </label>
-        <div style='overflow-wrap: break-word;'>
+        <div class='break-word'>
           <label for='{{ $asset.Name }}' class='b mr2 mb2'>{{ $asset.Name }}</label>
           <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='dib mr2 mb2'>view</a>
           <a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.AssetDir }}&name={{ $asset.Name }}' class='dib mr2 mb2'>rename</a>
@@ -355,7 +355,7 @@
             </svg>
           </div>
         </label>
-        <div style='overflow-wrap: break-word;'>
+        <div class='break-word'>
           <span class='b mr2 mb2'>{{ $asset.Name }}</span>
           <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='dib mr2 mb2'>edit</a>
           <a href='' class='dib mr2 mb2'>rename</a>

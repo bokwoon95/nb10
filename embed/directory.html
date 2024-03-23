@@ -310,7 +310,7 @@
         <div class='mr2 flex items-center'>
           <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='pointer'>
         </div>
-        <div class='br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}' style='word-break: break-word;'>
+        <div class='br2 break-word{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           <div class='flex flex-wrap items-center'>
             {{- if $file.IsDir }}
             <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>

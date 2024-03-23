@@ -213,7 +213,8 @@ details[open] summary.button { background-color: white; }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ws-normal { white-space: normal; }
 .nowrap { white-space: nowrap; }
-.word-wrap { word-break: break-all; }
+.pre-wrap { white-space: pre-wrap; }
+.break-word { overflow-wrap: break-word; }
 
 /* misc */
 code, .code { font-family: Consolas, monaco, monospace; }

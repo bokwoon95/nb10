@@ -104,7 +104,7 @@
       <a href='/{{ join "files" $.SitePrefix $match.FilePath }}' class='b'>{{ $match.FilePath }}</a>
       <span class='ml1 f6 mid-gray'>{{ $match.CreationTime.Format "2006-01-02" }}</span>
     </div>
-    <pre style='white-space: pre-wrap; word-break: break-word;'>{{ $match.Preview }}</pre>
+    <pre class='pre-wrap break-word'>{{ $match.Preview }}</pre>
   </li>
   {{- end }}
 </ul>
