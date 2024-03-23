@@ -23,10 +23,9 @@ type StatusCmd struct {
 	Notebrew  *nb10.Notebrew
 	Stdout    io.Writer
 	ConfigDir string
-	Port      int
 }
 
-func StatusCommand(nbrew *nb10.Notebrew, configDir string, addr string, args ...string) (*StatusCmd, error) {
+func StatusCommand(nbrew *nb10.Notebrew, configDir string, args ...string) (*StatusCmd, error) {
 	var cmd StatusCmd
 	cmd.Notebrew = nbrew
 	cmd.ConfigDir = configDir
@@ -46,11 +45,6 @@ Flags:`)
 		flagset.Usage()
 		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
-	n, err := strconv.Atoi(strings.TrimPrefix(strings.TrimPrefix(addr, "localhost"), ":"))
-	if err != nil {
-		return nil, err
-	}
-	cmd.Port = n
 	return &cmd, nil
 }
 
@@ -66,15 +60,15 @@ func (cmd *StatusCmd) Run() error {
 	if dataHomeDir == "" {
 		dataHomeDir = homeDir
 	}
-	pid, name, err := portPID(cmd.Port)
+	pid, name, err := portPID(cmd.Notebrew.Port)
 	if err != nil {
 		fmt.Fprintf(cmd.Stdout, "❌ %s\n", err.Error())
 	} else if pid != 0 && name != "" {
-		fmt.Fprintf(cmd.Stdout, "✔️  %s (pid %d) is listening on port %d\n", name, pid, cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "✔️  %s (pid %d) is listening on port %d\n", name, pid, cmd.Notebrew.Port)
 	} else {
-		fmt.Fprintf(cmd.Stdout, "❌ could not find any process listening on port %d\n", cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "❌ could not find any process listening on port %d\n", cmd.Notebrew.Port)
 	}
-	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Port)
+	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Notebrew.Port)
 	fmt.Fprintf(cmd.Stdout, "cmsdomain     = %s\n", cmd.Notebrew.CMSDomain)
 	fmt.Fprintf(cmd.Stdout, "contentdomain = %s\n", cmd.Notebrew.ContentDomain)
 	if cmd.Notebrew.ImgDomain == "" {
@@ -227,7 +221,7 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "proxy         = %s\n", strings.Join(proxies, ", "))
 	}
 
-	if cmd.Port == 443 {
+	if cmd.Notebrew.Port == 443 {
 		// DNS.
 		b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {

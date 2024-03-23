@@ -22,14 +22,12 @@ type StartCmd struct {
 	Notebrew  *nb10.Notebrew
 	Stdout    io.Writer
 	ConfigDir string
-	Addr      string
 }
 
-func StartCommand(nbrew *nb10.Notebrew, configDir, addr string, args ...string) (*StartCmd, error) {
+func StartCommand(nbrew *nb10.Notebrew, configDir string, args ...string) (*StartCmd, error) {
 	var cmd StartCmd
 	cmd.Notebrew = nbrew
 	cmd.ConfigDir = configDir
-	cmd.Addr = addr
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
 		fmt.Fprintln(flagset.Output(), `Usage:
@@ -53,7 +51,7 @@ func (cmd *StartCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	server, err := NewServer(cmd.Notebrew, cmd.ConfigDir, cmd.Addr)
+	server, err := NewServer(cmd.Notebrew, cmd.ConfigDir)
 	if err != nil {
 		return err
 	}

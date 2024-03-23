@@ -16,10 +16,9 @@ import (
 type StopCmd struct {
 	Notebrew *nb10.Notebrew
 	Stdout   io.Writer
-	Port     int
 }
 
-func StopCommand(nbrew *nb10.Notebrew, configDir string, addr string, args ...string) (*StopCmd, error) {
+func StopCommand(nbrew *nb10.Notebrew, configDir string, args ...string) (*StopCmd, error) {
 	var cmd StopCmd
 	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
@@ -38,11 +37,6 @@ Flags:`)
 		flagset.Usage()
 		return nil, fmt.Errorf("unexpected arguments: %s", strings.Join(flagset.Args(), " "))
 	}
-	n, err := strconv.Atoi(strings.TrimPrefix(strings.TrimPrefix(addr, "localhost"), ":"))
-	if err != nil {
-		return nil, err
-	}
-	cmd.Port = n
 	return &cmd, nil
 }
 
@@ -50,12 +44,12 @@ func (cmd *StopCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	pid, name, err := portPID(cmd.Port)
+	pid, name, err := portPID(cmd.Notebrew.Port)
 	if err != nil {
 		return err
 	}
 	if pid == 0 {
-		fmt.Fprintf(cmd.Stdout, "could not find any process listening on port %d\n", cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "could not find any process listening on port %d\n", cmd.Notebrew.Port)
 		return nil
 	}
 	if runtime.GOOS == "windows" {

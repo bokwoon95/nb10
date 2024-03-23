@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"database/sql"
 	"embed"
 	"encoding/base32"
@@ -34,6 +35,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/caddyserver/certmagic"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
@@ -116,6 +118,8 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
+	Port int
+
 	CMSDomain string // localhost:6444, example.com
 
 	ContentDomain string // localhost:6444, example.com
@@ -134,6 +138,18 @@ type Notebrew struct {
 		RealIPHeaders map[netip.Addr]string
 		ProxyIPs      map[netip.Addr]struct{}
 	}
+
+	IP4 netip.Addr
+
+	IP6 netip.Addr
+
+	ManagingDomains []string
+
+	StaticCertConfig *certmagic.Config
+
+	DynamicCertConfig *certmagic.Config
+
+	TLSConfig *tls.Config
 }
 
 type User struct {

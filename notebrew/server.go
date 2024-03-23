@@ -13,6 +13,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,14 +25,19 @@ import (
 	"github.com/libdns/namecheap"
 	"github.com/libdns/porkbun"
 	"github.com/mholt/acmez"
+	"golang.org/x/sync/errgroup"
 )
 
-func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, error) {
+func NewServer(nbrew *nb10.Notebrew, configDir string) (*http.Server, error) {
 	if nbrew.CMSDomain == "" {
 		return nil, fmt.Errorf("CMSDomain cannot be empty")
 	}
 	if nbrew.ContentDomain == "" {
 		return nil, fmt.Errorf("ContentDomain cannot be empty")
+	}
+	addr := ":" + strconv.Itoa(nbrew.Port)
+	if nbrew.Port == 443 || nbrew.Port == 80 {
+		addr = "localhost" + addr
 	}
 	server := &http.Server{
 		Addr:    addr,
@@ -44,6 +50,88 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 	server.WriteTimeout = 60 * time.Second
 	server.IdleTimeout = 120 * time.Second
 	server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
+
+	var ip4, ip6 netip.Addr
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	group, groupctx := errgroup.WithContext(context.Background())
+	group.Go(func() error {
+		request, err := http.NewRequest("GET", "https://ipv4.icanhazip.com", nil)
+		if err != nil {
+			return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+		}
+		response, err := client.Do(request.WithContext(groupctx))
+		if err != nil {
+			return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+		}
+		defer response.Body.Close()
+		var b strings.Builder
+		_, err = io.Copy(&b, response.Body)
+		if err != nil {
+			return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+		}
+		err = response.Body.Close()
+		if err != nil {
+			return err
+		}
+		s := strings.TrimSpace(b.String())
+		if s == "" {
+			return nil
+		}
+		ip, err := netip.ParseAddr(s)
+		if err != nil {
+			return fmt.Errorf("ipv4.icanhazip.com: %q is not an IP address", s)
+		}
+		if ip.Is4() {
+			ip4 = ip
+		}
+		return nil
+	})
+	group.Go(func() error {
+		request, err := http.NewRequest("GET", "https://ipv6.icanhazip.com", nil)
+		if err != nil {
+			return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+		}
+		response, err := client.Do(request.WithContext(groupctx))
+		if err != nil {
+			return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+		}
+		defer response.Body.Close()
+		var b strings.Builder
+		_, err = io.Copy(&b, response.Body)
+		if err != nil {
+			return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+		}
+		err = response.Body.Close()
+		if err != nil {
+			return err
+		}
+		s := strings.TrimSpace(b.String())
+		if s == "" {
+			return nil
+		}
+		ip, err := netip.ParseAddr(s)
+		if err != nil {
+			return fmt.Errorf("ipv6.icanhazip.com: %q is not an IP address", s)
+		}
+		if ip.Is6() {
+			ip6 = ip
+		}
+		return nil
+	})
+	err := group.Wait()
+	if err != nil {
+		return nil, err
+	}
+	var ip netip.Addr
+	if ip4.IsValid() {
+		ip = ip4
+	} else if ip6.IsValid() {
+		ip = ip6
+	} else {
+		return nil, fmt.Errorf("unable to determine the IP address of the current machine")
+	}
 
 	var dns01Solver acmez.Solver
 	b, err := os.ReadFile(filepath.Join(configDir, "dns.json"))
@@ -73,34 +161,15 @@ func NewServer(nbrew *nb10.Notebrew, configDir, addr string) (*http.Server, erro
 			if dnsConfig.APIKey == "" {
 				return nil, fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
 			}
-			resp, err := http.Get("https://ipv4.icanhazip.com")
-			if err != nil {
-				return nil, fmt.Errorf("determining the IP address of this machine by calling https://ipv4.icanhazip.com: %w", err)
-			}
-			defer resp.Body.Close()
-			var b strings.Builder
-			_, err = io.Copy(&b, resp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("https://ipv4.icanhazip.com: reading response body: %w", err)
-			}
-			err = resp.Body.Close()
-			if err != nil {
-				return nil, err
-			}
-			clientIP := strings.TrimSpace(b.String())
-			ip, err := netip.ParseAddr(clientIP)
-			if err != nil {
-				return nil, fmt.Errorf("could not determine IP address of the current machine: https://ipv4.icanhazip.com returned %q which is not an IP address", clientIP)
-			}
 			if !ip.Is4() {
-				return nil, fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", clientIP)
+				return nil, fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", ip)
 			}
 			dns01Solver = &certmagic.DNS01Solver{
 				DNSProvider: &namecheap.Provider{
 					APIKey:      dnsConfig.APIKey,
 					User:        dnsConfig.Username,
 					APIEndpoint: "https://api.namecheap.com/xml.response",
-					ClientIP:    clientIP,
+					ClientIP:    ip.String(),
 				},
 			}
 		case "cloudflare":

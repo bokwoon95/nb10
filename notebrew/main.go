@@ -121,9 +121,12 @@ func main() {
 		}
 		port := string(bytes.TrimSpace(b))
 		if port != "" {
-			_, err = strconv.Atoi(port)
+			n, err := strconv.Atoi(port)
 			if err != nil {
 				return fmt.Errorf("%s: %q is not a valid integer", filepath.Join(configDir, "port.txt"), port)
+			}
+			if n == 0 {
+				return fmt.Errorf("%s: port cannot be 0", filepath.Join(configDir, "port.txt"))
 			}
 		}
 
@@ -137,6 +140,13 @@ func main() {
 		// Determine the TCP address to listen on (based on the CMS domain and port).
 		var addr string
 		if port != "" {
+			nbrew.Port, err = strconv.Atoi(port)
+			if err != nil {
+				return fmt.Errorf("%s: %q is not a valid integer", filepath.Join(configDir, "port.txt"), port)
+			}
+			if nbrew.Port <= 0 {
+				return fmt.Errorf("%s: %d is not a valid port", filepath.Join(configDir, "port.txt"), nbrew.Port)
+			}
 			if nbrew.CMSDomain == "" {
 				nbrew.CMSDomain = "localhost:" + port
 			}
@@ -147,9 +157,11 @@ func main() {
 			}
 		} else {
 			if nbrew.CMSDomain == "" {
+				nbrew.Port = 6444
 				nbrew.CMSDomain = "localhost:6444"
 				addr = "localhost:6444"
 			} else {
+				nbrew.Port = 443
 				addr = ":443"
 			}
 		}
@@ -934,7 +946,7 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "start":
-				cmd, err := StartCommand(nbrew, configDir, addr, commandArgs...)
+				cmd, err := StartCommand(nbrew, configDir, commandArgs...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", command, err)
 				}
@@ -943,7 +955,7 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "status":
-				cmd, err := StatusCommand(nbrew, configDir, addr, commandArgs...)
+				cmd, err := StatusCommand(nbrew, configDir, commandArgs...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", command, err)
 				}
@@ -966,7 +978,7 @@ func main() {
 			return nil
 		}
 
-		server, err := NewServer(nbrew, configDir, addr)
+		server, err := NewServer(nbrew, configDir)
 		if err != nil {
 			return err
 		}
