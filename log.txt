@@ -35,9 +35,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: use cakturk/go-netstat to get the pid of the port
-    TODO: move over to shirou/gopsutil instead because go-netstat doesn't work for macOS.
-    - Once this works, hopefully `notebrew status` will actually show it running on the port on linux.
 TODO: in NewServer(), if we are about to call ManageSync (i.e. port is 443), use net.LookupIP() to do DNS resolution to make sure each domain's DNS entry resolves to the current machine's IP (use icanhazip.com). If any of the domains don't resolve to the current machine's IP, DON'T PROCEED and inform the user about the offending domains.
     - Once this is implemented, point the certmagic at a different directory and try triggering LetsEncrypt afresh.
 TODO: if our port is 443 (we need to make port a field in the Notebrew struct), when a user creates a new site with a TLD e.g. bokwoon.com we need to run a DNS resolution check to see if that domain really does point to our current IP address. If not, we reject the name and ask the user to try again (together with a link to a page explaining how add a new CNAME record for your custom domain).
