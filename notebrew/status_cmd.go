@@ -22,7 +22,7 @@ type StatusCmd struct {
 	Notebrew  *nb10.Notebrew
 	Stdout    io.Writer
 	ConfigDir string
-	Port      uint16
+	Port      int
 }
 
 func StatusCommand(nbrew *nb10.Notebrew, configDir string, addr string, args ...string) (*StatusCmd, error) {
@@ -49,7 +49,7 @@ Flags:`)
 	if err != nil {
 		return nil, err
 	}
-	cmd.Port = uint16(n)
+	cmd.Port = n
 	return &cmd, nil
 }
 
@@ -66,7 +66,7 @@ func (cmd *StatusCmd) Run() error {
 		dataHomeDir = homeDir
 	}
 	sockTabEntries, err := netstat.TCPSocks(func(sockTabEntry *netstat.SockTabEntry) bool {
-		return sockTabEntry.State == netstat.Listen && sockTabEntry.LocalAddr.Port == cmd.Port
+		return sockTabEntry.State == netstat.Listen && sockTabEntry.LocalAddr.Port == uint16(cmd.Port)
 	})
 	if err != nil {
 		return err
