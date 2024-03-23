@@ -272,7 +272,7 @@ func (cmd *StatusCmd) Run() error {
 		// Static domains.
 		fmt.Fprintf(cmd.Stdout, "staticdomains = %s\n", strings.Join(cmd.Notebrew.StaticDomains, ", "))
 	}
-	fmt.Fprintf(cmd.Stdout, "To configure the above settings, run `notebrew config`.\n")
+	fmt.Fprintf(cmd.Stdout, "To configure notebrew's settings, run `notebrew config`.\n")
 	return nil
 }
 
