@@ -71,7 +71,7 @@
   </div>
   <div class='mv3'>
     <div><label for='codeStyle' class='b'>Code Style (<a href='https://xyproto.github.io/splash/docs/all.html'>Chroma Style Gallery</a>):</label></div>
-    <select id='codeStyle' name='codeStyle' class='br2 b--black'>
+    <select id='codeStyle' name='codeStyle' class='br2'>
       {{- range $codeStyle, $true := chromaStyles }}
       <option value='{{ $codeStyle }}'{{ if eq $.CodeStyle $codeStyle }} selected{{ end }}>{{ $codeStyle }}</option>
       {{- end }}
