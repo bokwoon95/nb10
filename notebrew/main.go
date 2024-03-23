@@ -1309,10 +1309,6 @@ func main() {
 			server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
 			server.Handler = nbrew
 		}
-		// server, err = NewServer(nbrew, configDir)
-		// if err != nil {
-		// 	return err
-		// }
 
 		// Manually acquire a listener instead of using the more convenient
 		// ListenAndServe() just so that we can report back to the user if the
