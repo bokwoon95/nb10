@@ -39,7 +39,6 @@ import (
 	"github.com/libdns/godaddy"
 	"github.com/libdns/namecheap"
 	"github.com/libdns/porkbun"
-	"github.com/mholt/acmez"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -936,7 +935,6 @@ func main() {
 			}
 
 			// DNS.
-			var dns01Solver acmez.Solver
 			b, err := os.ReadFile(filepath.Join(configDir, "dns.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
@@ -967,22 +965,18 @@ func main() {
 					if !nbrew.IP4.IsValid() {
 						return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
 					}
-					dns01Solver = &certmagic.DNS01Solver{
-						DNSProvider: &namecheap.Provider{
-							APIKey:      dnsConfig.APIKey,
-							User:        dnsConfig.Username,
-							APIEndpoint: "https://api.namecheap.com/xml.response",
-							ClientIP:    nbrew.IP4.String(),
-						},
+					nbrew.DNSProvider = &namecheap.Provider{
+						APIKey:      dnsConfig.APIKey,
+						User:        dnsConfig.Username,
+						APIEndpoint: "https://api.namecheap.com/xml.response",
+						ClientIP:    nbrew.IP4.String(),
 					}
 				case "cloudflare":
 					if dnsConfig.APIToken == "" {
 						return fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
 					}
-					dns01Solver = &certmagic.DNS01Solver{
-						DNSProvider: &cloudflare.Provider{
-							APIToken: dnsConfig.APIToken,
-						},
+					nbrew.DNSProvider = &cloudflare.Provider{
+						APIToken: dnsConfig.APIToken,
 					}
 				case "porkbun":
 					if dnsConfig.APIKey == "" {
@@ -991,20 +985,16 @@ func main() {
 					if dnsConfig.SecretKey == "" {
 						return fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
 					}
-					dns01Solver = &certmagic.DNS01Solver{
-						DNSProvider: &porkbun.Provider{
-							APIKey:       dnsConfig.APIKey,
-							APISecretKey: dnsConfig.SecretKey,
-						},
+					nbrew.DNSProvider = &porkbun.Provider{
+						APIKey:       dnsConfig.APIKey,
+						APISecretKey: dnsConfig.SecretKey,
 					}
 				case "godaddy":
 					if dnsConfig.APIToken == "" {
 						return fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
 					}
-					dns01Solver = &certmagic.DNS01Solver{
-						DNSProvider: &godaddy.Provider{
-							APIToken: dnsConfig.APIToken,
-						},
+					nbrew.DNSProvider = &godaddy.Provider{
+						APIToken: dnsConfig.APIToken,
 					}
 				case "":
 					return fmt.Errorf("%s: missing provider field", filepath.Join(configDir, "dns.json"))
@@ -1033,13 +1023,13 @@ func main() {
 				}
 			}
 			if nbrew.CMSDomain == nbrew.ContentDomain {
-				if dns01Solver != nil {
+				if nbrew.DNSProvider != nil {
 					nbrew.StaticDomains = []string{nbrew.CMSDomain, "*." + nbrew.CMSDomain}
 				} else {
 					nbrew.StaticDomains = []string{nbrew.CMSDomain, "img." + nbrew.CMSDomain, "www." + nbrew.CMSDomain}
 				}
 			} else {
-				if dns01Solver != nil {
+				if nbrew.DNSProvider != nil {
 					nbrew.StaticDomains = []string{nbrew.ContentDomain, "*." + nbrew.ContentDomain, nbrew.CMSDomain, "*." + nbrew.CMSDomain}
 				} else {
 					nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
@@ -1049,17 +1039,18 @@ func main() {
 			// and wildcard subdomain.
 			nbrew.StaticCertConfig = certmagic.NewDefault()
 			nbrew.StaticCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
-			nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
-				// Create a new ACME issuer with the dns01Solver because this cert
-				// config potentially has to issue wildcard certificates which only the
-				// DNS-01 challenge solver is capable of.
-				certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
-					CA:          certmagic.DefaultACME.CA,
-					TestCA:      certmagic.DefaultACME.TestCA,
-					Logger:      certmagic.DefaultACME.Logger,
-					HTTPProxy:   certmagic.DefaultACME.HTTPProxy,
-					DNS01Solver: dns01Solver,
-				}),
+			if nbrew.DNSProvider != nil {
+				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
+					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
+						CA:        certmagic.DefaultACME.CA,
+						TestCA:    certmagic.DefaultACME.TestCA,
+						Logger:    certmagic.DefaultACME.Logger,
+						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+						DNS01Solver: &certmagic.DNS01Solver{
+							DNSProvider: nbrew.DNSProvider,
+						},
+					}),
+				}
 			}
 			nbrew.DynamicCertConfig = certmagic.NewDefault()
 			nbrew.DynamicCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
@@ -1249,6 +1240,9 @@ func main() {
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			group, groupctx := errgroup.WithContext(ctx)
 		case 80:
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")

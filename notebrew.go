@@ -36,6 +36,7 @@ import (
 
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/caddyserver/certmagic"
+	"github.com/libdns/libdns"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
@@ -132,6 +133,13 @@ type Notebrew struct {
 		VerificationURL string
 		SiteKey         string
 		SecretKey       string
+	}
+
+	DNSProvider interface {
+		libdns.RecordAppender
+		libdns.RecordDeleter
+		libdns.RecordGetter
+		libdns.RecordSetter
 	}
 
 	ProxyConfig struct {
