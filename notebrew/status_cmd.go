@@ -10,12 +10,13 @@ import (
 	"io/fs"
 	"net/netip"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
 	"github.com/bokwoon95/nb10"
-	"github.com/bokwoon95/nb10/netstat"
 )
 
 type StatusCmd struct {
@@ -65,17 +66,13 @@ func (cmd *StatusCmd) Run() error {
 	if dataHomeDir == "" {
 		dataHomeDir = homeDir
 	}
-	sockTabEntries, err := netstat.TCPSocks(func(sockTabEntry *netstat.SockTabEntry) bool {
-		return sockTabEntry.State == netstat.Listen && sockTabEntry.LocalAddr.Port == uint16(cmd.Port)
-	})
+	pid, name, err := portListener(cmd.Port)
 	if err != nil {
-		return err
-	}
-	if len(sockTabEntries) == 0 {
-		fmt.Fprintf(cmd.Stdout, "❌ no process found listening on port %d\n", cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "❌ %s\n", err.Error())
+	} else if pid != 0 && name != "" {
+		fmt.Fprintf(cmd.Stdout, "✔️ %s (pid %d) is listening on port %d\n", name, pid, cmd.Port)
 	} else {
-		sockTabEntry := sockTabEntries[0]
-		fmt.Fprintf(cmd.Stdout, "✔️ %s (pid %d) is listening on port %d\n", sockTabEntry.Process.Name, sockTabEntry.Process.Pid, cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "❌ no process found listening on port %d\n", cmd.Port)
 	}
 	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Port)
 	fmt.Fprintf(cmd.Stdout, "cmsdomain     = %s\n", cmd.Notebrew.CMSDomain)
@@ -270,4 +267,60 @@ func (cmd *StatusCmd) Run() error {
 	}
 	fmt.Fprintf(cmd.Stdout, "To configure the above settings, run `notebrew config`.\n")
 	return nil
+}
+
+func portListener(port int) (pid int, name string, err error) {
+	switch runtime.GOOS {
+	case "darwin", "linux":
+		return 0, "", nil
+	case "windows":
+		b, err := exec.Command("cmd.exe", "/c", "netstat", "-ano", "|", "findstr", ":"+strconv.Itoa(port)).Output()
+		if err != nil {
+			return 0, "", err
+		}
+		var pid int
+		var name string
+		var line []byte
+		remainder := b
+		for len(remainder) > 0 {
+			line, remainder, _ = bytes.Cut(remainder, []byte("\n"))
+			line = bytes.TrimSpace(line)
+			if len(line) == 0 {
+				continue
+			}
+			fields := strings.Fields(string(line))
+			if len(fields) < 5 {
+				continue
+			}
+			if !strings.HasSuffix(strings.TrimSpace(fields[1]), ":"+strconv.Itoa(port)) {
+				continue
+			}
+			if strings.TrimSpace(fields[3]) != "LISTENING" {
+				continue
+			}
+			pid, err = strconv.Atoi(strings.TrimSpace(fields[4]))
+			if err != nil {
+				continue
+			}
+			b, err := exec.Command("tasklist.exe", "/fi", "pid eq "+strconv.Itoa(pid), "/fo", "list").Output()
+			if err != nil {
+				return 0, "", err
+			}
+			n := bytes.Index(b, []byte("Image Name:"))
+			if n < 0 {
+				continue
+			}
+			start := n + len("Image Name:")
+			offset := bytes.Index(b[start:], []byte("\n"))
+			if offset < 0 {
+				name = string(bytes.TrimSpace(b[start:]))
+			} else {
+				name = string(bytes.TrimSpace(b[start : start+offset]))
+			}
+			return pid, name, nil
+		}
+		return 0, "", nil
+	default:
+		return 0, "", fmt.Errorf("unable to check if a process is listening on port %d (only macos, linux and windows are supported)", port)
+	}
 }
