@@ -22,7 +22,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		ContentBaseURL    string            `json:"contentBaseURL"`
 		SitePrefix        string            `json:"sitePrefix"`
 		ImgDomain         string            `json:"imgDomain"`
-		IsDatabaseFS        bool              `json:"isDatabaseFS"`
+		IsDatabaseFS      bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		FileID            ID                `json:"fileID"`
@@ -61,7 +61,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				notFound(w, r)
 				return
 			}
-			serveFile(w, r, file, fileInfo, fileType, "no-store")
+			serveFile(w, r, file, fileInfo, fileType, "no-cache, stale-while-revalidate, max-age=86400" /* 1 day */)
 			return
 		}
 		var response Response
