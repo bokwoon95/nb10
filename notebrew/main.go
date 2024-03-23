@@ -1293,16 +1293,16 @@ func main() {
 			if err != nil {
 				return err
 			}
-			server, err = NewServer(nbrew, configDir)
-			if err != nil {
-				return err
-			}
 		case 80:
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
 		default:
 			server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
 			server.Handler = nbrew
+		}
+		server, err = NewServer(nbrew, configDir)
+		if err != nil {
+			return err
 		}
 
 		// Manually acquire a listener instead of using the more convenient
