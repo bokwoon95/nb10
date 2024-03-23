@@ -62,9 +62,6 @@ BUG: creating a .com site seems to make it empty? Where are my files?
     - Why is my site.json not being created after I createsite? I need to manually navigate to site.json and save in order for the title and description to take effect.
 BUG: why is my html lang=''? I thought the default was "en"?
 
-TODO: fix ugly squishing of text:
-    - directory.html: file name, file size, file creation date
-    - file.html: file name, word wrap, save
 TODO: search.html: flex-wrap the checkboxes so that they don't go offscreen
 TODO: site_json.html: add a new "regenerate site" button at the top.
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
