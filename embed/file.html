@@ -287,12 +287,10 @@
   <div class='flex flex-wrap mv2'>
     <label for='content' class='b'>{{ base $.FilePath }}</label>
     <div class='flex-grow-1'></div>
-    <button type='button' class='button ba br2 b--black pv1 mh2 pointer'>
-      <label for='wordwrap' class='pointer flex items-center'>
-        <input id='wordwrap' type='checkbox' class='pointer'>
-        <span class='ml1'>word wrap</span>
-      </label>
-    </button>
+    <label for='wordwrap' class='pointer flex items-center mh2'>
+      <input id='wordwrap' type='checkbox' class='pointer'>
+      <span class='ml1'>word wrap</span>
+    </label>
     <button type='submit' class='button ba ph3 br2 b--black pv1'>save</button>
   </div>
   <div data-codemirror='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap","scrollIntoView":true}'>
