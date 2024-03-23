@@ -137,7 +137,7 @@ func main() {
 		}
 		nbrew.CMSDomain = string(bytes.TrimSpace(b))
 
-		// Determine the port to listen on (based on the CMS domain and user-configured port).
+		// Fill in the port and CMS domain if missing.
 		if port != "" {
 			nbrew.Port, err = strconv.Atoi(port)
 			if err != nil {
