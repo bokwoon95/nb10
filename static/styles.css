@@ -214,7 +214,7 @@ details[open] summary.button { background-color: white; }
 .ws-normal { white-space: normal; }
 .nowrap { white-space: nowrap; }
 .pre-wrap { white-space: pre-wrap; }
-.break-word { overflow-wrap: break-word; }
+.break-word {overflow-wrap: break-word; word-break: break-word;  }
 
 /* misc */
 code, .code { font-family: Consolas, monaco, monospace; }
