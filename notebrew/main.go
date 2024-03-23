@@ -1051,6 +1051,15 @@ func main() {
 						},
 					}),
 				}
+			} else {
+				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
+					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
+						CA:        certmagic.DefaultACME.CA,
+						TestCA:    certmagic.DefaultACME.TestCA,
+						Logger:    certmagic.DefaultACME.Logger,
+						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+					}),
+				}
 			}
 			nbrew.DynamicCertConfig = certmagic.NewDefault()
 			nbrew.DynamicCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
