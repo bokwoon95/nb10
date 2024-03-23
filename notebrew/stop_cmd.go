@@ -11,13 +11,12 @@ import (
 	"strings"
 
 	"github.com/bokwoon95/nb10"
-	"github.com/bokwoon95/nb10/netstat"
 )
 
 type StopCmd struct {
 	Notebrew *nb10.Notebrew
 	Stdout   io.Writer
-	Port     uint16
+	Port     int
 }
 
 func StopCommand(nbrew *nb10.Notebrew, configDir string, addr string, args ...string) (*StopCmd, error) {
@@ -43,7 +42,7 @@ Flags:`)
 	if err != nil {
 		return nil, err
 	}
-	cmd.Port = uint16(n)
+	cmd.Port = n
 	return &cmd, nil
 }
 
@@ -51,18 +50,14 @@ func (cmd *StopCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	sockTabEntries, err := netstat.TCPSocks(func(sockTabEntry *netstat.SockTabEntry) bool {
-		return sockTabEntry.State == netstat.Listen && sockTabEntry.LocalAddr.Port == cmd.Port
-	})
+	pid, name, err := portPID(cmd.Port)
 	if err != nil {
 		return err
 	}
-	if len(sockTabEntries) == 0 {
-		fmt.Fprintf(cmd.Stdout, "notebrew is not running\n")
+	if pid == 0 {
+		fmt.Fprintf(cmd.Stdout, "could not find any process listening on port %d\n", cmd.Port)
 		return nil
 	}
-	name := sockTabEntries[0].Process.Name
-	pid := sockTabEntries[0].Process.Pid
 	if runtime.GOOS == "windows" {
 		killCmd := exec.Command("taskkill.exe", "/t", "/f", "/pid", strconv.Itoa(pid))
 		err := killCmd.Run()
