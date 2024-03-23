@@ -1289,6 +1289,14 @@ func main() {
 					return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
 				}
 			}
+			err := nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
+			if err != nil {
+				return err
+			}
+			server, err = NewServer(nbrew, configDir)
+			if err != nil {
+				return err
+			}
 		case 80:
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
