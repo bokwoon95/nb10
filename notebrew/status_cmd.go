@@ -276,8 +276,7 @@ func portPID(port int) (pid int, name string, err error) {
 		b, err := cmd.Output()
 		if err != nil {
 			// lsof also returns 1 if no result was found, so the way we ensure
-			// an error actually occurred is by checking if anything was also
-			// printed to stderr.
+			// an error actually occurred is by additionally checking stderr.
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
 				return 0, "", fmt.Errorf(string(exitErr.Stderr))
