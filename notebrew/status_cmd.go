@@ -325,6 +325,10 @@ func portPID(port int) (pid int, name string, err error) {
 			if len(fields) < 5 {
 				continue
 			}
+			protocol := strings.TrimSpace(fields[0])
+			if protocol != "TCP" && protocol != "UDP" {
+				continue
+			}
 			if !strings.HasSuffix(strings.TrimSpace(fields[1]), ":"+strconv.Itoa(port)) {
 				continue
 			}
