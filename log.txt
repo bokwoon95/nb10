@@ -49,6 +49,7 @@ TODO: check if a user is able to delete their own site, and if so prevent it
 TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: invite.go and resetpassword.go
+TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
 BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
@@ -61,10 +62,8 @@ BUG: can't delete notebrew.com site
 BUG: creating a .com site seems to make it empty? Where are my files?
     - Why is my site.json not being created after I createsite? I need to manually navigate to site.json and save in order for the title and description to take effect.
 BUG: why is my html lang=''? I thought the default was "en"?
-
-TODO: search.html: flex-wrap the checkboxes so that they don't go offscreen
-TODO: site_json.html: add a new "regenerate site" button at the top.
-TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
+BUG: imgdomain is broken! why!
+    - once we figure out imgdomain we can start implementing client-side caching (immutable) for all images (since their ID is unique).
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
