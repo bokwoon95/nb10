@@ -36,7 +36,7 @@ func NewServer(nbrew *nb10.Notebrew, configDir string) (*http.Server, error) {
 		return nil, fmt.Errorf("ContentDomain cannot be empty")
 	}
 	addr := ":" + strconv.Itoa(nbrew.Port)
-	if nbrew.Port == 443 || nbrew.Port == 80 {
+	if nbrew.Port != 443 && nbrew.Port != 80 {
 		addr = "localhost" + addr
 	}
 	server := &http.Server{
