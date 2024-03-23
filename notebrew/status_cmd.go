@@ -66,13 +66,13 @@ func (cmd *StatusCmd) Run() error {
 	if dataHomeDir == "" {
 		dataHomeDir = homeDir
 	}
-	pid, name, err := portListener(cmd.Port)
+	pid, name, err := portPID(cmd.Port)
 	if err != nil {
 		fmt.Fprintf(cmd.Stdout, "❌ %s\n", err.Error())
 	} else if pid != 0 && name != "" {
-		fmt.Fprintf(cmd.Stdout, "✔️ %s (pid %d) is listening on port %d\n", name, pid, cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "✔️  %s (pid %d) is listening on port %d\n", name, pid, cmd.Port)
 	} else {
-		fmt.Fprintf(cmd.Stdout, "❌ no process found listening on port %d\n", cmd.Port)
+		fmt.Fprintf(cmd.Stdout, "❌ could not find any process listening on port %d\n", cmd.Port)
 	}
 	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Port)
 	fmt.Fprintf(cmd.Stdout, "cmsdomain     = %s\n", cmd.Notebrew.CMSDomain)
@@ -269,17 +269,51 @@ func (cmd *StatusCmd) Run() error {
 	return nil
 }
 
-func portListener(port int) (pid int, name string, err error) {
+func portPID(port int) (pid int, name string, err error) {
 	switch runtime.GOOS {
 	case "darwin", "linux":
+		stderr := &bytes.Buffer{}
+		cmd := exec.Command("lsof", "-n", "-P", "-i", ":"+strconv.Itoa(port))
+		cmd.Stderr = stderr
+		b, err := cmd.Output()
+		if err != nil {
+			// lsof also returns 1 if no result was found, so the way we ensure
+			// an error actually occurred is by checking if anything was also
+			// printed to stderr.
+			if stderr.Len() > 0 {
+				return 0, "", fmt.Errorf(stderr.String())
+			}
+		}
+		var line []byte
+		remainder := b
+		for len(remainder) > 0 {
+			line, remainder, _ = bytes.Cut(remainder, []byte("\n"))
+			line = bytes.TrimSpace(line)
+			if len(line) == 0 {
+				continue
+			}
+			if !bytes.Contains(line, []byte("LISTEN")) && !bytes.Contains(line, []byte("UDP")) {
+				continue
+			}
+			fields := strings.Fields(string(line))
+			if len(fields) < 5 {
+				continue
+			}
+			name = strings.TrimSpace(fields[0])
+			pid, err = strconv.Atoi(strings.TrimSpace(fields[1]))
+			if err != nil {
+				continue
+			}
+			return pid, name, nil
+		}
 		return 0, "", nil
 	case "windows":
-		b, err := exec.Command("cmd.exe", "/c", "netstat", "-ano", "|", "findstr", ":"+strconv.Itoa(port)).Output()
+		cmd := exec.Command("cmd.exe", "/c", "netstat", "-ano", "|", "findstr", ":"+strconv.Itoa(port))
+		b, err := cmd.Output()
 		if err != nil {
+			fmt.Println(string(b))
 			return 0, "", err
 		}
-		var pid int
-		var name string
 		var line []byte
 		remainder := b
 		for len(remainder) > 0 {
@@ -304,6 +338,7 @@ func portListener(port int) (pid int, name string, err error) {
 			}
 			b, err := exec.Command("tasklist.exe", "/fi", "pid eq "+strconv.Itoa(pid), "/fo", "list").Output()
 			if err != nil {
+				fmt.Println(string(b))
 				return 0, "", err
 			}
 			n := bytes.Index(b, []byte("Image Name:"))
