@@ -307,7 +307,7 @@ func portPID(port int) (pid int, name string, err error) {
 		return 0, "", nil
 	case "windows":
 		stderr := &bytes.Buffer{}
-		cmd := exec.Command("netstat", "-ano")
+		cmd := exec.Command("netstat.exe", "-a", "-n", "-o")
 		cmd.Stderr = stderr
 		b, err := cmd.Output()
 		if err != nil {
