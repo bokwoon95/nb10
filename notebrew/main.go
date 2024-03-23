@@ -137,8 +137,7 @@ func main() {
 		}
 		nbrew.CMSDomain = string(bytes.TrimSpace(b))
 
-		// Determine the TCP address to listen on (based on the CMS domain and port).
-		var addr string
+		// Determine the port to listen on (based on the CMS domain and user-configured port).
 		if port != "" {
 			nbrew.Port, err = strconv.Atoi(port)
 			if err != nil {
@@ -150,19 +149,12 @@ func main() {
 			if nbrew.CMSDomain == "" {
 				nbrew.CMSDomain = "localhost:" + port
 			}
-			if port == "443" || port == "80" {
-				addr = ":" + port
-			} else {
-				addr = "localhost:" + port
-			}
 		} else {
 			if nbrew.CMSDomain == "" {
 				nbrew.Port = 6444
 				nbrew.CMSDomain = "localhost:6444"
-				addr = "localhost:6444"
 			} else {
 				nbrew.Port = 443
-				addr = ":443"
 			}
 		}
 
@@ -964,7 +956,7 @@ func main() {
 					return fmt.Errorf("%s: %w", command, err)
 				}
 			case "stop":
-				cmd, err := StopCommand(nbrew, configDir, addr, commandArgs...)
+				cmd, err := StopCommand(nbrew, configDir, commandArgs...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", command, err)
 				}
