@@ -1240,9 +1240,55 @@ func main() {
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			group, groupctx := errgroup.WithContext(ctx)
+			if nbrew.DNSProvider != nil {
+				// TODO: check if the necessary DNS records have been set for
+				// each of the static domains and if not, set them.
+			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				group, groupctx := errgroup.WithContext(ctx)
+				resolved := make([]bool, len(nbrew.StaticDomains))
+				for i, domain := range nbrew.StaticDomains {
+					i, domain := i, domain
+					group.Go(func() error {
+						ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
+						if err != nil {
+							return err
+						}
+						for _, ip := range ips {
+							ip, ok := netip.AddrFromSlice(ip.IP)
+							if !ok {
+								continue
+							}
+							if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
+								resolved[i] = true
+								break
+							}
+						}
+						return nil
+					})
+				}
+				err := group.Wait()
+				if err != nil {
+					return err
+				}
+				var unresolvedDomains []string
+				for i, domain := range nbrew.StaticDomains {
+					if !resolved[i] {
+						unresolvedDomains = append(unresolvedDomains, domain)
+					}
+				}
+				if len(unresolvedDomains) > 0 {
+					ips := make([]string, 0, 2)
+					if nbrew.IP4.IsValid() {
+						ips = append(ips, nbrew.IP4.String())
+					}
+					if nbrew.IP6.IsValid() {
+						ips = append(ips, nbrew.IP6.String())
+					}
+					return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
+				}
+			}
 		case 80:
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
