@@ -27,7 +27,6 @@ require (
 	golang.org/x/sys v0.16.0
 	golang.org/x/term v0.16.0
 	modernc.org/sqlite v1.29.2
-	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5 // indirect
 )
 
 require (
