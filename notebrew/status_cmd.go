@@ -272,16 +272,15 @@ func (cmd *StatusCmd) Run() error {
 func portPID(port int) (pid int, name string, err error) {
 	switch runtime.GOOS {
 	case "darwin", "linux":
-		stderr := &bytes.Buffer{}
 		cmd := exec.Command("lsof", "-n", "-P", "-i", ":"+strconv.Itoa(port))
-		cmd.Stderr = stderr
 		b, err := cmd.Output()
 		if err != nil {
 			// lsof also returns 1 if no result was found, so the way we ensure
 			// an error actually occurred is by checking if anything was also
 			// printed to stderr.
-			if stderr.Len() > 0 {
-				return 0, "", fmt.Errorf(stderr.String())
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+				return 0, "", fmt.Errorf(string(exitErr.Stderr))
 			}
 		}
 		var line []byte
@@ -308,10 +307,11 @@ func portPID(port int) (pid int, name string, err error) {
 		}
 		return 0, "", nil
 	case "windows":
-		cmd := exec.Command("cmd.exe", "/c", "netstat", "-ano", "|", "findstr", ":"+strconv.Itoa(port))
+		stderr := &bytes.Buffer{}
+		cmd := exec.Command("netstat", "-ano")
+		cmd.Stderr = stderr
 		b, err := cmd.Output()
 		if err != nil {
-			fmt.Println(string(b))
 			return 0, "", err
 		}
 		var line []byte
@@ -338,7 +338,6 @@ func portPID(port int) (pid int, name string, err error) {
 			}
 			b, err := exec.Command("tasklist.exe", "/fi", "pid eq "+strconv.Itoa(pid), "/fo", "list").Output()
 			if err != nil {
-				fmt.Println(string(b))
 				return 0, "", err
 			}
 			n := bytes.Index(b, []byte("Image Name:"))
