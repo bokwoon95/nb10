@@ -275,12 +275,13 @@ func portPID(port int) (pid int, name string, err error) {
 		cmd := exec.Command("lsof", "-n", "-P", "-i", ":"+strconv.Itoa(port))
 		b, err := cmd.Output()
 		if err != nil {
-			// lsof also returns 1 if no result was found, so the way we ensure
-			// an error actually occurred is by additionally checking stderr.
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
 				return 0, "", fmt.Errorf(string(exitErr.Stderr))
 			}
+			// lsof also returning 1 is not necessarily an error, because it
+			// also returns 1 if no result was found. Return an error only if
+			// lsof also printed something to stderr.
 		}
 		var line []byte
 		remainder := b
@@ -306,11 +307,13 @@ func portPID(port int) (pid int, name string, err error) {
 		}
 		return 0, "", nil
 	case "windows":
-		stderr := &bytes.Buffer{}
 		cmd := exec.Command("netstat.exe", "-a", "-n", "-o")
-		cmd.Stderr = stderr
 		b, err := cmd.Output()
 		if err != nil {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+				return 0, "", fmt.Errorf(string(exitErr.Stderr))
+			}
 			return 0, "", err
 		}
 		var line []byte
