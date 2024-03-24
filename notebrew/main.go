@@ -475,7 +475,7 @@ func main() {
 				}
 				for i, domain := range nbrew.Domains {
 					if resolved[i] {
-						nbrew.Domains = append(nbrew.Domains, domain)
+						nbrew.ServerDomains = append(nbrew.ServerDomains, domain)
 					}
 				}
 			}
