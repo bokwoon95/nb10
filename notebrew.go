@@ -114,9 +114,9 @@ type Notebrew struct {
 
 	IP6 netip.Addr
 
-	ServerDomains []string
+	Domains []string
 
-	StaticDomains []string
+	ServerDomains []string
 
 	// FS is the file system associated with the notebrew instance.
 	FS FS
