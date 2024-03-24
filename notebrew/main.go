@@ -176,6 +176,84 @@ func main() {
 		if nbrew.ContentDomain == "" {
 			nbrew.ContentDomain = nbrew.CMSDomain
 		}
+		if nbrew.Port == 443 || nbrew.Port == 80 {
+			// IP4 and IP6.
+			client := &http.Client{
+				Timeout: 10 * time.Second,
+			}
+			group, groupctx := errgroup.WithContext(context.Background())
+			group.Go(func() error {
+				request, err := http.NewRequest("GET", "https://ipv4.icanhazip.com", nil)
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+				}
+				response, err := client.Do(request.WithContext(groupctx))
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+				}
+				defer response.Body.Close()
+				var b strings.Builder
+				_, err = io.Copy(&b, response.Body)
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
+				}
+				err = response.Body.Close()
+				if err != nil {
+					return err
+				}
+				s := strings.TrimSpace(b.String())
+				if s == "" {
+					return nil
+				}
+				ip, err := netip.ParseAddr(s)
+				if err != nil {
+					return fmt.Errorf("ipv4.icanhazip.com: did not get a valid IP address (%s)", s)
+				}
+				if ip.Is4() {
+					nbrew.IP4 = ip
+				}
+				return nil
+			})
+			group.Go(func() error {
+				request, err := http.NewRequest("GET", "https://ipv6.icanhazip.com", nil)
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+				}
+				response, err := client.Do(request.WithContext(groupctx))
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+				}
+				defer response.Body.Close()
+				var b strings.Builder
+				_, err = io.Copy(&b, response.Body)
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
+				}
+				err = response.Body.Close()
+				if err != nil {
+					return err
+				}
+				s := strings.TrimSpace(b.String())
+				if s == "" {
+					return nil
+				}
+				ip, err := netip.ParseAddr(s)
+				if err != nil {
+					return fmt.Errorf("ipv6.icanhazip.com: did not get a valid IP address (%s)", s)
+				}
+				if ip.Is6() {
+					nbrew.IP6 = ip
+				}
+				return nil
+			})
+			err := group.Wait()
+			if err != nil {
+				return err
+			}
+			if !nbrew.IP4.IsValid() && !nbrew.IP6.IsValid() {
+				return fmt.Errorf("unable to determine the IP address of the current machine")
+			}
+		}
 
 		// Database.
 		b, err = os.ReadFile(filepath.Join(configDir, "database.json"))
@@ -848,82 +926,6 @@ func main() {
 		}
 
 		if nbrew.Port == 443 {
-			// IP4 and IP6.
-			client := &http.Client{
-				Timeout: 10 * time.Second,
-			}
-			group, groupctx := errgroup.WithContext(context.Background())
-			group.Go(func() error {
-				request, err := http.NewRequest("GET", "https://ipv4.icanhazip.com", nil)
-				if err != nil {
-					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
-				}
-				response, err := client.Do(request.WithContext(groupctx))
-				if err != nil {
-					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
-				}
-				defer response.Body.Close()
-				var b strings.Builder
-				_, err = io.Copy(&b, response.Body)
-				if err != nil {
-					return fmt.Errorf("ipv4.icanhazip.com: %w", err)
-				}
-				err = response.Body.Close()
-				if err != nil {
-					return err
-				}
-				s := strings.TrimSpace(b.String())
-				if s == "" {
-					return nil
-				}
-				ip, err := netip.ParseAddr(s)
-				if err != nil {
-					return fmt.Errorf("ipv4.icanhazip.com: %q is not an IP address", s)
-				}
-				if ip.Is4() {
-					nbrew.IP4 = ip
-				}
-				return nil
-			})
-			group.Go(func() error {
-				request, err := http.NewRequest("GET", "https://ipv6.icanhazip.com", nil)
-				if err != nil {
-					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
-				}
-				response, err := client.Do(request.WithContext(groupctx))
-				if err != nil {
-					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
-				}
-				defer response.Body.Close()
-				var b strings.Builder
-				_, err = io.Copy(&b, response.Body)
-				if err != nil {
-					return fmt.Errorf("ipv6.icanhazip.com: %w", err)
-				}
-				err = response.Body.Close()
-				if err != nil {
-					return err
-				}
-				s := strings.TrimSpace(b.String())
-				if s == "" {
-					return nil
-				}
-				ip, err := netip.ParseAddr(s)
-				if err != nil {
-					return fmt.Errorf("ipv6.icanhazip.com: %q is not an IP address", s)
-				}
-				if ip.Is6() {
-					nbrew.IP6 = ip
-				}
-				return nil
-			})
-			err := group.Wait()
-			if err != nil {
-				return err
-			}
-			if !nbrew.IP4.IsValid() && !nbrew.IP6.IsValid() {
-				return fmt.Errorf("unable to determine the IP address of the current machine")
-			}
 
 			// DNS.
 			b, err := os.ReadFile(filepath.Join(configDir, "dns.json"))
