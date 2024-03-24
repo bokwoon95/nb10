@@ -90,16 +90,12 @@ func main() {
 		args := flagset.Args()
 		if configDir == "" {
 			configDir = filepath.Join(configHomeDir, "notebrew-config")
-			err := os.MkdirAll(configDir, 0755)
-			if err != nil {
-				return err
-			}
 		} else {
 			configDir = filepath.Clean(configDir)
-			_, err := os.Stat(configDir)
-			if err != nil {
-				return err
-			}
+		}
+		err = os.MkdirAll(configDir, 0755)
+		if err != nil {
+			return err
 		}
 		configDir, err = filepath.Abs(filepath.FromSlash(configDir))
 		if err != nil {
@@ -586,16 +582,12 @@ func main() {
 		if filesConfig.Dialect == "" {
 			if filesConfig.FilePath == "" {
 				filesConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-files")
-				err := os.MkdirAll(filesConfig.FilePath, 0755)
-				if err != nil {
-					return err
-				}
 			} else {
 				filesConfig.FilePath = filepath.Clean(filesConfig.FilePath)
-				_, err := os.Stat(filesConfig.FilePath)
-				if err != nil {
-					return err
-				}
+			}
+			err := os.MkdirAll(filesConfig.FilePath, 0755)
+			if err != nil {
+				return err
 			}
 			nbrew.FS, err = nb10.NewLocalFS(nb10.LocalFSConfig{
 				RootDir: filesConfig.FilePath,
@@ -803,16 +795,12 @@ func main() {
 			case "", "local":
 				if objectsConfig.FilePath == "" {
 					objectsConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-objects")
-					err := os.MkdirAll(objectsConfig.FilePath, 0755)
-					if err != nil {
-						return err
-					}
 				} else {
 					objectsConfig.FilePath = filepath.Clean(objectsConfig.FilePath)
-					_, err := os.Stat(objectsConfig.FilePath)
-					if err != nil {
-						return err
-					}
+				}
+				err := os.MkdirAll(objectsConfig.FilePath, 0755)
+				if err != nil {
+					return err
 				}
 				objectStorage, err = nb10.NewLocalObjectStorage(objectsConfig.FilePath, os.TempDir())
 				if err != nil {
