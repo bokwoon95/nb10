@@ -1282,7 +1282,7 @@ func main() {
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
-			err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.Domains)
+			err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.ServerDomains)
 			if err != nil {
 				return err
 			}
