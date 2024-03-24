@@ -1241,7 +1241,7 @@ func main() {
 			return nil
 		}
 
-		server := &http.Server{}
+		var server http.Server
 		switch nbrew.Port {
 		case 443:
 			server.Addr = ":443"
