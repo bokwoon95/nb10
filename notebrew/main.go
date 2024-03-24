@@ -342,7 +342,8 @@ func main() {
 						return err
 					}
 				}
-				// staticCertConfig manages the certificate for the main domain, content domain
+
+				// StaticCertConfig manages the certificate for the main domain, content domain
 				// and wildcard subdomain.
 				nbrew.StaticCertConfig = certmagic.NewDefault()
 				nbrew.StaticCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
@@ -430,18 +431,56 @@ func main() {
 					}
 				}
 
-				if nbrew.CMSDomain == nbrew.ContentDomain {
-					if nbrew.DNSProvider != nil {
-						nbrew.StaticDomains = []string{nbrew.CMSDomain, "*." + nbrew.CMSDomain}
-					} else {
-						nbrew.StaticDomains = []string{nbrew.CMSDomain, "img." + nbrew.CMSDomain, "www." + nbrew.CMSDomain}
+				nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, "www." + nbrew.ContentDomain}
+				if nbrew.CMSDomain != nbrew.ContentDomain {
+					nbrew.StaticDomains = append(nbrew.StaticDomains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
+				}
+				if nbrew.DNSProvider != nil {
+					nbrew.StaticDomains = append(nbrew.StaticDomains, "*."+nbrew.ContentDomain)
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				group, groupctx := errgroup.WithContext(ctx)
+				resolved := make([]bool, len(nbrew.StaticDomains))
+				for i, domain := range nbrew.StaticDomains {
+					i, domain := i, domain
+					group.Go(func() error {
+						if strings.Contains(domain, "*") {
+							// TODO: use nbrew.DNSProvider to check if the
+							// wildcard DNS record has been set, then set
+							// resolved to true.
+							return nil
+						}
+						ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
+						if err != nil {
+							return err
+						}
+						for _, ip := range ips {
+							ip, ok := netip.AddrFromSlice(ip.IP)
+							if !ok {
+								continue
+							}
+							if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
+								resolved[i] = true
+								break
+							}
+						}
+						return nil
+					})
+				}
+				err = group.Wait()
+				if err != nil {
+					return err
+				}
+				for i, domain := range nbrew.StaticDomains {
+					if resolved[i] {
+						nbrew.ServerDomains = append(nbrew.ServerDomains, domain)
 					}
-				} else {
-					if nbrew.DNSProvider != nil {
-						nbrew.StaticDomains = []string{nbrew.ContentDomain, "*." + nbrew.ContentDomain, nbrew.CMSDomain, "*." + nbrew.CMSDomain}
-					} else {
-						nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
-					}
+				}
+				err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -1247,59 +1286,59 @@ func main() {
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
-			if nbrew.DNSProvider != nil {
-				// TODO: check if the necessary DNS records have been set for
-				// each of the static domains and if not, set them.
-			} else {
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				group, groupctx := errgroup.WithContext(ctx)
-				resolved := make([]bool, len(nbrew.StaticDomains))
-				for i, domain := range nbrew.StaticDomains {
-					i, domain := i, domain
-					group.Go(func() error {
-						ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
-						if err != nil {
-							return err
-						}
-						for _, ip := range ips {
-							ip, ok := netip.AddrFromSlice(ip.IP)
-							if !ok {
-								continue
-							}
-							if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
-								resolved[i] = true
-								break
-							}
-						}
-						return nil
-					})
-				}
-				err := group.Wait()
-				if err != nil {
-					return err
-				}
-				var unresolvedDomains []string
-				for i, domain := range nbrew.StaticDomains {
-					if !resolved[i] {
-						unresolvedDomains = append(unresolvedDomains, domain)
-					}
-				}
-				if len(unresolvedDomains) > 0 {
-					ips := make([]string, 0, 2)
-					if nbrew.IP4.IsValid() {
-						ips = append(ips, nbrew.IP4.String())
-					}
-					if nbrew.IP6.IsValid() {
-						ips = append(ips, nbrew.IP6.String())
-					}
-					return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
-				}
-			}
-			err := nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
-			if err != nil {
-				return err
-			}
+			// if nbrew.DNSProvider != nil {
+			// 	// TODO: check if the necessary DNS records have been set for
+			// 	// each of the static domains and if not, set them.
+			// } else {
+			// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			// 	defer cancel()
+			// 	group, groupctx := errgroup.WithContext(ctx)
+			// 	resolved := make([]bool, len(nbrew.StaticDomains))
+			// 	for i, domain := range nbrew.StaticDomains {
+			// 		i, domain := i, domain
+			// 		group.Go(func() error {
+			// 			ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
+			// 			if err != nil {
+			// 				return err
+			// 			}
+			// 			for _, ip := range ips {
+			// 				ip, ok := netip.AddrFromSlice(ip.IP)
+			// 				if !ok {
+			// 					continue
+			// 				}
+			// 				if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
+			// 					resolved[i] = true
+			// 					break
+			// 				}
+			// 			}
+			// 			return nil
+			// 		})
+			// 	}
+			// 	err := group.Wait()
+			// 	if err != nil {
+			// 		return err
+			// 	}
+			// 	var unresolvedDomains []string
+			// 	for i, domain := range nbrew.StaticDomains {
+			// 		if !resolved[i] {
+			// 			unresolvedDomains = append(unresolvedDomains, domain)
+			// 		}
+			// 	}
+			// 	if len(unresolvedDomains) > 0 {
+			// 		ips := make([]string, 0, 2)
+			// 		if nbrew.IP4.IsValid() {
+			// 			ips = append(ips, nbrew.IP4.String())
+			// 		}
+			// 		if nbrew.IP6.IsValid() {
+			// 			ips = append(ips, nbrew.IP6.String())
+			// 		}
+			// 		return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
+			// 	}
+			// }
+			// err := nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
+			// if err != nil {
+			// 	return err
+			// }
 		case 80:
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
