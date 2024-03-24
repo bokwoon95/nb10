@@ -102,7 +102,19 @@ func init() {
 
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
-	Logger *slog.Logger
+	CMSDomain string // localhost:6444, example.com
+
+	ContentDomain string // localhost:6444, example.com
+
+	ImgDomain string
+
+	Port int
+
+	IP4 netip.Addr
+
+	IP6 netip.Addr
+
+	StaticDomains []string
 
 	// FS is the file system associated with the notebrew instance.
 	FS FS
@@ -118,14 +130,6 @@ type Notebrew struct {
 	// code. If the error is not a database error or if no underlying
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
-
-	Port int
-
-	CMSDomain string // localhost:6444, example.com
-
-	ContentDomain string // localhost:6444, example.com
-
-	ImgDomain string
 
 	CaptchaConfig struct {
 		WidgetScriptSrc template.URL
@@ -147,17 +151,13 @@ type Notebrew struct {
 		ProxyIPs      map[netip.Addr]struct{}
 	}
 
-	IP4 netip.Addr
-
-	IP6 netip.Addr
-
-	StaticDomains []string
-
 	StaticCertConfig *certmagic.Config
 
 	DynamicCertConfig *certmagic.Config
 
 	TLSConfig *tls.Config
+
+	Logger *slog.Logger
 }
 
 type User struct {

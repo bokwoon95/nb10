@@ -122,8 +122,35 @@ func main() {
 			})),
 		}
 
+		// CMS domain.
+		b, err := os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "cmsdomain.txt"), err)
+		}
+		nbrew.CMSDomain = string(bytes.TrimSpace(b))
+
+		// Content domain.
+		b, err = os.ReadFile(filepath.Join(configDir, "contentdomain.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "contentdomain.txt"), err)
+		}
+		nbrew.ContentDomain = string(bytes.TrimSpace(b))
+		if nbrew.ContentDomain == "" {
+			nbrew.ContentDomain = nbrew.CMSDomain
+		}
+
+		// Img domain.
+		b, err = os.ReadFile(filepath.Join(configDir, "imgdomain.txt"))
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "imgdomain.txt"), err)
+			}
+		} else {
+			nbrew.ImgDomain = string(bytes.TrimSpace(b))
+		}
+
 		// Port.
-		b, err := os.ReadFile(filepath.Join(configDir, "port.txt"))
+		b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
 		}
@@ -137,13 +164,6 @@ func main() {
 				return fmt.Errorf("%s: port cannot be 0", filepath.Join(configDir, "port.txt"))
 			}
 		}
-
-		// CMS domain.
-		b, err = os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "cmsdomain.txt"), err)
-		}
-		nbrew.CMSDomain = string(bytes.TrimSpace(b))
 
 		// Fill in the port and CMS domain if missing.
 		if port != "" {
@@ -164,26 +184,6 @@ func main() {
 			} else {
 				nbrew.Port = 443
 			}
-		}
-
-		// Content domain.
-		b, err = os.ReadFile(filepath.Join(configDir, "contentdomain.txt"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "contentdomain.txt"), err)
-		}
-		nbrew.ContentDomain = string(bytes.TrimSpace(b))
-		if nbrew.ContentDomain == "" {
-			nbrew.ContentDomain = nbrew.CMSDomain
-		}
-
-		// Img domain.
-		b, err = os.ReadFile(filepath.Join(configDir, "imgdomain.txt"))
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "imgdomain.txt"), err)
-			}
-		} else {
-			nbrew.ImgDomain = string(bytes.TrimSpace(b))
 		}
 
 		// Database.
@@ -856,6 +856,7 @@ func main() {
 			}
 		}
 
+		var certmagicDir string
 		if nbrew.Port == 443 {
 			// IP4 and IP6.
 			client := &http.Client{
@@ -1008,7 +1009,7 @@ func main() {
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
 			}
-			certmagicDir := string(bytes.TrimSpace(b))
+			certmagicDir = string(bytes.TrimSpace(b))
 			if certmagicDir == "" {
 				certmagicDir = filepath.Join(configDir, "certmagic")
 				err := os.MkdirAll(certmagicDir, 0755)
@@ -1035,87 +1036,8 @@ func main() {
 					nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
 				}
 			}
-			// staticCertConfig manages the certificate for the main domain, content domain
-			// and wildcard subdomain.
-			nbrew.StaticCertConfig = certmagic.NewDefault()
-			nbrew.StaticCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
-			if nbrew.DNSProvider != nil {
-				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
-					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
-						CA:        certmagic.DefaultACME.CA,
-						TestCA:    certmagic.DefaultACME.TestCA,
-						Logger:    certmagic.DefaultACME.Logger,
-						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
-						DNS01Solver: &certmagic.DNS01Solver{
-							DNSProvider: nbrew.DNSProvider,
-						},
-					}),
-				}
-			} else {
-				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
-					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
-						CA:        certmagic.DefaultACME.CA,
-						TestCA:    certmagic.DefaultACME.TestCA,
-						Logger:    certmagic.DefaultACME.Logger,
-						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
-					}),
-				}
-			}
-			nbrew.DynamicCertConfig = certmagic.NewDefault()
-			nbrew.DynamicCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
-			nbrew.DynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
-				DecisionFunc: func(ctx context.Context, name string) error {
-					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
-						return nil
-					}
-					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
-					if err != nil {
-						return err
-					}
-					if !fileInfo.IsDir() {
-						return fmt.Errorf("%q is not a directory", name)
-					}
-					return nil
-				},
-			}
-			nbrew.TLSConfig = &tls.Config{
-				NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
-				GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					if clientHello.ServerName == "" {
-						return nil, fmt.Errorf("server name required")
-					}
-					for _, domain := range nbrew.StaticDomains {
-						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
-							return nbrew.StaticCertConfig.GetCertificate(clientHello)
-						}
-					}
-					return nbrew.DynamicCertConfig.GetCertificate(clientHello)
-				},
-				MinVersion: tls.VersionTLS12,
-				CurvePreferences: []tls.CurveID{
-					tls.X25519,
-					tls.CurveP256,
-				},
-				CipherSuites: []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				},
-				PreferServerCipherSuites: true,
-			}
-			if cpuid.CPU.Supports(cpuid.AESNI) {
-				nbrew.TLSConfig.CipherSuites = []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				}
-			}
+			// the comprehensive static list to check is: cmsdomain, www.cmsdomain, contentdomain, www.contentdomain, img.contentdomain
+			// if dnsprovider is present, the list shrinks down to: cmsdomain, *.cmsdomain, contentdomain, *.contentdomain
 		}
 
 		// TODO:
@@ -1296,6 +1218,87 @@ func main() {
 						ips = append(ips, nbrew.IP6.String())
 					}
 					return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
+				}
+			}
+			// staticCertConfig manages the certificate for the main domain, content domain
+			// and wildcard subdomain.
+			nbrew.StaticCertConfig = certmagic.NewDefault()
+			nbrew.StaticCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
+			if nbrew.DNSProvider != nil {
+				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
+					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
+						CA:        certmagic.DefaultACME.CA,
+						TestCA:    certmagic.DefaultACME.TestCA,
+						Logger:    certmagic.DefaultACME.Logger,
+						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+						DNS01Solver: &certmagic.DNS01Solver{
+							DNSProvider: nbrew.DNSProvider,
+						},
+					}),
+				}
+			} else {
+				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
+					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
+						CA:        certmagic.DefaultACME.CA,
+						TestCA:    certmagic.DefaultACME.TestCA,
+						Logger:    certmagic.DefaultACME.Logger,
+						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+					}),
+				}
+			}
+			nbrew.DynamicCertConfig = certmagic.NewDefault()
+			nbrew.DynamicCertConfig.Storage = &certmagic.FileStorage{Path: certmagicDir}
+			nbrew.DynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
+				DecisionFunc: func(ctx context.Context, name string) error {
+					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+						return nil
+					}
+					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
+					if err != nil {
+						return err
+					}
+					if !fileInfo.IsDir() {
+						return fmt.Errorf("%q is not a directory", name)
+					}
+					return nil
+				},
+			}
+			nbrew.TLSConfig = &tls.Config{
+				NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
+				GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					if clientHello.ServerName == "" {
+						return nil, fmt.Errorf("server name required")
+					}
+					for _, domain := range nbrew.StaticDomains {
+						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+							return nbrew.StaticCertConfig.GetCertificate(clientHello)
+						}
+					}
+					return nbrew.DynamicCertConfig.GetCertificate(clientHello)
+				},
+				MinVersion: tls.VersionTLS12,
+				CurvePreferences: []tls.CurveID{
+					tls.X25519,
+					tls.CurveP256,
+				},
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				},
+				PreferServerCipherSuites: true,
+			}
+			if cpuid.CPU.Supports(cpuid.AESNI) {
+				nbrew.TLSConfig.CipherSuites = []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 				}
 			}
 			err := nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
