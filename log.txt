@@ -75,7 +75,9 @@ DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
     - want: the server starts and listens on :443, but no servers should be provisioned since DNS resolution should have failed for the domains.
 - Fresh server, no DNS entries. Set port to 80.
-    - want: the server starts using CMSDomain and ContentDomain set to the server's IP address, and everything behaves as it does on localhost (except without the subdomains).
+    - want: the server starts on :80 (no SSL certificates configured) using CMSDomain and ContentDomain set to the server's IP address, and everything behaves as it does on localhost (except without the subdomains).
+- Fresh server, with DNS entry set to notebrew.com. Set port to 80.
+    - want: the server starts on :80 (no SSL certificates configured) CMSDomain and ContentDomain set to the same thing, and everything behaves as it does on localhost (except without the subdomains).
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
