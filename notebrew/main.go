@@ -230,16 +230,12 @@ func main() {
 		certmagicDir := string(bytes.TrimSpace(b))
 		if certmagicDir == "" {
 			certmagicDir = filepath.Join(configDir, "certmagic")
-			err := os.MkdirAll(certmagicDir, 0755)
-			if err != nil {
-				return err
-			}
 		} else {
 			certmagicDir = filepath.Clean(certmagicDir)
-			_, err := os.Stat(certmagicDir)
-			if err != nil {
-				return err
-			}
+		}
+		err = os.MkdirAll(certmagicDir, 0755)
+		if err != nil {
+			return err
 		}
 		nbrew.CertStorage = &certmagic.FileStorage{
 			Path: certmagicDir,
