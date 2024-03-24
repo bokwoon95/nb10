@@ -135,9 +135,6 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "contentdomain.txt"), err)
 		}
 		nbrew.ContentDomain = string(bytes.TrimSpace(b))
-		if nbrew.ContentDomain == "" {
-			nbrew.ContentDomain = nbrew.CMSDomain
-		}
 
 		// Img domain.
 		b, err = os.ReadFile(filepath.Join(configDir, "imgdomain.txt"))
@@ -175,6 +172,9 @@ func main() {
 			} else {
 				nbrew.Port = 443
 			}
+		}
+		if nbrew.ContentDomain == "" {
+			nbrew.ContentDomain = nbrew.CMSDomain
 		}
 
 		// Database.
