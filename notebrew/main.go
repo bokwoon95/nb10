@@ -411,7 +411,7 @@ func main() {
 					if clientHello.ServerName == "" {
 						return nil, fmt.Errorf("server name required")
 					}
-					for _, domain := range nbrew.Domains {
+					for _, domain := range nbrew.StaticDomains {
 						if strings.HasPrefix(domain, "*.") {
 							if certmagic.MatchWildcard(clientHello.ServerName, domain) {
 								return nbrew.StaticCertConfig.GetCertificate(clientHello)
@@ -450,25 +450,25 @@ func main() {
 				}
 			}
 
-			nbrew.Domains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, "www." + nbrew.ContentDomain}
+			nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, "www." + nbrew.ContentDomain}
 			if nbrew.CMSDomain != nbrew.ContentDomain {
-				nbrew.Domains = append(nbrew.Domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
+				nbrew.StaticDomains = append(nbrew.StaticDomains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
 			}
 			if nbrew.DNSProvider != nil {
-				nbrew.Domains = append(nbrew.Domains, "*."+nbrew.ContentDomain)
+				nbrew.StaticDomains = append(nbrew.StaticDomains, "*."+nbrew.ContentDomain)
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			group, groupctx := errgroup.WithContext(ctx)
-			resolved := make([]bool, len(nbrew.Domains))
-			for i, domain := range nbrew.Domains {
+			mapped := make([]bool, len(nbrew.StaticDomains))
+			for i, domain := range nbrew.StaticDomains {
 				i, domain := i, domain
 				group.Go(func() error {
 					if strings.Contains(domain, "*") {
 						// TODO: use nbrew.DNSProvider to check if the
 						// wildcard DNS record has been set, then set
-						// resolved to true.
+						// mapped to true.
 						return nil
 					}
 					ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
@@ -481,7 +481,7 @@ func main() {
 							continue
 						}
 						if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
-							resolved[i] = true
+							mapped[i] = true
 							break
 						}
 					}
@@ -492,9 +492,9 @@ func main() {
 			if err != nil {
 				return err
 			}
-			for i, domain := range nbrew.Domains {
-				if resolved[i] {
-					nbrew.ServerDomains = append(nbrew.ServerDomains, domain)
+			for i, domain := range nbrew.StaticDomains {
+				if mapped[i] {
+					nbrew.MappedDomains = append(nbrew.MappedDomains, domain)
 				}
 			}
 		}
@@ -1300,7 +1300,7 @@ func main() {
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
-			err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.ServerDomains)
+			err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.MappedDomains)
 			if err != nil {
 				return err
 			}

@@ -269,11 +269,11 @@ func (cmd *StatusCmd) Run() error {
 			fmt.Fprintf(cmd.Stdout, "IPv6          = %s\n", cmd.Notebrew.IP6.String())
 		}
 
-		// Domains.
-		fmt.Fprintf(cmd.Stdout, "domains       = %s\n", strings.Join(cmd.Notebrew.Domains, ", "))
+		// Static Domains.
+		fmt.Fprintf(cmd.Stdout, "staticdomains = %s\n", strings.Join(cmd.Notebrew.StaticDomains, ", "))
 
-		// Server domains.
-		fmt.Fprintf(cmd.Stdout, "serverdomains = %s\n", strings.Join(cmd.Notebrew.ServerDomains, ", "))
+		// Mapped Domains.
+		fmt.Fprintf(cmd.Stdout, "mappeddomains = %s\n", strings.Join(cmd.Notebrew.MappedDomains, ", "))
 	}
 	fmt.Fprintf(cmd.Stdout, "To configure notebrew's settings, run `notebrew config`.\n")
 	return nil

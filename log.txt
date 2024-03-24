@@ -71,6 +71,10 @@ BUG: why is my html lang=''? I thought the default was "en"?
 BUG: imgdomain is broken! why!
     - once we figure out imgdomain we can start implementing client-side caching (immutable) for all images (since their ID is unique).
 
+DNS testcases:
+- Newly created server, no DNS entries configured. Set the cmsdomain and contentdomain and run it and see what happens.
+    - want: the server starts and listens on :443, but no servers should be provisioned since DNS resolution should have failed for the domains.
+
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
 - and deleteuser will not delete the default site, just the user and and site_user and site_owner entries.
