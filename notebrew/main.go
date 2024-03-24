@@ -253,6 +253,8 @@ func main() {
 			if !nbrew.IP4.IsValid() && !nbrew.IP6.IsValid() {
 				return fmt.Errorf("unable to determine the IP address of the current machine")
 			}
+			if nbrew.Port == 443 {
+			}
 		}
 
 		// Database.
@@ -926,7 +928,6 @@ func main() {
 		}
 
 		if nbrew.Port == 443 {
-
 			// DNS.
 			b, err := os.ReadFile(filepath.Join(configDir, "dns.json"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -1028,8 +1029,6 @@ func main() {
 					nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
 				}
 			}
-			// the comprehensive static list to check is: cmsdomain, www.cmsdomain, contentdomain, www.contentdomain, img.contentdomain
-			// if dnsprovider is present, the list shrinks down to: cmsdomain, *.cmsdomain, contentdomain, *.contentdomain
 
 			// staticCertConfig manages the certificate for the main domain, content domain
 			// and wildcard subdomain.
@@ -1081,8 +1080,14 @@ func main() {
 						return nil, fmt.Errorf("server name required")
 					}
 					for _, domain := range nbrew.StaticDomains {
-						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
-							return nbrew.StaticCertConfig.GetCertificate(clientHello)
+						if strings.HasPrefix(domain, "*.") {
+							if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+								return nbrew.StaticCertConfig.GetCertificate(clientHello)
+							}
+						} else {
+							if clientHello.ServerName == domain {
+								return nbrew.StaticCertConfig.GetCertificate(clientHello)
+							}
 						}
 					}
 					return nbrew.DynamicCertConfig.GetCertificate(clientHello)
