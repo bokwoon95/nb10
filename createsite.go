@@ -4,16 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"mime"
+	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"path"
 	"strings"
 	texttemplate "text/template"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/caddyserver/certmagic"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -241,6 +245,31 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		var sitePrefix string
 		if strings.Contains(response.SiteName, ".") {
 			sitePrefix = response.SiteName
+			if nbrew.Port == 443 {
+				ips, err := net.DefaultResolver.LookupIPAddr(r.Context(), response.SiteName)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					internalServerError(w, r, err)
+					return
+				}
+				matched := false
+				for _, ip := range ips {
+					ip, ok := netip.AddrFromSlice(ip.IP)
+					if !ok {
+						continue
+					}
+					if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					response.FormErrors.Add("siteName", fmt.Sprintf("please add a CNAME DNS record for this domain to point at %s", "www."+nbrew.ContentDomain))
+					response.Error = "DomainNotMatched"
+					writeResponse(w, r, response)
+					return
+				}
+			}
 		} else if response.SiteName != "" {
 			sitePrefix = "@" + response.SiteName
 		}
@@ -507,6 +536,16 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
+		}
+		if strings.Contains(response.SiteName, ".") && nbrew.Port == 443 {
+			certConfig := certmagic.NewDefault()
+			certConfig.Storage = nbrew.CertStorage
+			err := certConfig.ObtainCertSync(r.Context(), response.SiteName)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
 		}
 		writeResponse(w, r, response)
 	default:

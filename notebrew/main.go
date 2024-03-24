@@ -367,7 +367,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			group, groupctx := errgroup.WithContext(ctx)
-			resolved := make([]bool, len(nbrew.Domains))
+			matched := make([]bool, len(nbrew.Domains))
 			for i, domain := range nbrew.Domains {
 				i, domain := i, domain
 				group.Go(func() error {
@@ -391,7 +391,7 @@ func main() {
 							continue
 						}
 						if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
-							resolved[i] = true
+							matched[i] = true
 							break
 						}
 					}
@@ -403,7 +403,7 @@ func main() {
 				return err
 			}
 			for i, domain := range nbrew.Domains {
-				if resolved[i] {
+				if matched[i] {
 					nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
 				}
 			}
