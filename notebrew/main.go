@@ -155,15 +155,6 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
 		}
 		port := string(bytes.TrimSpace(b))
-		if port != "" {
-			n, err := strconv.Atoi(port)
-			if err != nil {
-				return fmt.Errorf("%s: %q is not a valid integer", filepath.Join(configDir, "port.txt"), port)
-			}
-			if n == 0 {
-				return fmt.Errorf("%s: port cannot be 0", filepath.Join(configDir, "port.txt"))
-			}
-		}
 
 		// Fill in the port and CMS domain if missing.
 		if port != "" {
