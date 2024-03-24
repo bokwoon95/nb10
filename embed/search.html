@@ -29,6 +29,9 @@
   {{- else }}
   <h1 class='f3 mv3 b'>Search</h1>
   {{- end }}
+  {{- if $.Term }}
+  <h2><i>"{{ $.Term }}" - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
+  {{- end }}
   <div class='mv3'>
     <div><label for='term' class='b'>Term:</label></div>
     <input id='term' name='term' value='{{ $.Term }}' placeholder='search term' class='pv1 ph2 br2 ba w-100' required>
@@ -85,9 +88,6 @@
     </div>
   </div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>search</button>
-  {{- if $.Term }}
-  <h2><i>"{{ $.Term }}"</i></h2>
-  {{- end }}
 </form>
 {{- if $.Matches }}
 <ul class='ph3 list-style-decimal'>
