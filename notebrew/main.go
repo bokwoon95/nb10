@@ -478,10 +478,6 @@ func main() {
 						nbrew.ServerDomains = append(nbrew.ServerDomains, domain)
 					}
 				}
-				err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
-				if err != nil {
-					return err
-				}
 			}
 		}
 
@@ -1286,6 +1282,10 @@ func main() {
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
+			err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
+			if err != nil {
+				return err
+			}
 			// if nbrew.DNSProvider != nil {
 			// 	// TODO: check if the necessary DNS records have been set for
 			// 	// each of the static domains and if not, set them.
