@@ -114,9 +114,9 @@ type Notebrew struct {
 
 	IP6 netip.Addr
 
-	StaticDomains []string
+	Domains []string
 
-	MappedDomains []string
+	ManagingDomains []string
 
 	// FS is the file system associated with the notebrew instance.
 	FS FS
@@ -141,6 +141,11 @@ type Notebrew struct {
 		SecretKey       string
 	}
 
+	ProxyConfig struct {
+		RealIPHeaders map[netip.Addr]string
+		ProxyIPs      map[netip.Addr]struct{}
+	}
+
 	DNSProvider interface {
 		libdns.RecordAppender
 		libdns.RecordDeleter
@@ -148,10 +153,7 @@ type Notebrew struct {
 		libdns.RecordSetter
 	}
 
-	ProxyConfig struct {
-		RealIPHeaders map[netip.Addr]string
-		ProxyIPs      map[netip.Addr]struct{}
-	}
+	CertStorage certmagic.Storage
 
 	StaticCertConfig *certmagic.Config
 
