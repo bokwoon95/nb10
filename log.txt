@@ -35,6 +35,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: if port is 80, we still need to compute the static domains and the mapped domains. Not just for port 443.
 TODO: we need to rework this.
     - We need to call ManageSync only for domains that we have verified resolve to us.
     - It is valid for domains to not resolve to us - img.example.com or content.com may be handled by an external server. So we do not treat nonresolution as an error - we simply silently do not call certificate management for it, and we also indicate to the user which of the domains we are managing in `notebrew status`.
