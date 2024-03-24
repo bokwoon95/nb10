@@ -416,95 +416,6 @@ func main() {
 				}
 			}
 		}
-		if nbrew.Port == 443 {
-			nbrew.StaticCertConfig = certmagic.NewDefault()
-			nbrew.StaticCertConfig.Storage = nbrew.CertStorage
-			if nbrew.DNSProvider != nil {
-				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
-					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
-						CA:        certmagic.DefaultACME.CA,
-						TestCA:    certmagic.DefaultACME.TestCA,
-						Logger:    certmagic.DefaultACME.Logger,
-						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
-						DNS01Solver: &certmagic.DNS01Solver{
-							DNSProvider: nbrew.DNSProvider,
-						},
-					}),
-				}
-			} else {
-				nbrew.StaticCertConfig.Issuers = []certmagic.Issuer{
-					certmagic.NewACMEIssuer(nbrew.StaticCertConfig, certmagic.ACMEIssuer{
-						CA:        certmagic.DefaultACME.CA,
-						TestCA:    certmagic.DefaultACME.TestCA,
-						Logger:    certmagic.DefaultACME.Logger,
-						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
-					}),
-				}
-			}
-			nbrew.DynamicCertConfig = certmagic.NewDefault()
-			nbrew.DynamicCertConfig.Storage = nbrew.CertStorage
-			nbrew.DynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
-				DecisionFunc: func(ctx context.Context, name string) error {
-					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
-						return nil
-					}
-					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
-					if err != nil {
-						return err
-					}
-					if !fileInfo.IsDir() {
-						return fmt.Errorf("%q is not a directory", name)
-					}
-					return nil
-				},
-			}
-			// TODO: TLSConfig can be created manually.
-			nbrew.TLSConfig = &tls.Config{
-				NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
-				GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-					if clientHello.ServerName == "" {
-						return nil, fmt.Errorf("server name required")
-					}
-					for _, domain := range nbrew.Domains {
-						if strings.HasPrefix(domain, "*.") {
-							if certmagic.MatchWildcard(clientHello.ServerName, domain) {
-								return nbrew.StaticCertConfig.GetCertificate(clientHello)
-							}
-						} else {
-							if clientHello.ServerName == domain {
-								return nbrew.StaticCertConfig.GetCertificate(clientHello)
-							}
-						}
-					}
-					return nbrew.DynamicCertConfig.GetCertificate(clientHello)
-				},
-				MinVersion: tls.VersionTLS12,
-				CurvePreferences: []tls.CurveID{
-					tls.X25519,
-					tls.CurveP256,
-				},
-				CipherSuites: []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				},
-				PreferServerCipherSuites: true,
-			}
-			if cpuid.CPU.Supports(cpuid.AESNI) {
-				nbrew.TLSConfig.CipherSuites = []uint16{
-					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-				}
-			}
-
-		}
 
 		// Database.
 		b, err = os.ReadFile(filepath.Join(configDir, "database.json"))
@@ -1303,67 +1214,92 @@ func main() {
 		case 443:
 			server.Addr = ":443"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
-			server.TLSConfig = nbrew.TLSConfig
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
-			err = nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.ManagingDomains)
+			staticCertConfig := certmagic.NewDefault()
+			staticCertConfig.Storage = nbrew.CertStorage
+			if nbrew.DNSProvider != nil {
+				staticCertConfig.Issuers = []certmagic.Issuer{
+					certmagic.NewACMEIssuer(staticCertConfig, certmagic.ACMEIssuer{
+						CA:        certmagic.DefaultACME.CA,
+						TestCA:    certmagic.DefaultACME.TestCA,
+						Logger:    certmagic.DefaultACME.Logger,
+						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+						DNS01Solver: &certmagic.DNS01Solver{
+							DNSProvider: nbrew.DNSProvider,
+						},
+					}),
+				}
+			} else {
+				staticCertConfig.Issuers = []certmagic.Issuer{
+					certmagic.NewACMEIssuer(staticCertConfig, certmagic.ACMEIssuer{
+						CA:        certmagic.DefaultACME.CA,
+						TestCA:    certmagic.DefaultACME.TestCA,
+						Logger:    certmagic.DefaultACME.Logger,
+						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+					}),
+				}
+			}
+			err = staticCertConfig.ManageSync(context.Background(), nbrew.ManagingDomains)
 			if err != nil {
 				return err
 			}
-			// if nbrew.DNSProvider != nil {
-			// 	// TODO: check if the necessary DNS records have been set for
-			// 	// each of the static domains and if not, set them.
-			// } else {
-			// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			// 	defer cancel()
-			// 	group, groupctx := errgroup.WithContext(ctx)
-			// 	resolved := make([]bool, len(nbrew.StaticDomains))
-			// 	for i, domain := range nbrew.StaticDomains {
-			// 		i, domain := i, domain
-			// 		group.Go(func() error {
-			// 			ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
-			// 			if err != nil {
-			// 				return err
-			// 			}
-			// 			for _, ip := range ips {
-			// 				ip, ok := netip.AddrFromSlice(ip.IP)
-			// 				if !ok {
-			// 					continue
-			// 				}
-			// 				if ip.Is4() && ip == nbrew.IP4 || ip.Is6() && ip == nbrew.IP6 {
-			// 					resolved[i] = true
-			// 					break
-			// 				}
-			// 			}
-			// 			return nil
-			// 		})
-			// 	}
-			// 	err := group.Wait()
-			// 	if err != nil {
-			// 		return err
-			// 	}
-			// 	var unresolvedDomains []string
-			// 	for i, domain := range nbrew.StaticDomains {
-			// 		if !resolved[i] {
-			// 			unresolvedDomains = append(unresolvedDomains, domain)
-			// 		}
-			// 	}
-			// 	if len(unresolvedDomains) > 0 {
-			// 		ips := make([]string, 0, 2)
-			// 		if nbrew.IP4.IsValid() {
-			// 			ips = append(ips, nbrew.IP4.String())
-			// 		}
-			// 		if nbrew.IP6.IsValid() {
-			// 			ips = append(ips, nbrew.IP6.String())
-			// 		}
-			// 		return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
-			// 	}
-			// }
-			// err := nbrew.StaticCertConfig.ManageSync(context.Background(), nbrew.StaticDomains)
-			// if err != nil {
-			// 	return err
-			// }
+			dynamicCertConfig := certmagic.NewDefault()
+			dynamicCertConfig.Storage = nbrew.CertStorage
+			dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
+				DecisionFunc: func(ctx context.Context, name string) error {
+					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+						return nil
+					}
+					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
+					if err != nil {
+						return err
+					}
+					if !fileInfo.IsDir() {
+						return fmt.Errorf("%q is not a directory", name)
+					}
+					return nil
+				},
+			}
+			server.TLSConfig = &tls.Config{
+				NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
+				GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+					if clientHello.ServerName == "" {
+						return nil, fmt.Errorf("server name required")
+					}
+					for _, domain := range nbrew.ManagingDomains {
+						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+							return staticCertConfig.GetCertificate(clientHello)
+						}
+					}
+					return dynamicCertConfig.GetCertificate(clientHello)
+				},
+				MinVersion: tls.VersionTLS12,
+				CurvePreferences: []tls.CurveID{
+					tls.X25519,
+					tls.CurveP256,
+				},
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				},
+				PreferServerCipherSuites: true,
+			}
+			if cpuid.CPU.Supports(cpuid.AESNI) {
+				server.TLSConfig.CipherSuites = []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+					tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				}
+			}
 		case 80:
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")

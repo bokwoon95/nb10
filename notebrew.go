@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"database/sql"
 	"embed"
 	"encoding/base32"
@@ -154,12 +153,6 @@ type Notebrew struct {
 	}
 
 	CertStorage certmagic.Storage
-
-	StaticCertConfig *certmagic.Config
-
-	DynamicCertConfig *certmagic.Config
-
-	TLSConfig *tls.Config
 
 	Logger *slog.Logger
 }
