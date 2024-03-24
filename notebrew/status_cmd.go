@@ -273,7 +273,7 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "domains       = %s\n", strings.Join(cmd.Notebrew.Domains, ", "))
 
 		// Server domains.
-		fmt.Fprintf(cmd.Stdout, "serverdomains = %s\n", strings.Join(cmd.Notebrew.Domains, ", "))
+		fmt.Fprintf(cmd.Stdout, "serverdomains = %s\n", strings.Join(cmd.Notebrew.ServerDomains, ", "))
 	}
 	fmt.Fprintf(cmd.Stdout, "To configure notebrew's settings, run `notebrew config`.\n")
 	return nil
