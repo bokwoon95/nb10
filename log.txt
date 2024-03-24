@@ -78,6 +78,7 @@ DNS testcases:
     - want: the server starts on :80 (no SSL certificates configured) using CMSDomain and ContentDomain set to the server's IP address, and everything behaves as it does on localhost (except without the subdomains).
 - Fresh server, with DNS entry set to notebrew.com. Set port to 80.
     - want: the server starts on :80 (no SSL certificates configured) CMSDomain and ContentDomain set to the same thing, and everything behaves as it does on localhost (except without the subdomains).
+The main usefulness of being able to run notebrew on plain IP addresses or HTTP is that new users can run it first without worrying about any domain name configuration or SSL certificate configuration and ascertain if they can connect to their server in the first place.
 
 should createuser only create a new user?
 - exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
