@@ -856,7 +856,6 @@ func main() {
 			}
 		}
 
-		var certmagicDir string
 		if nbrew.Port == 443 {
 			// IP4 and IP6.
 			client := &http.Client{
@@ -1001,39 +1000,6 @@ func main() {
 					return fmt.Errorf("%s: missing provider field", filepath.Join(configDir, "dns.json"))
 				default:
 					return fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
-				}
-			}
-
-			// Certmagic.
-			b, err = os.ReadFile(filepath.Join(configDir, "certmagic.txt"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
-			}
-			certmagicDir = string(bytes.TrimSpace(b))
-			if certmagicDir == "" {
-				certmagicDir = filepath.Join(configDir, "certmagic")
-				err := os.MkdirAll(certmagicDir, 0755)
-				if err != nil {
-					return err
-				}
-			} else {
-				certmagicDir = filepath.Clean(certmagicDir)
-				_, err := os.Stat(certmagicDir)
-				if err != nil {
-					return err
-				}
-			}
-			if nbrew.CMSDomain == nbrew.ContentDomain {
-				if nbrew.DNSProvider != nil {
-					nbrew.StaticDomains = []string{nbrew.CMSDomain, "*." + nbrew.CMSDomain}
-				} else {
-					nbrew.StaticDomains = []string{nbrew.CMSDomain, "img." + nbrew.CMSDomain, "www." + nbrew.CMSDomain}
-				}
-			} else {
-				if nbrew.DNSProvider != nil {
-					nbrew.StaticDomains = []string{nbrew.ContentDomain, "*." + nbrew.ContentDomain, nbrew.CMSDomain, "*." + nbrew.CMSDomain}
-				} else {
-					nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
 				}
 			}
 			// the comprehensive static list to check is: cmsdomain, www.cmsdomain, contentdomain, www.contentdomain, img.contentdomain
@@ -1218,6 +1184,38 @@ func main() {
 						ips = append(ips, nbrew.IP6.String())
 					}
 					return fmt.Errorf("the following domains do not resolve the the current machine's IP address (%s): %s", strings.Join(ips, " or "), strings.Join(unresolvedDomains, ", "))
+				}
+			}
+			// Certmagic.
+			b, err = os.ReadFile(filepath.Join(configDir, "certmagic.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
+			}
+			certmagicDir := string(bytes.TrimSpace(b))
+			if certmagicDir == "" {
+				certmagicDir = filepath.Join(configDir, "certmagic")
+				err := os.MkdirAll(certmagicDir, 0755)
+				if err != nil {
+					return err
+				}
+			} else {
+				certmagicDir = filepath.Clean(certmagicDir)
+				_, err := os.Stat(certmagicDir)
+				if err != nil {
+					return err
+				}
+			}
+			if nbrew.CMSDomain == nbrew.ContentDomain {
+				if nbrew.DNSProvider != nil {
+					nbrew.StaticDomains = []string{nbrew.CMSDomain, "*." + nbrew.CMSDomain}
+				} else {
+					nbrew.StaticDomains = []string{nbrew.CMSDomain, "img." + nbrew.CMSDomain, "www." + nbrew.CMSDomain}
+				}
+			} else {
+				if nbrew.DNSProvider != nil {
+					nbrew.StaticDomains = []string{nbrew.ContentDomain, "*." + nbrew.ContentDomain, nbrew.CMSDomain, "*." + nbrew.CMSDomain}
+				} else {
+					nbrew.StaticDomains = []string{nbrew.ContentDomain, "img." + nbrew.ContentDomain, nbrew.CMSDomain, "www." + nbrew.CMSDomain, "www." + nbrew.ContentDomain}
 				}
 			}
 			// staticCertConfig manages the certificate for the main domain, content domain
