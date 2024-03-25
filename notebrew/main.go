@@ -1118,7 +1118,6 @@ func main() {
 			buf.WriteString(" frame-src " + value + ";")
 		}
 		nbrew.ContentSecurityPolicy = buf.String()
-		fmt.Println(nbrew.ContentSecurityPolicy)
 
 		// TODO:
 		// go install github.com/bokwoon95/notebrew/notebrew
