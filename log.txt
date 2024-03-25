@@ -35,8 +35,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-BUG: why does creating a new site keep saying unavailable but then creates everything under the hood correctly? investigate.
-BUG: why does initially creating a site result in an invalid title and site description?
 BUG: can't delete a file from a bucket. Doesn't seem to work.
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
@@ -57,6 +55,8 @@ BUG: can't delete notebrew.com site
 BUG: creating a .com site seems to make it empty? Where are my files?
     - Why is my site.json not being created after I createsite? I need to manually navigate to site.json and save in order for the title and description to take effect.
 BUG: why is my html lang=''? I thought the default was "en"?
+BUG: why does creating a new site keep saying unavailable but then creates everything under the hood correctly? investigate.
+BUG: why does initially creating a site result in an invalid title and site description?
 
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
