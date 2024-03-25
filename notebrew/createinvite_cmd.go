@@ -85,7 +85,7 @@ func (cmd *CreateinviteCmd) Run() error {
 		count = int(cmd.Count.Int64)
 	}
 	scheme := "https://"
-	if cmd.Notebrew.CMSDomain == "localhost" || strings.HasPrefix(cmd.Notebrew.CMSDomain, "localhost:") {
+	if cmd.Notebrew.CMSDomain == "localhost" || strings.HasPrefix(cmd.Notebrew.CMSDomain, "localhost:") || cmd.Notebrew.Port == 80 {
 		scheme = "http://"
 	}
 	for i := 0; i < count; i++ {

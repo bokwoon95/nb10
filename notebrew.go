@@ -488,7 +488,7 @@ func (nbrew *Notebrew) contentBaseURL(sitePrefix string) string {
 	if strings.Contains(sitePrefix, ".") {
 		return "https://" + sitePrefix
 	}
-	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") {
+	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 {
 		if sitePrefix != "" {
 			return "http://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.CMSDomain
 		}

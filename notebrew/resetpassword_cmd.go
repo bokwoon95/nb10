@@ -201,7 +201,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 			}
 		}
 		scheme := "https://"
-		if cmd.Notebrew.CMSDomain == "localhost" || strings.HasPrefix(cmd.Notebrew.CMSDomain, "localhost:") {
+		if cmd.Notebrew.CMSDomain == "localhost" || strings.HasPrefix(cmd.Notebrew.CMSDomain, "localhost:") || cmd.Notebrew.Port == 80 {
 			scheme = "http://"
 		}
 		fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/resetpassword/?token="+url.QueryEscape(strings.TrimLeft(hex.EncodeToString(resetToken[:]), "0")))

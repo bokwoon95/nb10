@@ -25,7 +25,7 @@ import (
 
 func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	scheme := "https://"
-	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") {
+	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 {
 		scheme = "http://"
 	}
 
