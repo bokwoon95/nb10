@@ -340,13 +340,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			}
 		}
 		err = nbrew.FS.Mkdir(sitePrefix, 0755)
-		if err != nil {
-			if errors.Is(err, fs.ErrExist) {
-				response.FormErrors.Add("siteName", "unavailable")
-				response.Error = "FormErrorsPresent"
-				writeResponse(w, r, response)
-				return
-			}
+		if err != nil && !errors.Is(err, fs.ErrExist) {
 			getLogger(r.Context()).Error(err.Error())
 			internalServerError(w, r, err)
 			return
