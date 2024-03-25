@@ -62,11 +62,7 @@
 <figure class='mv2 w-70-l w-80-m w-100 center'>
   <figcaption class='flex flex-wrap break-word mv2'>
     {{- if $.PreviousImageName }}
-      {{- if and $.ImgDomain $.IsDatabaseFS }}
-      <a href='//{{ $.ImgDomain }}/{{ $.PreviousImageID }}{{ ext $.PreviousImageName }}'>&larr; previous</a>
-      {{- else }}
-      <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
-      {{- end }}
+    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
     {{- end }}
     <span class='flex-grow-1'></span>
     {{- if and $.ImgDomain $.IsDatabaseFS }}
@@ -77,11 +73,7 @@
     <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
     <span class='flex-grow-1'></span>
     {{- if $.NextImageName }}
-      {{- if and $.ImgDomain $.IsDatabaseFS }}
-      <a href='//{{ $.ImgDomain }}/{{ $.NextImageID }}{{ ext $.NextImageName }}'>next &rarr;</a>
-      {{- else }}
-      <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
-      {{- end }}
+    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
     {{- end }}
   </figcaption>
   {{- if and $.ImgDomain $.IsDatabaseFS }}
