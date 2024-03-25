@@ -42,7 +42,7 @@ p, ul, ol { margin-bottom: 2em; color: #1d1d1d; font-family: sans-serif; }
         <a href='{{ $post.Name }}/' class='font-bold'>{{ $post.Title }}</a>
         <span class='ml-2 text-sm gray-600'>{{ $post.CreationTime.Format "2006-01-02" }}</span>
       </div>
-      <div title='{{ $post.Preview }}' class='my-1 text-sm truncate'>
+      <div title='{{ $post.Preview }}' class='my-1 text-sm'>
         {{ $post.Preview }}
       </div>
     </li>
