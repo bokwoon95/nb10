@@ -562,7 +562,7 @@ func humanReadableFileSize(size int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "kMGTPE"[exp])
 }
 
-func badRequest(w http.ResponseWriter, r *http.Request, contentSecurityPolicy string, serverErr error) {
+func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, serverErr error) {
 	var message string
 	var maxBytesErr *http.MaxBytesError
 	if errors.As(serverErr, &maxBytesErr) {
@@ -612,7 +612,7 @@ func badRequest(w http.ResponseWriter, r *http.Request, contentSecurityPolicy st
 		http.Error(w, "BadRequest: "+message, http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusBadRequest)
 	buf.WriteTo(w)
 }

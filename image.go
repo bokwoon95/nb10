@@ -291,20 +291,20 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&request)
 			if err != nil {
-				badRequest(w, r, nbrew.ContentSecurityPolicy, err)
+				nbrew.badRequest(w, r, err)
 				return
 			}
 		case "application/x-www-form-urlencoded", "multipart/form-data":
 			if contentType == "multipart/form-data" {
 				err := r.ParseMultipartForm(1 << 20 /* 1 MB */)
 				if err != nil {
-					badRequest(w, r, nbrew.ContentSecurityPolicy, err)
+					nbrew.badRequest(w, r, err)
 					return
 				}
 			} else {
 				err := r.ParseForm()
 				if err != nil {
-					badRequest(w, r, nbrew.ContentSecurityPolicy, err)
+					nbrew.badRequest(w, r, err)
 					return
 				}
 			}

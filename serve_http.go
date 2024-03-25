@@ -83,7 +83,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 		err := r.ParseForm()
 		if err != nil {
-			badRequest(w, r, nbrew.ContentSecurityPolicy, err)
+			nbrew.badRequest(w, r, err)
 			return
 		}
 	}

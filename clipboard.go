@@ -39,7 +39,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 	err := r.ParseForm()
 	if err != nil {
-		badRequest(w, r, nbrew.ContentSecurityPolicy, err)
+		nbrew.badRequest(w, r, err)
 		return
 	}
 	referer := r.Referer()
