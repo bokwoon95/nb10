@@ -915,8 +915,8 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if file.hasChildren {
 		return &fs.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
 	}
-	switch path.Ext(name) {
-	case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+	fileType := fileTypes[path.Ext(name)]
+	if fileType.IsObject {
 		err = fsys.ObjectStorage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
 			return err
@@ -1531,6 +1531,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 }
 
 func (storage *S3ObjectStorage) Delete(ctx context.Context, key string) error {
+	fmt.Printf("S3ObjectStorage.Delete: %s\n", key)
 	_, err := storage.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
