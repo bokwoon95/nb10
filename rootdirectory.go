@@ -229,7 +229,6 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		Format: "SELECT {*}" +
 			" FROM files" +
 			" WHERE file_path IN ({notes}, {pages}, {posts}, {themes}, {output}, {sitejson})" +
-			" AND ((is_dir AND file_path NOT LIKE '%.%') OR (NOT is_dir AND file_path LIKE '%.%'))" +
 			" ORDER BY CASE file_path" +
 			" WHEN {notes} THEN 1" +
 			" WHEN {pages} THEN 2" +
