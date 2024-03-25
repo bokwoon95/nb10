@@ -90,7 +90,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				internalServerError(w, r, err)
 				return
 			}
-			w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 			executeTemplate(w, r, tmpl, &response)
 		}
 
@@ -230,20 +230,20 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		case "application/json":
 			err := json.NewDecoder(r.Body).Decode(&request)
 			if err != nil {
-				badRequest(w, r, err)
+				badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 				return
 			}
 		case "application/x-www-form-urlencoded", "multipart/form-data":
 			if contentType == "multipart/form-data" {
 				err := r.ParseMultipartForm(1 << 20 /* 1 MB */)
 				if err != nil {
-					badRequest(w, r, err)
+					badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 					return
 				}
 			} else {
 				err := r.ParseForm()
 				if err != nil {
-					badRequest(w, r, err)
+					badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 					return
 				}
 			}

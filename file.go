@@ -373,7 +373,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			internalServerError(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		executeTemplate(w, r, tmpl, &response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -431,14 +431,14 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&request)
 			if err != nil {
-				badRequest(w, r, err)
+				badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 				return
 			}
 		case "application/x-www-form-urlencoded":
 			r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 			err := r.ParseForm()
 			if err != nil {
-				badRequest(w, r, err)
+				badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 				return
 			}
 			request.Content = r.Form.Get("content")
@@ -468,7 +468,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
 				if err != nil {
 					if errors.As(err, &maxBytesErr) {
-						badRequest(w, r, err)
+						badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())

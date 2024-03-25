@@ -104,7 +104,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	if err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			badRequest(w, r, err)
+			badRequest(w, r, nbrew.ContentSecurityPolicy, err)
 			return
 		}
 		getLogger(r.Context()).Error(err.Error())

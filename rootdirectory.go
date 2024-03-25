@@ -113,7 +113,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			internalServerError(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		executeTemplate(w, r, tmpl, &response)
 	}
 

@@ -144,7 +144,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			internalServerError(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		executeTemplate(w, r, tmpl, &response)
 	}
 	if r.Method != "GET" {

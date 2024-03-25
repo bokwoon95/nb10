@@ -106,7 +106,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			internalServerError(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		executeTemplate(w, r, tmpl, &response)
 	}
 

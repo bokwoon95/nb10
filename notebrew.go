@@ -562,7 +562,7 @@ func humanReadableFileSize(size int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "kMGTPE"[exp])
 }
 
-func badRequest(w http.ResponseWriter, r *http.Request, serverErr error) {
+func badRequest(w http.ResponseWriter, r *http.Request, contentSecurityPolicy string, serverErr error) {
 	var message string
 	var maxBytesErr *http.MaxBytesError
 	if errors.As(serverErr, &maxBytesErr) {
