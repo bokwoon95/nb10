@@ -420,10 +420,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 					return
 				}
-				var b [blake2b.Size256]byte
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", "max-age=31536000, immutable")
-				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 				http.ServeContent(w, r, "", time.Time{}, readSeeker)
 				return
 			}
