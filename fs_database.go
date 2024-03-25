@@ -1482,12 +1482,11 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 	fmt.Printf("created upload %s\n", *createResult.UploadId)
 	var parts []types.CompletedPart
 	var partNumber int32
-	buf := make([]byte, 0, 5<<20 /* 5 MB */)
+	var buf [5 << 20]byte
 	done := false
 	for !done {
-		buf = buf[:0]
 		fmt.Printf("reading bytes\n")
-		n, err := reader.Read(buf)
+		n, err := reader.Read(buf[:])
 		fmt.Printf("read %d bytes\n", n)
 		if err != nil {
 			if err != io.EOF {
