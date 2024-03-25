@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	"github.com/bokwoon95/nb10/sq"
 )
@@ -1404,6 +1405,7 @@ type S3ObjectStorage struct {
 	Client     *s3.Client
 	Bucket     string
 	PurgeCache func(ctx context.Context, key string) error
+	Logger     *slog.Logger
 }
 
 var _ ObjectStorage = (*S3ObjectStorage)(nil)
@@ -1415,6 +1417,7 @@ type S3StorageConfig struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	PurgeCache      func(ctx context.Context, key string) error
+	Logger          *slog.Logger
 }
 
 func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3ObjectStorage, error) {
@@ -1426,6 +1429,7 @@ func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3ObjectStorage
 		}),
 		Bucket:     config.Bucket,
 		PurgeCache: config.PurgeCache,
+		Logger:     config.Logger,
 	}
 	// Ping the bucket and see if we have access.
 	_, err := storage.Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
@@ -1456,10 +1460,64 @@ func (storage *S3ObjectStorage) Get(ctx context.Context, key string) (io.ReadClo
 }
 
 func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
-	_, err := storage.Client.PutObject(ctx, &s3.PutObjectInput{
+	cleanup := func(uploadId *string) {
+		_, err := storage.Client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
+			Bucket:   &storage.Bucket,
+			Key:      aws.String(key),
+			UploadId: uploadId,
+		})
+		if err != nil {
+			storage.Logger.Error(err.Error())
+		}
+	}
+	createResult, err := storage.Client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
-		Body:   reader,
+	})
+	if err != nil {
+		return nil
+	}
+	var parts []types.CompletedPart
+	var partNumber int32
+	buf := make([]byte, 0, 5<<20 /* 5 MB */)
+	done := false
+	for !done {
+		buf = buf[:0]
+		n, err := reader.Read(buf)
+		if err != nil {
+			if err != io.EOF {
+				cleanup(createResult.UploadId)
+				return err
+			}
+			done = true
+		}
+		if n == 0 {
+			continue
+		}
+		partNumber++
+		uploadResult, err := storage.Client.UploadPart(ctx, &s3.UploadPartInput{
+			Bucket:     &storage.Bucket,
+			Key:        aws.String(key),
+			UploadId:   createResult.UploadId,
+			PartNumber: aws.Int32(partNumber),
+			Body:       bytes.NewReader(buf[:n]),
+		})
+		if err != nil {
+			cleanup(createResult.UploadId)
+			return err
+		}
+		parts = append(parts, types.CompletedPart{
+			ETag:       uploadResult.ETag,
+			PartNumber: aws.Int32(partNumber),
+		})
+	}
+	_, err = storage.Client.CompleteMultipartUpload(context.TODO(), &s3.CompleteMultipartUploadInput{
+		Bucket:   &storage.Bucket,
+		Key:      aws.String(key),
+		UploadId: createResult.UploadId,
+		MultipartUpload: &types.CompletedMultipartUpload{
+			Parts: parts,
+		},
 	})
 	if err != nil {
 		return err
