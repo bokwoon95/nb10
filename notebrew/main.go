@@ -1044,6 +1044,7 @@ func main() {
 			nbrew.CaptchaConfig.VerificationURL = captchaConfig.VerificationURL
 			nbrew.CaptchaConfig.SiteKey = captchaConfig.SiteKey
 			nbrew.CaptchaConfig.SecretKey = captchaConfig.SecretKey
+			nbrew.CaptchaConfig.CSP = captchaConfig.CSP
 		}
 
 		// Proxy.
@@ -1077,6 +1078,47 @@ func main() {
 				nbrew.ProxyConfig.ProxyIPs[addr] = struct{}{}
 			}
 		}
+
+		// Content Security Policy.
+		var buf strings.Builder
+		// default-src
+		buf.WriteString("default-src 'none';")
+		// script-src
+		buf.WriteString(" script-src 'self' 'unsafe-hashes' " + nb10.BaselineJSHash)
+		if value := nbrew.CaptchaConfig.CSP["script-src"]; value != "" {
+			buf.WriteString(" " + value)
+		}
+		buf.WriteString(";")
+		// connect-src
+		buf.WriteString(" connect-src 'self'")
+		if value := nbrew.CaptchaConfig.CSP["connect-src"]; value != "" {
+			buf.WriteString(" " + value)
+		}
+		buf.WriteString(";")
+		// img-src
+		buf.WriteString(" img-src 'self' data:")
+		if nbrew.ImgDomain != "" {
+			buf.WriteString(" " + nbrew.ImgDomain)
+		}
+		buf.WriteString(";")
+		// style-src
+		buf.WriteString(" style-src 'self' 'unsafe-inline'")
+		if value := nbrew.CaptchaConfig.CSP["style-src"]; value != "" {
+			buf.WriteString(" " + value)
+		}
+		buf.WriteString(";")
+		// base-uri
+		buf.WriteString(" base-uri 'self';")
+		// form-action
+		buf.WriteString(" form-action 'self';")
+		// manifest-src
+		buf.WriteString(" manifest-src 'self';")
+		// frame-src
+		if value := nbrew.CaptchaConfig.CSP["frame-src"]; value != "" {
+			buf.WriteString(" frame-src " + value + ";")
+		}
+		nbrew.ContentSecurityPolicy = buf.String()
+		fmt.Println(nbrew.ContentSecurityPolicy)
 
 		// TODO:
 		// go install github.com/bokwoon95/notebrew/notebrew

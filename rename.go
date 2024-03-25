@@ -58,8 +58,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				"base":       path.Base,
 				"hasPrefix":  strings.HasPrefix,
 				"trimPrefix": strings.TrimPrefix,
-				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(baselineJS) },
+				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 				"referer":    func() string { return referer },
 			}
 			tmpl, err := template.New("rename.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/rename.html")

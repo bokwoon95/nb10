@@ -85,8 +85,8 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			funcMap := map[string]any{
 				"trimPrefix": strings.TrimPrefix,
 				"contains":   strings.Contains,
-				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(baselineJS) },
+				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 				"referer":    func() string { return referer },
 				"username":   func() string { return user.Username },
 			}

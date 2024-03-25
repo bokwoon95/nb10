@@ -44,8 +44,8 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		funcMap := map[string]any{
-			"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-			"baselineJS": func() template.JS { return template.JS(baselineJS) },
+			"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
+			"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 			"referer":    func() string { return r.Referer() },
 		}
 		tmpl, err := template.New("logout.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/logout.html")

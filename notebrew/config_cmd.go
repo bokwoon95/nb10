@@ -271,6 +271,9 @@ func (cmd *ConfigCmd) Run() error {
 					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "captcha.json"), err)
 				}
 			}
+			if captchaConfig.CSP == nil {
+				captchaConfig.CSP = make(map[string]string)
+			}
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, captchaHelp)
@@ -286,6 +289,13 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, captchaConfig.SiteKey+"\n")
 			case "secretKey":
 				io.WriteString(cmd.Stdout, captchaConfig.SecretKey+"\n")
+			case "csp":
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(captchaConfig.CSP)
+				if err != nil {
+					return err
+				}
 			default:
 				io.WriteString(cmd.Stderr, captchaHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -629,6 +639,15 @@ func (cmd *ConfigCmd) Run() error {
 			captchaConfig.SiteKey = cmd.Value.String
 		case "secretKey":
 			captchaConfig.SecretKey = cmd.Value.String
+		case "csp":
+			var csp map[string]string
+			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&csp)
+			if err != nil {
+				return err
+			}
+			captchaConfig.CSP = csp
 		default:
 			io.WriteString(cmd.Stderr, captchaHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -801,11 +820,12 @@ const objectsHelp = `# == objects keys == #
 `
 
 type CaptchaConfig struct {
-	WidgetScriptSrc string `json:"widgetScriptSrc"`
-	WidgetClass     string `json:"widgetClass"`
-	VerificationURL string `json:"verificationURL"`
-	SiteKey         string `json:"siteKey"`
-	SecretKey       string `json:"secretKey"`
+	WidgetScriptSrc string            `json:"widgetScriptSrc"`
+	WidgetClass     string            `json:"widgetClass"`
+	VerificationURL string            `json:"verificationURL"`
+	SiteKey         string            `json:"siteKey"`
+	SecretKey       string            `json:"secretKey"`
+	CSP             map[string]string `json:"csp"`
 }
 
 const captchaHelp = `# == captcha keys == #
@@ -815,6 +835,7 @@ const captchaHelp = `# == captcha keys == #
 # verificationURL - Captcha verification URL to make POST requests to.
 # siteKey         - Captcha site key.
 # secretKey       - Captcha secret key.
+# csp             - Object mapping of Content-Security-Policy directive names to values for the captcha widget to work.
 `
 
 type ProxyConfig struct {

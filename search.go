@@ -92,8 +92,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			"hasPrefix":  strings.HasPrefix,
 			"trimPrefix": strings.TrimPrefix,
 			"contains":   strings.Contains,
-			"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-			"baselineJS": func() template.JS { return template.JS(baselineJS) },
+			"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
+			"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 			"referer":    func() string { return referer },
 			"hasExt": func(ext string) bool {
 				_, ok := extMap[ext]

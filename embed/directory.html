@@ -319,7 +319,7 @@
             {{- end }}
             {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
               {{- if and $.ImgDomain $.IsDatabaseFS }}
-              <img src='{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
+              <img src='http://{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
               {{- else }}
               <img src='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}?raw' class='h3 w3 mr1'>
               {{- end }}

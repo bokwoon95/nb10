@@ -50,9 +50,13 @@ var (
 
 	logSessions = false
 
-	stylesCSS string
+	StylesCSS string
 
-	baselineJS string
+	StylesCSSHash string
+
+	BaselineJS string
+
+	BaselineJSHash string
 
 	contentSecurityPolicy string
 
@@ -65,22 +69,23 @@ func init() {
 	if err != nil {
 		return
 	}
-	// We don't need to calculate stylesCSSHash because we are already using
-	// the extra permissive style-src 'unsafe-inline' in our
-	// Content-Security-Policy.
-	stylesCSS = string(b)
+	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+	hash := sha256.Sum256(b)
+	StylesCSS = string(b)
+	StylesCSSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
 	// baseline.js
 	b, err = fs.ReadFile(embedFS, "static/baseline.js")
 	if err != nil {
 		return
 	}
 	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-	hash := sha256.Sum256(b)
-	baselineJS = string(b)
-	baselineJSHash := "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+	hash = sha256.Sum256(b)
+	BaselineJS = string(b)
+	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+
 	// contentSecurityPolicy
 	contentSecurityPolicy = "default-src 'none';" +
-		" script-src 'self' 'unsafe-hashes' " + baselineJSHash + ";" +
+		" script-src 'self' 'unsafe-hashes' " + BaselineJSHash + ";" +
 		" connect-src 'self';" +
 		" img-src 'self' data:;" +
 		" style-src 'self' 'unsafe-inline';" +
@@ -89,7 +94,7 @@ func init() {
 		" manifest-src 'self';"
 	// contentSecurityPolicyCaptcha
 	contentSecurityPolicyWithCaptcha = "default-src 'none';" +
-		" script-src 'self' 'unsafe-hashes' " + baselineJSHash + " https://hcaptcha.com https://*.hcaptcha.com;" +
+		" script-src 'self' 'unsafe-hashes' " + BaselineJSHash + " https://hcaptcha.com https://*.hcaptcha.com;" +
 		" connect-src 'self' https://hcaptcha.com https://*.hcaptcha.com;" +
 		" img-src 'self' data:;" +
 		" style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com;" +
@@ -138,6 +143,7 @@ type Notebrew struct {
 		VerificationURL string
 		SiteKey         string
 		SecretKey       string
+		CSP             map[string]string
 	}
 
 	ProxyConfig struct {
@@ -153,6 +159,8 @@ type Notebrew struct {
 	}
 
 	CertStorage certmagic.Storage
+
+	ContentSecurityPolicy string
 
 	Logger *slog.Logger
 }

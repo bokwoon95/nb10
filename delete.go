@@ -80,8 +80,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				"ext":        path.Ext,
 				"hasPrefix":  strings.HasPrefix,
 				"trimPrefix": strings.TrimPrefix,
-				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(baselineJS) },
+				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 				"referer":    func() string { return referer },
 			}
 			tmpl, err := template.New("delete.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/delete.html")

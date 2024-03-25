@@ -91,8 +91,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				"base":       path.Base,
 				"hasPrefix":  strings.HasPrefix,
 				"trimPrefix": strings.TrimPrefix,
-				"stylesCSS":  func() template.CSS { return template.CSS(stylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(baselineJS) },
+				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 				"referer":    func() string { return referer },
 				"head": func(s string) string {
 					head, _, _ := strings.Cut(s, "/")
