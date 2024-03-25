@@ -271,11 +271,22 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			defer tx.Rollback()
 			_, err = sq.Exec(r.Context(), tx, sq.Query{
 				Dialect: nbrew.Dialect,
+				Format: "DELETE FROM site_owner WHERE EXISTS (" +
+					"SELECT 1 FROM site WHERE site.site_id = site_owner.site_id AND site.site_name = {siteName}" +
+					")",
+				Values: []any{
+					sq.StringParam("siteName", request.SiteName),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
 				Format: "DELETE FROM site_user WHERE EXISTS (" +
-					"SELECT 1" +
-					" FROM site" +
-					" WHERE site.site_id = site_user.site_id" +
-					" AND site.site_name = {siteName}" +
+					"SELECT 1 FROM site WHERE site.site_id = site_user.site_id AND site.site_name = {siteName}" +
 					")",
 				Values: []any{
 					sq.StringParam("siteName", request.SiteName),
