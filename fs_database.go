@@ -1461,7 +1461,7 @@ func (storage *S3ObjectStorage) Get(ctx context.Context, key string) (io.ReadClo
 
 func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	fileType, ok := fileTypes[path.Ext(key)]
-	if !ok {
+	if !ok || !fileType.IsObject {
 		return fmt.Errorf("%s: invalid filetype %s", key, path.Ext(key))
 	}
 	cleanup := func(uploadId *string) {
