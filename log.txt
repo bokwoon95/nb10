@@ -35,7 +35,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: replace all checks of CMSDomain being localhost with checks of Port being 443 (i.e. http.SetCookie)
 TODO: image caching is VITAL. We *need* to cache images. And that means getting imgdomain to work. And even if imgdomain is not active, we need to cache images for like, 1 day (max-age=86400).
 TODO: move google/uuid dependency into sq itself, so it's only 4 files
 TODO: check if a user is able to delete their own site, and if so prevent it
