@@ -36,6 +36,12 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: pin/unpin files in a directory. How does it work? With pagination and all?
+CREATE TABLE pinned_files (
+    parent_id BINARY(16) REFERENCES files (file_id) ON UPDATE CASCADE
+    ,file_id BINARY(16) REFERENCES files (file_id) ON UPDATE CASCADE
+
+    ,CONSTRAINT pinned_files_parent_id_file_id_pkey PRIMARY KEY (parent_id, file_id)
+);
 BUG: can't delete a file from a bucket. Doesn't seem to work.
 TODO: purge all occurences of NB-00050 (NB-\d+) in the codebase.
 TODO: check if a user is able to delete their own site, and if so prevent it
