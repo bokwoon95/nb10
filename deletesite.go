@@ -45,7 +45,6 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			return false, true, nil
 		}
 		userIsAuthorized, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format: "SELECT {*}" +
 				" FROM site" +
