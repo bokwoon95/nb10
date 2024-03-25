@@ -1461,6 +1461,7 @@ func (storage *S3ObjectStorage) Get(ctx context.Context, key string) (io.ReadClo
 
 func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	cleanup := func(uploadId *string) {
+		fmt.Printf("cleaning up %s\n", *uploadId)
 		_, err := storage.Client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
 			Bucket:   &storage.Bucket,
 			Key:      aws.String(key),
@@ -1470,20 +1471,24 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			storage.Logger.Error(err.Error())
 		}
 	}
+	fmt.Printf("creating upload\n")
 	createResult, err := storage.Client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return nil
+		return err
 	}
+	fmt.Printf("created upload %s\n", *createResult.UploadId)
 	var parts []types.CompletedPart
 	var partNumber int32
 	buf := make([]byte, 0, 5<<20 /* 5 MB */)
 	done := false
 	for !done {
 		buf = buf[:0]
+		fmt.Printf("reading bytes\n")
 		n, err := reader.Read(buf)
+		fmt.Printf("read %d bytes\n", n)
 		if err != nil {
 			if err != io.EOF {
 				cleanup(createResult.UploadId)
@@ -1495,6 +1500,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			continue
 		}
 		partNumber++
+		fmt.Printf("uploading %s part %d\n", *createResult.UploadId, partNumber)
 		uploadResult, err := storage.Client.UploadPart(ctx, &s3.UploadPartInput{
 			Bucket:     &storage.Bucket,
 			Key:        aws.String(key),
@@ -1502,6 +1508,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			PartNumber: aws.Int32(partNumber),
 			Body:       bytes.NewReader(buf[:n]),
 		})
+		fmt.Printf("uploaded %s part %d\n", *createResult.UploadId, partNumber)
 		if err != nil {
 			cleanup(createResult.UploadId)
 			return err
@@ -1511,7 +1518,8 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			PartNumber: aws.Int32(partNumber),
 		})
 	}
-	_, err = storage.Client.CompleteMultipartUpload(context.TODO(), &s3.CompleteMultipartUploadInput{
+	fmt.Printf("completing %s\n", *createResult.UploadId)
+	_, err = storage.Client.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
 		Bucket:   &storage.Bucket,
 		Key:      aws.String(key),
 		UploadId: createResult.UploadId,
@@ -1519,6 +1527,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			Parts: parts,
 		},
 	})
+	fmt.Printf("completed %s\n", *createResult.UploadId)
 	if err != nil {
 		return err
 	}
