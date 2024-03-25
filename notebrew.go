@@ -926,10 +926,12 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			var b [blake2b.Size256]byte
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
-			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
+			if !hasMaxAge {
+				var b [blake2b.Size256]byte
+				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
+			}
 			http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
 			return
 		}
@@ -960,11 +962,11 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			var b [blake2b.Size256]byte
 			w.Header().Set("Content-Encoding", "gzip")
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			if !hasMaxAge {
+				var b [blake2b.Size256]byte
 				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			}
 			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
