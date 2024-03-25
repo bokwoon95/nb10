@@ -65,7 +65,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			}
 			return false, false, err
 		}
-		return false, userIsAuthorized, nil
+		return siteNotFound, userIsAuthorized, nil
 	}
 
 	switch r.Method {
