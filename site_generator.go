@@ -1738,14 +1738,15 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 				return err
 			}
 			isImgTag := bytes.Equal(name, []byte("img"))
+			isAnchorTag := bytes.Equal(name, []byte("a"))
 			for moreAttr {
 				key, val, moreAttr = tokenizer.TagAttr()
-				if isImgTag && bytes.Equal(key, []byte("src")) {
+				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
 					uri, err := url.Parse(string(val))
 					if err == nil && uri.Scheme == "" && uri.Host == "" {
 						switch path.Ext(uri.Path) {
 						case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-							uri.Scheme = "https"
+							uri.Scheme = ""
 							uri.Host = siteGen.imgDomain
 							if strings.HasPrefix(uri.Path, "/") {
 								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
