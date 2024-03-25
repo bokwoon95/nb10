@@ -1460,6 +1460,10 @@ func (storage *S3ObjectStorage) Get(ctx context.Context, key string) (io.ReadClo
 }
 
 func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
+	fileType, ok := fileTypes[path.Ext(key)]
+	if !ok {
+		return fmt.Errorf("%s: invalid filetype %s", key, path.Ext(key))
+	}
 	cleanup := func(uploadId *string) {
 		_, err := storage.Client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
 			Bucket:   &storage.Bucket,
@@ -1471,8 +1475,10 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 		}
 	}
 	createResult, err := storage.Client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
-		Bucket: &storage.Bucket,
-		Key:    aws.String(key),
+		Bucket:       &storage.Bucket,
+		Key:          aws.String(key),
+		CacheControl: aws.String("max-age=31536000, immutable" /* 1 year */),
+		ContentType:  aws.String(fileType.ContentType),
 	})
 	if err != nil {
 		return err
