@@ -74,7 +74,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
 	w.Header().Add("Cross-Origin-Opener-Policy", "same-origin")
 	w.Header().Add("Cross-Origin-Embedder-Policy", "require-corp")
-	w.Header().Add("Cross-Origin-Resource-Policy", "same-origin")
+	w.Header().Add("Cross-Origin-Resource-Policy", "cross-origin")
 	if nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 	}

@@ -63,14 +63,14 @@
   <figcaption class='flex flex-wrap break-word mv2'>
     {{- if $.PreviousImageName }}
       {{- if and $.ImgDomain $.IsDatabaseFS }}
-      <a href='{{ $.ImgDomain }}/{{ $.PreviousImageID }}{{ ext $.PreviousImageName }}'>&larr; previous</a>
+      <a href='//{{ $.ImgDomain }}/{{ $.PreviousImageID }}{{ ext $.PreviousImageName }}'>&larr; previous</a>
       {{- else }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
       {{- end }}
     {{- end }}
     <span class='flex-grow-1'></span>
     {{- if and $.ImgDomain $.IsDatabaseFS }}
-    <a href='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a>
+    <a href='//{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a>
     {{- else }}
     <a href='?raw'>{{ base $.FilePath }}</a>
     {{- end }}
@@ -78,14 +78,14 @@
     <span class='flex-grow-1'></span>
     {{- if $.NextImageName }}
       {{- if and $.ImgDomain $.IsDatabaseFS }}
-      <a href='{{ $.ImgDomain }}/{{ $.NextImageID }}{{ ext $.NextImageName }}'>next &rarr;</a>
+      <a href='//{{ $.ImgDomain }}/{{ $.NextImageID }}{{ ext $.NextImageName }}'>next &rarr;</a>
       {{- else }}
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
       {{- end }}
     {{- end }}
   </figcaption>
   {{- if and $.ImgDomain $.IsDatabaseFS }}
-  <img src='{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
+  <img src='//{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- else }}
   <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- end }}

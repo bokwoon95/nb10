@@ -332,7 +332,7 @@
         <label class='pointer{{ if isInClipboard $asset.Name }} dashed-border{{ end }}' style='display: block; position: relative;' data-disable-click-selection>
           <input type='checkbox' id='{{ $asset.Name }}' name='name' value='{{ $asset.Name }}' class='pointer' style='position: absolute; top: 4px; left: 4px;'>
           {{- if and $.ImgDomain $.IsDatabaseFS }}
-          <img src='{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='w-100' loading='lazy'>
+          <img src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='w-100' loading='lazy'>
           {{- else }}
           <img src='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}?raw' class='w-100' loading='lazy'>
           {{- end }}
