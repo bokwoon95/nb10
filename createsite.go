@@ -306,6 +306,20 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			}
 			_, err = sq.Exec(r.Context(), tx, sq.Query{
 				Dialect: nbrew.Dialect,
+				Format: "INSERT INTO site_owner (site_id, user_id)" +
+					" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
+				Values: []any{
+					sq.StringParam("siteName", request.SiteName),
+					sq.StringParam("username", user.Username),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
 				Format: "INSERT INTO site_user (site_id, user_id)" +
 					" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
 				Values: []any{
