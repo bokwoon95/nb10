@@ -5,11 +5,10 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/bokwoon95/nb10/sq/internal/googleuuid"
 )
 
 // Dialects supported.
@@ -65,9 +64,17 @@ func (v *uuidValue) Value() (driver.Value, error) {
 	if v.dialect != DialectPostgres {
 		return v.value[:], nil
 	}
-	var buf [36]byte
-	googleuuid.EncodeHex(buf[:], v.value)
-	return string(buf[:]), nil
+	var b [36]byte
+	hex.Encode(b[:], v.value[:4])
+	b[8] = '-'
+	hex.Encode(b[9:13], v.value[4:6])
+	b[13] = '-'
+	hex.Encode(b[14:18], v.value[6:8])
+	b[18] = '-'
+	hex.Encode(b[19:23], v.value[8:10])
+	b[23] = '-'
+	hex.Encode(b[24:], v.value[10:])
+	return string(b[:]), nil
 }
 
 // DialectValuer implements the DialectValuer interface.
