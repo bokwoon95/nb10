@@ -45,6 +45,7 @@ TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
 TODO: invite.go and resetpassword.go
+TODO: users.go (what do we show about a user? allow them to change username? no)
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
 TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
