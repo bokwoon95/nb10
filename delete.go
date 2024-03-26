@@ -308,6 +308,9 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					}
 					return err
 				}
+				if head == "posts" && name == "postlist.json" {
+					return nil
+				}
 				err = nbrew.FS.WithContext(groupctxA).RemoveAll(path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					response.DeleteErrors[i] = err.Error()

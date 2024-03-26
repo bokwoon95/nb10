@@ -306,9 +306,9 @@
   <ul>
     {{- range $file := $.Files }}
     <li class='bb pv2'>
-      <label for='{{ $file.Name }}' class='flex items-center pointer' data-disable-click-selection>
+      <label for='{{ $file.Name }}' class='flex items-center{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
         <div class='mr2 flex items-center'>
-          <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='pointer'>
+          <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='pointer'{{ if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }} disabled {{ end }}>
         </div>
         <div class='br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           <div class='flex flex-wrap break-word items-center'>
