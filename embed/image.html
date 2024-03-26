@@ -64,14 +64,14 @@
     {{- if $.PreviousImageName }}
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
     {{- end }}
-    <span class='flex-grow-1'></span>
+    <span class='flex-grow-1 mh1'></span>
     {{- if and $.ImgDomain $.IsDatabaseFS }}
-    <a href='//{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' class='mh1'>{{ base $.FilePath }}</a>
+    <a href='//{{ $.ImgDomain }}/{{ $.FileID }}{{ ext $.FilePath }}'>{{ base $.FilePath }}</a>
     {{- else }}
-    <a href='?raw' class='mh1'>{{ base $.FilePath }}</a>
+    <a href='?raw'>{{ base $.FilePath }}</a>
     {{- end }}
-    <span class='mh1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
-    <span class='flex-grow-1'></span>
+    <span class='f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
+    <span class='flex-grow-1 mh1'></span>
     {{- if $.NextImageName }}
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
     {{- end }}
