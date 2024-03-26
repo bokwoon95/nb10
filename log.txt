@@ -43,6 +43,7 @@ CREATE TABLE pinned_file (
     ,CONSTRAINT pinned_files_parent_id_file_id_pkey PRIMARY KEY (parent_id, file_id)
 );
 TODO: purge all occurences of NB-00050 (NB-\d+) in the codebase.
+TODO: notebrew config processimg: let users configure a json object that controls how images are processed before being uploaded: then I will be able to upload photoes taken straight from my phone.
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
