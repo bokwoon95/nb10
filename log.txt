@@ -35,11 +35,13 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
+TODO: remove contentSecurityPolicy and contentSecurityPolicyWithCaptcha from the codebase.
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
 TODO: notebrew config processimg: let users configure a json object that controls how images are processed before being uploaded: then I will be able to upload photoes taken straight from my phone.
-    - notebrew config imgcmd 'optimize-img'
+    - notebrew config imgcmd 'imgresize'
     - if width/height is less than 0.5625 or 9:16 (i.e. tall image), constrain the width to max 1080p instead of the height.
     - else if width or height is larger than 1080p, take whichever dimension is larger and scale it to 1080p while keeping image dimensions.
     - vipsheader $file -f width

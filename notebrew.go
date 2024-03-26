@@ -112,6 +112,8 @@ type Notebrew struct {
 
 	ImgDomain string
 
+	ImgCmd string
+
 	Port int
 
 	IP4 netip.Addr

@@ -342,8 +342,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 
 		switch ext {
 		case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-			cmdPath, err := exec.LookPath("nbrew-process-img")
-			if err != nil {
+			if nbrew.ImgCmd == "" {
 				err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
 				if err != nil {
 					var maxBytesErr *http.MaxBytesError
@@ -356,6 +355,12 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					return
 				}
 				continue
+			}
+			cmdPath, err := exec.LookPath(nbrew.ImgCmd)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				internalServerError(w, r, err)
+				return
 			}
 			id := NewID()
 			inputPath := path.Join(tempDir, id.String()+"-input"+ext)

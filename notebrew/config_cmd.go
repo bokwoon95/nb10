@@ -24,10 +24,11 @@ const configHelp = `Usage:
   notebrew config database.dialect sqlite         # sets the database dialect to sqlite
 
 Keys:
-  notebrew config port          # (txt) The port that notebrew listens on.
-  notebrew config cmsdomain     # (txt) The domain that the CMS is served on.
-  notebrew config contentdomain # (txt) The domain that the content is served on.
-  notebrew config imgdomain     # (txt) The domain that images are served on.
+  notebrew config port          # (txt) Port that notebrew listens on.
+  notebrew config cmsdomain     # (txt) Domain that the CMS is served on.
+  notebrew config contentdomain # (txt) Domain that the content is served on.
+  notebrew config imgdomain     # (txt) Domain that images are served on.
+  notebrew config imgcmd        # (txt) Image preprocessing command.
   notebrew config database      # (json) Database configuration.
   notebrew config files         # (json) File system configuration.
   notebrew config objects       # (json) Object storage configuration.
@@ -110,6 +111,12 @@ func (cmd *ConfigCmd) Run() error {
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
 		case "imgdomain":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
+		case "imgcmd":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "imgcmd.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
@@ -411,6 +418,11 @@ func (cmd *ConfigCmd) Run() error {
 		}
 	case "imgdomain":
 		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"), []byte(cmd.Value.String), 0644)
+		if err != nil {
+			return err
+		}
+	case "imgcmd":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "imgcmd.txt"), []byte(cmd.Value.String), 0644)
 		if err != nil {
 			return err
 		}

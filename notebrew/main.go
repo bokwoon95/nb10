@@ -142,6 +142,13 @@ func main() {
 			nbrew.ImgDomain = string(bytes.TrimSpace(b))
 		}
 
+		// Img cmd.
+		b, err = os.ReadFile(filepath.Join(configDir, "imgcmd.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "imgcmd.txt"), err)
+		}
+		nbrew.ImgCmd = string(bytes.TrimSpace(b))
+
 		// Port.
 		b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
