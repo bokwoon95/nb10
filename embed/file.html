@@ -323,8 +323,26 @@
   {{- if eq (head $.FilePath) "pages" }}
   <details>
     <summary class='pointer f6'>how do I include assets in my page?</summary>
-    <div>
-    </div>
+    <p>Uploaded assets can be directly included in the page by their file name.</p>
+    <ul class='list-style-disc ph3'>
+      <li>
+        <p>Include images with the <code>&lt;img&gt;</code> tag.</p>
+        <pre class='pre-wrap break-word'>&lt;img src='my-file-name.jpg' alt='a cat' width='500' height='500'&gt;</pre>
+      </li>
+      <li>
+        <p>Include CSS files with the <code>&lt;link&gt;</code> tag.</p>
+        <pre class='pre-wrap break-word'>&lt;link href='my-file-name.css' rel='stylesheet'&gt;</pre>
+      </li>
+      <li>
+        <p>Include JavaScript files with the <code>&lt;script&gt;</code> tag.</p>
+        <pre class='pre-wrap break-word'>&lt;script src='my-file-name.js'&gt;&lt;/script&gt;</pre>
+      </li>
+      <li>
+        <p>Include Markdown files with the <code>{{ "{{" }} index $.Markdown "my-file-name.md" {{ "}}" }}</code> template action.</p>
+        <pre class='pre-wrap break-word'>{{ "{{" }} index $.Markdown "my-file-name.md" {{ "}}" }}
+&lt;!-- renders the contents of "my-file-name.md" as HTML --&gt;</pre>
+      </li>
+    </ul>
   </details>
   <span class='b'>assets</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap mh2'>create file</a>
@@ -333,14 +351,13 @@
     <summary class='pointer f6'>how do I include images in my post?</summary>
     <div>
       <p>Uploaded images are <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
-      <p>You can also <strong>explicitly include</strong> images with an <code>&lt;img&gt;</code> tag. Example:</p>
+      <p>You can also <strong>explicitly include</strong> images with the <code>&lt;img&gt;</code> tag. Example:</p>
       <pre class='pre-wrap break-word'># Here is a picture I took today:
 
-&lt;!-- display IMG_4661.JPG using 500 by 500 pixels--&gt;
-&lt;img src='IMG_4661.JPG' alt='a cat' width='500' height='500'&gt;
+&lt;img src='my-file-name.jpg' alt='a cat' width='500' height='500'&gt;
+&lt;!-- display my-file-name.jpg using 500 by 500 pixels--&gt;
 
-It's a [cat](https://en.wikipedia.org/wiki/Cat)
-</pre>
+It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
       <p>If an image is explicitly included, it will not be included at the end of the post.</p>
     </div>
   </details>
