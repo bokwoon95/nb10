@@ -35,17 +35,17 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
-TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
-TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: invite.go and resetpassword.go
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
+TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
 BUG: can't add new images via file.html image upload "save".
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
 BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.

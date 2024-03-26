@@ -293,7 +293,7 @@
   {{- end }}
 </div>
 {{- end }}
-<div class='bb pb2 flex'>
+<div class='bb pb2 flex flex-wrap'>
   <div>{{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}</div>
   <div class='flex-grow-1'></div>
   {{- if eq (head $.FilePath) "posts" }}
