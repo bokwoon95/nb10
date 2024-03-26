@@ -361,6 +361,7 @@
         </label>
         <div class='break-word'>
           <span class='b mr2 mb2'>{{ $asset.Name }}</span>
+          <span class='mr2 f6 mid-gray'>{{ humanReadableFileSize $asset.Size }}</span>
           <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='dib mr2 mb2'>edit</a>
           <a href='' class='dib mr2 mb2'>rename</a>
           <button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 mr2 mb2'>cut</button>
