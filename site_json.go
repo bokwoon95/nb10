@@ -122,11 +122,11 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			tmpl, err := template.New("site_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/site_json.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			executeTemplate(w, r, tmpl, &response)
+			nbrew.executeTemplate(w, r, tmpl, &response)
 		}
 		var response Response
 		_, err := nbrew.getSession(r, "flash", &response)
@@ -142,7 +142,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "site.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		var request Request
@@ -150,7 +150,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			err := json.Unmarshal(b, &request)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}
@@ -174,7 +174,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			} else {
@@ -191,7 +191,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			}
@@ -217,7 +217,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "site.json"), http.StatusFound)
@@ -272,32 +272,32 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		b, err := json.MarshalIndent(&request, "", "  ")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		defer writer.Close()
 		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		err = writer.Close()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		response := Response{

@@ -51,11 +51,11 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.New("logout.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/logout.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		executeTemplate(w, r, tmpl, nil)
+		nbrew.executeTemplate(w, r, tmpl, nil)
 	case "POST":
 		http.SetCookie(w, &http.Cookie{
 			Path:   "/",
@@ -73,7 +73,7 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}

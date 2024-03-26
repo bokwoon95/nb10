@@ -87,11 +87,11 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			tmpl, err := template.New("delete.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/delete.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			executeTemplate(w, r, tmpl, &response)
+			nbrew.executeTemplate(w, r, tmpl, &response)
 		}
 
 		var response Response
@@ -153,7 +153,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		err = group.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		n := 0
@@ -182,7 +182,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				err := nbrew.setSession(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "delete")+"/?parent="+url.QueryEscape(response.Parent), http.StatusFound)
@@ -198,7 +198,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			head, tail, _ := strings.Cut(response.Parent, "/")
@@ -413,7 +413,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		err := groupA.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 
@@ -493,7 +493,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		err = groupB.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 
@@ -603,7 +603,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		err = groupC.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 
@@ -617,7 +617,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			count := atomic.Int64{}
@@ -797,7 +797,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			err = groupD.Wait()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			response.RegenerationStats.Count = int(count.Load())

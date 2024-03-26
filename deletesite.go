@@ -93,11 +93,11 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			tmpl, err := template.New("deletesite.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/deletesite.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			executeTemplate(w, r, tmpl, &response)
+			nbrew.executeTemplate(w, r, tmpl, &response)
 		}
 
 		var response Response
@@ -128,7 +128,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		siteNotFound, userIsAuthorized, err := getSitePermissions(response.SiteName, user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		if siteNotFound {
@@ -149,7 +149,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				b, err := json.Marshal(&response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				w.Write(b)
@@ -159,7 +159,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				err := nbrew.setSession(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				http.Redirect(w, r, "/files/deletesite/?name="+url.QueryEscape(response.SiteName), http.StatusFound)
@@ -173,7 +173,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			http.Redirect(w, r, "/files/", http.StatusFound)
@@ -229,7 +229,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		siteNotFound, userIsAuthorized, err := getSitePermissions(response.SiteName, user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		if siteNotFound {
@@ -258,14 +258,14 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		err = nbrew.FS.RemoveAll(sitePrefix)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		if nbrew.DB != nil {
 			tx, err := nbrew.DB.Begin()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			defer tx.Rollback()
@@ -280,7 +280,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			_, err = sq.Exec(r.Context(), tx, sq.Query{
@@ -294,7 +294,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			_, err = sq.Exec(r.Context(), tx, sq.Query{
@@ -306,13 +306,13 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			err = tx.Commit()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}

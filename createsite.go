@@ -95,11 +95,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			tmpl, err := template.New("createsite.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/createsite.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			executeTemplate(w, r, tmpl, &response)
+			nbrew.executeTemplate(w, r, tmpl, &response)
 		}
 
 		var response Response
@@ -117,7 +117,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		response.UserSiteNames = userSiteNames
@@ -143,7 +143,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				err := nbrew.setSession(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				http.Redirect(w, r, "/files/createsite/", http.StatusFound)
@@ -161,7 +161,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			http.Redirect(w, r, "/files/", http.StatusFound)
@@ -205,7 +205,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		response.UserSiteNames = userSiteNames
@@ -249,7 +249,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				ips, err := net.DefaultResolver.LookupIPAddr(r.Context(), response.SiteName)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				matched := false
@@ -277,7 +277,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			tx, err := nbrew.DB.Begin()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			defer tx.Rollback()
@@ -301,7 +301,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 					}
 				}
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			_, err = sq.Exec(r.Context(), tx, sq.Query{
@@ -315,7 +315,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			_, err = sq.Exec(r.Context(), tx, sq.Query{
@@ -329,20 +329,20 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			err = tx.Commit()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}
 		err = nbrew.FS.Mkdir(sitePrefix, 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		dirs := []string{
@@ -356,14 +356,14 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			err = nbrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
 			if err != nil && !errors.Is(err, fs.ErrExist) {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}
 		siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
@@ -542,7 +542,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		err = group.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		if strings.Contains(response.SiteName, ".") && nbrew.Port == 443 {
@@ -551,7 +551,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			err := certConfig.ObtainCertSync(r.Context(), response.SiteName)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}

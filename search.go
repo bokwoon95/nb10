@@ -103,11 +103,11 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		tmpl, err := template.New("search.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/search.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		executeTemplate(w, r, tmpl, &response)
+		nbrew.executeTemplate(w, r, tmpl, &response)
 	}
 
 	request := Request{
@@ -200,7 +200,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 	case "postgres":

@@ -110,11 +110,11 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		tmpl, err := template.New("rootdirectory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/rootdirectory.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		executeTemplate(w, r, tmpl, &response)
+		nbrew.executeTemplate(w, r, tmpl, &response)
 	}
 
 	var response Response
@@ -163,7 +163,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		response.Sites = sites
@@ -185,7 +185,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 					continue
 				}
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			var absolutePath string
@@ -208,7 +208,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(".")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		for _, dirEntry := range dirEntries {
@@ -255,7 +255,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	})
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
-		internalServerError(w, r, err)
+		nbrew.internalServerError(w, r, err)
 		return
 	}
 	response.Files = files
@@ -343,7 +343,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		err := group.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		writeResponse(w, r, response)
@@ -422,7 +422,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		err := group.Wait()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		writeResponse(w, r, response)
@@ -448,7 +448,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	})
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
-		internalServerError(w, r, err)
+		nbrew.internalServerError(w, r, err)
 		return
 	}
 	response.Sites = sites

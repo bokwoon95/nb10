@@ -82,26 +82,6 @@ func init() {
 	hash = sha256.Sum256(b)
 	BaselineJS = string(b)
 	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
-
-	// contentSecurityPolicy
-	contentSecurityPolicy = "default-src 'none';" +
-		" script-src 'self' 'unsafe-hashes' " + BaselineJSHash + ";" +
-		" connect-src 'self';" +
-		" img-src 'self' data:;" +
-		" style-src 'self' 'unsafe-inline';" +
-		" base-uri 'self';" +
-		" form-action 'self';" +
-		" manifest-src 'self';"
-	// contentSecurityPolicyCaptcha
-	contentSecurityPolicyWithCaptcha = "default-src 'none';" +
-		" script-src 'self' 'unsafe-hashes' " + BaselineJSHash + " https://hcaptcha.com https://*.hcaptcha.com;" +
-		" connect-src 'self' https://hcaptcha.com https://*.hcaptcha.com;" +
-		" img-src 'self' data:;" +
-		" style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com;" +
-		" base-uri 'self';" +
-		" form-action 'self';" +
-		" manifest-src 'self';" +
-		" frame-src https://hcaptcha.com https://*.hcaptcha.com;"
 }
 
 // Notebrew represents a notebrew instance.
@@ -449,7 +429,7 @@ var readerPool = sync.Pool{
 	},
 }
 
-func executeTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
+func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {
@@ -476,13 +456,13 @@ func executeTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Temp
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 		fmt.Printf(fmt.Sprintf("%#v", data))
-		internalServerError(w, r, err)
+		nbrew.internalServerError(w, r, err)
 		return
 	}
 	err = gzipWriter.Close()
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
-		internalServerError(w, r, err)
+		nbrew.internalServerError(w, r, err)
 		return
 	}
 
@@ -824,7 +804,7 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 	buf.WriteTo(w)
 }
 
-func internalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
+func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -868,7 +848,7 @@ func internalServerError(w http.ResponseWriter, r *http.Request, serverErr error
 		http.Error(w, "ServerError", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusInternalServerError)
 	buf.WriteTo(w)
 }

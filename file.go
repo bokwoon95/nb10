@@ -138,7 +138,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			_, err = io.Copy(&b, file)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			response.Content = b.String()
@@ -184,14 +184,14 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			} else {
 				dirEntries, err := nbrew.FS.ReadDir(path.Join(sitePrefix, response.AssetDir))
 				if err != nil && !errors.Is(err, fs.ErrNotExist) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				for _, dirEntry := range dirEntries {
@@ -204,7 +204,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						fileInfo, err := dirEntry.Info()
 						if err != nil {
 							getLogger(r.Context()).Error(err.Error())
-							internalServerError(w, r, err)
+							nbrew.internalServerError(w, r, err)
 							return
 						}
 						var absolutePath string
@@ -252,14 +252,14 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			} else {
 				dirEntries, err := nbrew.FS.ReadDir(path.Join(sitePrefix, response.AssetDir))
 				if err != nil && !errors.Is(err, fs.ErrNotExist) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				for _, dirEntry := range dirEntries {
@@ -272,7 +272,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						fileInfo, err := dirEntry.Info()
 						if err != nil {
 							getLogger(r.Context()).Error(err.Error())
-							internalServerError(w, r, err)
+							nbrew.internalServerError(w, r, err)
 							return
 						}
 						var absolutePath string
@@ -370,11 +370,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		tmpl, err := template.New("file.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/file.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		executeTemplate(w, r, tmpl, &response)
+		nbrew.executeTemplate(w, r, tmpl, &response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
@@ -397,7 +397,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, filePath), http.StatusFound)
@@ -446,7 +446,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			reader, err = r.MultipartReader()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			part, err := reader.NextPart()
@@ -455,7 +455,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					break
 				}
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			var maxBytesErr *http.MaxBytesError
@@ -467,7 +467,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			formName := part.FormName()
@@ -500,20 +500,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, filePath), 0644)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		defer writer.Close()
 		_, err = io.Copy(writer, strings.NewReader(response.Content))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		err = writer.Close()
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 
@@ -532,7 +532,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			tempDir, err := filepath.Abs(filepath.Join(os.TempDir(), "notebrew-temp"))
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			group, groupctx := errgroup.WithContext(r.Context())
@@ -543,7 +543,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						break
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				formName := part.FormName()
@@ -564,7 +564,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				if err != nil {
 					if !errors.Is(err, fs.ErrNotExist) {
 						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+						nbrew.internalServerError(w, r, err)
 						return
 					}
 				} else {
@@ -583,7 +583,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 								continue
 							}
 							getLogger(r.Context()).Error(err.Error())
-							internalServerError(w, r, err)
+							nbrew.internalServerError(w, r, err)
 							return
 						}
 						continue
@@ -591,7 +591,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					cmdPath, err := exec.LookPath(nbrew.ImgCmd)
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+						nbrew.internalServerError(w, r, err)
 						return
 					}
 					id := NewID()
@@ -601,19 +601,19 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					if err != nil {
 						if !errors.Is(err, fs.ErrNotExist) {
 							getLogger(r.Context()).Error(err.Error())
-							internalServerError(w, r, err)
+							nbrew.internalServerError(w, r, err)
 							return
 						}
 						err := os.MkdirAll(filepath.Dir(inputPath), 0755)
 						if err != nil {
 							getLogger(r.Context()).Error(err.Error())
-							internalServerError(w, r, err)
+							nbrew.internalServerError(w, r, err)
 							return
 						}
 						input, err = os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 						if err != nil {
 							getLogger(r.Context()).Error(err.Error())
-							internalServerError(w, r, err)
+							nbrew.internalServerError(w, r, err)
 							return
 						}
 					}
@@ -626,13 +626,13 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							continue
 						}
 						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+						nbrew.internalServerError(w, r, err)
 						return
 					}
 					err = input.Close()
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+						nbrew.internalServerError(w, r, err)
 						return
 					}
 					group.Go(func() error {
@@ -660,7 +660,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			err = group.Wait()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}
@@ -670,7 +670,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			startedAt := time.Now()
@@ -679,7 +679,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if err != nil {
 				if !errors.As(err, &response.RegenerationStats.TemplateError) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			}
@@ -688,7 +688,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			category := path.Dir(tail)
@@ -705,7 +705,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				response.RegenerationStats.Count, err = siteGen.GeneratePosts(r.Context(), category, tmpl)
@@ -716,7 +716,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			} else if name == "postlist.html" {
@@ -728,7 +728,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				response.RegenerationStats.Count, err = siteGen.GeneratePostList(r.Context(), category, tmpl)
@@ -739,7 +739,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			} else if strings.HasSuffix(name, ".md") {
@@ -751,7 +751,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.CreationTime, tmpl)
@@ -763,7 +763,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			}

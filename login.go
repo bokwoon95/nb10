@@ -123,7 +123,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				if failedLoginAttempts >= 3 {
@@ -148,11 +148,11 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			tmpl, err := template.New("login.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/login.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			executeTemplate(w, r, tmpl, &response)
+			nbrew.executeTemplate(w, r, tmpl, &response)
 		}
 
 		err := r.ParseForm()
@@ -164,7 +164,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		_, err = nbrew.getSession(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		nbrew.clearSession(w, r, "flash")
@@ -202,7 +202,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 					})
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+						nbrew.internalServerError(w, r, err)
 						return
 					}
 				} else {
@@ -216,7 +216,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 					})
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
-						internalServerError(w, r, err)
+						nbrew.internalServerError(w, r, err)
 						return
 					}
 				}
@@ -229,7 +229,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			} else if response.Error == "" {
@@ -243,7 +243,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
@@ -255,7 +255,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 			}
@@ -273,7 +273,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				err := nbrew.setSession(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				var query string
@@ -387,7 +387,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				userNotFound = true
@@ -412,7 +412,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				userNotFound = true
@@ -437,7 +437,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
-					internalServerError(w, r, err)
+					nbrew.internalServerError(w, r, err)
 					return
 				}
 				if failedLoginAttempts >= 3 {
@@ -467,7 +467,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			resp, err := client.Post(nbrew.CaptchaConfig.VerificationURL, "application/x-www-form-urlencoded", strings.NewReader(values.Encode()))
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			defer resp.Body.Close()
@@ -475,7 +475,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			err = json.NewDecoder(resp.Body).Decode(&result)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			value := result["success"]
@@ -513,7 +513,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		_, err = rand.Read(authenticationToken[8:])
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		var authenticationTokenHash [8 + blake2b.Size256]byte
@@ -532,7 +532,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 			response.Username, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
@@ -546,7 +546,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		} else {
@@ -561,7 +561,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				internalServerError(w, r, err)
+				nbrew.internalServerError(w, r, err)
 				return
 			}
 		}

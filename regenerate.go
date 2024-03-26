@@ -46,7 +46,7 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
-			internalServerError(w, r, err)
+			nbrew.internalServerError(w, r, err)
 			return
 		}
 		http.Redirect(w, r, referer, http.StatusFound)
@@ -58,7 +58,7 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 	regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
-		internalServerError(w, r, err)
+		nbrew.internalServerError(w, r, err)
 		return
 	}
 	response := Response{
