@@ -33,7 +33,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		return false
 	}
 	if r.Method != "POST" {
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
@@ -228,7 +228,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				return
 			}
 			if !exists {
-				notAuthorized(w, r)
+				nbrew.notAuthorized(w, r)
 				return
 			}
 		}
@@ -602,6 +602,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		waitGroup.Wait()
 		writeResponse(w, r, response)
 	default:
-		notFound(w, r)
+		nbrew.notFound(w, r)
 	}
 }

@@ -148,13 +148,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		executeTemplate(w, r, tmpl, &response)
 	}
 	if r.Method != "GET" {
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 		return
 	}
 
 	head, _, _ := strings.Cut(filePath, "/")
 	if head != "notes" && head != "pages" && head != "posts" && head != "output" {
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	}
 

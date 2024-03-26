@@ -250,7 +250,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			request.Parent = r.Form.Get("parent")
 			request.Names = r.Form["name"]
 		default:
-			unsupportedContentType(w, r)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 
@@ -827,6 +827,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		response.DeleteErrors = response.DeleteErrors[:n]
 		writeResponse(w, r, response)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }

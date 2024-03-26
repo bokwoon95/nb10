@@ -55,7 +55,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 
 	fileType, ok := fileTypes[path.Ext(filePath)]
 	if !ok {
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	head, tail, _ := strings.Cut(filePath, "/")
 	switch head {
 	case "":
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	case "notes":
 		isEditable = fileType.Ext == ".html" || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" || fileType.Ext == ".txt"
@@ -90,7 +90,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			fileType.ContentType = "text/plain; charset=utf-8"
 		}
 	default:
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	}
 
@@ -414,7 +414,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		if !isEditable {
-			methodNotAllowed(w, r)
+			nbrew.methodNotAllowed(w, r)
 			return
 		}
 
@@ -475,7 +475,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				request.Content = b.String()
 			}
 		default:
-			unsupportedContentType(w, r)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 
@@ -770,6 +770,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 		writeResponse(w, r, response)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }

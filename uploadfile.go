@@ -32,7 +32,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		FilesTooBig       []string          `json:"filesTooBig,omitempty"`
 	}
 	if r.Method != "POST" {
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 		return
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {

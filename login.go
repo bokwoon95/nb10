@@ -43,7 +43,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if nbrew.DB == nil {
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	}
 
@@ -332,7 +332,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			request.CaptchaResponse = r.Form.Get("h-captcha-response")
 			redirect = r.Form.Get("redirect")
 		default:
-			unsupportedContentType(w, r)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 
@@ -568,7 +568,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		response.AuthenticationToken = strings.TrimLeft(hex.EncodeToString(authenticationToken[:]), "0")
 		writeResponse(w, r, response)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }
 

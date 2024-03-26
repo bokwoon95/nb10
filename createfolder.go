@@ -178,7 +178,7 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			request.Parent = r.Form.Get("parent")
 			request.Name = r.Form.Get("name")
 		default:
-			unsupportedContentType(w, r)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 
@@ -324,6 +324,6 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 		}
 		writeResponse(w, r, response)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }

@@ -234,7 +234,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			request.Name = r.Form.Get("name")
 			request.To = r.Form.Get("to")
 		default:
-			unsupportedContentType(w, r)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 
@@ -597,6 +597,6 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		writeResponse(w, r, response)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }

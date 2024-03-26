@@ -13,7 +13,7 @@ import (
 
 func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 	if nbrew.DB == nil {
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	}
 	var authenticationTokenString string
@@ -79,6 +79,6 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }

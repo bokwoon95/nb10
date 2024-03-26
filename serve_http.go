@@ -108,7 +108,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// nbrew.resetpassword(w, r)
 			return
 		default:
-			notFound(w, r)
+			nbrew.notFound(w, r)
 			return
 		}
 	}
@@ -119,18 +119,18 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		head, tail, _ := strings.Cut(urlPath, "/")
 		if head == "static" {
 			if r.Method != "GET" {
-				methodNotAllowed(w, r)
+				nbrew.methodNotAllowed(w, r)
 				return
 			}
 			fileType, ok := fileTypes[path.Ext(urlPath)]
 			if !ok {
-				notFound(w, r)
+				nbrew.notFound(w, r)
 				return
 			}
 			file, err := RuntimeFS.Open(urlPath)
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					notFound(w, r)
+					nbrew.notFound(w, r)
 					return
 				}
 				getLogger(r.Context()).Error(err.Error())
@@ -192,7 +192,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
 				}
-				notAuthenticated(w, r)
+				nbrew.notAuthenticated(w, r)
 				return
 			}
 			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
@@ -201,7 +201,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
 				}
-				notAuthenticated(w, r)
+				nbrew.notAuthenticated(w, r)
 				return
 			}
 			var authenticationTokenHash [8 + blake2b.Size256]byte
@@ -252,7 +252,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
 				}
-				notAuthenticated(w, r)
+				nbrew.notAuthenticated(w, r)
 				return
 			}
 			user = result.User
@@ -276,7 +276,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !isAuthorizedForSite {
-			notAuthorized(w, r)
+			nbrew.notAuthorized(w, r)
 			return
 		}
 
@@ -298,7 +298,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, urlPath))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
-						notFound(w, r)
+						nbrew.notFound(w, r)
 						return
 					}
 					getLogger(r.Context()).Error(err.Error())
@@ -315,7 +315,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, urlPath))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					notFound(w, r)
+					nbrew.notFound(w, r)
 					return
 				}
 				getLogger(r.Context()).Error(err.Error())
@@ -366,7 +366,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.rename(w, r, user, sitePrefix)
 			return
 		default:
-			notFound(w, r)
+			nbrew.notFound(w, r)
 			return
 		}
 	}

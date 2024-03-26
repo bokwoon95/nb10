@@ -619,7 +619,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 	buf.WriteTo(w)
 }
 
-func notAuthenticated(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -658,12 +658,12 @@ func notAuthenticated(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "NotAuthenticated", http.StatusUnauthorized)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusUnauthorized)
 	buf.WriteTo(w)
 }
 
-func notAuthorized(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
@@ -701,12 +701,12 @@ func notAuthorized(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "NotAuthorized", http.StatusForbidden)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusForbidden)
 	buf.WriteTo(w)
 }
 
-func notFound(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -738,12 +738,12 @@ func notFound(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "NotFound", http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusNotFound)
 	buf.WriteTo(w)
 }
 
-func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -775,12 +775,12 @@ func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "NotFound", http.StatusMethodNotAllowed)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusMethodNotAllowed)
 	buf.WriteTo(w)
 }
 
-func unsupportedContentType(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	var message string
 	if contentType == "" {
@@ -819,7 +819,7 @@ func unsupportedContentType(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "UnsupportedMediaType "+message, http.StatusUnsupportedMediaType)
 		return
 	}
-	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusUnsupportedMediaType)
 	buf.WriteTo(w)
 }
@@ -871,11 +871,6 @@ func internalServerError(w http.ResponseWriter, r *http.Request, serverErr error
 	w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
 	w.WriteHeader(http.StatusInternalServerError)
 	buf.WriteTo(w)
-}
-
-type NullString struct {
-	Valid  bool   `json:"valid"`
-	String string `json:"string"`
 }
 
 func WriteFile(ctx context.Context, fsys FS, filePath string, reader io.Reader) error {

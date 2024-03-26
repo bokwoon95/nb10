@@ -48,7 +48,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, filePath))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					notFound(w, r)
+					nbrew.notFound(w, r)
 					return
 				}
 				getLogger(r.Context()).Error(err.Error())
@@ -58,7 +58,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			defer file.Close()
 			fileType, ok := fileTypes[path.Ext(filePath)]
 			if !ok {
-				notFound(w, r)
+				nbrew.notFound(w, r)
 				return
 			}
 			serveFile(w, r, file, fileInfo, fileType, "stale-while-revalidate, max-age=86400" /* 1 day */)
@@ -310,7 +310,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			request.Content = r.Form.Get("content")
 		default:
-			unsupportedContentType(w, r)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 
@@ -475,6 +475,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		writeResponse(w, r, response)
 	default:
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 	}
 }

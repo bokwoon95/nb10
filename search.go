@@ -60,13 +60,13 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 
 	if r.Method != "GET" {
-		methodNotAllowed(w, r)
+		nbrew.methodNotAllowed(w, r)
 		return
 	}
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
-		notFound(w, r)
+		nbrew.notFound(w, r)
 		return
 	}
 
