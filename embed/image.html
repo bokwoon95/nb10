@@ -70,7 +70,7 @@
     {{- else }}
     <a href='?raw'>{{ base $.FilePath }}</a>
     {{- end }}
-    <span class='f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
+    <span class='ml1 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
     <span class='flex-grow-1 mh1'></span>
     {{- if $.NextImageName }}
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
