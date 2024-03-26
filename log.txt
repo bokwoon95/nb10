@@ -35,13 +35,12 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
-BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
-TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
     - TODO: do the feature first where you read from pinned_file when listing directory.go, then add the nbrew.pin() action that hooks into /files/pin/ that actually adds and removes pinned file entries.
+BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
+BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
