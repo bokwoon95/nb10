@@ -66,7 +66,7 @@ func (cmd *StatusCmd) Run() error {
 	} else if pid != 0 && name != "" {
 		fmt.Fprintf(cmd.Stdout, "✔️  %s (pid %d) is listening on port %d\n", name, pid, cmd.Notebrew.Port)
 	} else {
-		fmt.Fprintf(cmd.Stdout, "❌ could not find any process listening on port %d\n", cmd.Notebrew.Port)
+		fmt.Fprintf(cmd.Stdout, "❌ notebrew is not currently running on port %d\n", cmd.Notebrew.Port)
 	}
 	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Notebrew.Port)
 	fmt.Fprintf(cmd.Stdout, "cmsdomain     = %s\n", cmd.Notebrew.CMSDomain)
