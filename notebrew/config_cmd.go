@@ -797,7 +797,7 @@ const databaseHelp = `# == database keys == #
 `
 
 const filesHelp = `# == files keys == #
-# Choose between using the local filesystem (backed by a plain old directory) or a remote filesystem (backed by a database) to store files.
+# Choose between using the local filesystem (backed by a plain old directory) or a database filesystem (backed by a database) to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using the local filesystem).
 # filePath - Files root directory (if using the local filesystem) or file path to the sqlite file (if using sqlite).
