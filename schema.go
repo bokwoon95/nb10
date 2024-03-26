@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 
 	"github.com/bokwoon95/sqddl/ddl"
 )
@@ -32,6 +33,13 @@ type rawTable struct {
 		Dialect string
 		Type    string
 		Columns []string
+	}
+	Constraints []struct {
+		Dialect           string
+		Type              string
+		Columns           []string
+		ReferencesTable   string
+		ReferencesColumns []string
 	}
 }
 
@@ -114,7 +122,7 @@ func unmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
 					columnName = rawColumn.Column
 				}
 				cache.AddOrUpdateConstraint(table, ddl.Constraint{
-					ConstraintName:    ddl.GenerateName(ddl.FOREIGN_KEY, rawTable.Table, []string{columnName}),
+					ConstraintName:    ddl.GenerateName(ddl.FOREIGN_KEY, rawTable.Table, []string{rawColumn.Column}),
 					ConstraintType:    ddl.FOREIGN_KEY,
 					Columns:           []string{rawColumn.Column},
 					ReferencesTable:   rawColumn.References.Table,
@@ -131,6 +139,21 @@ func unmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
 				IndexName: ddl.GenerateName(ddl.INDEX, rawTable.Table, rawIndex.Columns),
 				IndexType: rawIndex.Type,
 				Columns:   rawIndex.Columns,
+			})
+		}
+		for _, rawConstraint := range rawTable.Constraints {
+			if rawConstraint.Dialect != "" && rawConstraint.Dialect != dialect {
+				continue
+			}
+			if rawConstraint.Type != ddl.PRIMARY_KEY && rawConstraint.Type != ddl.FOREIGN_KEY && rawConstraint.Type != ddl.UNIQUE {
+				return nil, fmt.Errorf("%s: invalid constraint type %q", rawTable.Table, rawConstraint.Type)
+			}
+			cache.AddOrUpdateConstraint(table, ddl.Constraint{
+				ConstraintName:    ddl.GenerateName(rawConstraint.Type, rawTable.Table, rawConstraint.Columns),
+				ConstraintType:    rawConstraint.Type,
+				Columns:           rawConstraint.Columns,
+				ReferencesTable:   rawConstraint.ReferencesTable,
+				ReferencesColumns: rawConstraint.ReferencesColumns,
 			})
 		}
 	}

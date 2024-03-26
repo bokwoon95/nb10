@@ -131,5 +131,36 @@
         ]
       }
     ]
+  },
+  {
+    "table": "pinned_file",
+    "primarykey": [
+      "parent_id",
+      "file_id"
+    ],
+    "columns": [
+      {
+        "column": "parent_id",
+        "type": {
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "references": {
+          "table": "files",
+          "column": "file_id"
+        }
+      },
+      {
+        "column": "file_id",
+        "type": {
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "references": {
+          "table": "files",
+          "column": "file_id"
+        }
+      }
+    ]
   }
 ]
