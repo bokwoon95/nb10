@@ -40,13 +40,6 @@ TODO: unfortunately it seems uploadfile.go tends to work without a hitch, but fi
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
-TODO: notebrew config processimg: let users configure a json object that controls how images are processed before being uploaded: then I will be able to upload photoes taken straight from my phone.
-    - notebrew config imgcmd 'imgresize'
-    - if width/height is less than 0.5625 or 9:16 (i.e. tall image), constrain the width to max 1080p instead of the height.
-    - else if width or height is larger than 1080p, take whichever dimension is larger and scale it to 1080p while keeping image dimensions.
-    - vipsheader $file -f width
-    - vipsheader $file -f height
-    - vipsheader resize $file $file_resized $(1080/$value)
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
