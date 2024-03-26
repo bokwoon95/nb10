@@ -35,6 +35,9 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+// pinned_file.go
+// pin_upin.go
+// /files/pin?
 TODO: pin/unpin files in a directory. How does it work? With pagination and all?
 CREATE TABLE pinned_file (
     parent_id BINARY(16) REFERENCES files (file_id) ON UPDATE CASCADE

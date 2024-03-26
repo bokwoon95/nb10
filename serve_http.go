@@ -44,8 +44,11 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Clean the path and redirect if necessary.
 	if r.Method == "GET" {
 		cleanedPath := path.Clean(r.URL.Path)
-		if cleanedPath != "/" && path.Ext(cleanedPath) == "" {
-			cleanedPath += "/"
+		if cleanedPath != "/" {
+			_, ok := fileTypes[path.Ext(cleanedPath)]
+			if !ok {
+				cleanedPath += "/"
+			}
 		}
 		if cleanedPath != r.URL.Path {
 			cleanedURL := *r.URL
