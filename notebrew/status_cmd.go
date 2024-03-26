@@ -76,6 +76,11 @@ func (cmd *StatusCmd) Run() error {
 	} else {
 		fmt.Fprintf(cmd.Stdout, "imgdomain     = %s\n", cmd.Notebrew.ImgDomain)
 	}
+	if cmd.Notebrew.ImgCmd == "" {
+		fmt.Fprintf(cmd.Stdout, "imgcmd        = <not configured>\n")
+	} else {
+		fmt.Fprintf(cmd.Stdout, "imgcmd        = %s\n", cmd.Notebrew.ImgCmd)
+	}
 
 	// Database.
 	b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
