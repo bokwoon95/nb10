@@ -35,6 +35,8 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
+BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 TODO: convert the "how do I include assets?" and "how do I include alt text?" links to details/summary popups.
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
