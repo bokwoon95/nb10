@@ -68,7 +68,7 @@ func (nbrew *Notebrew) regenerate(w http.ResponseWriter, r *http.Request, sitePr
 }
 
 type RegenerationStats struct {
-	Count         int           `json:"count"`
+	Count         int64         `json:"count"`
 	TimeTaken     string        `json:"timeTaken"`
 	TemplateError TemplateError `json:"templateError"`
 }
@@ -95,7 +95,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		"": postListTemplate,
 	}
 	var regenerationStats RegenerationStats
-	var count atomic.Int64
+	var regenerationCount atomic.Int64
 	startedAt := time.Now()
 
 	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
@@ -140,7 +140,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					if err != nil {
 						return err
 					}
-					count.Add(1)
+					regenerationCount.Add(1)
 					return nil
 				})
 			}
@@ -246,7 +246,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					if err != nil {
 						return err
 					}
-					count.Add(1)
+					regenerationCount.Add(1)
 					return nil
 				})
 			}
@@ -261,7 +261,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					if err != nil {
 						return err
 					}
-					count.Add(int64(n))
+					regenerationCount.Add(int64(n))
 					return nil
 				})
 			}
@@ -277,7 +277,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				return RegenerationStats{}, nil
 			}
 		}
-		regenerationStats.Count = int(count.Load())
+		regenerationStats.Count = regenerationCount.Load()
 		regenerationStats.TimeTaken = time.Since(startedAt).String()
 		return regenerationStats, nil
 	}
@@ -317,7 +317,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				if err != nil {
 					return err
 				}
-				count.Add(1)
+				regenerationCount.Add(1)
 				return nil
 			})
 			return nil
@@ -414,7 +414,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				if err != nil {
 					return err
 				}
-				count.Add(1)
+				regenerationCount.Add(1)
 				return nil
 			})
 			return nil
@@ -426,7 +426,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				if err != nil {
 					return err
 				}
-				count.Add(int64(n))
+				regenerationCount.Add(int64(n))
 				return nil
 			})
 		}
@@ -442,7 +442,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			return RegenerationStats{}, err
 		}
 	}
-	regenerationStats.Count = int(count.Load())
+	regenerationStats.Count = regenerationCount.Load()
 	regenerationStats.TimeTaken = time.Since(startedAt).String()
 	return regenerationStats, nil
 }

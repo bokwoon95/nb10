@@ -1,6 +1,7 @@
 package nb10
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -47,6 +49,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		BelongsTo         string            `json:"belongsTo"`
 		AssetDir          string            `json:"assetDir"`
 		Assets            []Asset           `json:"assets"`
+		UploadCount       int64             `json:"uploadCount"`
+		UploadSize        int64             `json:"uploadSize"`
 		FilesExist        []string          `json:"filesExist"`
 		FilesTooBig       []string          `json:"filesTooBig"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
@@ -392,6 +396,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					"from": "file",
 				},
 				"regenerationStats": response.RegenerationStats,
+				"uploadCount":       response.UploadCount,
+				"uploadSize":        response.UploadSize,
 				"filesExist":        response.FilesExist,
 				"filesTooBig":       response.FilesTooBig,
 			})
@@ -535,6 +541,35 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.internalServerError(w, r, err)
 				return
 			}
+			var uploadCount, uploadSize atomic.Int64
+			writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
+				writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+				if err != nil {
+					if !errors.Is(err, fs.ErrNotExist) {
+						return err
+					}
+					err := nbrew.FS.WithContext(ctx).MkdirAll(path.Dir(filePath), 0755)
+					if err != nil {
+						return err
+					}
+					writer, err = nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+					if err != nil {
+						return err
+					}
+				}
+				defer writer.Close()
+				n, err := io.Copy(writer, reader)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				uploadCount.Add(1)
+				uploadSize.Add(n)
+				return nil
+			}
 			group, groupctx := errgroup.WithContext(r.Context())
 			for {
 				part, err := reader.NextPart()
@@ -575,7 +610,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				switch ext {
 				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
 					if nbrew.ImgCmd == "" {
-						err := WriteFile(r.Context(), nbrew.FS, filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
+						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
 						if err != nil {
 							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
@@ -649,7 +684,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						if err != nil {
 							return err
 						}
-						err = WriteFile(groupctx, nbrew.FS, filePath, output)
+						defer output.Close()
+						err = writeFile(groupctx, filePath, output)
 						if err != nil {
 							return err
 						}
@@ -663,6 +699,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.internalServerError(w, r, err)
 				return
 			}
+			response.UploadCount = uploadCount.Load()
+			response.UploadSize = uploadSize.Load()
 		}
 
 		switch head {

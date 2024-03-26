@@ -29,6 +29,10 @@
     {{- else }}
     <div>created file</div>
     {{- end }}
+    {{- if $.UploadCount }}
+    <br>
+    <div>uploaded {{ $.UploadCount }} file{{ if ne $.UploadCount 1 }}s{{ end }} ({{ humanReadableFileSize $.UploadSize }} total)</div>
+    {{- end }}
     {{- if $.FilesTooBig }}
     <br>
     <div>
@@ -60,6 +64,10 @@
       {{- end }}
     {{- else }}
     <div>saved</div>
+    {{- end }}
+    {{- if $.UploadCount }}
+    <br>
+    <div>uploaded {{ $.UploadCount }} file{{ if ne $.UploadCount 1 }}s{{ end }} ({{ humanReadableFileSize $.UploadSize }} total)</div>
     {{- end }}
     {{- if $.FilesExist }}
     <br>
@@ -315,9 +323,8 @@
   {{- if eq (head $.FilePath) "pages" }}
   <details>
     <summary class='pointer f6'>how do I include assets in my page?</summary>
-    <p class='f6'>
-      !alt lorem ipsum dolor sit amet
-    </p>
+    <div>
+    </div>
   </details>
   <span class='b'>assets</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap mh2'>create file</a>
@@ -325,12 +332,16 @@
   <details>
     <summary class='pointer f6'>how do I include images in my post?</summary>
     <div>
-      Uploaded images are implicitly included at the end of the post. They are shown in alphabetical order, which you can control by renaming the files. You can also explicitly include images in the post using an <code>&lt;img&gt;</code> tag with the <code>href</code> attribute set to the name of the image file. Example:
-      <pre>&lt;img href='IMG_4661.JPG'&gt; &lt;!-- image displaying IMG_4661.JPG --&gt;</pre>
-      If an image is explicitly mentioned in the post, it will not be included in the implicit list of images appended to the end of the post.
-      {{- if $.IsDatabaseFS }}
-      You may additionally provide captions for an image by clicking 'view' on an image and filling in the caption.
-      {{- end }}
+      <p>Uploaded images are <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
+      <p>You can also <strong>explicitly include</strong> images with an <code>&lt;img&gt;</code> tag. Example:</p>
+      <pre># Here is a picture I took today:
+
+&lt;!-- display IMG_4661.JPG using 500 by 500 pixels--&gt;
+&lt;img src='IMG_4661.JPG' alt='a cat' width='500' height='500'&gt;
+
+It's a [cat](https://en.wikipedia.org/wiki/Cat)
+</pre>
+      <p>If an image is explicitly included, it will not be included at the end of the post.</p>
     </div>
   </details>
   <span class='b'>images</span>

@@ -127,12 +127,12 @@
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "uploadfile" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  {{- $count := index $.PostRedirectGet "count" }}
+  {{- $uploadCount := index $.PostRedirectGet "uploadCount" }}
   {{- $filesExist := index $.PostRedirectGet "filesExist" }}
   {{- $filesTooBig := index $.PostRedirectGet "filesTooBig" }}
-  {{- $size := float64ToInt64 (index $.PostRedirectGet "size") }}
+  {{- $uploadSize := float64ToInt64 (index $.PostRedirectGet "uploadSize") }}
   <div class='pv1'>
-    <div>{{ $count }} file{{ if ne $count 1.0 }}s{{ end }} uploaded ({{ humanReadableFileSize $size }} total)</div>
+    <div>uploaded {{ $uploadCount }} file{{ if ne $uploadCount 1.0 }}s{{ end }} ({{ humanReadableFileSize $uploadSize }} total)</div>
     {{- if $filesExist }}
     <br>
     <div>

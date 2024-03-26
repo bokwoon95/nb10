@@ -989,7 +989,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	return nil
 }
 
-func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string, tmpl *template.Template) (int, error) {
+func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string, tmpl *template.Template) (int64, error) {
 	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 		type File struct {
 			FilePath     string
@@ -1042,9 +1042,9 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 		}
 		err = group.Wait()
 		if err != nil {
-			return int(count.Load()), err
+			return count.Load(), err
 		}
-		return int(count.Load()), nil
+		return count.Load(), nil
 	}
 	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
 	if err != nil {
@@ -1091,9 +1091,9 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 	}
 	err = group.Wait()
 	if err != nil {
-		return int(count.Load()), err
+		return count.Load(), err
 	}
-	return int(count.Load()), nil
+	return count.Load(), nil
 }
 
 type Post struct {
@@ -1114,7 +1114,7 @@ type PostListData struct {
 	Posts      []Post
 }
 
-func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category string, tmpl *template.Template) (int, error) {
+func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category string, tmpl *template.Template) (int64, error) {
 	var config struct {
 		PostsPerPage int
 	}
@@ -1172,11 +1172,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			subgroup, subctx := errgroup.WithContext(groupctx)
 			for _, filePath := range filePaths {
 				filePath := filePath
-				n, err := strconv.Atoi(path.Base(filePath))
+				n, err := strconv.ParseInt(path.Base(filePath), 10, 64)
 				if err != nil {
 					continue
 				}
-				if n <= lastPage {
+				if int(n) <= lastPage {
 					continue
 				}
 				subgroup.Go(func() error {
@@ -1223,7 +1223,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		for cursor.Next() {
 			post, err := cursor.Result()
 			if err != nil {
-				return page, err
+				return int64(page), err
 			}
 			timestampPrefix, _, _ := strings.Cut(post.Name, "-")
 			if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
@@ -1247,7 +1247,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		}
 		err = cursor.Close()
 		if err != nil {
-			return page, err
+			return int64(page), err
 		}
 		if len(batch) > 0 {
 			group.Go(func() error {
@@ -1256,15 +1256,15 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		}
 		err = group.Wait()
 		if err != nil {
-			return page, err
+			return int64(page), err
 		}
 		if page == 1 && len(batch) == 0 {
 			err := siteGen.GeneratePostListPage(ctx, category, tmpl, 1, 1, nil)
 			if err != nil {
-				return page, err
+				return int64(page), err
 			}
 		}
-		return page, nil
+		return int64(page), nil
 	}
 	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
 	if err != nil {
@@ -1299,15 +1299,15 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			if !dirEntry.IsDir() {
 				continue
 			}
-			n, err := strconv.Atoi(dirEntry.Name())
+			n, err := strconv.ParseInt(dirEntry.Name(), 10, 64)
 			if err != nil {
 				continue
 			}
-			if n <= lastPage {
+			if int(n) <= lastPage {
 				continue
 			}
 			subgroup.Go(func() error {
-				return siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.Itoa(n)))
+				return siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.FormatInt(n, 10)))
 			})
 		}
 		err = subgroup.Wait()
@@ -1325,7 +1325,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	for _, dirEntry := range dirEntries {
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return page, err
+			return int64(page), err
 		}
 		name := fileInfo.Name()
 		creationTime := CreationTime(path.Join(absoluteDir, name), fileInfo)
@@ -1361,15 +1361,15 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	}
 	err = group.Wait()
 	if err != nil {
-		return page, err
+		return int64(page), err
 	}
 	if page == 1 && len(batch) == 0 {
 		err := siteGen.GeneratePostListPage(ctx, category, tmpl, 1, 1, []Post{})
 		if err != nil {
-			return page, err
+			return int64(page), err
 		}
 	}
-	return page, nil
+	return int64(page), nil
 }
 
 func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category string, tmpl *template.Template, lastPage, currentPage int, posts []Post) error {

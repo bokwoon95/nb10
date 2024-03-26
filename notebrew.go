@@ -26,7 +26,6 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"time"
@@ -851,33 +850,6 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusInternalServerError)
 	buf.WriteTo(w)
-}
-
-func WriteFile(ctx context.Context, fsys FS, filePath string, reader io.Reader) error {
-	writer, err := fsys.WithContext(ctx).OpenWriter(filePath, 0644)
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		err := fsys.WithContext(ctx).MkdirAll(path.Dir(filePath), 0755)
-		if err != nil {
-			return err
-		}
-		writer, err = fsys.WithContext(ctx).OpenWriter(filePath, 0644)
-		if err != nil {
-			return err
-		}
-	}
-	defer writer.Close()
-	_, err = io.Copy(writer, reader)
-	if err != nil {
-		return err
-	}
-	err = writer.Close()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs.FileInfo, fileType FileType, cacheControl string) {

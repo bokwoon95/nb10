@@ -620,7 +620,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			count := atomic.Int64{}
+			regenerationCount := atomic.Int64{}
 			startedAt := time.Now()
 			groupD, groupctxD := errgroup.WithContext(r.Context())
 			if resetIndexHTML.Load() {
@@ -634,7 +634,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						return err
 					}
-					count.Add(1)
+					regenerationCount.Add(1)
 					return nil
 				})
 			}
@@ -649,7 +649,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						return err
 					}
-					count.Add(1)
+					regenerationCount.Add(1)
 					return nil
 				})
 			}
@@ -674,7 +674,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						return err
 					}
-					count.Add(int64(n))
+					regenerationCount.Add(int64(n))
 					return nil
 				})
 			}
@@ -699,7 +699,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						return err
 					}
-					count.Add(int64(n))
+					regenerationCount.Add(int64(n))
 					return nil
 				})
 			}
@@ -733,7 +733,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						return err
 					}
-					count.Add(1)
+					regenerationCount.Add(1)
 					return nil
 				})
 			}
@@ -790,7 +790,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 						return err
 					}
-					count.Add(1)
+					regenerationCount.Add(1)
 					return nil
 				})
 			}
@@ -800,7 +800,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			response.RegenerationStats.Count = int(count.Load())
+			response.RegenerationStats.Count = regenerationCount.Load()
 			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			if templateErrPtr.Load() != nil {
 				response.RegenerationStats.TemplateError = *templateErrPtr.Load()

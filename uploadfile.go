@@ -26,8 +26,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		Error             string            `json:"error,omitempty"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		Parent            string            `json:"parent"`
-		Count             int               `json:"count"`
-		Size              int               `json:"size"`
+		UploadCount       int64             `json:"uploadCount"`
+		UploadSize        int64             `json:"uploadSize"`
 		FilesExist        []string          `json:"fileExist,omitempty"`
 		FilesTooBig       []string          `json:"filesTooBig,omitempty"`
 	}
@@ -51,8 +51,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				"from":              "uploadfile",
 				"regenerationStats": response.RegenerationStats,
 				"error":             response.Error,
-				"count":             response.Count,
-				"size":              response.Size,
+				"uploadCount":       response.UploadCount,
+				"uploadSize":        response.UploadSize,
 				"filesExist":        response.FilesExist,
 				"filesTooBig":       response.FilesTooBig,
 			},
@@ -158,7 +158,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		return
 	}
 
-	var count, regenerationCount, size atomic.Int64
+	var regenerationCount, uploadCount, uploadSize atomic.Int64
 	writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
 		writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
 		if err != nil {
@@ -173,8 +173,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		if err != nil {
 			return err
 		}
-		count.Add(1)
-		size.Add(n)
+		uploadCount.Add(1)
+		uploadSize.Add(n)
 		return nil
 	}
 
@@ -469,9 +469,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			templateErrPtr.CompareAndSwap(nil, &templateErr)
 		}
 	}
-	response.Count = int(count.Load())
-	response.Size = int(size.Load())
-	response.RegenerationStats.Count = int(regenerationCount.Load())
+	response.UploadCount = uploadCount.Load()
+	response.UploadSize = uploadSize.Load()
+	response.RegenerationStats.Count = regenerationCount.Load()
 	if response.RegenerationStats.Count != 0 {
 		response.RegenerationStats.TimeTaken = timeTaken.String()
 	}

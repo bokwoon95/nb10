@@ -1,6 +1,7 @@
 package nb10
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -41,6 +42,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		Content           string            `json:"content"`
 		Error             string            `json:"error"`
 		FormErrors        url.Values        `json:"formErrors"`
+		UploadCount       int64             `json:"uploadCount"`
+		UploadSize        int64             `json:"uploadSize"`
 		FilesTooBig       []string          `json:"filesTooBig"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
@@ -180,6 +183,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				"postRedirectGet": map[string]any{
 					"from": "createfile",
 				},
+				"uploadCount":       response.UploadCount,
+				"uploadSize":        response.UploadSize,
 				"regenerationStats": response.RegenerationStats,
 				"filesTooBig":       response.FilesTooBig,
 			})
@@ -437,6 +442,35 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				nbrew.internalServerError(w, r, err)
 				return
 			}
+			var uploadCount, uploadSize atomic.Int64
+			writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
+				writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+				if err != nil {
+					if !errors.Is(err, fs.ErrNotExist) {
+						return err
+					}
+					err := nbrew.FS.WithContext(ctx).MkdirAll(path.Dir(filePath), 0755)
+					if err != nil {
+						return err
+					}
+					writer, err = nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+					if err != nil {
+						return err
+					}
+				}
+				defer writer.Close()
+				n, err := io.Copy(writer, reader)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				uploadCount.Add(1)
+				uploadSize.Add(n)
+				return nil
+			}
 			group, groupctx := errgroup.WithContext(r.Context())
 			for {
 				part, err := reader.NextPart()
@@ -466,7 +500,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				switch ext {
 				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
 					if nbrew.ImgCmd == "" {
-						err := WriteFile(r.Context(), nbrew.FS, filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
+						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, 10<<20 /* 10 MB */))
 						if err != nil {
 							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
@@ -540,7 +574,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 						if err != nil {
 							return err
 						}
-						err = WriteFile(groupctx, nbrew.FS, filePath, output)
+						defer output.Close()
+						err = writeFile(groupctx, filePath, output)
 						if err != nil {
 							return err
 						}
@@ -554,6 +589,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				nbrew.internalServerError(w, r, err)
 				return
 			}
+			response.UploadCount = uploadCount.Load()
+			response.UploadSize = uploadSize.Load()
 		}
 		switch head {
 		case "pages":
@@ -581,7 +618,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			var count atomic.Int64
+			var regenerationCount atomic.Int64
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
@@ -604,7 +641,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					}
 					return err
 				}
-				count.Add(1)
+				regenerationCount.Add(1)
 				return nil
 			})
 			group.Go(func() error {
@@ -626,7 +663,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					}
 					return err
 				}
-				count.Add(int64(n))
+				regenerationCount.Add(int64(n))
 				return nil
 			})
 			err = group.Wait()
@@ -635,7 +672,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			response.RegenerationStats.Count = int(count.Load())
+			response.RegenerationStats.Count = regenerationCount.Load()
 			if templateErrPtr.Load() != nil {
 				response.RegenerationStats.TemplateError = *templateErrPtr.Load()
 			}
