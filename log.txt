@@ -37,6 +37,7 @@ notebrew/open_browser.go
 
 TODO: remove contentSecurityPolicy and contentSecurityPolicyWithCaptcha from the codebase.
 TODO: unfortunately it seems uploadfile.go tends to work without a hitch, but file.go doesn't work for adding new images at all.
+TODO: ayo why tf can't I add captions to my funny memes?
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
