@@ -35,7 +35,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: remove contentSecurityPolicy and contentSecurityPolicyWithCaptcha from the codebase.
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
