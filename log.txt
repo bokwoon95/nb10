@@ -46,6 +46,7 @@ TODO: check if a user is able to delete their own site, and if so prevent it
     - We also need to add frontend checks to hide the delete button.
 TODO: invite.go and resetpassword.go
 TODO: users.go (what do we show about a user? allow them to change username? no)
+TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
 TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
