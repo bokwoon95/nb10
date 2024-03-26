@@ -320,7 +320,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			Format:  "UPDATE files SET text = {content} WHERE file_path = {filePath}",
 			Values: []any{
 				sq.StringParam("content", response.Content),
-				sq.StringParam("filePath", filePath),
+				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
 			},
 		})
 		if err != nil {
