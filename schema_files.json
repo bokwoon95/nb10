@@ -160,6 +160,13 @@
           "table": "files",
           "column": "file_id"
         }
+      },
+      {
+        "column": "creation_time",
+        "type": {
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        }
       }
     ]
   }

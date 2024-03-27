@@ -924,6 +924,16 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	}
 	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
+		Format:  "DELETE FROM pinned_file WHERE (SELECT file_id FROM files WHERE file_path = {name}) IN (parent_id, file_id)",
+		Values: []any{
+			sq.StringParam("name", name),
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name}",
 		Values: []any{
 			sq.StringParam("name", name),
@@ -993,6 +1003,19 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return err
 	}
 	waitGroup.Wait()
+	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		Dialect: fsys.Dialect,
+		Format: "DELETE FROM pinned_file WHERE EXISTS (" +
+			"SELECT 1"+
+			" FROM files"+
+			" WHERE files.file_id IN (pinned_file.parent_id, pinned_file.file_id)" +
+			" AND (file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\') " +
+			")",
+		Values: []any{
+			sq.StringParam("name", name),
+			sq.StringParam("pattern", pattern),
+		},
+	})
 	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",

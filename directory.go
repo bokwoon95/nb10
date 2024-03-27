@@ -39,6 +39,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		IsDir             bool              `json:"isDir"`
 		ModTime           time.Time         `json:"modTime"`
 		CreationTime      time.Time         `json:"creationTime"`
+		PinnedFiles       []File            `json:"pinnedFiles"`
 		Files             []File            `json:"files"`
 		Sort              string            `json:"sort"`
 		Order             string            `json:"order"`
