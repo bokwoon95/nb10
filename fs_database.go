@@ -1008,8 +1008,8 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		Format: "DELETE FROM pinned_file WHERE EXISTS (" +
 			"SELECT 1"+
 			" FROM files"+
-			" WHERE files.file_id IN (pinned_file.parent_id, pinned_file.file_id)" +
-			" AND (file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\') " +
+			" WHERE (file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\') " +
+			" AND files.file_id IN (pinned_file.parent_id, pinned_file.file_id)" +
 			")",
 		Values: []any{
 			sq.StringParam("name", name),
