@@ -205,14 +205,14 @@ func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 			sq.StringParam("name", name),
 		},
 	}, func(row *sq.Row) *DatabaseFileInfo {
-		fileInfo := &DatabaseFileInfo{}
-		fileInfo.FileID = row.UUID("file_id")
-		fileInfo.FilePath = row.String("file_path")
-		fileInfo.isDir = row.Bool("is_dir")
-		fileInfo.size = row.Int64("size")
-		fileInfo.modTime = row.Time("mod_time")
-		fileInfo.CreationTime = row.Time("creation_time")
-		return fileInfo
+		return &DatabaseFileInfo{
+			FileID:       row.UUID("file_id"),
+			FilePath:     row.String("file_path"),
+			isDir:        row.Bool("is_dir"),
+			size:         row.Int64("size"),
+			modTime:      row.Time("mod_time"),
+			CreationTime: row.Time("creation_time"),
+		}
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

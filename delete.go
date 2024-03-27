@@ -41,7 +41,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		Username          string            `json:"username"`
 		Parent            string            `json:"parent"`
 		Files             []File            `json:"files"`
-		Error             string            `json:"status"`
+		Error             string            `json:"error"`
 		DeleteErrors      []string          `json:"deleteErrors"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}

@@ -341,11 +341,11 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch urlPath {
-		case "regenerate":
-			nbrew.regenerate(w, r, sitePrefix)
-			return
 		case "site.json":
 			nbrew.siteJSON(w, r, user, sitePrefix)
+			return
+		case "pin":
+			nbrew.pin(w, r, user, sitePrefix)
 			return
 		case "createfolder":
 			nbrew.createfolder(w, r, user, sitePrefix)

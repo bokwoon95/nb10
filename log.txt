@@ -10,17 +10,18 @@ creation_time_windows.go
 notebrew.go
 dev.go
 site_generator.go
-regenerate.go => regenerated site (x files in xxx duration) view
-site_json.go => regenerated site (x files in xxx duration) view
-postlist_json.go => regenerated post list (x files in xxx duration) view
+regenerate.go
+site_json.go
+postlist_json.go
 rootdirectory.go
 directory.go
+pin.go
 image.go
-file.go => regenerated page|post in xxx duration view
+file.go
 createsite.go
 deletesite.go
 createfolder.go
-createfile.go => generated page|post in xxx duration view
+createfile.go
 delete.go
 search.go
 rename.go
@@ -35,11 +36,15 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+// pin these files?
+// unpin these files?
+
 TODO: pinfile.go: pin/unpin files in a directory. How does it work? With pagination and all?
     - /files/pin?parent=xxxx&name=yyyy
     - /files/pin?parent=xxxx&name=yyyy&unpin
     - TODO: do the feature first where you read from pinned_file when listing directory.go, then add the nbrew.pin() action that hooks into /files/pin/ that actually adds and removes pinned file entries.
 TODO: uploadfile.go/createfile.go/file.go, if the image name is just "image" we need to an timestamp prefix to the name so that (1) we can continually upload files called "image.jpg" or whatever without naming conflicts and (2) images are sorted by creation date if sorted by name. We may need to do the monotonically increasing timestamp thing.
+BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
 BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
 BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 TODO: check if a user is able to delete their own site, and if so prevent it
