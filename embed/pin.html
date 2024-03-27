@@ -5,7 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<title>Delete file</title>
+<title>{{ if $.Unpin }}Unpin{{ else }}Pin{{ end }} file</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
@@ -22,15 +22,22 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <div class='mv3 b tc'>No items to delete</div>
+  <div class='mv3 b tc'>No items to pin</div>
 </div>
 {{- else }}
 <form method='post' class='mv5 w-80 w-70-m w-60-l center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <h3 class='mv3 b'>Delete the following files(s)?</h3>
+  {{- if $.Unpin }}
+  <h3 class='mv3 b'>Unpin following files(s)?</h3>
+  {{- else }}
+  <h3 class='mv3 b'>Pin following files(s)?</h3>
+  {{- end }}
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
+  {{- if $.Unpin }}
+  <input type='hidden' name='unpin'>
+  {{- end }}
   <ul class='list-style-disc ph3'>
     {{- range $file := $.Files }}
     <li class='mv1'>
@@ -46,6 +53,10 @@
     </li>
     {{- end }}
   </ul>
-  <button type='submit' class='button-danger ba br2 b--dark-red pa2 mv3'>Delete</button>
+  {{- if $.Unpin }}
+  <button type='submit' class='button-danger ba br2 b--dark-red pa2 mv3'>Unpin</button>
+  {{- else }}
+  <button type='submit' class='button ba br2 b--black pa2 mv3'>Pin</button>
+  {{- end }}
 </form>
 {{- end }}
