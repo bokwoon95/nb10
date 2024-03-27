@@ -14,24 +14,24 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type LocalFSConfig struct {
-	// RootDir is the root directory of the LocalFS.
+type DirFSConfig struct {
+	// RootDir is the root directory of the DirFS.
 	RootDir string
 
-	// TempDir is the temp directory of the LocalFS.
+	// TempDir is the temp directory of the DirFS.
 	TempDir string
 }
 
-// LocalFS represents a filesystem rooted on a local directory.
-type LocalFS struct {
-	// Context provides the context of all operations called on the LocalFS.
+// DirFS represents a filesystem rooted on a directory.
+type DirFS struct {
+	// Context provides the context of all operations called on the DirFS.
 	Context context.Context
 
-	// RootDir is the root directory of the LocalFS. Has to be an absolute
+	// RootDir is the root directory of the DirFS. Has to be an absolute
 	// path!!
 	RootDir string
 
-	// TempDir is the temp directory of the LocalFS. Files are first written to
+	// TempDir is the temp directory of the DirFS. Files are first written to
 	// the TempDir before being swapped into the rootDir via an atomic rename
 	// (windows is the exception I've found the renames there to be BUGGY AF!
 	// *insert github issue where rename on windows keep failing intermittently
@@ -39,7 +39,7 @@ type LocalFS struct {
 	TempDir string
 }
 
-func NewLocalFS(config LocalFSConfig) (*LocalFS, error) {
+func NewDirFS(config DirFSConfig) (*DirFS, error) {
 	rootDir, err := filepath.Abs(filepath.FromSlash(config.RootDir))
 	if err != nil {
 		return nil, err
@@ -48,23 +48,23 @@ func NewLocalFS(config LocalFSConfig) (*LocalFS, error) {
 	if err != nil {
 		return nil, err
 	}
-	localFS := &LocalFS{
+	dirFS := &DirFS{
 		Context: context.Background(),
 		RootDir: rootDir,
 		TempDir: tempDir,
 	}
-	return localFS, nil
+	return dirFS, nil
 }
 
-func (fsys *LocalFS) WithContext(ctx context.Context) FS {
-	return &LocalFS{
+func (fsys *DirFS) WithContext(ctx context.Context) FS {
+	return &DirFS{
 		Context: ctx,
 		RootDir: fsys.RootDir,
 		TempDir: fsys.TempDir,
 	}
 }
 
-func (fsys *LocalFS) Open(name string) (fs.File, error) {
+func (fsys *DirFS) Open(name string) (fs.File, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (fsys *LocalFS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
-func (fsys *LocalFS) Stat(name string) (fs.FileInfo, error) {
+func (fsys *DirFS) Stat(name string) (fs.FileInfo, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (fsys *LocalFS) Stat(name string) (fs.FileInfo, error) {
 	return fileInfo, nil
 }
 
-func (fsys *LocalFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
+func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (fsys *LocalFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, err
 		}
 		return file, nil
 	}
-	file := &LocalFileWriter{
+	file := &DirFileWriter{
 		ctx:     fsys.Context,
 		rootDir: fsys.RootDir,
 		tempDir: fsys.TempDir,
@@ -132,8 +132,8 @@ func (fsys *LocalFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, err
 	return file, nil
 }
 
-// LocalFileWriter represents a writable file on a LocalFS.
-type LocalFileWriter struct {
+// DirFileWriter represents a writable file on a DirFS.
+type DirFileWriter struct {
 	// ctx provides the context of all operations called on the file.
 	ctx context.Context
 
@@ -160,7 +160,7 @@ type LocalFileWriter struct {
 	writeFailed bool
 }
 
-func (file *LocalFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
+func (file *DirFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
@@ -174,7 +174,7 @@ func (file *LocalFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, nil
 }
 
-func (file *LocalFileWriter) Write(p []byte) (n int, err error) {
+func (file *DirFileWriter) Write(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
@@ -188,7 +188,7 @@ func (file *LocalFileWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (file *LocalFileWriter) Close() error {
+func (file *DirFileWriter) Close() error {
 	tempFilePath := filepath.Join(file.tempDir, file.tempName)
 	destFilePath := filepath.Join(file.rootDir, file.name)
 	defer os.Remove(tempFilePath)
@@ -206,7 +206,7 @@ func (file *LocalFileWriter) Close() error {
 	return nil
 }
 
-func (fsys *LocalFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (fsys *DirFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	err := fsys.Context.Err()
 	if err != nil {
 		return nil, err
@@ -218,7 +218,7 @@ func (fsys *LocalFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return os.ReadDir(filepath.Join(fsys.RootDir, name))
 }
 
-func (fsys *LocalFS) Mkdir(name string, _ fs.FileMode) error {
+func (fsys *DirFS) Mkdir(name string, _ fs.FileMode) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -230,7 +230,7 @@ func (fsys *LocalFS) Mkdir(name string, _ fs.FileMode) error {
 	return os.Mkdir(filepath.Join(fsys.RootDir, name), 0755)
 }
 
-func (fsys *LocalFS) MkdirAll(name string, _ fs.FileMode) error {
+func (fsys *DirFS) MkdirAll(name string, _ fs.FileMode) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -242,7 +242,7 @@ func (fsys *LocalFS) MkdirAll(name string, _ fs.FileMode) error {
 	return os.MkdirAll(filepath.Join(fsys.RootDir, name), 0755)
 }
 
-func (fsys *LocalFS) Remove(name string) error {
+func (fsys *DirFS) Remove(name string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -254,7 +254,7 @@ func (fsys *LocalFS) Remove(name string) error {
 	return os.Remove(filepath.Join(fsys.RootDir, name))
 }
 
-func (fsys *LocalFS) RemoveAll(name string) error {
+func (fsys *DirFS) RemoveAll(name string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -266,7 +266,7 @@ func (fsys *LocalFS) RemoveAll(name string) error {
 	return os.RemoveAll(filepath.Join(fsys.RootDir, name))
 }
 
-func (fsys *LocalFS) Rename(oldName, newName string) error {
+func (fsys *DirFS) Rename(oldName, newName string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err
@@ -297,7 +297,7 @@ func (fsys *LocalFS) Rename(oldName, newName string) error {
 	return nil
 }
 
-func (fsys *LocalFS) Copy(srcName, destName string) error {
+func (fsys *DirFS) Copy(srcName, destName string) error {
 	err := fsys.Context.Err()
 	if err != nil {
 		return err

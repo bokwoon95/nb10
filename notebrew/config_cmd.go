@@ -798,10 +798,10 @@ const databaseHelp = `# == database keys == #
 `
 
 const filesHelp = `# == files keys == #
-# Choose between using the local filesystem (backed by a plain old directory) or a database filesystem (backed by a database) to store files.
+# Choose between using a directory or a database-backed filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using the local filesystem).
-# filePath - Files root directory (if using the local filesystem) or file path to the sqlite file (if using sqlite).
+# dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using a directory).
+# filePath - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite).
 # user     - Database user
 # password - Database password
 # host     - Database host
@@ -821,10 +821,10 @@ type ObjectsConfig struct {
 }
 
 const objectsHelp = `# == objects keys == #
-# Choose between using the local filesystem (backed by a plain old directory) or an S3-compatible provider to store objects. Only applicable if using the remote filesytem (see ` + "`notebrew config files`" + `).
+# Choose between using the a directory or an S3-compatible provider to store objects. Only applicable if using the remote filesytem (see ` + "`notebrew config files`" + `).
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# provider        - Object storage provider (possible values: local, s3)
-# filePath        - Objects root directory (if using the local filesystem)
+# provider        - Object storage provider (possible values: directory, s3)
+# filePath        - Objects root directory (if using a directory)
 # endpoint        - S3 endpoint.
 # region          - S3 region.
 # bucket          - S3 bucket.

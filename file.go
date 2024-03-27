@@ -116,8 +116,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			if localFS, ok := nbrew.FS.(*LocalFS); ok {
-				absolutePath = path.Join(localFS.RootDir, response.SitePrefix, response.FilePath)
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
@@ -128,8 +128,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			if localFS, ok := nbrew.FS.(*LocalFS); ok {
-				absolutePath = path.Join(localFS.RootDir, sitePrefix, response.FilePath)
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
@@ -212,8 +212,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						var absolutePath string
-						if localFS, ok := nbrew.FS.(*LocalFS); ok {
-							absolutePath = path.Join(localFS.RootDir, sitePrefix, response.AssetDir, name)
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
 						}
 						response.Assets = append(response.Assets, Asset{
 							Name:         name,
@@ -280,8 +280,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						var absolutePath string
-						if localFS, ok := nbrew.FS.(*LocalFS); ok {
-							absolutePath = path.Join(localFS.RootDir, sitePrefix, response.AssetDir, name)
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
 						}
 						response.Assets = append(response.Assets, Asset{
 							Name:         name,
@@ -497,8 +497,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			if localFS, ok := nbrew.FS.(*LocalFS); ok {
-				absolutePath = path.Join(localFS.RootDir, sitePrefix, response.FilePath)
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}

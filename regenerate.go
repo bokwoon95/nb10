@@ -406,8 +406,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					return err
 				}
 				var absolutePath string
-				if localFS, ok := nbrew.FS.(*LocalFS); ok {
-					absolutePath = path.Join(localFS.RootDir, sitePrefix, filePath)
+				if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
 				err = siteGen.GeneratePost(subctxB, filePath, b.String(), creationTime, postTemplate)

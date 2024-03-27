@@ -505,8 +505,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						creationTime = fileInfo.CreationTime
 					} else {
 						var absolutePath string
-						if localFS, ok := nbrew.FS.(*LocalFS); ok {
-							absolutePath = path.Join(localFS.RootDir, sitePrefix, parentPost)
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPost)
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}

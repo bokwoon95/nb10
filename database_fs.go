@@ -1642,12 +1642,12 @@ func (storage *InMemoryObjectStorage) Copy(ctx context.Context, srcKey, destKey 
 	return nil
 }
 
-type LocalObjectStorage struct {
+type DirObjectStorage struct {
 	RootDir string
 	TempDir string
 }
 
-func NewLocalObjectStorage(rootDir, tempDir string) (*LocalObjectStorage, error) {
+func NewDirObjectStorage(rootDir, tempDir string) (*DirObjectStorage, error) {
 	var err error
 	rootDir, err = filepath.Abs(filepath.FromSlash(rootDir))
 	if err != nil {
@@ -1657,14 +1657,14 @@ func NewLocalObjectStorage(rootDir, tempDir string) (*LocalObjectStorage, error)
 	if err != nil {
 		return nil, err
 	}
-	localStorage := &LocalObjectStorage{
+	localStorage := &DirObjectStorage{
 		RootDir: filepath.FromSlash(rootDir),
 		TempDir: filepath.FromSlash(tempDir),
 	}
 	return localStorage, nil
 }
 
-func (storage *LocalObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+func (storage *DirObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	err := ctx.Err()
 	if err != nil {
 		return nil, err
@@ -1682,7 +1682,7 @@ func (storage *LocalObjectStorage) Get(ctx context.Context, key string) (io.Read
 	return file, nil
 }
 
-func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
+func (storage *DirObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -1752,7 +1752,7 @@ func (storage *LocalObjectStorage) Put(ctx context.Context, key string, reader i
 	return nil
 }
 
-func (storage *LocalObjectStorage) Delete(ctx context.Context, key string) error {
+func (storage *DirObjectStorage) Delete(ctx context.Context, key string) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -1767,7 +1767,7 @@ func (storage *LocalObjectStorage) Delete(ctx context.Context, key string) error
 	return nil
 }
 
-func (storage *LocalObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
+func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
 	err := ctx.Err()
 	if err != nil {
 		return err

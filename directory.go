@@ -180,8 +180,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		response.CreationTime = fileInfo.CreationTime
 	} else {
 		var absolutePath string
-		if localFS, ok := nbrew.FS.(*LocalFS); ok {
-			absolutePath = path.Join(localFS.RootDir, response.SitePrefix, response.FilePath)
+		if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 		}
 		response.CreationTime = CreationTime(absolutePath, fileInfo)
 	}
@@ -287,8 +287,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 			name := fileInfo.Name()
 			var absolutePath string
-			if localFS, ok := nbrew.FS.(*LocalFS); ok {
-				absolutePath = path.Join(localFS.RootDir, sitePrefix, filePath, name)
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath, name)
 			}
 			file := File{
 				Name:         name,

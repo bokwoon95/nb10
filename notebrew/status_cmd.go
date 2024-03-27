@@ -178,7 +178,7 @@ func (cmd *StatusCmd) Run() error {
 				}
 				if decodeError != nil {
 					fmt.Fprintf(cmd.Stdout, "objects       = <error: %s: %s>\n", filepath.Join(cmd.ConfigDir, "objects.json"), err)
-				} else if objectsConfig.Provider == "" || objectsConfig.Provider == "local" {
+				} else if objectsConfig.Provider == "" || objectsConfig.Provider == "directory" {
 					var filePath string
 					if objectsConfig.FilePath == "" {
 						filePath = filepath.Join(dataHomeDir, "notebrew-objects")

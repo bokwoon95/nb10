@@ -189,8 +189,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				return
 			}
 			var absolutePath string
-			if localFS, ok := nbrew.FS.(*LocalFS); ok {
-				absolutePath = path.Join(localFS.RootDir, sitePrefix, name)
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, name)
 			}
 			response.Files = append(response.Files, File{
 				Name:         name,

@@ -776,8 +776,8 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						creationTime = fileInfo.CreationTime
 					} else {
 						var absolutePath string
-						if localFS, ok := nbrew.FS.(*LocalFS); ok {
-							absolutePath = path.Join(localFS.RootDir, sitePrefix, filePath)
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}

@@ -596,7 +596,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			nbrew.FS, err = nb10.NewLocalFS(nb10.LocalFSConfig{
+			nbrew.FS, err = nb10.NewDirFS(nb10.DirFSConfig{
 				RootDir: filesConfig.FilePath,
 				TempDir: os.TempDir(),
 			})
@@ -799,7 +799,7 @@ func main() {
 				}
 			}
 			switch objectsConfig.Provider {
-			case "", "local":
+			case "", "directory":
 				if objectsConfig.FilePath == "" {
 					objectsConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-objects")
 				} else {
@@ -809,7 +809,7 @@ func main() {
 				if err != nil {
 					return err
 				}
-				objectStorage, err = nb10.NewLocalObjectStorage(objectsConfig.FilePath, os.TempDir())
+				objectStorage, err = nb10.NewDirObjectStorage(objectsConfig.FilePath, os.TempDir())
 				if err != nil {
 					return err
 				}
@@ -847,7 +847,7 @@ func main() {
 					return err
 				}
 			default:
-				return fmt.Errorf("%s: unsupported provider %q (possible values: local, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
+				return fmt.Errorf("%s: unsupported provider %q (possible values: directory, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
 			}
 			nbrew.FS, err = nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
 				DB:            db,
