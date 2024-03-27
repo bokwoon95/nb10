@@ -361,6 +361,36 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		scheme = "http"
 	}
 
+	// TODO: fetch both the pinned files and files concurrently?
+	response.PinnedFiles, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+		Dialect: databaseFS.Dialect,
+		Format: "SELECT {*}" +
+			" FROM pinned_file" +
+			" JOIN files ON files.file_id = pinned_file.file_id" +
+			" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+			" ORDER BY pinned_file.creation_time, pinned_file.file_id",
+		Values: []any{
+			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+		},
+	}, func(row *sq.Row) File {
+		return File{
+			FileID:       row.UUID("files.file_id"),
+			Name:         path.Base(row.String("files.file_path")),
+			Size:         row.Int64("files.size"),
+			ModTime:      row.Time("files.mod_time"),
+			CreationTime: row.Time("files.creation_time"),
+			IsDir:        row.Bool("files.is_dir"),
+		}
+	})
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		nbrew.internalServerError(w, r, err)
+		return
+	}
+	if response.PinnedFiles == nil {
+		response.PinnedFiles = []File{}
+	}
+
 	if response.Sort == "name" {
 		response.From = r.Form.Get("from")
 		if response.From != "" {
