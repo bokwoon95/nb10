@@ -313,7 +313,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		if !isEditable {
-			serveFile(w, r, file, fileInfo, fileType, "no-store")
+			serveFile(w, r, file, fileInfo, fileType, "no-cache")
 			return
 		}
 

@@ -332,7 +332,6 @@
           </div>
         </div>
         <div class='flex-grow-1'></div>
-        {{- if or (ne (head $.FilePath) "posts") $file.IsDir (ne $file.Name "postlist.json") }}
         <details class='relative ml1' data-autoclose-details>
           <summary role='button' title='more actions' class='flex items-center button ba br2 b--black h2 hide-marker ph2' data-disable-click-selection>
             {{ template "heroicons-ellipsis-horizontal" }}
@@ -351,7 +350,6 @@
           {{- end }}
           </div>
         </details>
-        {{- end }}
       </label>
     </li>
     {{- end }}

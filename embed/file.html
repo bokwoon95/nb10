@@ -338,9 +338,8 @@
         <pre class='pre-wrap break-word'>&lt;script src='my-file-name.js'&gt;&lt;/script&gt;</pre>
       </li>
       <li>
-        <p>Include Markdown files with the <code>{{ "{{" }} index $.Markdown "my-file-name.md" {{ "}}" }}</code> template action.</p>
-        <pre class='pre-wrap break-word'>{{ "{{" }} index $.Markdown "my-file-name.md" {{ "}}" }}
-&lt;!-- renders the contents of "my-file-name.md" as HTML --&gt;</pre>
+        <p>Include Markdown files with the <code>{{ "{{" }} index $.Markdown "my-file-name.md" {{ "}}" }}</code> template action. This renders the contents of the markdown file as HTML.</p>
+        <pre class='pre-wrap break-word'>{{ "{{" }} index $.Markdown "my-file-name.md" {{ "}}" }}</pre>
       </li>
     </ul>
   </details>

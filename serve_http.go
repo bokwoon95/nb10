@@ -524,7 +524,7 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	if databaseFile, ok := file.(*DatabaseFile); ok {
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Cache-Control", "no-cache")
 		w.WriteHeader(http.StatusNotFound)
 		_, err := io.Copy(w, bytes.NewReader(databaseFile.buf.Bytes()))
 		if err != nil {
@@ -540,7 +540,7 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	}()
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(http.StatusNotFound)
 	_, err = io.Copy(gzipWriter, file)
 	if err != nil {
