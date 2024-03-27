@@ -54,6 +54,9 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
+		if response.PinnedFiles == nil {
+			response.PinnedFiles = []File{}
+		}
 		if response.Files == nil {
 			response.Files = []File{}
 		}
@@ -386,9 +389,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		getLogger(r.Context()).Error(err.Error())
 		nbrew.internalServerError(w, r, err)
 		return
-	}
-	if response.PinnedFiles == nil {
-		response.PinnedFiles = []File{}
 	}
 
 	if response.Sort == "name" {
