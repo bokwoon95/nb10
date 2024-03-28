@@ -45,7 +45,6 @@ TODO: add output/posts and output/themes to the list of privileged file which ca
 BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
 BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 BUG: renaming posts should rightfully trigger a postlist regeneration because the link has changed.
-TODO: rename DirFS to DirFS, just like in the stdlib.
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
