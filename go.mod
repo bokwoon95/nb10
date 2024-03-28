@@ -15,6 +15,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.7
 	github.com/libdns/cloudflare v0.1.0
 	github.com/libdns/godaddy v1.0.3
+	github.com/libdns/libdns v0.2.1
 	github.com/libdns/namecheap v0.0.0-20211109042440-fc7440785c8e
 	github.com/libdns/porkbun v0.1.2
 	github.com/mattn/go-sqlite3 v1.14.16
@@ -49,7 +50,6 @@ require (
 	github.com/jackc/pgproto3/v2 v2.3.2 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
-	github.com/libdns/libdns v0.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
