@@ -36,7 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: set content encoding of *ALL* json responses to UTF-8.
 TODO: file.html: add size and date next to file name
 TODO: image.html: add date next to
 TODO: sqddl: change sqlite newSQLiteMigration to move the if dropObjects check *much* later -- calculate all the columns/indexes/constraints that need to be added or removed first, then at the end depending on whether dropObjects is enabled we append the alter table command. ALTER TABLE is safe in SQLite if we are only adding or dropping columns! In particular we are focusing on use cases where only columns are added, which is getting shafted by the early check to dropObjects.
