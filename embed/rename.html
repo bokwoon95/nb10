@@ -40,7 +40,7 @@
     <div class='b'>Old Name:</div>
     <div class='flex items-center'>
       {{ if $.Prefix }}<span class='mr2'>{{ $.Prefix }}</span>{{ end }}
-      <input value='{{ $.From }}' class='pv1 ph2 br2 ba w-100 bg-near-white' disabled>
+      <input value='{{ trimPrefix $.From $.Prefix }}' class='pv1 ph2 br2 ba w-100 bg-near-white' disabled>
       {{ if $.Ext }}<span class='ml2'>{{ $.Ext }}<span>{{ end }}
     </div>
   </div>
