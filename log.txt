@@ -72,7 +72,7 @@ BUG: why is my html lang=''? I thought the default was "en"?
 BUG: why does creating a new site keep saying unavailable but then creates everything under the hood correctly? investigate.
 BUG: why does initially creating a site result in an invalid title and site description?
 BUG: creating a note with "60%" in the title seems to make the redirect do wonky things (it's still created, but the user is presented with some HTTP (??) error).
-BUG: pasting an image from themes into 404.html seems to lead to a broken file preview (the file is still there, and can be deleted, but it's being fetched as ".jpg" for some reason).
+BUG: pasting an image from themes into 404.html seems to lead to a broken file preview (the file is still there, and can be deleted, but it's being fetched as ".jpg" for some reason) (only if imgdomain is set).
 
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
