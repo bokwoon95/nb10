@@ -44,6 +44,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		IsDir             bool              `json:"isDir"`
 		ModTime           time.Time         `json:"modTime"`
 		CreationTime      time.Time         `json:"creationTime"`
+		Size              int64             `json:"size"`
 		Content           string            `json:"content"`
 		URL               template.URL      `json:"url,omitempty"`
 		BelongsTo         string            `json:"belongsTo"`
@@ -133,6 +134,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
+		response.Size = fileInfo.Size()
 		response.ImgDomain = nbrew.ImgDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 
