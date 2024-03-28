@@ -1,8 +1,8 @@
 schema.go
 id.go
 fs.go
-fs_local.go
-fs_remote.go
+fs_dir.go
+fs_database.go
 creation_time.go
 creation_time_darwin.go
 creation_time_linux.go
