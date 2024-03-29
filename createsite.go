@@ -81,7 +81,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				}
 				return
 			}
-			referer := getReferer(r)
+			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
 				"hasPrefix":  strings.HasPrefix,

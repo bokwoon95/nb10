@@ -81,7 +81,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			}
 			return
 		}
-		referer := getReferer(r)
+		referer := nbrew.getReferer(r)
 		extMap := make(map[string]struct{})
 		for _, ext := range response.Exts {
 			extMap[ext] = struct{}{}

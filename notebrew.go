@@ -184,7 +184,7 @@ func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name s
 	cookie := &http.Cookie{
 		Path:     "/",
 		Name:     name,
-		Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+		Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
@@ -279,7 +279,7 @@ func (nbrew *Notebrew) clearSession(w http.ResponseWriter, r *http.Request, name
 		Name:     name,
 		Value:    "0",
 		MaxAge:   -1,
-		Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+		Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -489,7 +489,7 @@ func (nbrew *Notebrew) contentBaseURL(sitePrefix string) string {
 	return "https://" + nbrew.ContentDomain
 }
 
-func getReferer(r *http.Request) string {
+func (nbrew *Notebrew) getReferer(r *http.Request) string {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer
 	//
 	// "The Referer header can contain an origin, path, and querystring, and
@@ -670,7 +670,7 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 		byline = "You do not have permission to perform that action (try logging in to a different account)."
 	}
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  getReferer(r),
+		"Referer":  nbrew.getReferer(r),
 		"Title":    "403 forbidden",
 		"Headline": "403 forbidden",
 		"Byline":   byline,
@@ -707,7 +707,7 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  getReferer(r),
+		"Referer":  nbrew.getReferer(r),
 		"Title":    "404 not found",
 		"Headline": "404 not found",
 		"Byline":   "The page you are looking for does not exist.",
@@ -745,7 +745,7 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  getReferer(r),
+		"Referer":  nbrew.getReferer(r),
 		"Title":    "405 method not allowed",
 		"Headline": "405 method not allowed: " + r.Method,
 	})
@@ -789,7 +789,7 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  getReferer(r),
+		"Referer":  nbrew.getReferer(r),
 		"Title":    "415 unsupported media type",
 		"Headline": message,
 	})
@@ -828,13 +828,13 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	var data map[string]any
 	if errors.Is(serverErr, context.DeadlineExceeded) {
 		data = map[string]any{
-			"Referer":  getReferer(r),
+			"Referer":  nbrew.getReferer(r),
 			"Title":    "deadline exceeded",
 			"Headline": "The server took too long to process your request.",
 		}
 	} else {
 		data = map[string]any{
-			"Referer":  getReferer(r),
+			"Referer":  nbrew.getReferer(r),
 			"Title":    "500 internal server error",
 			"Headline": "500 internal server error",
 			"Byline":   "There's a bug with notebrew.",

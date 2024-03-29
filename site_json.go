@@ -105,7 +105,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				}
 				return
 			}
-			referer := getReferer(r)
+			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":                  path.Join,
 				"base":                  path.Base,

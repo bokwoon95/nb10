@@ -71,7 +71,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			Name:     "clipboard",
 			Value:    clipboard.Encode(),
 			MaxAge:   int(time.Hour.Seconds()),
-			Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+			Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})
@@ -82,7 +82,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			Name:     "clipboard",
 			Value:    "0",
 			MaxAge:   -1,
-			Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+			Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})
@@ -117,7 +117,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						Name:     "clipboard",
 						Value:    clipboard.Encode(),
 						MaxAge:   int(time.Hour.Seconds()),
-						Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+						Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 						HttpOnly: true,
 						SameSite: http.SameSiteLaxMode,
 					})
@@ -127,7 +127,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						Name:     "clipboard",
 						Value:    "0",
 						MaxAge:   -1,
-						Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+						Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 						HttpOnly: true,
 						SameSite: http.SameSiteLaxMode,
 					})

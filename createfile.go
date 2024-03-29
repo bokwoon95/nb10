@@ -88,7 +88,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				}
 				return
 			}
-			referer := getReferer(r)
+			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
 				"base":       path.Base,

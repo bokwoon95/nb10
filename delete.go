@@ -74,7 +74,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				}
 				return
 			}
-			referer := getReferer(r)
+			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
 				"ext":        path.Ext,

@@ -62,7 +62,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			}
 			return
 		}
-		referer := getReferer(r)
+		referer := nbrew.getReferer(r)
 		clipboard := make(url.Values)
 		isInClipboard := make(map[string]bool)
 		cookie, _ := r.Cookie("clipboard")

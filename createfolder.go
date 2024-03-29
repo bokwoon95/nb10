@@ -73,7 +73,7 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 				}
 				return
 			}
-			referer := getReferer(r)
+			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
 				"base":       path.Base,

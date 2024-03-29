@@ -337,7 +337,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			return
 		}
 
-		referer := getReferer(r)
+		referer := nbrew.getReferer(r)
 		clipboard := make(url.Values)
 		isInClipboard := make(map[string]bool)
 		cookie, _ := r.Cookie("clipboard")

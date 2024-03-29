@@ -70,7 +70,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 			return
 		}
-		referer := getReferer(r)
+		referer := nbrew.getReferer(r)
 		clipboard := make(url.Values)
 		isInClipboard := make(map[string]bool)
 		cookie, _ := r.Cookie("clipboard")
@@ -213,7 +213,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "sort",
 				Value:    "0",
 				MaxAge:   -1,
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -223,7 +223,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "sort",
 				Value:    response.Sort,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -253,7 +253,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "order",
 				Value:    "0",
 				MaxAge:   -1,
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -263,7 +263,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "order",
 				Value:    response.Order,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:"),
+				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
