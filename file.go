@@ -31,6 +31,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
 		Size         int64     `json:"size"`
+		Content      string    `json:"content"`
+		AltText      string    `json:"altText"`
 	}
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
@@ -186,12 +188,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						Size:         row.Int64("size"),
 						ModTime:      row.Time("mod_time"),
 						CreationTime: row.Time("creation_time"),
+						Content:      strings.TrimSpace(row.String("text")),
 					}
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.internalServerError(w, r, err)
 					return
+				}
+				for i := range response.Assets {
+					asset := &response.Assets[i]
+					if strings.HasPrefix(asset.Content, "!alt ") {
+						altText, _, _ := strings.Cut(asset.Content, "\n")
+						asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+					}
 				}
 			} else {
 				dirEntries, err := nbrew.FS.ReadDir(path.Join(sitePrefix, response.AssetDir))
@@ -254,12 +264,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						Size:         row.Int64("size"),
 						ModTime:      row.Time("mod_time"),
 						CreationTime: row.Time("creation_time"),
+						Content:      strings.TrimSpace(row.String("text")),
 					}
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.internalServerError(w, r, err)
 					return
+				}
+				for i := range response.Assets {
+					asset := &response.Assets[i]
+					if strings.HasPrefix(asset.Content, "!alt ") {
+						altText, _, _ := strings.Cut(asset.Content, "\n")
+						asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+					}
 				}
 			} else {
 				dirEntries, err := nbrew.FS.ReadDir(path.Join(sitePrefix, response.AssetDir))

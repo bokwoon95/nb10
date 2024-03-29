@@ -382,9 +382,9 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
             <div class='flex flex-wrap break-word items-center'>
               {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
-                <img src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
+                <img alt='{{ $asset.AltText }}' src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
                 {{- else }}
-                <img src='/{{ join "files" $.SitePrefix $.FilePath $asset.Name }}?raw' class='h3 w3 mr1'>
+                <img alt='{{ $asset.AltText }}' src='/{{ join "files" $.SitePrefix $.FilePath $asset.Name }}?raw' class='h3 w3 mr1'>
                 {{- end }}
               {{- end }}
               <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='flex-wrap'>{{ $asset.Name }}</a>
@@ -392,11 +392,9 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
               <span class='ml2 f6 mid-gray'>{{ $asset.CreationTime.Format "2006-01-02" }}</span>
               <span class='flex-grow-1'></span>
             </div>
-            <!-- <pre class='ma0 pre-wrap break-word'>Lorem ipsum</pre> -->
-            <!-- <pre class='ma0 pre-wrap break-word'>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</pre> -->
-            <!-- <pre class='ma0 pre-wrap break-word'>!alt this is the sun -->
-<!-- # and this is the caption :)) -->
-<!-- [bottom text](https://google.com)</pre> -->
+            {{- if $asset.Content }}
+            <pre class='ma0 pre-wrap break-word'>{{ $asset.Content }}</pre>
+            {{- end }}
           </div>
           <div class='flex-grow-1'></div>
           <details class='relative ml1' data-autoclose-details>
