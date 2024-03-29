@@ -71,7 +71,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			Name:     "clipboard",
 			Value:    clipboard.Encode(),
 			MaxAge:   int(time.Hour.Seconds()),
-			Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+			Secure:   r.TLS != nil,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})
@@ -82,7 +82,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			Name:     "clipboard",
 			Value:    "0",
 			MaxAge:   -1,
-			Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+			Secure:   r.TLS != nil,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})
@@ -117,7 +117,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						Name:     "clipboard",
 						Value:    clipboard.Encode(),
 						MaxAge:   int(time.Hour.Seconds()),
-						Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+						Secure:   r.TLS != nil,
 						HttpOnly: true,
 						SameSite: http.SameSiteLaxMode,
 					})
@@ -127,7 +127,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						Name:     "clipboard",
 						Value:    "0",
 						MaxAge:   -1,
-						Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+						Secure:   r.TLS != nil,
 						HttpOnly: true,
 						SameSite: http.SameSiteLaxMode,
 					})
@@ -554,7 +554,13 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		close(pastedCh)
 		if srcHead == "posts" && destHead == "posts" {
 			func() {
-				srcSiteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, response.SrcSitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+				srcSiteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+					FS:                 nbrew.FS,
+					ContentDomain:      nbrew.ContentDomain,
+					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+					ImgDomain:          nbrew.ImgDomain,
+					SitePrefix:         response.SrcSitePrefix,
+				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					return
@@ -576,7 +582,13 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				}
 				destSiteGen := srcSiteGen
 				if response.SrcSitePrefix != response.DestSitePrefix {
-					destSiteGen, err = NewSiteGenerator(r.Context(), nbrew.FS, response.DestSitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+					destSiteGen, err = NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+						FS:                 nbrew.FS,
+						ContentDomain:      nbrew.ContentDomain,
+						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+						ImgDomain:          nbrew.ImgDomain,
+						SitePrefix:         response.DestSitePrefix,
+					})
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
 						return

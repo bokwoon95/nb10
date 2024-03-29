@@ -370,6 +370,14 @@ func main() {
 		if err1 != nil && nbrew.DNSProvider != nil {
 			nbrew.Domains = append(nbrew.Domains, "*."+nbrew.ContentDomain)
 		}
+		nbrew.CMSDomainHTTPS = true
+		if strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 || err1 == nil {
+			nbrew.CMSDomainHTTPS = false
+		}
+		nbrew.ContentDomainHTTPS = true
+		if strings.HasPrefix(nbrew.ContentDomain, "localhost:") || (nbrew.ContentDomain == nbrew.CMSDomain && nbrew.Port == 80) || err2 == nil {
+			nbrew.ContentDomainHTTPS = false
+		}
 		if nbrew.Port == 443 || nbrew.Port == 80 {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -919,7 +927,13 @@ func main() {
 				return err
 			}
 		}
-		siteGen, err := nb10.NewSiteGenerator(context.Background(), nbrew.FS, "", nbrew.ContentDomain, nbrew.ImgDomain)
+		siteGen, err := nb10.NewSiteGenerator(context.Background(), nb10.SiteGeneratorConfig{
+			FS:                 nbrew.FS,
+			ContentDomain:      nbrew.ContentDomain,
+			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+			ImgDomain:          nbrew.ImgDomain,
+			SitePrefix:         "",
+		})
 		if err != nil {
 			return err
 		}
@@ -1343,7 +1357,11 @@ func main() {
 			server.Addr = ":80"
 			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
 		default:
-			server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
+			if len(nbrew.ProxyConfig.RealIPHeaders) == 0 && len(nbrew.ProxyConfig.ProxyIPs) == 0 {
+				server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
+			} else {
+				server.Addr = ":" + strconv.Itoa(nbrew.Port)
+			}
 			server.Handler = nbrew
 		}
 
@@ -1361,8 +1379,8 @@ func main() {
 			// To avoid importing an entire 3rd party library just to use a constant.
 			const WSAEADDRINUSE = syscall.Errno(10048)
 			if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
-				if server.Addr == "localhost" || strings.HasPrefix(server.Addr, "localhost:") {
-					fmt.Println("notebrew is already running on http://" + server.Addr + "/files/")
+				if !nbrew.CMSDomainHTTPS {
+					fmt.Println("notebrew is already running on http://" + nbrew.CMSDomain + "/files/")
 					open("http://" + server.Addr + "/files/")
 					return nil
 				}
@@ -1404,8 +1422,8 @@ func main() {
 					close(wait)
 				}
 			}()
-			if server.Addr == "localhost" || strings.HasPrefix(server.Addr, "localhost:") {
-				fmt.Printf(startmsg, "http://"+server.Addr+"/files/")
+			if !nbrew.CMSDomainHTTPS {
+				fmt.Printf(startmsg, "http://"+nbrew.CMSDomain+"/files/")
 				open("http://" + server.Addr + "/files/")
 			} else {
 				fmt.Printf(startmsg, server.Addr)

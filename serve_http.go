@@ -25,7 +25,7 @@ import (
 
 func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	scheme := "https://"
-	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 {
+	if r.TLS == nil {
 		scheme = "http://"
 	}
 
@@ -78,7 +78,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Cross-Origin-Opener-Policy", "same-origin")
 	w.Header().Add("Cross-Origin-Embedder-Policy", "credentialless")
 	w.Header().Add("Cross-Origin-Resource-Policy", "cross-origin")
-	if nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") {
+	if r.TLS != nil {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 	}
 

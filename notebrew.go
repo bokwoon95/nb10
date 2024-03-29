@@ -87,7 +87,11 @@ func init() {
 type Notebrew struct {
 	CMSDomain string // localhost:6444, example.com
 
+	CMSDomainHTTPS bool
+
 	ContentDomain string // localhost:6444, example.com
+
+	ContentDomainHTTPS bool
 
 	ImgDomain string
 
@@ -184,7 +188,7 @@ func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name s
 	cookie := &http.Cookie{
 		Path:     "/",
 		Name:     name,
-		Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+		Secure:   r.TLS != nil,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
@@ -279,7 +283,7 @@ func (nbrew *Notebrew) clearSession(w http.ResponseWriter, r *http.Request, name
 		Name:     name,
 		Value:    "0",
 		MaxAge:   -1,
-		Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+		Secure:   r.TLS != nil,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
@@ -477,16 +481,16 @@ func (nbrew *Notebrew) contentBaseURL(sitePrefix string) string {
 	if strings.Contains(sitePrefix, ".") {
 		return "https://" + sitePrefix
 	}
-	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 {
+	if nbrew.CMSDomainHTTPS {
 		if sitePrefix != "" {
-			return "http://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.CMSDomain
+			return "https://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.ContentDomain
 		}
-		return "http://" + nbrew.CMSDomain
+		return "https://" + nbrew.ContentDomain
 	}
 	if sitePrefix != "" {
-		return "https://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.ContentDomain
+		return "http://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.CMSDomain
 	}
-	return "https://" + nbrew.ContentDomain
+	return "http://" + nbrew.CMSDomain
 }
 
 func (nbrew *Notebrew) getReferer(r *http.Request) string {
@@ -497,7 +501,7 @@ func (nbrew *Notebrew) getReferer(r *http.Request) string {
 	// information."
 	referer := r.Referer()
 	uri := *r.URL
-	if r.Host == "localhost" || strings.HasPrefix(r.Host, "localhost:") {
+	if r.TLS == nil {
 		uri.Scheme = "http"
 	} else {
 		uri.Scheme = "https"

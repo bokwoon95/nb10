@@ -199,7 +199,13 @@ func (cmd *CreatesiteCmd) Run() error {
 				return err
 			}
 		}
-		siteGen, err := nb10.NewSiteGenerator(context.Background(), cmd.Notebrew.FS, sitePrefix, cmd.Notebrew.ContentDomain, cmd.Notebrew.ImgDomain)
+		siteGen, err := nb10.NewSiteGenerator(context.Background(), nb10.SiteGeneratorConfig{
+			FS:                 cmd.Notebrew.FS,
+			ContentDomain:      cmd.Notebrew.ContentDomain,
+			ContentDomainHTTPS: cmd.Notebrew.ContentDomainHTTPS,
+			ImgDomain:          cmd.Notebrew.ImgDomain,
+			SitePrefix:         sitePrefix,
+		})
 		if err != nil {
 			return err
 		}

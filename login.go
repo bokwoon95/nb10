@@ -287,7 +287,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				Path:     "/",
 				Name:     "authentication",
 				Value:    response.AuthenticationToken,
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+				Secure:   r.TLS != nil,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),

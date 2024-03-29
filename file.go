@@ -725,7 +725,13 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 
 		switch head {
 		case "pages":
-			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+				FS:                 nbrew.FS,
+				ContentDomain:      nbrew.ContentDomain,
+				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+				ImgDomain:          nbrew.ImgDomain,
+				SitePrefix:         sitePrefix,
+			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
@@ -743,7 +749,13 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 			response.RegenerationStats.Count = 1
 		case "posts":
-			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+				FS:                 nbrew.FS,
+				ContentDomain:      nbrew.ContentDomain,
+				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+				ImgDomain:          nbrew.ImgDomain,
+				SitePrefix:         sitePrefix,
+			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)

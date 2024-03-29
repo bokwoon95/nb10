@@ -121,19 +121,26 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	case "notes":
 		break
 	case "pages":
-		siteGen, err = NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+		siteGen, err = NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+			FS:                 nbrew.FS,
+			ContentDomain:      nbrew.ContentDomain,
+			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+			ImgDomain:          nbrew.ImgDomain,
+			SitePrefix:         sitePrefix,
+		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
 			return
 		}
 	case "posts":
-		siteGen, err = NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
+		siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+			FS:                 nbrew.FS,
+			ContentDomain:      nbrew.ContentDomain,
+			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+			ImgDomain:          nbrew.ImgDomain,
+			SitePrefix:         sitePrefix,
+		})
 		category := tail
 		postTemplate, err = siteGen.PostTemplate(r.Context(), category)
 		if err != nil {

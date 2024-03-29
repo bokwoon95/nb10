@@ -39,7 +39,9 @@ type SiteGenerator struct {
 	fsys               FS
 	sitePrefix         string
 	contentDomain      string
+	contentDomainHTTPS bool
 	imgDomain          string
+	port               int
 	markdown           goldmark.Markdown
 	mu                 sync.Mutex
 	templateCache      map[string]*template.Template
@@ -60,12 +62,21 @@ type Site struct {
 	NavigationLinks []NavigationLink
 }
 
-func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, imgDomain string) (*SiteGenerator, error) {
+type SiteGeneratorConfig struct {
+	FS                 FS
+	ContentDomain      string
+	ContentDomainHTTPS bool
+	ImgDomain          string
+	SitePrefix         string
+}
+
+func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*SiteGenerator, error) {
 	siteGen := &SiteGenerator{
-		fsys:               fsys,
-		sitePrefix:         sitePrefix,
-		contentDomain:      contentDomain,
-		imgDomain:          imgDomain,
+		fsys:               siteGenConfig.FS,
+		sitePrefix:         siteGenConfig.SitePrefix,
+		contentDomain:      siteGenConfig.ContentDomain,
+		contentDomainHTTPS: siteGenConfig.ContentDomainHTTPS,
+		imgDomain:          siteGenConfig.ImgDomain,
 		mu:                 sync.Mutex{},
 		templateCache:      make(map[string]*template.Template),
 		templateInProgress: make(map[string]chan struct{}),
@@ -79,7 +90,7 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 		Description     string
 		NavigationLinks []NavigationLink
 	}
-	b, err := fs.ReadFile(fsys, path.Join(sitePrefix, "site.json"))
+	b, err := fs.ReadFile(siteGen.fsys, path.Join(siteGen.sitePrefix, "site.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
@@ -93,13 +104,13 @@ func NewSiteGenerator(ctx context.Context, fsys FS, sitePrefix, contentDomain, i
 		config.Emoji = "☕"
 		config.CodeStyle = "onedark"
 		var home string
-		siteName := strings.TrimPrefix(sitePrefix, "@")
+		siteName := strings.TrimPrefix(siteGen.sitePrefix, "@")
 		if siteName == "" {
 			home = "home"
 		} else if strings.Contains(siteName, ".") {
 			home = siteName
 		} else {
-			home = siteName + "." + contentDomain
+			home = siteName + "." + siteGen.contentDomain
 		}
 		config.NavigationLinks = []NavigationLink{
 			{Name: home, URL: "/"},
@@ -1586,7 +1597,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			if strings.Contains(siteGen.sitePrefix, ".") {
 				contentDomain = siteGen.sitePrefix
 			} else {
-				if siteGen.contentDomain == "localhost" || strings.HasPrefix(siteGen.contentDomain, "localhost:") {
+				if !siteGen.contentDomainHTTPS {
 					scheme = "http://"
 				}
 				if siteGen.sitePrefix != "" {

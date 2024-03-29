@@ -442,7 +442,13 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+				FS:                 nbrew.FS,
+				ContentDomain:      nbrew.ContentDomain,
+				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+				ImgDomain:          nbrew.ImgDomain,
+				SitePrefix:         sitePrefix,
+			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
@@ -510,7 +516,13 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
-					siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+					siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+						FS:                 nbrew.FS,
+						ContentDomain:      nbrew.ContentDomain,
+						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+						ImgDomain:          nbrew.ImgDomain,
+						SitePrefix:         sitePrefix,
+					})
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
 						nbrew.internalServerError(w, r, err)
@@ -573,7 +585,13 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						nbrew.internalServerError(w, r, err)
 						return
 					}
-					siteGen, err := NewSiteGenerator(r.Context(), nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+					siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+						FS:                 nbrew.FS,
+						ContentDomain:      nbrew.ContentDomain,
+						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+						ImgDomain:          nbrew.ImgDomain,
+						SitePrefix:         sitePrefix,
+					})
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
 						nbrew.internalServerError(w, r, err)

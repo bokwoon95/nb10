@@ -2,20 +2,25 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bokwoon95/nb10"
+	"github.com/caddyserver/certmagic"
+	"github.com/klauspost/cpuid/v2"
 )
 
 type StartCmd struct {
@@ -51,10 +56,109 @@ func (cmd *StartCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	server, err := NewServer(cmd.Notebrew, cmd.ConfigDir)
-	if err != nil {
-		return err
+	var server http.Server
+	switch cmd.Notebrew.Port {
+	case 443:
+		server.Addr = ":443"
+		server.Handler = http.TimeoutHandler(cmd.Notebrew, 60*time.Second, "The server took too long to process your request.")
+		server.ReadTimeout = 60 * time.Second
+		server.WriteTimeout = 60 * time.Second
+		server.IdleTimeout = 120 * time.Second
+		staticCertConfig := certmagic.NewDefault()
+		staticCertConfig.Storage = cmd.Notebrew.CertStorage
+		if cmd.Notebrew.DNSProvider != nil {
+			staticCertConfig.Issuers = []certmagic.Issuer{
+				certmagic.NewACMEIssuer(staticCertConfig, certmagic.ACMEIssuer{
+					CA:        certmagic.DefaultACME.CA,
+					TestCA:    certmagic.DefaultACME.TestCA,
+					Logger:    certmagic.DefaultACME.Logger,
+					HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+					DNS01Solver: &certmagic.DNS01Solver{
+						DNSProvider: cmd.Notebrew.DNSProvider,
+					},
+				}),
+			}
+		} else {
+			staticCertConfig.Issuers = []certmagic.Issuer{
+				certmagic.NewACMEIssuer(staticCertConfig, certmagic.ACMEIssuer{
+					CA:        certmagic.DefaultACME.CA,
+					TestCA:    certmagic.DefaultACME.TestCA,
+					Logger:    certmagic.DefaultACME.Logger,
+					HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+				}),
+			}
+		}
+		err := staticCertConfig.ManageSync(context.Background(), cmd.Notebrew.ManagingDomains)
+		if err != nil {
+			return err
+		}
+		dynamicCertConfig := certmagic.NewDefault()
+		dynamicCertConfig.Storage = cmd.Notebrew.CertStorage
+		dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
+			DecisionFunc: func(ctx context.Context, name string) error {
+				if certmagic.MatchWildcard(name, "*."+cmd.Notebrew.ContentDomain) {
+					return nil
+				}
+				fileInfo, err := fs.Stat(cmd.Notebrew.FS.WithContext(ctx), name)
+				if err != nil {
+					return err
+				}
+				if !fileInfo.IsDir() {
+					return fmt.Errorf("%q is not a directory", name)
+				}
+				return nil
+			},
+		}
+		server.TLSConfig = &tls.Config{
+			NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
+			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				if clientHello.ServerName == "" {
+					return nil, fmt.Errorf("server name required")
+				}
+				for _, domain := range cmd.Notebrew.ManagingDomains {
+					if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+						return staticCertConfig.GetCertificate(clientHello)
+					}
+				}
+				return dynamicCertConfig.GetCertificate(clientHello)
+			},
+			MinVersion: tls.VersionTLS12,
+			CurvePreferences: []tls.CurveID{
+				tls.X25519,
+				tls.CurveP256,
+			},
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			},
+			PreferServerCipherSuites: true,
+		}
+		if cpuid.CPU.Supports(cpuid.AESNI) {
+			server.TLSConfig.CipherSuites = []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			}
+		}
+	case 80:
+		server.Addr = ":80"
+		server.Handler = http.TimeoutHandler(cmd.Notebrew, 60*time.Second, "The server took too long to process your request.")
+	default:
+		if len(cmd.Notebrew.ProxyConfig.RealIPHeaders) == 0 && len(cmd.Notebrew.ProxyConfig.ProxyIPs) == 0 {
+			server.Addr = "localhost:" + strconv.Itoa(cmd.Notebrew.Port)
+		} else {
+			server.Addr = ":" + strconv.Itoa(cmd.Notebrew.Port)
+		}
+		server.Handler = cmd.Notebrew
 	}
+
 	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		var errno syscall.Errno
@@ -65,8 +169,8 @@ func (cmd *StartCmd) Run() error {
 		// https://cs.opensource.google/go/x/sys/+/refs/tags/v0.6.0:windows/zerrors_windows.go;l=2680
 		const WSAEADDRINUSE = syscall.Errno(10048)
 		if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
-			if server.Addr == "localhost" || strings.HasPrefix(server.Addr, "localhost:") {
-				fmt.Fprintln(cmd.Stdout, "notebrew is already running on http://" + server.Addr + "/files/")
+			if !cmd.Notebrew.CMSDomainHTTPS {
+				fmt.Fprintln(cmd.Stdout, "notebrew is already running on http://"+cmd.Notebrew.CMSDomain+"/files/")
 				return nil
 			}
 			fmt.Fprintln(cmd.Stdout, "notebrew is already running (run `notebrew stop` to stop the process)")
@@ -116,8 +220,8 @@ func (cmd *StartCmd) Run() error {
 				close(wait)
 			}
 		}()
-		if server.Addr == "localhost" || strings.HasPrefix(server.Addr, "localhost:") {
-			fmt.Fprintf(cmd.Stdout, startmsg, "http://"+server.Addr+"/files/")
+		if !cmd.Notebrew.CMSDomainHTTPS {
+			fmt.Fprintf(cmd.Stdout, startmsg, "http://"+cmd.Notebrew.CMSDomain+"/files/")
 		} else {
 			fmt.Fprintf(cmd.Stdout, startmsg, server.Addr)
 		}

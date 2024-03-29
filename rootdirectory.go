@@ -270,7 +270,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		response.Limit = 1000
 	}
 	scheme := "https"
-	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 {
+	if r.TLS == nil {
 		scheme = "http"
 	}
 

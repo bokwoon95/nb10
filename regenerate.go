@@ -74,7 +74,13 @@ type RegenerationStats struct {
 }
 
 func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (RegenerationStats, error) {
-	siteGen, err := NewSiteGenerator(ctx, nbrew.FS, sitePrefix, nbrew.ContentDomain, nbrew.ImgDomain)
+	siteGen, err := NewSiteGenerator(ctx, SiteGeneratorConfig{
+		FS:                 nbrew.FS,
+		ContentDomain:      nbrew.ContentDomain,
+		ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+		ImgDomain:          nbrew.ImgDomain,
+		SitePrefix:         sitePrefix,
+	})
 	if err != nil {
 		return RegenerationStats{}, err
 	}

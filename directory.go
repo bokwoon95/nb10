@@ -213,7 +213,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "sort",
 				Value:    "0",
 				MaxAge:   -1,
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+				Secure:   r.TLS != nil,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -223,7 +223,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "sort",
 				Value:    response.Sort,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+				Secure:   r.TLS != nil,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -253,7 +253,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "order",
 				Value:    "0",
 				MaxAge:   -1,
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+				Secure:   r.TLS != nil,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -263,7 +263,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				Name:     "order",
 				Value:    response.Order,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
-				Secure:   nbrew.CMSDomain != "localhost" && !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80,
+				Secure:   r.TLS != nil,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
 			})
@@ -360,7 +360,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		response.Limit = 1000
 	}
 	scheme := "https"
-	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 {
+	if r.TLS == nil {
 		scheme = "http"
 	}
 
