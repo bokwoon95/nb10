@@ -415,7 +415,7 @@ type Image struct {
 	Parent  string
 	Name    string
 	AltText string
-	Caption string
+	Caption template.HTML
 }
 
 func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text string) error {
@@ -490,29 +490,46 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				name := path.Base(result.FilePath)
 				switch path.Ext(result.FilePath) {
 				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-					image := Image{
-						Parent:  urlPath,
-						Name:    name,
-						Caption: string(bytes.TrimSpace(result.Text)),
-					}
-					result.Text = result.Text[:0]
-					bufPool.Put(bytes.NewBuffer(result.Text))
-					if strings.HasPrefix(image.Caption, "!alt ") {
-						image.AltText, image.Caption, _ = strings.Cut(image.Caption, "\n")
-						image.AltText = strings.TrimSpace(strings.TrimPrefix(image.AltText, "!alt "))
-						image.Caption = strings.TrimSpace(image.Caption)
-					}
-					pageData.Images = append(pageData.Images, image)
-				case ".md":
+					pageData.Images = append(pageData.Images, Image{
+						Parent: urlPath,
+						Name:   name,
+					})
+					i := len(pageData.Images) - 1
 					subgroup.Go(func() error {
-						err := subctx.Err()
-						if err != nil {
-							return err
-						}
 						defer func() {
 							result.Text = result.Text[:0]
 							bufPool.Put(bytes.NewBuffer(result.Text))
 						}()
+						err := subctx.Err()
+						if err != nil {
+							return err
+						}
+						var altText []byte
+						result.Text = bytes.TrimSpace(result.Text)
+						if bytes.HasPrefix(result.Text, []byte("!alt ")) {
+							altText, result.Text, _ = bytes.Cut(result.Text, []byte("\n"))
+							altText = bytes.TrimSpace(bytes.TrimPrefix(altText, []byte("!alt ")))
+							result.Text = bytes.TrimSpace(result.Text)
+						}
+						var b strings.Builder
+						err = siteGen.markdown.Convert(result.Text, &b)
+						if err != nil {
+							return err
+						}
+						pageData.Images[i].AltText = string(altText)
+						pageData.Images[i].Caption = template.HTML(b.String())
+						return nil
+					})
+				case ".md":
+					subgroup.Go(func() error {
+						defer func() {
+							result.Text = result.Text[:0]
+							bufPool.Put(bytes.NewBuffer(result.Text))
+						}()
+						err := subctx.Err()
+						if err != nil {
+							return err
+						}
 						var b strings.Builder
 						err = siteGen.markdown.Convert(result.Text, &b)
 						if err != nil {
@@ -887,6 +904,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			return err
 		}
 		defer cursor.Close()
+		group, groupctx := errgroup.WithContext(ctx)
 		for cursor.Next() {
 			result, err := cursor.Result()
 			if err != nil {
@@ -896,21 +914,42 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			if _, ok := imgIsMentioned[name]; ok {
 				continue
 			}
-			image := Image{
-				Parent:  urlPath,
-				Name:    name,
-				Caption: string(bytes.TrimSpace(result.Text)),
-			}
-			result.Text = result.Text[:0]
-			bufPool.Put(bytes.NewBuffer(result.Text))
-			if strings.HasPrefix(image.Caption, "!alt ") {
-				image.AltText, image.Caption, _ = strings.Cut(image.Caption, "\n")
-				image.AltText = strings.TrimSpace(strings.TrimPrefix(image.AltText, "!alt "))
-				image.Caption = strings.TrimSpace(image.Caption)
-			}
-			postData.Images = append(postData.Images, image)
+			postData.Images = append(postData.Images, Image{
+				Parent: urlPath,
+				Name:   name,
+			})
+			i := len(postData.Images) - 1
+			group.Go(func() error {
+				defer func() {
+					result.Text = result.Text[:0]
+					bufPool.Put(bytes.NewBuffer(result.Text))
+				}()
+				err := groupctx.Err()
+				if err != nil {
+					return err
+				}
+				var altText []byte
+				result.Text = bytes.TrimSpace(result.Text)
+				if bytes.HasPrefix(result.Text, []byte("!alt ")) {
+					altText, result.Text, _ = bytes.Cut(result.Text, []byte("\n"))
+					altText = bytes.TrimSpace(bytes.TrimPrefix(altText, []byte("!alt ")))
+					result.Text = bytes.TrimSpace(result.Text)
+				}
+				var b strings.Builder
+				err = siteGen.markdown.Convert(result.Text, &b)
+				if err != nil {
+					return err
+				}
+				postData.Images[i].AltText = string(altText)
+				postData.Images[i].Caption = template.HTML(b.String())
+				return nil
+			})
 		}
 		err = cursor.Close()
+		if err != nil {
+			return err
+		}
+		err = group.Wait()
 		if err != nil {
 			return err
 		}
