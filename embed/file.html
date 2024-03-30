@@ -374,11 +374,11 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
     <ul>
       {{- range $i, $asset := $.Assets }}
       <li class='pv2{{ if $i }} bt{{ end }}'>
-        <label for='{{ $asset.Name }}' class='flex items-center{{ if or (ne (head $.FilePath) "posts") (ne $asset.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
-          <div class='mr2 flex items-center'>
+        <label for='{{ $asset.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $asset.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
+          <div class='mr2 flex items-center' style='margin-top: 0.6rem;'>
             <input type='checkbox' id='{{ $asset.Name }}' name='name' value='{{ $asset.Name }}' class='pointer'>
           </div>
-          <div class='br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
+          <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
               {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
