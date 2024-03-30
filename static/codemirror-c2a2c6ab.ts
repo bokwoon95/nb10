@@ -14,7 +14,9 @@ import { javascript } from "@codemirror/lang-javascript";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 // import { languages } from '@codemirror/language-data';
 
+globalThis.editors = [];
 for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[data-codemirror]").entries()) {
+  globalThis.editors.push(null);
   const config = new Map<string, any>();
   try {
     let obj = JSON.parse(dataCodemirror.getAttribute("data-codemirror") || `{}`);
@@ -106,6 +108,7 @@ for (const [index, dataCodemirror] of document.querySelectorAll<HTMLElement>("[d
       ],
     }),
   });
+  globalThis.editors[index] = editor;
   function configureLanguage(ext: string) {
     switch (ext) {
       case ".html":
