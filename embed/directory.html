@@ -306,30 +306,28 @@
   <ul>
     {{- range $file := $.Files }}
     <li class='bb pv2'>
-      <label for='{{ $file.Name }}' class='flex items-center{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
-        <div class='mr2 flex items-center'>
+      <label for='{{ $file.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
+        <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
           <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'{{ if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }} disabled {{ end }}>
         </div>
-        <div class='br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
-          <div class='flex flex-wrap break-word items-center'>
-            {{- if $file.IsDir }}
-            <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>
-            {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
-            <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
-            {{- end }}
-            {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
-              {{- if and $.ImgDomain $.IsDatabaseFS }}
-              <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
-              {{- else }}
-              <img src='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}?raw' class='h3 w3 mr1'>
-              {{- end }}
-            {{- end }}
-            <a href='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
-            {{- if not $file.IsDir }}
-            <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
-            {{- end }}
-            <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
-          </div>
+        <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
+          {{- if $file.IsDir }}
+          <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>
+          {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
+          <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
+          {{- end }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and $.ImgDomain $.IsDatabaseFS }}
+          <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
+          {{- else }}
+          <img src='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}?raw' class='h3 w3 mr1'>
+          {{- end }}
+          {{- end }}
+          <a href='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
+          {{- if not $file.IsDir }}
+          <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
+          {{- end }}
+          <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
         </div>
         <div class='flex-grow-1'></div>
         <details class='relative ml1' data-autoclose-details>
