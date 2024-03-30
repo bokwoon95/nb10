@@ -16,10 +16,10 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 .h-100 { height: 100%; }
 .w-100 { width: 100%; }
 @media screen and (min-width: 30em) and (max-width: 60em) {
-  .w-80-m { width: 80%; }
+  .w-90-m { width: 90%; }
 }
 @media screen and (min-width: 60em) {
-  .w-70-l { width: 70%; }
+  .w-80-l { width: 80%; }
 }
 .block { display: block; }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -38,7 +38,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 <ul class='m-0 p-0 list-none'>
   {{ range $image := $.Images }}
   <li>
-    <div class='w-70-l w-80-m w-100 mx-auto'>
+    <div class='w-80-l w-90-m w-100 mx-auto'>
       <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block h-100 w-100 object-cover' loading='lazy'>
       <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
     </div>
