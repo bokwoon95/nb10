@@ -41,6 +41,7 @@ TODO: pin.go
     - NOTE: pin.go should be a POST-only handler. Clicking 'pin' or 'unpin' will take effect immediately, just like how clipboard/cut and clipboard/copy currently work.
 TODO: uploadfile.go/createfile.go/file.go, if the image name is just "image" we need to an timestamp prefix to the name so that (1) we can continually upload files called "image.jpg" or whatever without naming conflicts and (2) images are sorted by creation date if sorted by name. We may need to do the monotonically increasing timestamp thing.
 BUG: why is my labula post not viewable on mobile?
+    - TODO: because labula-11.80 is being taken as a file with extension .80, which we don't want. The solution is to forbid dots "." in file names but not in directory names, but how will we enforce that? urlDirSafe vs urlFileSafe? Huh?
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
