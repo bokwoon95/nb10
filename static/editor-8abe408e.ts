@@ -77,8 +77,12 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
   });
 
   // Auto-resize textarea as user types into it.
+  // NOTE: Resetting the height with "auto" causes annoying viewport jumps when
+  // typing on iOS Safari. Don't do it (like in answer
+  // https://stackoverflow.com/a/48460773). Just set the scrollHeight directly.
+  // This means the textarea will never shrink, only grow, but it's the price
+  // to pay for not being annoying to type on mobile.
   textarea.addEventListener("input", function() {
-    // textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   });
 
@@ -175,7 +179,6 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     });
     textarea.style.whiteSpace = "pre-wrap";
     textarea.style.overflow = "hidden";
-    // textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   } else {
     editor.dispatch({
@@ -183,7 +186,6 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     });
     textarea.style.whiteSpace = "pre";
     textarea.style.overflow = "auto";
-    // textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   }
   if (config.has("wordwrapCheckboxID")) {
@@ -199,7 +201,6 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
           });
           textarea.style.whiteSpace = "pre-wrap";
           textarea.style.overflow = "hidden";
-          // textarea.style.height = "auto";
           textarea.style.height = `${textarea.scrollHeight}px`;
         } else {
           localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
@@ -208,7 +209,6 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
           });
           textarea.style.whiteSpace = "pre";
           textarea.style.overflow = "auto";
-          // textarea.style.height = "auto";
           textarea.style.height = `${textarea.scrollHeight}px`;
         }
       });
