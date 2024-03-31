@@ -78,7 +78,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
 
   // Auto-resize textarea as user types into it.
   textarea.addEventListener("input", function() {
-    textarea.style.height = "auto";
+    // textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   });
 
@@ -175,7 +175,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     });
     textarea.style.whiteSpace = "pre-wrap";
     textarea.style.overflow = "hidden";
-    textarea.style.height = "auto";
+    // textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   } else {
     editor.dispatch({
@@ -183,7 +183,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     });
     textarea.style.whiteSpace = "pre";
     textarea.style.overflow = "auto";
-    textarea.style.height = "auto";
+    // textarea.style.height = "auto";
     textarea.style.height = `${textarea.scrollHeight}px`;
   }
   if (config.has("wordwrapCheckboxID")) {
@@ -199,7 +199,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
           });
           textarea.style.whiteSpace = "pre-wrap";
           textarea.style.overflow = "hidden";
-          textarea.style.height = "auto";
+          // textarea.style.height = "auto";
           textarea.style.height = `${textarea.scrollHeight}px`;
         } else {
           localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
@@ -208,7 +208,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
           });
           textarea.style.whiteSpace = "pre";
           textarea.style.overflow = "auto";
-          textarea.style.height = "auto";
+          // textarea.style.height = "auto";
           textarea.style.height = `${textarea.scrollHeight}px`;
         }
       });
