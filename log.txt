@@ -36,6 +36,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: remove the isLargeDocument check from editor.ts, we will only check for it initially but when we switch extensions we will do the simplest thing and not check length at all.
 TODO: pin.go
     - NOTE: pin.go should be a POST-only handler. Clicking 'pin' or 'unpin' will take effect immediately, just like how clipboard/cut and clipboard/copy currently work.
 TODO: uploadfile.go/createfile.go/file.go, if the image name is just "image" we need to an timestamp prefix to the name so that (1) we can continually upload files called "image.jpg" or whatever without naming conflicts and (2) images are sorted by creation date if sorted by name. We may need to do the monotonically increasing timestamp thing.
