@@ -12,9 +12,9 @@ import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 
-globalThis.codemirrorEditors = [];
+globalThis.editors = [];
 for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-editor]").entries()) {
-  globalThis.codemirrorEditors.push(null);
+  globalThis.editors.push(null);
   const config = new Map<string, any>();
   try {
     let obj = JSON.parse(dataEditor.getAttribute("data-editor") || "{}");
@@ -57,6 +57,30 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
       ext = extElement.value;
     }
   }
+
+  // Ctrl-s/Cmd-s to submit.
+  textarea.addEventListener("keydown", function(event) {
+    if (navigator.userAgent.includes("Macintosh")) {
+      if (!event.metaKey || event.key != "s") {
+        return;
+      }
+    } else {
+      if (!event.ctrlKey || event.key != "s") {
+        return;
+      }
+    }
+    event.preventDefault();
+    if (form) {
+      form.dispatchEvent(new Event("submit"));
+      form.submit();
+    }
+  });
+
+  // Auto-resize textarea as user types into it.
+  textarea.addEventListener("input", function() {
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  });
 
   // Create the codemirror editor.
   const wordwrap = new Compartment();
@@ -119,14 +143,20 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     }),
   });
 
-  // Register the codemirror editor in the global codemirrorEditors array.
-  globalThis.codemirrorEditors[index] = editor;
+  // Register the codemirror editor in the global editors array.
+  globalThis.editors[index] = editor;
 
-  // Restore cursor position from localStorage.
-  const position = Number(localStorage.getItem(`editorPosition:${window.location.pathname}:${index}`));
-  if (position && position <= textarea.value.length) {
+  // Restore textarea cursor position from localStorage.
+  const textareaCursorPosition = Number(localStorage.getItem(`textareaCursorPosition:${window.location.pathname}:${index}`));
+  if (textareaCursorPosition && textareaCursorPosition <= textarea.value.length) {
+    textarea.setSelectionRange(textareaCursorPosition, textareaCursorPosition);
+  }
+
+  // Restore editor cursor position from localStorage.
+  const editorCursorPosition = Number(localStorage.getItem(`editorCursorPosition:${window.location.pathname}:${index}`));
+  if (editorCursorPosition && editorCursorPosition <= textarea.value.length) {
     editor.dispatch({
-      selection: { anchor: position, head: position },
+      selection: { anchor: editorCursorPosition, head: editorCursorPosition },
     });
   }
 
@@ -143,6 +173,18 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     editor.dispatch({
       effects: wordwrap.reconfigure(EditorView.lineWrapping),
     });
+    textarea.style.whiteSpace = "pre-wrap";
+    textarea.style.overflow = "hidden";
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  } else {
+    editor.dispatch({
+      effects: wordwrap.reconfigure([]),
+    });
+    textarea.style.whiteSpace = "pre";
+    textarea.style.overflow = "auto";
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
   }
   if (config.has("wordwrapCheckboxID")) {
     const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
@@ -155,30 +197,20 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
           editor.dispatch({
             effects: wordwrap.reconfigure(EditorView.lineWrapping),
           });
+          textarea.style.whiteSpace = "pre-wrap";
+          textarea.style.overflow = "hidden";
+          textarea.style.height = "auto";
+          textarea.style.height = `${textarea.scrollHeight}px`;
         } else {
           localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
           editor.dispatch({
             effects: wordwrap.reconfigure([]),
           });
+          textarea.style.whiteSpace = "pre";
+          textarea.style.overflow = "auto";
+          textarea.style.height = "auto";
+          textarea.style.height = `${textarea.scrollHeight}px`;
         }
-      });
-    }
-  }
-
-  // Configure language.
-  const isLargeDocument = textarea.value.length > 50000;
-  if (!isLargeDocument) {
-    if (ext == ".html") {
-      editor.dispatch({
-        effects: language.reconfigure(html()),
-      });
-    } else if (ext == ".css") {
-      editor.dispatch({
-        effects: language.reconfigure(css()),
-      });
-    } else if (ext == ".js") {
-      editor.dispatch({
-        effects: language.reconfigure(javascript()),
       });
     }
   }
@@ -186,14 +218,16 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
   // On form submit, synchronize the codemirror editor's contents with the
   // textarea it is paired with (before the form is submitted).
   form.addEventListener("submit", function() {
+    // Save the textarea cursor position to localStorage.
+    localStorage.setItem(`textareaCursorPosition:${window.location.pathname}:${index}`, textarea.selectionStart.toString());
+    // Save the editor cursor position to localStorage.
+    const ranges = editor.state.selection.ranges;
+    if (ranges.length > 0) {
+      const editorCursorPosition = ranges[0].from;
+      localStorage.setItem(`editorCursorPosition:${window.location.pathname}:${index}`, editorCursorPosition.toString());
+    }
+    // Copy the codemirror editor's contents to the textarea.
     if (ext == ".html" || ext == ".css" || ext == ".js") {
-      // Save the cursor position to localStorage.
-      const ranges = editor.state.selection.ranges;
-      if (ranges.length > 0) {
-        const position = ranges[0].from;
-        localStorage.setItem(`editorPosition:${window.location.pathname}:${index}`, position.toString());
-      }
-      // Copy the codemirror editor's contents to the textarea.
       textarea.value = editor.state.doc.toString();
     }
   });
@@ -202,17 +236,43 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
   textarea.after(editor.dom);
 
   // Show the textarea or the codemirror editor depending on the extension.
+  const isLargeDocument = textarea.value.length > 50000;
   if (ext == ".html" || ext == ".css" || ext == ".js") {
-    textarea.style.display = "none";
-    if (config.get("scrollIntoView")) {
-      if (position && position <= textarea.value.length) {
+    // Hide textarea.
+    textarea.style.setProperty("display", "none");
+    // Configure editor language.
+    if (!isLargeDocument) {
+      if (ext == ".html") {
         editor.dispatch({
-          effects: EditorView.scrollIntoView(position, { y: "center" }),
+          effects: language.reconfigure(html()),
+        });
+      } else if (ext == ".css") {
+        editor.dispatch({
+          effects: language.reconfigure(css()),
+        });
+      } else if (ext == ".js") {
+        editor.dispatch({
+          effects: language.reconfigure(javascript()),
+        });
+      }
+    }
+    // Scroll to editor cursor position.
+    if (config.get("scrollIntoView")) {
+      if (editorCursorPosition && editorCursorPosition <= textarea.value.length) {
+        editor.dispatch({
+          effects: EditorView.scrollIntoView(editorCursorPosition, { y: "center" }),
         });
       }
     }
   } else {
-    editor.dom.style.display = "none";
+    // Hide editor.
+    editor.dom.style.setProperty("display", "none", "important");
+    // Scroll to textarea cursor position.
+    if (config.get("scrollIntoView")) {
+      textarea.blur();
+      textarea.focus();
+      textarea.blur();
+    }
   }
 
   if (config.has("extElementName")) {
@@ -222,7 +282,11 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
       extElement.addEventListener("change", function() {
         ext = extElement.value;
         if (ext == ".html" || ext == ".css" || ext == ".js") {
-          textarea.style.display = "none";
+          // Hide textarea.
+          textarea.style.setProperty("display", "none");
+          // Show editor
+          editor.dom.style.setProperty("display", "");
+          // Configure editor language.
           if (!isLargeDocument) {
             if (ext == ".html") {
               editor.dispatch({
@@ -239,10 +303,12 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
             }
           }
         } else {
-          editor.dom.style.display = "none";
+          // Hide editor.
+          editor.dom.style.setProperty("display", "none", "important");
+          // Show textarea.
+          textarea.style.setProperty("display", "");
         }
       });
     }
   }
-
 }
