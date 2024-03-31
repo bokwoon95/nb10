@@ -1,0 +1,248 @@
+// To build this file:
+// - Navigate to the project root where package.json is located.
+// - Run npm install
+// - Run ./node_modules/.bin/esbuild ./static/codemirror-xxxxxxxx.ts --outfile=./static/codemirror-xxxxxxxx.js --bundle --minify
+// - Replace xxxxxxxx with the first 8 characters of the SHA256 hash of the file contents (normalize all \r\n to \n)
+import { EditorState, Prec, Compartment } from '@codemirror/state';
+import { EditorView, lineNumbers, keymap } from '@codemirror/view';
+import { indentWithTab, history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { indentOnInput, indentUnit, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { html } from "@codemirror/lang-html";
+import { css } from "@codemirror/lang-css";
+import { javascript } from "@codemirror/lang-javascript";
+
+globalThis.codemirrorEditors = [];
+for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-editor]").entries()) {
+  globalThis.codemirrorEditors.push(null);
+  const config = new Map<string, any>();
+  try {
+    let obj = JSON.parse(dataEditor.getAttribute("data-editor") || "{}");
+    for (const [key, value] of Object.entries(obj)) {
+      config.set(key, value);
+    }
+  } catch (e) {
+    console.error(e);
+    continue;
+  }
+
+  // Locate the textarea.
+  const textarea = dataEditor.querySelector("textarea");
+  if (!textarea) {
+    continue;
+  }
+
+  // Locate the parent form that houses the textarea.
+  let form: HTMLFormElement | undefined;
+  let element = textarea.parentElement;
+  while (element != null) {
+    if (element instanceof HTMLFormElement) {
+      form = element;
+      break;
+    }
+    element = element.parentElement;
+  }
+  if (!form) {
+    continue;
+  }
+
+  // Determine the file extension.
+  let ext = "";
+  if (config.has("ext")) {
+    ext = config.get("ext");
+  } else if (config.has("extElementName")) {
+    const extElementName = config.get("extElementName");
+    const extElement = form.elements[extElementName] as HTMLInputElement | HTMLSelectElement;
+    if (extElement) {
+      ext = extElement.value;
+    }
+  }
+
+  // Create the codemirror editor.
+  const wordwrap = new Compartment();
+  const language = new Compartment();
+  const editor = new EditorView({
+    state: EditorState.create({
+      doc: textarea.value,
+      extensions: [
+        // Basic extensions copied from basicSetup in
+        // https://github.com/codemirror/basic-setup/blob/main/src/codemirror.ts.
+        lineNumbers(),
+        history(),
+        indentUnit.of("  "),
+        indentOnInput(),
+        autocompletion(),
+        keymap.of([
+          indentWithTab,
+          ...defaultKeymap,
+          ...historyKeymap,
+          ...completionKeymap,
+        ]),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        // Dynamic settings.
+        wordwrap.of([]),
+        language.of([]),
+        // Custom theme.
+        EditorView.theme({
+          "&": {
+            fontSize: "11.5pt",
+            border: "1px solid black",
+            backgroundColor: "white",
+          },
+          ".cm-content": {
+            fontFamily: "Menlo, Monaco, Lucida Console, monospace",
+            minHeight: "16rem"
+          },
+          ".cm-scroller": {
+            overflow: "auto",
+          }
+        }),
+        // Custom keymaps.
+        Prec.high(keymap.of([
+          {
+            // Ctrl-s/Cmd-s to submit.
+            key: "Mod-s",
+            run: function(_: EditorView): boolean {
+              if (form) {
+                // Trigger all submit events on the form, so that the
+                // codemirror instances have a chance to sychronize
+                // with the textarea instances.
+                form.dispatchEvent(new Event("submit"));
+                // Actually submit the form.
+                form.submit();
+              }
+              return true;
+            },
+          },
+        ])),
+      ],
+    }),
+  });
+
+  // Register the codemirror editor in the global codemirrorEditors array.
+  globalThis.codemirrorEditors[index] = editor;
+
+  // Restore cursor position from localStorage.
+  const position = Number(localStorage.getItem(`editorPosition:${window.location.pathname}:${index}`));
+  if (position && position <= textarea.value.length) {
+    editor.dispatch({
+      selection: { anchor: position, head: position },
+    });
+  }
+
+  // Configure word wrap.
+  let wordwrapEnabled = localStorage.getItem(`wordwrap:${window.location.pathname}:${index}`);
+  if (wordwrapEnabled == null) {
+    if (ext == ".html" || ext == ".css" || ext == ".js") {
+      wordwrapEnabled = "false";
+    } else {
+      wordwrapEnabled = "true";
+    }
+  }
+  if (wordwrapEnabled == "true") {
+    editor.dispatch({
+      effects: wordwrap.reconfigure(EditorView.lineWrapping),
+    });
+  }
+  if (config.has("wordwrapCheckboxID")) {
+    const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
+    const wordwrapInput = document.getElementById(wordwrapCheckboxID) as HTMLInputElement;
+    if (wordwrapInput) {
+      wordwrapInput.checked = wordwrapEnabled == "true";
+      wordwrapInput.addEventListener("change", function() {
+        if (wordwrapInput.checked) {
+          localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "true");
+          editor.dispatch({
+            effects: wordwrap.reconfigure(EditorView.lineWrapping),
+          });
+        } else {
+          localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
+          editor.dispatch({
+            effects: wordwrap.reconfigure([]),
+          });
+        }
+      });
+    }
+  }
+
+  // Configure language.
+  const isLargeDocument = textarea.value.length > 50000;
+  if (!isLargeDocument) {
+    if (ext == ".html") {
+      editor.dispatch({
+        effects: language.reconfigure(html()),
+      });
+    } else if (ext == ".css") {
+      editor.dispatch({
+        effects: language.reconfigure(css()),
+      });
+    } else if (ext == ".js") {
+      editor.dispatch({
+        effects: language.reconfigure(javascript()),
+      });
+    }
+  }
+
+  // On form submit, synchronize the codemirror editor's contents with the
+  // textarea it is paired with (before the form is submitted).
+  form.addEventListener("submit", function() {
+    if (ext == ".html" || ext == ".css" || ext == ".js") {
+      // Save the cursor position to localStorage.
+      const ranges = editor.state.selection.ranges;
+      if (ranges.length > 0) {
+        const position = ranges[0].from;
+        localStorage.setItem(`editorPosition:${window.location.pathname}:${index}`, position.toString());
+      }
+      // Copy the codemirror editor's contents to the textarea.
+      textarea.value = editor.state.doc.toString();
+    }
+  });
+
+  // Insert the codemirror editor after the textarea.
+  textarea.after(editor.dom);
+
+  // Show the textarea or the codemirror editor depending on the extension.
+  if (ext == ".html" || ext == ".css" || ext == ".js") {
+    textarea.style.display = "none";
+    if (config.get("scrollIntoView")) {
+      if (position && position <= textarea.value.length) {
+        editor.dispatch({
+          effects: EditorView.scrollIntoView(position, { y: "center" }),
+        });
+      }
+    }
+  } else {
+    editor.dom.style.display = "none";
+  }
+
+  if (config.has("extElementName")) {
+    const extElementName = config.get("extElementName");
+    const extElement = form.elements[extElementName] as HTMLInputElement | HTMLSelectElement;
+    if (extElement) {
+      extElement.addEventListener("change", function() {
+        ext = extElement.value;
+        if (ext == ".html" || ext == ".css" || ext == ".js") {
+          textarea.style.display = "none";
+          if (!isLargeDocument) {
+            if (ext == ".html") {
+              editor.dispatch({
+                effects: language.reconfigure(html()),
+              });
+            } else if (ext == ".css") {
+              editor.dispatch({
+                effects: language.reconfigure(css()),
+              });
+            } else if (ext == ".js") {
+              editor.dispatch({
+                effects: language.reconfigure(javascript()),
+              });
+            }
+          }
+        } else {
+          editor.dom.style.display = "none";
+        }
+      });
+    }
+  }
+
+}

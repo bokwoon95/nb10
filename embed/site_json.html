@@ -6,7 +6,7 @@
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
 <script type='module' src='/files/static/site_json.js'></script>
-<script type='module' src='/files/static/codemirror-c2a2c6ab.js'></script>
+<script type='module' src='/files/static/editor-4eadd822.js'></script>
 <title>site.json (Site Settings)</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -79,7 +79,7 @@
   </div>
   <div class='mv3'>
     <div><label for='description' class='b'>Description:</label></div>
-    <div data-codemirror='{"ext":".md"}'>
+    <div data-editor='{"ext":".md"}'>
       <input type='hidden' name='ext:0' value='.md'>
       <textarea id='description' name='description' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code' required>{{ $.Description }}</textarea>
     </div>

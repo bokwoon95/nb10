@@ -132,3 +132,134 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
     input.files = dataTransfer.files;
   });
 }
+
+for (const [index, dataEditor] of document.querySelectorAll("[data-editor]").entries()) {
+  const config = new Map();
+  try {
+    let obj = JSON.parse(dataEditor.getAttribute("data-editor") || "{}");
+    for (const [key, value] of Object.entries(obj)) {
+      config.set(key, value);
+    }
+  } catch (e) {
+    console.error(e);
+    continue;
+  }
+
+  const textarea = dataEditor.querySelector("textarea");
+  if (!textarea) {
+    continue;
+  }
+
+  // Auto-resize textarea to fit content.
+  textarea.style.overflow = "hidden";
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+  textarea.addEventListener("input", function() {
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  });
+
+  // Locate the parent form that houses the textarea.
+  let form;
+  let element = textarea.parentElement;
+  while (element != null) {
+    if (element instanceof HTMLFormElement) {
+      form = element;
+      break;
+    }
+    element = element.parentElement;
+  }
+  if (!form) {
+    continue;
+  }
+
+  // Determine the file extension.
+  let ext = "";
+  if (config.has("ext")) {
+    ext = config.get("ext");
+  } else if (config.has("extElementName")) {
+    const extElementName = config.get("extElementName");
+    const extElement = form.elements[extElementName];
+    if (extElement) {
+      ext = extElement.value;
+    }
+  }
+
+  // Ctrl-s/Cmd-s to submit.
+  textarea.addEventListener("keydown", function(event) {
+    if (navigator.userAgent.includes("Macintosh")) {
+      if (!event.metaKey || event.key != "s") {
+        return;
+      }
+    } else {
+      if (!event.ctrlKey || event.key != "s") {
+        return;
+      }
+    }
+    event.preventDefault();
+    form.dispatchEvent(new Event("submit"));
+    form.submit();
+  });
+
+  // Restore cursor position from localStorage.
+  const position = Number(localStorage.getItem(`textareaposition:${window.location.pathname}:${index}`));
+  if (position && position <= textarea.value.length) {
+    textarea.setSelectionRange(position, position);
+  }
+
+  // Configure word wrap.
+  let wordwrapEnabled = localStorage.getItem(`wordwrap:${window.location.pathname}:${index}`);
+  if (wordwrapEnabled == null) {
+    if (ext == ".html" || ext == ".css" || ext == ".js") {
+      wordwrapEnabled = "false";
+    } else {
+      wordwrapEnabled = "true";
+    }
+  }
+  if (wordwrapEnabled == "true") {
+    textarea.style.whiteSpace = "pre-wrap";
+    textarea.style.overflow = "hidden";
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  } else {
+    textarea.style.whiteSpace = "pre";
+    textarea.style.overflow = "auto";
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+  if (config.has("wordwrapCheckboxID")) {
+    const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
+    const wordwrapInput = document.getElementById(wordwrapCheckboxID);
+    if (wordwrapInput) {
+      wordwrapInput.checked = wordwrapEnabled == "true";
+      wordwrapInput.addEventListener("change", function() {
+        if (wordwrapInput.checked) {
+          localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "true");
+          textarea.style.whiteSpace = "pre-wrap";
+          textarea.style.overflow = "hidden";
+          textarea.style.height = "auto";
+          textarea.style.height = `${textarea.scrollHeight}px`;
+        } else {
+          localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
+          textarea.style.whiteSpace = "pre";
+          textarea.style.overflow = "auto";
+          textarea.style.height = "auto";
+          textarea.style.height = `${textarea.scrollHeight}px`;
+        }
+      });
+    }
+  }
+
+  // On form submit, save the cursor position to localStorage.
+  form.addEventListener("submit", function() {
+    localStorage.setItem(`textareaposition:${window.location.pathname}:${index}`, textarea.selectionStart.toString());
+  });
+
+  if (ext != ".html" && ext != ".css" && ext != ".js") {
+    if (config.get("scrollIntoView")) {
+      textarea.blur();
+      textarea.focus();
+      textarea.blur();
+    }
+  }
+}

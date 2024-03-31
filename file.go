@@ -397,7 +397,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			nbrew.internalServerError(w, r, err)
 			return
 		}
-		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+		// w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		nbrew.executeTemplate(w, r, tmpl, &response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
