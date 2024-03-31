@@ -236,12 +236,11 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
   textarea.after(editor.dom);
 
   // Show the textarea or the codemirror editor depending on the extension.
-  const isLargeDocument = textarea.value.length > 50000;
   if (ext == ".html" || ext == ".css" || ext == ".js") {
     // Hide textarea.
     textarea.style.setProperty("display", "none");
     // Configure editor language.
-    if (!isLargeDocument) {
+    if (textarea.value.length <= 50000) {
       if (ext == ".html") {
         editor.dispatch({
           effects: language.reconfigure(html()),
@@ -287,20 +286,18 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
           // Show editor
           editor.dom.style.setProperty("display", "");
           // Configure editor language.
-          if (!isLargeDocument) {
-            if (ext == ".html") {
-              editor.dispatch({
-                effects: language.reconfigure(html()),
-              });
-            } else if (ext == ".css") {
-              editor.dispatch({
-                effects: language.reconfigure(css()),
-              });
-            } else if (ext == ".js") {
-              editor.dispatch({
-                effects: language.reconfigure(javascript()),
-              });
-            }
+          if (ext == ".html") {
+            editor.dispatch({
+              effects: language.reconfigure(html()),
+            });
+          } else if (ext == ".css") {
+            editor.dispatch({
+              effects: language.reconfigure(css()),
+            });
+          } else if (ext == ".js") {
+            editor.dispatch({
+              effects: language.reconfigure(javascript()),
+            });
           }
         } else {
           // Hide editor.
