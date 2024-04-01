@@ -413,7 +413,7 @@ func filenameSafe(s string) string {
 		}
 		b.WriteRune(char)
 	}
-	return b.String()
+	return strings.Trim(b.String(), ".")
 }
 
 var hashPool = sync.Pool{
@@ -864,7 +864,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 	// .jpeg .jpg .png .webp .gif .woff .woff2
 	if !fileType.IsGzippable {
 		if fileSeeker, ok := file.(io.ReadSeeker); ok {
-			if !hasMaxAge {
+			if hasMaxAge {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
 				http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
@@ -887,12 +887,10 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			var b [blake2b.Size256]byte
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
-			if !hasMaxAge {
-				var b [blake2b.Size256]byte
-				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			}
+			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
 			return
 		}
@@ -912,6 +910,13 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		// indexed, its contents are already gzipped. We can reach directly
 		// into its buffer and skip the gzipping step.
 		if databaseFile.fileType.IsGzippable && !databaseFile.isFulltextIndexed {
+			if hasMaxAge {
+				w.Header().Set("Content-Encoding", "gzip")
+				w.Header().Set("Content-Type", fileType.ContentType)
+				w.Header().Set("Cache-Control", cacheControl)
+				http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
+				return
+			}
 			hasher := hashPool.Get().(hash.Hash)
 			defer func() {
 				hasher.Reset()
@@ -923,18 +928,18 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
+			var b [blake2b.Size256]byte
 			w.Header().Set("Content-Encoding", "gzip")
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
-			if !hasMaxAge {
-				var b [blake2b.Size256]byte
-				w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			}
+			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
 			return
 		}
 	}
 
+	// If file is small enough and we want the ETag, we can buffer the entire
+	// file into memory, calculate its ETag and serve.
 	if fileInfo.Size() <= 1<<20 /* 1 MB */ && !hasMaxAge {
 		hasher := hashPool.Get().(hash.Hash)
 		defer func() {

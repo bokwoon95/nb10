@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -78,7 +77,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Cross-Origin-Opener-Policy", "same-origin")
 	w.Header().Add("Cross-Origin-Embedder-Policy", "credentialless")
 	w.Header().Add("Cross-Origin-Resource-Policy", "cross-origin")
-	if r.TLS != nil {
+	if nbrew.CMSDomainHTTPS {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 	}
 
@@ -406,23 +405,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			defer reader.Close()
 			if readSeeker, ok := reader.(io.ReadSeeker); ok {
-				hasher := hashPool.Get().(hash.Hash)
-				defer func() {
-					hasher.Reset()
-					hashPool.Put(hasher)
-				}()
-				_, err := io.Copy(hasher, readSeeker)
-				if err != nil {
-					logger.Error(err.Error())
-					http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-					return
-				}
-				_, err = readSeeker.Seek(0, io.SeekStart)
-				if err != nil {
-					logger.Error(err.Error())
-					http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-					return
-				}
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", "max-age=31536000, immutable")
 				http.ServeContent(w, r, "", time.Time{}, readSeeker)
@@ -441,6 +423,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sitePrefix = r.Host
 	}
 
+	var ok bool
 	var filePath string
 	var fileType FileType
 	ext := path.Ext(urlPath)
@@ -458,11 +441,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			custom404(w, r, nbrew.FS, sitePrefix)
 			return
 		}
-		filePath = path.Join(sitePrefix, "output", urlPath)
-		fileType = fileTypes[ext]
-		if fileType == (FileType{}) {
-			custom404(w, r, nbrew.FS, sitePrefix)
-			return
+		fileType, ok = fileTypes[ext]
+		if ok {
+			filePath = path.Join(sitePrefix, "output", urlPath)
+		} else {
+			filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
+			fileType.Ext = ".html"
+			fileType.ContentType = "text/html; charset=utf-8"
+			fileType.IsGzippable = true
 		}
 	}
 	file, err := nbrew.FS.Open(filePath)
@@ -494,20 +480,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cacheControl = "no-cache, stale-while-revalidate, max-age=31536000" /* 1 year */
 	default:
 		cacheControl = "no-cache, stale-while-revalidate, max-age=120" /* 2 minutes */
-	}
-	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-		_, err := sq.Exec(r.Context(), databaseFS.DB, sq.Query{
-			Dialect: databaseFS.Dialect,
-			Format:  "UPDATE files SET serve_count = coalesce(serve_count, 0) + 1 WHERE file_path = {filePath}",
-			Values: []any{
-				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-			},
-		})
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
 	}
 	serveFile(w, r, file, fileInfo, fileType, cacheControl)
 }

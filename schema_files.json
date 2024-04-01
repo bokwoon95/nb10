@@ -81,12 +81,6 @@
         }
       },
       {
-        "column": "serve_count",
-        "type": {
-          "default": "BIGINT"
-        }
-      },
-      {
         "column": "mod_time",
         "type": {
           "default": "DATETIME",
