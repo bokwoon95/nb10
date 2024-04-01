@@ -34,6 +34,7 @@
   <ul class='list-style-disc ph3'>
     {{- range $file := $.Files }}
     <li class='mv1'>
+      <input type='hidden' name='name' value='{{ $file.Name }}'>
       {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
         {{- if and $.ImgDomain $.IsDatabaseFS }}
         <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
@@ -42,7 +43,10 @@
         {{- end }}
       {{- end }}
       <a href='/{{ join "files" $.SitePrefix $.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
-      <input type='hidden' name='name' value='{{ $file.Name }}'>
+      {{- if not $file.IsDir }}
+      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
+      {{- end }}
+      <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
     </li>
     {{- end }}
   </ul>

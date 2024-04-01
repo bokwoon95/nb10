@@ -22,11 +22,12 @@ import (
 
 func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type File struct {
-		FileID  ID        `json:"fileID"`
-		Name    string    `json:"name"`
-		IsDir   bool      `json:"isDir"`
-		Size    int64     `json:"size"`
-		ModTime time.Time `json:"modTime"`
+		FileID       ID        `json:"fileID"`
+		Name         string    `json:"name"`
+		IsDir        bool      `json:"isDir"`
+		Size         int64     `json:"size"`
+		ModTime      time.Time `json:"modTime"`
+		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
 		Parent string   `json:"parent"`
@@ -76,13 +77,14 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			}
 			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
-				"join":       path.Join,
-				"ext":        path.Ext,
-				"hasPrefix":  strings.HasPrefix,
-				"trimPrefix": strings.TrimPrefix,
-				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
-				"referer":    func() string { return referer },
+				"join":                  path.Join,
+				"ext":                   path.Ext,
+				"hasPrefix":             strings.HasPrefix,
+				"trimPrefix":            strings.TrimPrefix,
+				"humanReadableFileSize": humanReadableFileSize,
+				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
+				"referer":               func() string { return referer },
 			}
 			tmpl, err := template.New("delete.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/delete.html")
 			if err != nil {
@@ -145,6 +147,13 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				}
 				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 					file.FileID = fileInfo.FileID
+					file.CreationTime = fileInfo.CreationTime
+				} else {
+					var absolutePath string
+					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+					}
+					file.CreationTime = CreationTime(absolutePath, fileInfo)
 				}
 				response.Files[i] = file
 				return nil
@@ -497,6 +506,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
+		// God deleting files seems deceptively simple (i.e. bloody complicated).
 		// 1. delete files
 		// 2. delete outputDir (if an entire post category was deleted, we also delete the entire output/posts/{category})
 		// 3. if index.html | 404.html was deleted, fill them in with embed/index.html | embed/404.html and regenerate the pages
