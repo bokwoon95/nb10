@@ -61,7 +61,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	names = slices.Compact(names)
 	response := Response{}
 	numPinned := atomic.Int64{}
-	_ = numPinned
+	_ = &numPinned
 	var preparedExec *sq.PreparedExec
 	switch nbrew.Dialect {
 	case "sqlite", "postgres":
