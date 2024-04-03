@@ -383,8 +383,8 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 	}
 
 	finalTemplate := template.New(name).Funcs(funcMap)
-	for i, tmpl := range externalTemplates {
-		for _, tmpl := range tmpl.Templates() {
+	for i, externalTemplate := range externalTemplates {
+		for _, tmpl := range externalTemplate.Templates() {
 			_, err = finalTemplate.AddParseTree(tmpl.Name(), tmpl.Tree)
 			if err != nil {
 				return nil, TemplateError{
