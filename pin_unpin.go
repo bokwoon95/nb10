@@ -103,7 +103,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	for _, name := range names {
 		name := name
 		group.Go(func() error {
-			// TODO: we need to vet each
+			// TODO: we need to vet each name the user passes, that its head is one of notes | pages | posts | output. Then we also need to figure out how to check file existence (both the parent and filePath). We'll need to rewrite the SQL query to use INSERT ... SELECT instead of INSERT ... VALUES.
 			preparedExec.Exec(groupctx, sq.StringParam("filePath", path.Join(sitePrefix, name)))
 			return nil
 		})
