@@ -389,7 +389,7 @@ func main() {
 					}
 					ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
 					if err != nil {
-						fmt.Println("got here")
+						fmt.Printf("domain=%q err=%q\n", domain, err)
 						return err
 					}
 					for _, ip := range ips {
@@ -409,9 +409,9 @@ func main() {
 			if err != nil {
 				return err
 			}
-			cmsDomainWildcard := "*"+nbrew.CMSDomain
+			cmsDomainWildcard := "*" + nbrew.CMSDomain
 			cmsDomainWildcardAdded := false
-			contentDomainWildcard := "*"+nbrew.ContentDomain
+			contentDomainWildcard := "*" + nbrew.ContentDomain
 			contentDomainWildcardAdded := false
 			for i, domain := range nbrew.Domains {
 				if matched[i] {
