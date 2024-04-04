@@ -377,7 +377,6 @@ func main() {
 			defer cancel()
 			group, groupctx := errgroup.WithContext(ctx)
 			matched := make([]bool, len(nbrew.Domains))
-			fmt.Printf("%#v\n", nbrew.Domains)
 			for i, domain := range nbrew.Domains {
 				i, domain := i, domain
 				group.Go(func() error {
@@ -387,7 +386,6 @@ func main() {
 					}
 					ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
 					if err != nil {
-						fmt.Printf("domain=%q err=%q\n", domain, err)
 						return err
 					}
 					for _, ip := range ips {
@@ -418,28 +416,22 @@ func main() {
 				cmsDomainWildcardAdded := false
 				contentDomainWildcard := "*." + nbrew.ContentDomain
 				contentDomainWildcardAdded := false
-				fmt.Printf("cmsDomainWildcard=%q contentDomainWildcard=%q\n", cmsDomainWildcard, contentDomainWildcard)
 				for i, domain := range nbrew.Domains {
-					fmt.Printf("domain=%q matched=%v", domain, matched[i])
 					if matched[i] {
 						if certmagic.MatchWildcard(domain, cmsDomainWildcard) {
-							fmt.Printf(" matches=%q", cmsDomainWildcard)
 							if !cmsDomainWildcardAdded {
 								cmsDomainWildcardAdded = true
 								nbrew.ManagingDomains = append(nbrew.ManagingDomains, cmsDomainWildcard)
 							}
 						} else if certmagic.MatchWildcard(domain, contentDomainWildcard) {
-							fmt.Printf(" matches=%q", contentDomainWildcard)
 							if !contentDomainWildcardAdded {
 								contentDomainWildcardAdded = true
 								nbrew.ManagingDomains = append(nbrew.ManagingDomains, contentDomainWildcard)
 							}
 						} else {
-							fmt.Printf(" nomatch")
 							nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
 						}
 					}
-					fmt.Printf("\n")
 				}
 			}
 		}
