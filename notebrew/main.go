@@ -344,9 +344,6 @@ func main() {
 		if err2 != nil && nbrew.CMSDomain != nbrew.ContentDomain {
 			nbrew.Domains = append(nbrew.Domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
 		}
-		if err1 != nil && nbrew.DNSProvider != nil {
-			nbrew.Domains = append(nbrew.Domains, "*."+nbrew.ContentDomain)
-		}
 		nbrew.CMSDomainHTTPS = true
 		if strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 || err1 == nil {
 			nbrew.CMSDomainHTTPS = false
