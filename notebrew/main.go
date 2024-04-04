@@ -1303,9 +1303,6 @@ func main() {
 			dynamicCertConfig.Storage = nbrew.CertStorage
 			dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
 				DecisionFunc: func(ctx context.Context, name string) error {
-					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
-						return nil
-					}
 					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
 					if err != nil {
 						return err
