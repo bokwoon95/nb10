@@ -407,25 +407,38 @@ func main() {
 			if err != nil {
 				return err
 			}
-			cmsDomainWildcard := "*" + nbrew.CMSDomain
-			cmsDomainWildcardAdded := false
-			contentDomainWildcard := "*" + nbrew.ContentDomain
-			contentDomainWildcardAdded := false
-			for i, domain := range nbrew.Domains {
-				if matched[i] {
-					if certmagic.MatchWildcard(domain, cmsDomainWildcard) {
-						if !cmsDomainWildcardAdded {
-							cmsDomainWildcardAdded = true
-							nbrew.ManagingDomains = append(nbrew.ManagingDomains, cmsDomainWildcard)
-						}
-					} else if certmagic.MatchWildcard(domain, contentDomainWildcard) {
-						if !contentDomainWildcardAdded {
-							contentDomainWildcardAdded = true
-							nbrew.ManagingDomains = append(nbrew.ManagingDomains, contentDomainWildcard)
-						}
-					} else {
+			if nbrew.Port == 80 {
+				for i, domain := range nbrew.Domains {
+					if matched[i] {
 						nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
 					}
+				}
+			} else {
+				cmsDomainWildcard := "*" + nbrew.CMSDomain
+				cmsDomainWildcardAdded := false
+				contentDomainWildcard := "*" + nbrew.ContentDomain
+				contentDomainWildcardAdded := false
+				for i, domain := range nbrew.Domains {
+					fmt.Printf("domain=%q matched=%v", domain, matched[i])
+					if matched[i] {
+						if certmagic.MatchWildcard(domain, cmsDomainWildcard) {
+							fmt.Printf(" matches=%q", cmsDomainWildcard)
+							if !cmsDomainWildcardAdded {
+								cmsDomainWildcardAdded = true
+								nbrew.ManagingDomains = append(nbrew.ManagingDomains, cmsDomainWildcard)
+							}
+						} else if certmagic.MatchWildcard(domain, contentDomainWildcard) {
+							fmt.Printf(" matches=%q", contentDomainWildcard)
+							if !contentDomainWildcardAdded {
+								contentDomainWildcardAdded = true
+								nbrew.ManagingDomains = append(nbrew.ManagingDomains, contentDomainWildcard)
+							}
+						} else {
+							fmt.Printf(" nomatch")
+							nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
+						}
+					}
+					fmt.Printf("\n")
 				}
 			}
 		}
