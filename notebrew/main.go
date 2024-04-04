@@ -380,6 +380,7 @@ func main() {
 			defer cancel()
 			group, groupctx := errgroup.WithContext(ctx)
 			matched := make([]bool, len(nbrew.Domains))
+			fmt.Printf("%#v\n", nbrew.Domains)
 			for i, domain := range nbrew.Domains {
 				i, domain := i, domain
 				group.Go(func() error {
