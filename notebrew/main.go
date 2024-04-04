@@ -183,6 +183,10 @@ func main() {
 				nbrew.CMSDomain = "localhost:6444"
 			}
 		}
+		if nbrew.ContentDomain == "" {
+			nbrew.ContentDomain = nbrew.CMSDomain
+		}
+
 		if nbrew.Port == 443 || nbrew.Port == 80 {
 			// IP4 and IP6.
 			client := &http.Client{
@@ -268,9 +272,70 @@ func main() {
 				}
 			}
 		}
-		if nbrew.ContentDomain == "" {
-			nbrew.ContentDomain = nbrew.CMSDomain
+
+		// DNS.
+		b, err = os.ReadFile(filepath.Join(configDir, "dns.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
 		}
+		b = bytes.TrimSpace(b)
+		var dnsConfig DNSConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&dnsConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+			}
+		}
+		switch dnsConfig.Provider {
+		case "":
+			break
+		case "namecheap":
+			if dnsConfig.Username == "" {
+				return fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
+			}
+			if dnsConfig.APIKey == "" {
+				return fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
+			}
+			if !nbrew.IP4.IsValid() {
+				return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
+			}
+			nbrew.DNSProvider = &namecheap.Provider{
+				APIKey:      dnsConfig.APIKey,
+				User:        dnsConfig.Username,
+				APIEndpoint: "https://api.namecheap.com/xml.response",
+				ClientIP:    nbrew.IP4.String(),
+			}
+		case "cloudflare":
+			if dnsConfig.APIToken == "" {
+				return fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
+			}
+			nbrew.DNSProvider = &cloudflare.Provider{
+				APIToken: dnsConfig.APIToken,
+			}
+		case "porkbun":
+			if dnsConfig.APIKey == "" {
+				return fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
+			}
+			if dnsConfig.SecretKey == "" {
+				return fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
+			}
+			nbrew.DNSProvider = &porkbun.Provider{
+				APIKey:       dnsConfig.APIKey,
+				APISecretKey: dnsConfig.SecretKey,
+			}
+		case "godaddy":
+			if dnsConfig.APIToken == "" {
+				return fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
+			}
+			nbrew.DNSProvider = &godaddy.Provider{
+				APIToken: dnsConfig.APIToken,
+			}
+		default:
+			return fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
+		}
+
 		_, err1 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.CMSDomain, "["), "]"))
 		_, err2 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.ContentDomain, "["), "]"))
 		if err1 != nil {
@@ -289,75 +354,6 @@ func main() {
 		nbrew.ContentDomainHTTPS = true
 		if strings.HasPrefix(nbrew.ContentDomain, "localhost:") || (nbrew.ContentDomain == nbrew.CMSDomain && nbrew.Port == 80) || err2 == nil {
 			nbrew.ContentDomainHTTPS = false
-		}
-
-		// DNS.
-		b, err = os.ReadFile(filepath.Join(configDir, "dns.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
-		}
-		b = bytes.TrimSpace(b)
-		if len(b) > 0 {
-			var dnsConfig struct {
-				Provider  string
-				Username  string
-				APIKey    string
-				APIToken  string
-				SecretKey string
-			}
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&dnsConfig)
-			if err != nil {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
-			}
-			switch dnsConfig.Provider {
-			case "namecheap":
-				if dnsConfig.Username == "" {
-					return fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
-				}
-				if dnsConfig.APIKey == "" {
-					return fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
-				}
-				if !nbrew.IP4.IsValid() {
-					return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
-				}
-				nbrew.DNSProvider = &namecheap.Provider{
-					APIKey:      dnsConfig.APIKey,
-					User:        dnsConfig.Username,
-					APIEndpoint: "https://api.namecheap.com/xml.response",
-					ClientIP:    nbrew.IP4.String(),
-				}
-			case "cloudflare":
-				if dnsConfig.APIToken == "" {
-					return fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
-				}
-				nbrew.DNSProvider = &cloudflare.Provider{
-					APIToken: dnsConfig.APIToken,
-				}
-			case "porkbun":
-				if dnsConfig.APIKey == "" {
-					return fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
-				}
-				if dnsConfig.SecretKey == "" {
-					return fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
-				}
-				nbrew.DNSProvider = &porkbun.Provider{
-					APIKey:       dnsConfig.APIKey,
-					APISecretKey: dnsConfig.SecretKey,
-				}
-			case "godaddy":
-				if dnsConfig.APIToken == "" {
-					return fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
-				}
-				nbrew.DNSProvider = &godaddy.Provider{
-					APIToken: dnsConfig.APIToken,
-				}
-			case "":
-				break
-			default:
-				return fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
-			}
 		}
 
 		// Certmagic.
@@ -391,12 +387,6 @@ func main() {
 					if err == nil {
 						return nil
 					}
-					if strings.Contains(domain, "*") {
-						// TODO: use nbrew.DNSProvider to check if the
-						// wildcard DNS record has been set, then set
-						// mapped to true.
-						return nil
-					}
 					ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
 					if err != nil {
 						return err
@@ -418,9 +408,25 @@ func main() {
 			if err != nil {
 				return err
 			}
+			cmsDomainWildcard := "*"+nbrew.CMSDomain
+			cmsDomainWildcardAdded := false
+			contentDomainWildcard := "*"+nbrew.ContentDomain
+			contentDomainWildcardAdded := false
 			for i, domain := range nbrew.Domains {
 				if matched[i] {
-					nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
+					if certmagic.MatchWildcard(domain, cmsDomainWildcard) {
+						if !cmsDomainWildcardAdded {
+							cmsDomainWildcardAdded = true
+							nbrew.ManagingDomains = append(nbrew.ManagingDomains, cmsDomainWildcard)
+						}
+					} else if certmagic.MatchWildcard(domain, contentDomainWildcard) {
+						if !contentDomainWildcardAdded {
+							contentDomainWildcardAdded = true
+							nbrew.ManagingDomains = append(nbrew.ManagingDomains, contentDomainWildcard)
+						}
+					} else {
+						nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
+					}
 				}
 			}
 		}
