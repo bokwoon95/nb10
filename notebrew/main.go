@@ -156,94 +156,6 @@ func main() {
 		}
 		port := string(bytes.TrimSpace(b))
 
-		// DNS.
-		b, err = os.ReadFile(filepath.Join(configDir, "dns.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
-		}
-		b = bytes.TrimSpace(b)
-		if len(b) > 0 {
-			var dnsConfig struct {
-				Provider  string
-				Username  string
-				APIKey    string
-				APIToken  string
-				SecretKey string
-			}
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&dnsConfig)
-			if err != nil {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
-			}
-			switch dnsConfig.Provider {
-			case "namecheap":
-				if dnsConfig.Username == "" {
-					return fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
-				}
-				if dnsConfig.APIKey == "" {
-					return fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
-				}
-				if !nbrew.IP4.IsValid() {
-					return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
-				}
-				nbrew.DNSProvider = &namecheap.Provider{
-					APIKey:      dnsConfig.APIKey,
-					User:        dnsConfig.Username,
-					APIEndpoint: "https://api.namecheap.com/xml.response",
-					ClientIP:    nbrew.IP4.String(),
-				}
-			case "cloudflare":
-				if dnsConfig.APIToken == "" {
-					return fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
-				}
-				nbrew.DNSProvider = &cloudflare.Provider{
-					APIToken: dnsConfig.APIToken,
-				}
-			case "porkbun":
-				if dnsConfig.APIKey == "" {
-					return fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
-				}
-				if dnsConfig.SecretKey == "" {
-					return fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
-				}
-				nbrew.DNSProvider = &porkbun.Provider{
-					APIKey:       dnsConfig.APIKey,
-					APISecretKey: dnsConfig.SecretKey,
-				}
-			case "godaddy":
-				if dnsConfig.APIToken == "" {
-					return fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
-				}
-				nbrew.DNSProvider = &godaddy.Provider{
-					APIToken: dnsConfig.APIToken,
-				}
-			case "":
-				return fmt.Errorf("%s: missing provider field", filepath.Join(configDir, "dns.json"))
-			default:
-				return fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
-			}
-		}
-
-		// Certmagic.
-		b, err = os.ReadFile(filepath.Join(configDir, "certmagic.txt"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
-		}
-		certmagicDir := string(bytes.TrimSpace(b))
-		if certmagicDir == "" {
-			certmagicDir = filepath.Join(configDir, "certmagic")
-		} else {
-			certmagicDir = filepath.Clean(certmagicDir)
-		}
-		err = os.MkdirAll(certmagicDir, 0755)
-		if err != nil {
-			return err
-		}
-		nbrew.CertStorage = &certmagic.FileStorage{
-			Path: certmagicDir,
-		}
-
 		// Fill in the port and CMS domain if missing.
 		if port != "" {
 			nbrew.Port, err = strconv.Atoi(port)
@@ -378,6 +290,95 @@ func main() {
 		if strings.HasPrefix(nbrew.ContentDomain, "localhost:") || (nbrew.ContentDomain == nbrew.CMSDomain && nbrew.Port == 80) || err2 == nil {
 			nbrew.ContentDomainHTTPS = false
 		}
+
+		// DNS.
+		b, err = os.ReadFile(filepath.Join(configDir, "dns.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+		}
+		b = bytes.TrimSpace(b)
+		if len(b) > 0 {
+			var dnsConfig struct {
+				Provider  string
+				Username  string
+				APIKey    string
+				APIToken  string
+				SecretKey string
+			}
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err := decoder.Decode(&dnsConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+			}
+			switch dnsConfig.Provider {
+			case "namecheap":
+				if dnsConfig.Username == "" {
+					return fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
+				}
+				if dnsConfig.APIKey == "" {
+					return fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
+				}
+				if !nbrew.IP4.IsValid() {
+					return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
+				}
+				nbrew.DNSProvider = &namecheap.Provider{
+					APIKey:      dnsConfig.APIKey,
+					User:        dnsConfig.Username,
+					APIEndpoint: "https://api.namecheap.com/xml.response",
+					ClientIP:    nbrew.IP4.String(),
+				}
+			case "cloudflare":
+				if dnsConfig.APIToken == "" {
+					return fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
+				}
+				nbrew.DNSProvider = &cloudflare.Provider{
+					APIToken: dnsConfig.APIToken,
+				}
+			case "porkbun":
+				if dnsConfig.APIKey == "" {
+					return fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
+				}
+				if dnsConfig.SecretKey == "" {
+					return fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
+				}
+				nbrew.DNSProvider = &porkbun.Provider{
+					APIKey:       dnsConfig.APIKey,
+					APISecretKey: dnsConfig.SecretKey,
+				}
+			case "godaddy":
+				if dnsConfig.APIToken == "" {
+					return fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
+				}
+				nbrew.DNSProvider = &godaddy.Provider{
+					APIToken: dnsConfig.APIToken,
+				}
+			case "":
+				break
+			default:
+				return fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
+			}
+		}
+
+		// Certmagic.
+		b, err = os.ReadFile(filepath.Join(configDir, "certmagic.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
+		}
+		certmagicDir := string(bytes.TrimSpace(b))
+		if certmagicDir == "" {
+			certmagicDir = filepath.Join(configDir, "certmagic")
+		} else {
+			certmagicDir = filepath.Clean(certmagicDir)
+		}
+		err = os.MkdirAll(certmagicDir, 0755)
+		if err != nil {
+			return err
+		}
+		nbrew.CertStorage = &certmagic.FileStorage{
+			Path: certmagicDir,
+		}
+
 		if nbrew.Port == 443 || nbrew.Port == 80 {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
