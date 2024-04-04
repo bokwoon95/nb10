@@ -233,16 +233,18 @@ func (cmd *StatusCmd) Run() error {
 			return err
 		}
 		b = bytes.TrimSpace(b)
-		if len(b) == 0 {
-			fmt.Fprintf(cmd.Stdout, "dns           = <not configured>\n")
-		} else {
-			var dnsConfig DNSConfig
+		var dnsConfig DNSConfig
+		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
 			err = decoder.Decode(&dnsConfig)
 			if err != nil {
 				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
 			}
+		}
+		if dnsConfig.Provider == "" {
+			fmt.Fprintf(cmd.Stdout, "dns           = <not configured>\n")
+		} else {
 			fmt.Fprintf(cmd.Stdout, "dns           = %s\n", dnsConfig.Provider)
 		}
 
