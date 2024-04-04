@@ -418,6 +418,7 @@ func main() {
 				cmsDomainWildcardAdded := false
 				contentDomainWildcard := "*" + nbrew.ContentDomain
 				contentDomainWildcardAdded := false
+				fmt.Printf("cmsDomainWildcard=%q contentDomainWildcard=%q\n", cmsDomainWildcard, contentDomainWildcard)
 				for i, domain := range nbrew.Domains {
 					fmt.Printf("domain=%q matched=%v", domain, matched[i])
 					if matched[i] {
