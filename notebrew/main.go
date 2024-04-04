@@ -389,6 +389,7 @@ func main() {
 					}
 					ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
 					if err != nil {
+						fmt.Println("got here")
 						return err
 					}
 					for _, ip := range ips {
