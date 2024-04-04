@@ -414,9 +414,9 @@ func main() {
 					}
 				}
 			} else {
-				cmsDomainWildcard := "*" + nbrew.CMSDomain
+				cmsDomainWildcard := "*." + nbrew.CMSDomain
 				cmsDomainWildcardAdded := false
-				contentDomainWildcard := "*" + nbrew.ContentDomain
+				contentDomainWildcard := "*." + nbrew.ContentDomain
 				contentDomainWildcardAdded := false
 				fmt.Printf("cmsDomainWildcard=%q contentDomainWildcard=%q\n", cmsDomainWildcard, contentDomainWildcard)
 				for i, domain := range nbrew.Domains {
