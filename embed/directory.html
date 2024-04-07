@@ -324,6 +324,64 @@
 <form>
   <input type='hidden' name='parent' value='{{ $.FilePath }}'>
   <ul>
+    {{- range $file := $.PinnedFiles }}
+    <li class='bb pv2'>
+      <label for='{{ $file.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
+        <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
+          <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'{{ if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }} disabled {{ end }}>
+        </div>
+        <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
+          {{- if $file.IsDir }}
+          <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>
+          {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
+          <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
+          {{- end }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and $.ImgDomain $.IsDatabaseFS }}
+          <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
+          {{- else }}
+          <img src='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}?raw' class='h3 w3 mr1'>
+          {{- end }}
+          {{- end }}
+          <a href='/{{ join "files" $.SitePrefix $.FilePath $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
+          {{- if not $file.IsDir }}
+          <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
+          {{- end }}
+          <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
+          <span class='ml2 f6'>{{ template "octicons-pin" }}</span>
+        </div>
+        <div class='flex-grow-1'></div>
+        <details class='relative ml1' data-autoclose-details>
+          <summary role='button' title='more actions' class='flex items-center button ba br2 b--black h2 hide-marker ph2 pointer' data-disable-click-selection>
+            {{ template "heroicons-ellipsis-horizontal" }}
+            {{ template "octicons-triangle-down" }}
+          </summary>
+          <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
+          {{- if $readOnly }}
+            {{- if $.IsDatabaseFS }}
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>unpin</button></div>
+            {{- end }}
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+          {{- else if eq (join $.FilePath $file.Name) "pages/index.html" "pages/404.html" "output/themes/post.html" "output/themes/postlist.html"}}
+          <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+            {{- if $.IsDatabaseFS }}
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>unpin</button></div>
+            {{- end }}
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+          {{- else }}
+          <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
+          <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
+          <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+            {{- if $.IsDatabaseFS }}
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>unpin</button></div>
+            {{- end }}
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+          {{- end }}
+          </div>
+        </details>
+      </label>
+    </li>
+    {{- end }}
     {{- range $file := $.Files }}
     <li class='bb pv2'>
       <label for='{{ $file.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
@@ -549,5 +607,11 @@
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='16' height='16'>
   <path d='M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z'></path>
   <path d='M11.78 4.72a.749.749 0 1 1-1.06 1.06L8.75 3.811V9.5a.75.75 0 0 1-1.5 0V3.811L5.28 5.78a.749.749 0 1 1-1.06-1.06l3.25-3.25a.749.749 0 0 1 1.06 0l3.25 3.25Z'></path>
+</svg>
+{{- end }}
+
+{{- define "octicons-pin" }}
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='16' height='16'>
+  <path d='m11.294.984 3.722 3.722a1.75 1.75 0 0 1-.504 2.826l-1.327.613a3.089 3.089 0 0 0-1.707 2.084l-.584 2.454c-.317 1.332-1.972 1.8-2.94.832L5.75 11.311 1.78 15.28a.749.749 0 1 1-1.06-1.06l3.969-3.97-2.204-2.204c-.968-.968-.5-2.623.832-2.94l2.454-.584a3.08 3.08 0 0 0 2.084-1.707l.613-1.327a1.75 1.75 0 0 1 2.826-.504ZM6.283 9.723l2.732 2.731a.25.25 0 0 0 .42-.119l.584-2.454a4.586 4.586 0 0 1 2.537-3.098l1.328-.613a.25.25 0 0 0 .072-.404l-3.722-3.722a.25.25 0 0 0-.404.072l-.613 1.328a4.584 4.584 0 0 1-3.098 2.537l-2.454.584a.25.25 0 0 0-.119.42l2.731 2.732Z'></path>
 </svg>
 {{- end }}

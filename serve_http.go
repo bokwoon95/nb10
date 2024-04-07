@@ -346,6 +346,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "pin":
 			nbrew.pin(w, r, user, sitePrefix)
 			return
+		case "unpin":
+			nbrew.unpin(w, r, user, sitePrefix)
+			return
 		case "createfolder":
 			nbrew.createfolder(w, r, user, sitePrefix)
 			return
