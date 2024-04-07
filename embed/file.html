@@ -177,6 +177,26 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+{{- if eq (index $.PostRedirectGet "from") "pin" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{ $numPinned := index $.PostRedirectGet "numPinned" }}
+  <div class='pv1'>
+    pinned {{ $numPinned }} file{{ if ne $numPinned 0.0 }}s{{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
+{{- if eq (index $.PostRedirectGet "from") "unpin" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{ $numUnpinned := index $.PostRedirectGet "numUnpinned" }}
+  <div class='pv1'>
+    unpinned {{ $numUnpinned }} file{{ if ne $numUnpinned 0.0 }}s{{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if len $clipboard }}
 {{- $srcSitePrefix := $clipboard.Get "sitePrefix" }}
 {{- $srcParent := $clipboard.Get "parent" }}
