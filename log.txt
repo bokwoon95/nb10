@@ -51,6 +51,7 @@ BUG: Unable to create assets for pages/index.html (we need to make an exception 
 BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 BUG: rename.go: renaming posts should rightfully trigger a postlist regeneration because the link has changed.
 BUG: unable to create an image post with no post body (to S3).
+BUG: deleting a post category doesn't delete the output folder (food2 on notebrew.com)
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
