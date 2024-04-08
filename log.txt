@@ -60,6 +60,7 @@ TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style ga
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
 TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
+TODO: consider gzipping all JSON responses (we may finally have to write that JSONify function utility).
 BUG: can't add new images via file.html image upload "save".
 BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
 BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.
