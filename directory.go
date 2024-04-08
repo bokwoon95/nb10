@@ -65,6 +65,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 		if r.Form.Has("api") {
 			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Encoding", "gzip")
 			gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 			gzipWriter.Reset(w)
 			defer func() {
