@@ -21,6 +21,7 @@ import (
 func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
+		Parent       string    `json:"parent"`
 		Name         string    `json:"name"`
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
@@ -291,6 +292,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath, name)
 			}
 			file := File{
+				Parent:       filePath,
 				Name:         name,
 				IsDir:        fileInfo.IsDir(),
 				Size:         fileInfo.Size(),
@@ -376,9 +378,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
 		},
 	}, func(row *sq.Row) File {
+		filePath := row.String("files.file_path")
 		return File{
 			FileID:       row.UUID("files.file_id"),
-			Name:         path.Base(row.String("files.file_path")),
+			Parent:       path.Dir(filePath),
+			Name:         path.Base(filePath),
 			Size:         row.Int64("files.size"),
 			ModTime:      row.Time("files.mod_time"),
 			CreationTime: row.Time("files.creation_time"),
@@ -419,13 +423,15 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.IntParam("limit", response.Limit),
 					},
 				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
 					return File{
-						FileID:       row.UUID("file_id"),
-						Name:         path.Base(row.String("file_path")),
-						Size:         row.Int64("size"),
-						ModTime:      row.Time("mod_time"),
-						CreationTime: row.Time("creation_time"),
-						IsDir:        row.Bool("is_dir"),
+						FileID:       row.UUID("files.file_id"),
+						Parent:       path.Dir(filePath),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
 					}
 				})
 				if err != nil {
@@ -517,13 +523,15 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.IntParam("limit", response.Limit),
 					},
 				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
 					return File{
-						FileID:       row.UUID("file_id"),
-						Name:         path.Base(row.String("file_path")),
-						Size:         row.Int64("size"),
-						ModTime:      row.Time("mod_time"),
-						CreationTime: row.Time("creation_time"),
-						IsDir:        row.Bool("is_dir"),
+						FileID:       row.UUID("files.file_id"),
+						Parent:       path.Dir(filePath),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
 					}
 				})
 				if err != nil {
@@ -641,13 +649,15 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.IntParam("limit", response.Limit),
 					},
 				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
 					return File{
-						FileID:       row.UUID("file_id"),
-						Name:         path.Base(row.String("file_path")),
-						Size:         row.Int64("size"),
-						ModTime:      row.Time("mod_time"),
-						CreationTime: row.Time("creation_time"),
-						IsDir:        row.Bool("is_dir"),
+						FileID:       row.UUID("files.file_id"),
+						Parent:       path.Dir(filePath),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
 					}
 				})
 				if err != nil {
@@ -772,13 +782,15 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.IntParam("limit", response.Limit),
 					},
 				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
 					return File{
-						FileID:       row.UUID("file_id"),
-						Name:         path.Base(row.String("file_path")),
-						Size:         row.Int64("size"),
-						ModTime:      row.Time("mod_time"),
-						CreationTime: row.Time("creation_time"),
-						IsDir:        row.Bool("is_dir"),
+						FileID:       row.UUID("files.file_id"),
+						Parent:       path.Dir(filePath),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
 					}
 				})
 				if err != nil {
@@ -903,13 +915,15 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			sq.IntParam("limit", response.Limit),
 		},
 	}, func(row *sq.Row) File {
+		filePath := row.String("files.file_path")
 		return File{
-			FileID:       row.UUID("file_id"),
-			Name:         path.Base(row.String("file_path")),
-			Size:         row.Int64("size"),
-			ModTime:      row.Time("mod_time"),
-			CreationTime: row.Time("creation_time"),
-			IsDir:        row.Bool("is_dir"),
+			FileID:       row.UUID("files.file_id"),
+			Parent:       path.Dir(filePath),
+			Name:         path.Base(filePath),
+			Size:         row.Int64("files.size"),
+			ModTime:      row.Time("files.mod_time"),
+			CreationTime: row.Time("files.creation_time"),
+			IsDir:        row.Bool("files.is_dir"),
 		}
 	})
 	if err != nil {
