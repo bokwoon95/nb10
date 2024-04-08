@@ -409,6 +409,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					order = sq.Expr("file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -461,6 +462,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					order = sq.Expr("file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
+					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT 1" +
 						" FROM files" +

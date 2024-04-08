@@ -29,7 +29,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		ContentBaseURL string   `json:"contentBaseURL"`
 		SitePrefix     string   `json:"sitePrefix"`
 		ImgDomain      string   `json:"imgDomain"`
-		IsDatabaseFS     bool     `json:"isDatabaseFS"`
+		IsDatabaseFS   bool     `json:"isDatabaseFS"`
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
@@ -88,6 +88,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		funcMap := map[string]any{
 			"join":       path.Join,
+			"dir":        path.Dir,
+			"base":       path.Base,
 			"ext":        path.Ext,
 			"hasPrefix":  strings.HasPrefix,
 			"trimPrefix": strings.TrimPrefix,
