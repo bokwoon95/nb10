@@ -36,7 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: pinned files should embed the full filepath so that they're still reachable even if moved around, and unpin() should read in a list of filepaths (not names, if they don't have a "/" skip them) and remove them based on their filepaths.
 TODO: try uploading images notebrew.com from an android phone and see what the filename is called (also image.jpg? image.jpeg? image.png?)
 TODO: search.html: display a "view in directory" link that will take the user to the page where the file is the first item allowing them to do the usual file operations on it.
 TODO: file.html: reverse the <-- back | notes | files part. files comes first, followed by everything else.
