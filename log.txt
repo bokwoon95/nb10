@@ -36,6 +36,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: the cation div in post.html also needs the same padding/margin as a paragraph (it has to resemble a paragraph in all but name -- why aren't we using a paragraph again?)
 TODO: implement "insert" button in asset item menu.
     - insert CSS: <link rel='stylesheet' href='my-file-name.css'>
     - insert JS: <script src='my-file-name.js'></script>
