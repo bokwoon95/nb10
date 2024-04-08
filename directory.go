@@ -381,7 +381,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		filePath := row.String("files.file_path")
 		return File{
 			FileID:       row.UUID("files.file_id"),
-			Parent:       path.Dir(filePath),
+			Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 			Name:         path.Base(filePath),
 			Size:         row.Int64("files.size"),
 			ModTime:      row.Time("files.mod_time"),
@@ -426,7 +426,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					filePath := row.String("files.file_path")
 					return File{
 						FileID:       row.UUID("files.file_id"),
-						Parent:       path.Dir(filePath),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 						Name:         path.Base(filePath),
 						Size:         row.Int64("files.size"),
 						ModTime:      row.Time("files.mod_time"),
@@ -526,7 +526,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					filePath := row.String("files.file_path")
 					return File{
 						FileID:       row.UUID("files.file_id"),
-						Parent:       path.Dir(filePath),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 						Name:         path.Base(filePath),
 						Size:         row.Int64("files.size"),
 						ModTime:      row.Time("files.mod_time"),
@@ -652,7 +652,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					filePath := row.String("files.file_path")
 					return File{
 						FileID:       row.UUID("files.file_id"),
-						Parent:       path.Dir(filePath),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 						Name:         path.Base(filePath),
 						Size:         row.Int64("files.size"),
 						ModTime:      row.Time("files.mod_time"),
@@ -785,7 +785,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					filePath := row.String("files.file_path")
 					return File{
 						FileID:       row.UUID("files.file_id"),
-						Parent:       path.Dir(filePath),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 						Name:         path.Base(filePath),
 						Size:         row.Int64("files.size"),
 						ModTime:      row.Time("files.mod_time"),
@@ -918,7 +918,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		filePath := row.String("files.file_path")
 		return File{
 			FileID:       row.UUID("files.file_id"),
-			Parent:       path.Dir(filePath),
+			Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 			Name:         path.Base(filePath),
 			Size:         row.Int64("files.size"),
 			ModTime:      row.Time("files.mod_time"),
