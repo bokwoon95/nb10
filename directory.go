@@ -749,9 +749,16 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 					}
 					if response.From != "" {
-						uri.RawQuery = "beforeTime=" + url.QueryEscape(response.FromTime) + "&before=" + url.QueryEscape(response.From) + "&limit=" + strconv.Itoa(response.Limit)
+						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&beforeTime=" + url.QueryEscape(response.FromTime) +
+							"&before=" + url.QueryEscape(response.From) +
+							"&limit=" + strconv.Itoa(response.Limit)
 					} else {
-						uri.RawQuery = "beforeTime=" + url.QueryEscape(response.FromTime) + "&limit=" + strconv.Itoa(response.Limit)
+						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&beforeTime=" + url.QueryEscape(response.FromTime) +
+							"&limit=" + strconv.Itoa(response.Limit)
 					}
 					response.PreviousURL = uri.String()
 				}
