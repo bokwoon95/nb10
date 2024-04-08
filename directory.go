@@ -1,12 +1,10 @@
 package nb10
 
 import (
-	"compress/gzip"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"html/template"
-	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -65,14 +63,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 		if r.Form.Has("api") {
 			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Content-Encoding", "gzip")
-			gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-			gzipWriter.Reset(w)
-			defer func() {
-				gzipWriter.Reset(io.Discard)
-				gzipWriterPool.Put(gzipWriter)
-			}()
-			encoder := json.NewEncoder(gzipWriter)
+			encoder := json.NewEncoder(w)
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
