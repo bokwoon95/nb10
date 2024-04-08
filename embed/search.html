@@ -90,15 +90,16 @@
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>search</button>
 </form>
 {{- if $.Matches }}
-<ul class='ph3 list-style-decimal'>
-  {{- range $match := $.Matches }}
+<ul>
+  {{- range $i, $match := $.Matches }}
   <li>
     <div>
+      <span class='mr1'>{{ incr $i }}.</span>
       {{- if eq (ext $match.FilePath) ".jpeg" ".jpg" ".png" ".webp" ".gif" }}
         {{- if and $.ImgDomain $.IsDatabaseFS }}
-        <img src='//{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 mr1' loading='lazy'>
+        <img src='//{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 ml1' loading='lazy'>
         {{- else }}
-        <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 mr1' loading='lazy'>
+        <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 ml1' loading='lazy'>
         {{- end }}
       {{- end }}
       <a href='/{{ join "files" $.SitePrefix $match.FilePath }}' class='b'>{{ $match.FilePath }}</a>
