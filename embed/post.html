@@ -34,6 +34,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 </nav>
 <hr>
 <div class='text-sm gray-600'>{{ $.CreationTime.Format "2006-01-02" }}</div>
+<article>
 {{ $.Content }}
 <ul class='m-0 p-0 list-none'>
   {{ range $image := $.Images }}
@@ -46,5 +47,6 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
   </li>
   {{ end }}
 </ul>
+</article>
 <hr>
 <div class='text-sm gray-600'>last modified {{ $.ModificationTime.Format "2006-01-02 15:04:05 UTC" }}</div>
