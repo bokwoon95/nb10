@@ -443,10 +443,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					nextFile := response.Files[response.Limit]
 					response.Files = response.Files[:response.Limit]
 					uri := &url.URL{
-						Scheme:   scheme,
-						Host:     r.Host,
-						Path:     r.URL.Path,
-						RawQuery: "from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit),
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&from=" + url.QueryEscape(nextFile.Name) +
+							"&limit=" + strconv.Itoa(response.Limit),
 					}
 					response.NextURL = uri.String()
 				}
@@ -480,10 +483,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				if hasPreviousFile {
 					uri := &url.URL{
-						Scheme:   scheme,
-						Host:     r.Host,
-						Path:     r.URL.Path,
-						RawQuery: "before=" + url.QueryEscape(response.From) + "&limit=" + strconv.Itoa(response.Limit),
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&before=" + url.QueryEscape(response.From) +
+							"&limit=" + strconv.Itoa(response.Limit),
 					}
 					response.PreviousURL = uri.String()
 				}
@@ -544,10 +550,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				if len(response.Files) > response.Limit {
 					response.Files = response.Files[1:]
 					uri := &url.URL{
-						Scheme:   scheme,
-						Host:     r.Host,
-						Path:     r.URL.Path,
-						RawQuery: "before=" + url.QueryEscape(response.Files[0].Name) + "&limit=" + strconv.Itoa(response.Limit),
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&before=" + url.QueryEscape(response.Files[0].Name) +
+							"&limit=" + strconv.Itoa(response.Limit),
 					}
 					response.PreviousURL = uri.String()
 				}
@@ -590,10 +599,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					return err
 				}
 				uri := &url.URL{
-					Scheme:   scheme,
-					Host:     r.Host,
-					Path:     r.URL.Path,
-					RawQuery: "from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit),
+					Scheme: scheme,
+					Host:   r.Host,
+					Path:   r.URL.Path,
+					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+						"&order=" + url.QueryEscape(response.Order) +
+						"&from=" + url.QueryEscape(nextFile.Name) +
+						"&limit=" + strconv.Itoa(response.Limit),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -678,9 +690,17 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 					}
 					if response.Sort == "edited" {
-						uri.RawQuery = "fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) + "&from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
+							"&from=" + url.QueryEscape(nextFile.Name) +
+							"&limit=" + strconv.Itoa(response.Limit)
 					} else if response.Sort == "created" {
-						uri.RawQuery = "fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) + "&from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
+							"&from=" + url.QueryEscape(nextFile.Name) +
+							"&limit=" + strconv.Itoa(response.Limit)
 					}
 					response.NextURL = uri.String()
 				}
@@ -812,9 +832,17 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 					}
 					if response.Sort == "edited" {
-						uri.RawQuery = "beforeTime=" + url.QueryEscape(response.Files[0].ModTime.UTC().Format(timeFormat)) + "&before=" + url.QueryEscape(response.Files[0].Name) + "&limit=" + strconv.Itoa(response.Limit)
+						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&beforeTime=" + url.QueryEscape(response.Files[0].ModTime.UTC().Format(timeFormat)) +
+							"&before=" + url.QueryEscape(response.Files[0].Name) +
+							"&limit=" + strconv.Itoa(response.Limit)
 					} else if response.Sort == "created" {
-						uri.RawQuery = "beforeTime=" + url.QueryEscape(response.Files[0].CreationTime.UTC().Format(timeFormat)) + "&before=" + url.QueryEscape(response.Files[0].Name) + "&limit=" + strconv.Itoa(response.Limit)
+						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&beforeTime=" + url.QueryEscape(response.Files[0].CreationTime.UTC().Format(timeFormat)) +
+							"&before=" + url.QueryEscape(response.Files[0].Name) +
+							"&limit=" + strconv.Itoa(response.Limit)
 					}
 					response.PreviousURL = uri.String()
 				}
@@ -872,9 +900,17 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 				}
 				if response.Sort == "edited" {
-					uri.RawQuery = "fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) + "&from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+					uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+						"&order=" + url.QueryEscape(response.Order) +
+						"&fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
+						"&from=" + url.QueryEscape(nextFile.Name) +
+						"&limit=" + strconv.Itoa(response.Limit)
 				} else if response.Sort == "created" {
-					uri.RawQuery = "fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) + "&from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+					uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+						"&order=" + url.QueryEscape(response.Order) +
+						"&fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
+						"&from=" + url.QueryEscape(nextFile.Name) +
+						"&limit=" + strconv.Itoa(response.Limit)
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -949,11 +985,22 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			Path:   r.URL.Path,
 		}
 		if response.Sort == "name" {
-			uri.RawQuery = "from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+			uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+				"&order=" + url.QueryEscape(response.Order) +
+				"&from=" + url.QueryEscape(nextFile.Name) +
+				"&limit=" + strconv.Itoa(response.Limit)
 		} else if response.Sort == "edited" {
-			uri.RawQuery = "fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) + "&from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+			uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+				"&order=" + url.QueryEscape(response.Order) +
+				"&fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
+				"&from=" + url.QueryEscape(nextFile.Name) +
+				"&limit=" + strconv.Itoa(response.Limit)
 		} else if response.Sort == "created" {
-			uri.RawQuery = "fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) + "&from=" + url.QueryEscape(nextFile.Name) + "&limit=" + strconv.Itoa(response.Limit)
+			uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+				"&order=" + url.QueryEscape(response.Order) +
+				"&fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
+				"&from=" + url.QueryEscape(nextFile.Name) +
+				"&limit=" + strconv.Itoa(response.Limit)
 		}
 		response.NextURL = uri.String()
 	}
