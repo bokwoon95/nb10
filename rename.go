@@ -126,7 +126,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
 						if len(b) == 5 {
 							response.Prefix = prefix + "-"
-							remainder = ""
+							remainder = path.Ext(remainder)
 						}
 					}
 				}
@@ -291,7 +291,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
 						if len(b) == 5 {
 							response.Prefix = prefix + "-"
-							remainder = ""
+							remainder = ext
 						}
 					}
 				}
