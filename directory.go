@@ -511,10 +511,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Order == "asc" {
 					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.Before))
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("file_path DESC")
 				} else {
 					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.Before))
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("file_path ASC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 					Debug:   true,
@@ -566,10 +566,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Order == "asc" {
 					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.Before))
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("file_path ASC")
 				} else {
 					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.Before))
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Debug:   true,
