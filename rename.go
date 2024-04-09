@@ -121,10 +121,11 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						}
 					}
 				} else {
-					if len(remainder) > 0 && len(remainder) <= 8 {
-						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", remainder))
+					prefix := strings.TrimSuffix(remainder, path.Ext(remainder))
+					if len(prefix) > 0 && len(prefix) <= 8 {
+						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
 						if len(b) == 5 {
-							response.Prefix = remainder + "-"
+							response.Prefix = prefix + "-"
 							remainder = ""
 						}
 					}
@@ -285,10 +286,11 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						}
 					}
 				} else {
-					if len(remainder) > 0 && len(remainder) <= 8 {
-						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", remainder))
+					prefix := strings.TrimSuffix(remainder, ext)
+					if len(prefix) > 0 && len(prefix) <= 8 {
+						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", prefix))
 						if len(b) == 5 {
-							response.Prefix = remainder + "-"
+							response.Prefix = prefix + "-"
 							remainder = ""
 						}
 					}
