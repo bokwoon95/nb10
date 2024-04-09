@@ -548,7 +548,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				response.Files = files
 				if len(response.Files) > response.Limit {
-					response.Files = response.Files[1:]
+					response.Files = response.Files[:len(response.Files)-1]
 					uri := &url.URL{
 						Scheme: scheme,
 						Host:   r.Host,
