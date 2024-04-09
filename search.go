@@ -293,7 +293,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 	case "postgres":
+		// SELECT * FROM files WHERE files.fts @@ ((to_tsquery('english', 'apple') || phraseto_tsquery('english', 'steve jobs')) && !!to_tsquery('english', 'iphone'))
 	case "mysql":
+		// SELECT * FROM files WHERE MATCH (file_name, text) AGAINST ('("apple" "steve jobs") -"iphone"' IN BOOLEAN MODE)
 	}
 	writeResponse(w, r, response)
 }
