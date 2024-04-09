@@ -2,7 +2,6 @@ package nb10
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -208,8 +207,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			includeTerms = append(includeTerms, b.String())
 		}
 	}
-	fmt.Printf("%#v\n", includeTerms)
-	fmt.Printf("%#v\n", excludeTerms)
 	if len(includeTerms) == 0 && len(excludeTerms) == 0 {
 		writeResponse(w, r, response)
 		return
