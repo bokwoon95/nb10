@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
 )
@@ -156,6 +158,44 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	var terms [][]string
 	var excludeTerms [][]string
 	_, _ = terms, excludeTerms
+	start := -1
+	exclude := false
+	inString := false
+	for i, char := range response.Query {
+		if char == '"' {
+			inString = !inString
+			continue
+		}
+		if start < 0 {
+			if !inString && char == '-' {
+				nextChar, _ := utf8.DecodeRuneInString(response.Query[i+1:])
+				if nextChar == utf8.RuneError || unicode.IsSpace(nextChar) {
+					continue
+				}
+				exclude = true
+				continue
+			}
+			if unicode.IsSpace(char) {
+				continue
+			}
+			start = i
+			continue
+		}
+		if unicode.IsSpace(char) {
+			term := response.Query[start:i]
+			_ = term
+			start = -1
+			if exclude {
+				if inString {
+				} else {
+				}
+			} else {
+				if inString {
+				} else {
+				}
+			}
+		}
+	}
 	var err error
 	switch databaseFS.Dialect {
 	case "sqlite":
