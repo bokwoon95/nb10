@@ -72,6 +72,7 @@
     {{- end }}
     <span class='ml2 f6 mid-gray flex items-center'>{{ humanReadableFileSize $.Size }}</span>
     <span class='ml2 f6 mid-gray'>{{ $.CreationTime.Format "2006-01-02" }}</span>
+    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}?sort=name&from={{ base $.FilePath }}&limit=1' class='ml2 f6'>view in folder</a>
     <span class='flex-grow-1 mh1'></span>
     {{- if $.NextImageName }}
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
