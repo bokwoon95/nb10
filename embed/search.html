@@ -38,12 +38,12 @@
   </div>
   <div class='mv3'>
     <div class='b'>Operator:</div>
-    <label for='operator.or' class='mr3 pointer nowrap'>
-      <input id='operator.or' type='radio' name='operator' value='or' class='pointer'{{ if ne $.Operator "and" }} checked{{ end }}>
+    <label for='operator.OR' class='mr3 pointer nowrap'>
+      <input id='operator.OR' type='radio' name='operator' value='OR' class='pointer'{{ if ne $.Operator "AND" }} checked{{ end }}>
       <span>OR</span>
     </label>
-    <label for='operator.and' class='mr3 pointer nowrap'>
-      <input id='operator.and' type='radio' name='operator' value='and' class='pointer'{{ if eq $.Operator "and" }} checked{{ end }}>
+    <label for='operator.AND' class='mr3 pointer nowrap'>
+      <input id='operator.AND' type='radio' name='operator' value='AND' class='pointer'{{ if eq $.Operator "AND" }} checked{{ end }}>
       <span>AND</span>
     </label>
   </div>

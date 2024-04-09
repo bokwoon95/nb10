@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -133,9 +134,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.Username = user.Username
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
 	response.SearchTerms = strings.TrimSpace(request.SearchTerms)
-	response.Operator = strings.ToLower(strings.TrimSpace(request.Operator))
-	if response.Operator != "or" && response.Operator != "and" {
-		response.Operator = "or"
+	response.Operator = strings.ToUpper(strings.TrimSpace(request.Operator))
+	if response.Operator != "OR" && response.Operator != "AND" {
+		response.Operator = "OR"
 	}
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
@@ -151,80 +152,117 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	if !isValidParent(response.Parent) {
 		response.Parent = "."
 	}
-	if response.SearchTerms == "" {
-		writeResponse(w, r, response)
-		return
-	}
-	var terms [][]string
-	var excludeTerms [][]string
-	_, _ = terms, excludeTerms
-	start := -1
+	var includeTerms []string
+	var excludeTerms []string
 	exclude := false
 	inString := false
+	var b strings.Builder
 	for i, char := range response.SearchTerms {
 		if char == '"' {
+			if b.Len() > 0 {
+				if exclude {
+					excludeTerms = append(excludeTerms, b.String())
+				} else {
+					includeTerms = append(includeTerms, b.String())
+				}
+				exclude = false
+				b.Reset()
+			}
 			inString = !inString
 			continue
 		}
-		if start < 0 {
-			if !inString && char == '-' {
-				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
-				if nextChar == utf8.RuneError || unicode.IsSpace(nextChar) {
-					continue
-				}
-				exclude = true
-				continue
-			}
+		if inString {
+			b.WriteRune(char)
+			continue
+		}
+		if b.Len() == 0 {
 			if unicode.IsSpace(char) {
 				continue
 			}
-			start = i
+			if char == '-' {
+				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
+				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
+					exclude = true
+				}
+				continue
+			}
+			b.WriteRune(char)
 			continue
 		}
 		if unicode.IsSpace(char) {
-			term := response.SearchTerms[start:i]
-			_ = term
-			start = -1
 			if exclude {
-				if inString {
-				} else {
-				}
+				excludeTerms = append(excludeTerms, b.String())
 			} else {
-				if inString {
-				} else {
-				}
+				includeTerms = append(includeTerms, b.String())
 			}
+			exclude = false
+			b.Reset()
+			continue
+		}
+		b.WriteRune(char)
+	}
+	if b.Len() > 0 {
+		if exclude {
+			excludeTerms = append(excludeTerms, b.String())
+		} else {
+			includeTerms = append(includeTerms, b.String())
 		}
 	}
+	fmt.Printf("%#v\n", includeTerms)
+	fmt.Printf("%#v\n", excludeTerms)
+	if len(includeTerms) == 0 && len(excludeTerms) == 0 {
+		writeResponse(w, r, response)
+		return
+	}
 	var err error
+	var parentFilter sq.Expression
+	parent := path.Join(sitePrefix, response.Parent)
+	if parent == "." {
+		parentFilter = sq.Expr("(file_path LIKE 'notes/%'" +
+			" OR file_path LIKE 'pages/%'" +
+			" OR file_path LIKE 'posts/%'" +
+			" OR file_path LIKE 'output/%'" +
+			" OR parent_id IS NULL)")
+	} else {
+		parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
+	}
+	extensionFilter := sq.Expr("1 = 1")
+	if len(response.Exts) > 0 {
+		var b strings.Builder
+		var args []any
+		b.WriteString("(")
+		for i, ext := range response.Exts {
+			if i > 0 {
+				b.WriteString(" OR ")
+			}
+			b.WriteString("file_path LIKE {}")
+			args = append(args, "%"+ext)
+		}
+		b.WriteString(")")
+		extensionFilter = sq.Expr(b.String(), args...)
+	}
 	switch databaseFS.Dialect {
 	case "sqlite":
-		var parentFilter sq.Expression
-		parent := path.Join(sitePrefix, response.Parent)
-		if parent == "." {
-			parentFilter = sq.Expr("(file_path LIKE 'notes/%'" +
-				" OR file_path LIKE 'pages/%'" +
-				" OR file_path LIKE 'posts/%'" +
-				" OR file_path LIKE 'output/%'" +
-				" OR parent_id IS NULL)")
-		} else {
-			parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
-		}
-		extensionFilter := sq.Expr("1 = 1")
-		if len(response.Exts) > 0 {
-			var b strings.Builder
-			var args []any
+		var b strings.Builder
+		if len(excludeTerms) > 0 {
 			b.WriteString("(")
-			for i, ext := range response.Exts {
-				if i > 0 {
-					b.WriteString(" OR ")
-				}
-				b.WriteString("file_path LIKE {}")
-				args = append(args, "%"+ext)
-			}
-			b.WriteString(")")
-			extensionFilter = sq.Expr(b.String(), args...)
 		}
+		if len(includeTerms) == 0 {
+			includeTerms = []string{""}
+		}
+		for i, term := range includeTerms {
+			if i > 0 {
+				b.WriteString(" " + response.Operator + " ")
+			}
+			b.WriteString(`"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
+		}
+		if len(excludeTerms) > 0 {
+			b.WriteString(")")
+			for _, term := range excludeTerms {
+				b.WriteString(" NOT " + `"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
+			}
+		}
+		query := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 			Debug:   true,
 			Dialect: databaseFS.Dialect,
@@ -237,7 +275,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
 				sq.Param("parentFilter", parentFilter),
-				sq.StringParam("query", `"`+strings.ReplaceAll(response.SearchTerms, `"`, `""`)+`"`),
+				sq.StringParam("query", query),
 				sq.Param("extensionFilter", extensionFilter),
 			},
 		}, func(row *sq.Row) Match {
