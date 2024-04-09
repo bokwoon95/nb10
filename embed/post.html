@@ -3,6 +3,7 @@ html { max-width: 80ch; padding: 2rem 0.5rem; margin: auto; line-height: 1.75; f
 p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 .m-0 { margin: 0px; }
 .my-1 { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+.my-4 { margin-top: 1rem; margin-bottom: 1rem; }
 .mx-auto { margin-left: auto; margin-right: auto; }
 .ml-2 { margin-left: 0.5rem; }
 .mr-1 { margin-right: 0.25rem; }
@@ -33,19 +34,17 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 </nav>
 <hr>
 <div class='text-sm gray-600'>{{ $.CreationTime.Format "2006-01-02" }}</div>
-<article>
+<main>
 {{ $.Content }}
-<ul class='m-0 p-0 list-none'>
+<div>
   {{ range $image := $.Images }}
-  <li>
-    <div class='w-80-l w-90-m w-100 mx-auto'>
-      <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto' loading='lazy'>
-      <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
-    </div>
-    <div>{{ $image.Caption }}</div>
-  </li>
+  <div class='w-80-l w-90-m w-100 mx-auto'>
+    <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto' loading='lazy'>
+    <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
+  </div>
+  <div class='my-4'>{{ $image.Caption }}</div>
   {{ end }}
-</ul>
-</article>
+</div>
+</main>
 <hr>
 <div class='text-sm gray-600'>last modified {{ $.ModificationTime.Format "2006-01-02 15:04:05 UTC" }}</div>
