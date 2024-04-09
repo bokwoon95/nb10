@@ -404,7 +404,7 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
                 {{- else }}
-                <img alt='{{ $asset.AltText }}' src='/{{ join "files" $.SitePrefix $.FilePath $asset.Name }}?raw' class='h3 w3 mr1'>
+                <img alt='{{ $asset.AltText }}' src='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}?raw' class='h3 w3 mr1'>
                 {{- end }}
               {{- end }}
               <a href='/{{ join "files" $.SitePrefix $.AssetDir $asset.Name }}' class='flex-wrap'>{{ $asset.Name }}</a>
@@ -424,15 +424,17 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
             </summary>
             <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
               {{- if eq (join $.FilePath $asset.Name) "pages/index.html" "pages/404.html" "output/themes/post.html" "output/themes/postlist.html"}}
-              <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
-              <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
-              <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $asset.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+                <div class='ma2'><button type='button' class='button ba br2 b--black pa2 w-100' data-insert='{"name":"{{ $asset.Name }}","altText":"{{ $asset.AltText }}"}'>insert</button></div>
+                <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+                <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
+                <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $asset.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
               {{- else }}
-              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.AssetDir }}&name={{ $asset.Name }}'>rename</a></div>
-              <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
-              <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
-              <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
-              <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $asset.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+                <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.AssetDir }}&name={{ $asset.Name }}'>rename</a></div>
+                <div class='ma2'><button type='button' class='button ba br2 b--black pa2 w-100' data-insert='{"name":"{{ $asset.Name }}","altText":"{{ $asset.AltText }}"}'>insert</button></div>
+                <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
+                <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+                <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $asset.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
+                <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $asset.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
               {{- end }}
             </div>
           </details>
