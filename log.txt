@@ -36,12 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: implement "insert" button in asset item menu.
-    - data-insert='my-file-name.jpg'
-    - insert CSS: <link rel='stylesheet' href='my-file-name.css'>
-    - insert JS: <script src='my-file-name.js'></script>
-    - insert image: <img src='my-file-name.jpg' alt='my alt text' style='max-width: 100%; height: auto;'>
-    - insert markdown: {{ index $.Markdown "my-file-name.md" }}
 TODO: search: rename "Term" to "Terms (space separated)". Add a new field called "Operator" which is either OR or AND.
 TODO: uploadfile.go/createfile.go/file.go, if the image name is just "image" we need to an timestamp prefix to the name so that (1) we can continually upload files called "image.jpg" or whatever without naming conflicts and (2) images are sorted by creation date if sorted by name. We may need to do the monotonically increasing timestamp thing.
 TODO: create image post, which lets the user upload and image and its caption directly into a post without needing to specify a post body.
