@@ -21,13 +21,13 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 		Parent    string `json:"parent"`
 		NumPinned int    `json:"numPinned"`
 	}
-	if r.Method != "POST" {
-		nbrew.methodNotAllowed(w, r)
-		return
-	}
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
 		nbrew.notFound(w, r)
+		return
+	}
+	if r.Method != "POST" {
+		nbrew.methodNotAllowed(w, r)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
@@ -184,13 +184,13 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		Parent      string `json:"parent"`
 		NumUnpinned int    `json:"numUnpinned"`
 	}
-	if r.Method != "POST" {
-		nbrew.methodNotAllowed(w, r)
-		return
-	}
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
 		nbrew.notFound(w, r)
+		return
+	}
+	if r.Method != "POST" {
+		nbrew.methodNotAllowed(w, r)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
