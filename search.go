@@ -259,7 +259,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				b.WriteString(" NOT " + `"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
 			}
 		}
-		fulltextQuery := b.String()
+		ftsQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 			Debug:   true,
 			Dialect: databaseFS.Dialect,
@@ -267,12 +267,12 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				" FROM files" +
 				" JOIN files_fts5 ON files_fts5.rowid = files.rowid" +
 				" WHERE {parentFilter}" +
-				" AND files_fts5 MATCH {fulltextQuery}" +
+				" AND files_fts5 MATCH {ftsQuery}" +
 				" AND {extensionFilter}" +
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
 				sq.Param("parentFilter", parentFilter),
-				sq.StringParam("fulltextQuery", fulltextQuery),
+				sq.StringParam("ftsQuery", ftsQuery),
 				sq.Param("extensionFilter", extensionFilter),
 			},
 		}, func(row *sq.Row) Match {
