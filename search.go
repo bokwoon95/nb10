@@ -218,13 +218,13 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	var parentFilter sq.Expression
 	parent := path.Join(sitePrefix, response.Parent)
 	if parent == "." {
-		parentFilter = sq.Expr("(file_path LIKE 'notes/%'" +
-			" OR file_path LIKE 'pages/%'" +
-			" OR file_path LIKE 'posts/%'" +
-			" OR file_path LIKE 'output/%'" +
-			" OR parent_id IS NULL)")
+		parentFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
+			" OR files.file_path LIKE 'pages/%'" +
+			" OR files.file_path LIKE 'posts/%'" +
+			" OR files.file_path LIKE 'output/%'" +
+			" OR files.parent_id IS NULL)")
 	} else {
-		parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
+		parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
 	}
 	extensionFilter := sq.Expr("1 = 1")
 	if len(response.Exts) > 0 {
@@ -235,7 +235,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			if i > 0 {
 				b.WriteString(" OR ")
 			}
-			b.WriteString("file_path LIKE {}")
+			b.WriteString("files.file_path LIKE {}")
 			args = append(args, "%"+ext)
 		}
 		b.WriteString(")")
@@ -262,7 +262,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				b.WriteString(" NOT " + `"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
 			}
 		}
-		query := b.String()
+		fulltextQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 			Debug:   true,
 			Dialect: databaseFS.Dialect,
@@ -270,12 +270,12 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				" FROM files" +
 				" JOIN files_fts5 ON files_fts5.rowid = files.rowid" +
 				" WHERE {parentFilter}" +
-				" AND files_fts5 MATCH {query}" +
+				" AND files_fts5 MATCH {fulltextQuery}" +
 				" AND {extensionFilter}" +
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
 				sq.Param("parentFilter", parentFilter),
-				sq.StringParam("query", query),
+				sq.StringParam("fulltextQuery", fulltextQuery),
 				sq.Param("extensionFilter", extensionFilter),
 			},
 		}, func(row *sq.Row) Match {
