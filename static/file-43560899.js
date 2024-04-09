@@ -45,7 +45,6 @@ if (dataEditor) {
         } else {
           const cursorPosition = textarea.selectionStart;
           textarea.value = textarea.value.substring(0, cursorPosition) + text + textarea.value.substring(cursorPosition);
-          // textarea.setSelectionRange(cursorPosition, cursorPosition);
           textarea.style.height = `${textarea.scrollHeight}px`;
         }
         const innerText = dataInsert.innerText;
