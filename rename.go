@@ -120,6 +120,14 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 							remainder = suffix
 						}
 					}
+				} else {
+					if len(remainder) > 0 && len(remainder) <= 8 {
+						b, _ := base32Encoding.DecodeString(fmt.Sprintf("%08s", remainder))
+						if len(b) == 5 {
+							response.Prefix = remainder + "-"
+							remainder = ""
+						}
+					}
 				}
 			}
 			ext := path.Ext(remainder)
