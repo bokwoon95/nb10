@@ -13,7 +13,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 .gray-600 { color: #4b5563; }
 .font-bold { font-weight: bold; }
 .text-sm { font-size: 0.875rem; }
-.h-100 { height: 100%; }
+.h-auto { height: auto; }
 .w-100 { width: 100%; }
 @media screen and (min-width: 30em) and (max-width: 60em) {
   .w-90-m { width: 90%; }
@@ -24,7 +24,6 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 .block { display: block; }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .list-none { list-style: none; }
-.object-cover { object-fit: cover; }
 </style>
 <title>{{ if $.Category }}{{ $.Category }}{{ else }}posts{{ end }} - {{ $.Site.Title }}</title>
 <nav>

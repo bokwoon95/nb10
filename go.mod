@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.51.1
 	github.com/aws/smithy-go v1.20.1
-	github.com/bokwoon95/sqddl v0.4.11
+	github.com/bokwoon95/sqddl v0.4.12
 	github.com/caddyserver/certmagic v0.20.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/jackc/pgconn v1.14.0
@@ -19,7 +19,6 @@ require (
 	github.com/libdns/namecheap v0.0.0-20211109042440-fc7440785c8e
 	github.com/libdns/porkbun v0.1.2
 	github.com/mattn/go-sqlite3 v1.14.16
-	github.com/mholt/acmez v1.2.0
 	github.com/yuin/goldmark v1.4.13
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594
 	golang.org/x/crypto v0.18.0
@@ -51,6 +50,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
+	github.com/mholt/acmez v1.2.0 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
