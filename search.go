@@ -153,6 +153,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		writeResponse(w, r, response)
 		return
 	}
+	var terms [][]string
+	var excludeTerms [][]string
+	_, _ = terms, excludeTerms
 	var err error
 	switch databaseFS.Dialect {
 	case "sqlite":
