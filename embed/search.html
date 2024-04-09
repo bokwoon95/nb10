@@ -5,7 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<title>{{ if $.Query }}"{{ $.Query }}"{{ else }}search{{ end }}</title>
+<title>{{ if $.Terms }}"{{ $.Terms }}"{{ else }}search{{ end }}</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
@@ -29,12 +29,12 @@
   {{- else }}
   <h1 class='f3 mv3 b'>Search</h1>
   {{- end }}
-  {{- if $.Query }}
-  <h2><i>"{{ $.Query }}" - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
+  {{- if $.Terms }}
+  <h2><i>"{{ $.Terms }}" - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
   {{- end }}
   <div class='mv3'>
-    <div><label for='query' class='b'>Query:</label></div>
-    <input id='query' name='query' value='{{ $.Query }}' placeholder='search query' class='pv1 ph2 br2 ba w-100' required>
+    <div><label for='terms' class='b'>Search terms (space separated):</label></div>
+    <input id='terms' name='terms' value='{{ $.Terms }}' placeholder='search terms' class='pv1 ph2 br2 ba w-100' required>
   </div>
   <div class='mv3'>
     <div class='b'>Operator:</div>
@@ -122,7 +122,7 @@
   {{- end }}
 </ul>
 {{- else }}
-  {{- if $.Query }}
+  {{- if $.Terms }}
   <div class='mv2 tc'>- No matches -</div>
   {{- end }}
 {{- end }}

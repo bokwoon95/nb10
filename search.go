@@ -24,7 +24,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 	type Request struct {
 		Parent   string   `json:"parent"`
-		Query    string   `json:"query"`
+		Terms    string   `json:"terms"`
 		Operator string   `json:"operator"`
 		Exts     []string `json:"exts"`
 	}
@@ -36,7 +36,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
-		Query          string   `json:"query"`
+		Terms          string   `json:"terms"`
 		Operator       string   `json:"operator"`
 		Exts           []string `json:"exts"`
 		Matches        []Match  `json:"matches"`
@@ -119,7 +119,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 
 	request := Request{
 		Parent:   r.Form.Get("parent"),
-		Query:    r.Form.Get("query"),
+		Terms:    r.Form.Get("terms"),
 		Operator: r.Form.Get("operator"),
 		Exts:     r.Form["ext"],
 	}
@@ -132,7 +132,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
-	response.Query = strings.TrimSpace(request.Query)
+	response.Terms = strings.TrimSpace(request.Terms)
 	response.Operator = strings.ToLower(strings.TrimSpace(request.Operator))
 	if response.Operator != "or" && response.Operator != "and" {
 		response.Operator = "or"
@@ -151,7 +151,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	if !isValidParent(response.Parent) {
 		response.Parent = "."
 	}
-	if response.Query == "" {
+	if response.Terms == "" {
 		writeResponse(w, r, response)
 		return
 	}
@@ -161,14 +161,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	start := -1
 	exclude := false
 	inString := false
-	for i, char := range response.Query {
+	for i, char := range response.Terms {
 		if char == '"' {
 			inString = !inString
 			continue
 		}
 		if start < 0 {
 			if !inString && char == '-' {
-				nextChar, _ := utf8.DecodeRuneInString(response.Query[i+1:])
+				nextChar, _ := utf8.DecodeRuneInString(response.Terms[i+1:])
 				if nextChar == utf8.RuneError || unicode.IsSpace(nextChar) {
 					continue
 				}
@@ -182,7 +182,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			continue
 		}
 		if unicode.IsSpace(char) {
-			term := response.Query[start:i]
+			term := response.Terms[start:i]
 			_ = term
 			start = -1
 			if exclude {
@@ -237,7 +237,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
 				sq.Param("parentFilter", parentFilter),
-				sq.StringParam("query", `"`+strings.ReplaceAll(response.Query, `"`, `""`)+`"`),
+				sq.StringParam("query", `"`+strings.ReplaceAll(response.Terms, `"`, `""`)+`"`),
 				sq.Param("extensionFilter", extensionFilter),
 			},
 		}, func(row *sq.Row) Match {
