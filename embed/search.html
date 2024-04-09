@@ -5,7 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<title>{{ if $.Term }}"{{ $.Term }}"{{ else }}search{{ end }}</title>
+<title>{{ if $.Query }}"{{ $.Query }}"{{ else }}search{{ end }}</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
@@ -29,12 +29,23 @@
   {{- else }}
   <h1 class='f3 mv3 b'>Search</h1>
   {{- end }}
-  {{- if $.Term }}
-  <h2><i>"{{ $.Term }}" - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
+  {{- if $.Query }}
+  <h2><i>"{{ $.Query }}" - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
   {{- end }}
   <div class='mv3'>
-    <div><label for='term' class='b'>Term:</label></div>
-    <input id='term' name='term' value='{{ $.Term }}' placeholder='search term' class='pv1 ph2 br2 ba w-100' required>
+    <div><label for='query' class='b'>Query:</label></div>
+    <input id='query' name='query' value='{{ $.Query }}' placeholder='search query' class='pv1 ph2 br2 ba w-100' required>
+  </div>
+  <div class='mv3'>
+    <div class='b'>Operator:</div>
+    <label for='operator.or' class='mr3 pointer nowrap'>
+      <input id='operator.or' type='radio' name='operator' value='or' class='pointer'{{ if ne $.Operator "and" }} checked{{ end }}>
+      <span>OR</span>
+    </label>
+    <label for='operator.and' class='mr3 pointer nowrap'>
+      <input id='operator.and' type='radio' name='operator' value='and' class='pointer'{{ if eq $.Operator "and" }} checked{{ end }}>
+      <span>AND</span>
+    </label>
   </div>
   <div class='mv3'>
     <div class='b'>Extensions (leave blank to select all):</div>
@@ -111,7 +122,7 @@
   {{- end }}
 </ul>
 {{- else }}
-  {{- if $.Term }}
+  {{- if $.Query }}
   <div class='mv2 tc'>- No matches -</div>
   {{- end }}
 {{- end }}

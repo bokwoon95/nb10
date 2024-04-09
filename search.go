@@ -21,9 +21,10 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
-		Parent string   `json:"parent"`
-		Term   string   `json:"term"`
-		Exts   []string `json:"exts"`
+		Parent   string   `json:"parent"`
+		Query    string   `json:"query"`
+		Operator string   `json:"operator"`
+		Exts     []string `json:"exts"`
 	}
 	type Response struct {
 		ContentBaseURL string   `json:"contentBaseURL"`
@@ -33,7 +34,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
-		Term           string   `json:"term"`
+		Query          string   `json:"query"`
+		Operator       string   `json:"operator"`
 		Exts           []string `json:"exts"`
 		Matches        []Match  `json:"matches"`
 	}
@@ -114,9 +116,10 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 
 	request := Request{
-		Parent: r.Form.Get("parent"),
-		Term:   r.Form.Get("term"),
-		Exts:   r.Form["ext"],
+		Parent:   r.Form.Get("parent"),
+		Query:    r.Form.Get("query"),
+		Operator: r.Form.Get("operator"),
+		Exts:     r.Form["ext"],
 	}
 
 	var response Response
@@ -127,7 +130,11 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
-	response.Term = strings.TrimSpace(request.Term)
+	response.Query = strings.TrimSpace(request.Query)
+	response.Operator = strings.ToLower(strings.TrimSpace(request.Operator))
+	if response.Operator != "or" && response.Operator != "and" {
+		response.Operator = "or"
+	}
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
 			switch ext {
@@ -142,7 +149,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	if !isValidParent(response.Parent) {
 		response.Parent = "."
 	}
-	if response.Term == "" {
+	if response.Query == "" {
 		writeResponse(w, r, response)
 		return
 	}
@@ -176,17 +183,18 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			extensionFilter = sq.Expr(b.String(), args...)
 		}
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
 				" JOIN files_fts5 ON files_fts5.rowid = files.rowid" +
 				" WHERE {parentFilter}" +
-				" AND files_fts5 MATCH {term}" +
+				" AND files_fts5 MATCH {query}" +
 				" AND {extensionFilter}" +
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
 				sq.Param("parentFilter", parentFilter),
-				sq.StringParam("term", `"`+strings.ReplaceAll(response.Term, `"`, `""`)+`"`),
+				sq.StringParam("query", `"`+strings.ReplaceAll(response.Query, `"`, `""`)+`"`),
 				sq.Param("extensionFilter", extensionFilter),
 			},
 		}, func(row *sq.Row) Match {
