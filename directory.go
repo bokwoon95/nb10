@@ -266,7 +266,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 		if isDefaultOrder {
 			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.Path,
+				Path:     r.URL.EscapedPath(),
 				Name:     "order",
 				Value:    "0",
 				MaxAge:   -1,
@@ -276,7 +276,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			})
 		} else {
 			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.Path,
+				Path:     r.URL.EscapedPath(),
 				Name:     "order",
 				Value:    response.Order,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
