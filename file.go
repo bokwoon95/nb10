@@ -28,6 +28,7 @@ import (
 func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, file fs.File, fileInfo fs.FileInfo) {
 	type Asset struct {
 		FileID       ID        `json:"fileID"`
+		Parent       string    `json:"parent"`
 		Name         string    `json:"name"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
@@ -154,46 +155,96 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-				response.Assets, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
-					Dialect: databaseFS.Dialect,
-					Format: "SELECT {*}" +
-						" FROM files" +
-						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
-						" AND NOT is_dir" +
-						" AND (" +
-						"file_path LIKE '%.jpeg'" +
-						" OR file_path LIKE '%.jpg'" +
-						" OR file_path LIKE '%.png'" +
-						" OR file_path LIKE '%.webp'" +
-						" OR file_path LIKE '%.gif'" +
-						" OR file_path LIKE '%.css'" +
-						" OR file_path LIKE '%.js'" +
-						" OR file_path LIKE '%.md'" +
-						") " +
-						" ORDER BY file_path",
-					Values: []any{
-						sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
-					},
-				}, func(row *sq.Row) Asset {
-					return Asset{
-						Name:         path.Base(row.String("file_path")),
-						Size:         row.Int64("size"),
-						ModTime:      row.Time("mod_time"),
-						CreationTime: row.Time("creation_time"),
-						Content:      strings.TrimSpace(row.String("text")),
+				group, groupctx := errgroup.WithContext(r.Context())
+				group.Go(func() error {
+					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "SELECT {*}" +
+							" FROM pinned_file" +
+							" JOIN files ON files.file_id = pinned_file.file_id" +
+							" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
+							" AND NOT files.is_dir" +
+							" AND (" +
+							"files.file_path LIKE '%.jpeg'" +
+							" OR files.file_path LIKE '%.jpg'" +
+							" OR files.file_path LIKE '%.png'" +
+							" OR files.file_path LIKE '%.webp'" +
+							" OR files.file_path LIKE '%.gif'" +
+							" OR files.file_path LIKE '%.css'" +
+							" OR files.file_path LIKE '%.js'" +
+							" OR files.file_path LIKE '%.md'" +
+							") " +
+							" ORDER BY pinned_file.creation_time, pinned_file.file_id",
+						Values: []any{
+							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+						},
+					}, func(row *sq.Row) Asset {
+						filePath := row.String("files.file_path")
+						return Asset{
+							FileID:       row.UUID("files.file_id"),
+							Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+							Name:         path.Base(filePath),
+							Size:         row.Int64("files.size"),
+							ModTime:      row.Time("files.mod_time"),
+							CreationTime: row.Time("files.creation_time"),
+						}
+					})
+					if err != nil {
+						return err
 					}
+					response.PinnedAssets = pinnedAssets
+					return nil
 				})
-				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				group.Go(func() error {
+					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "SELECT {*}" +
+							" FROM files" +
+							" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
+							" AND NOT is_dir" +
+							" AND (" +
+							"file_path LIKE '%.jpeg'" +
+							" OR file_path LIKE '%.jpg'" +
+							" OR file_path LIKE '%.png'" +
+							" OR file_path LIKE '%.webp'" +
+							" OR file_path LIKE '%.gif'" +
+							" OR file_path LIKE '%.css'" +
+							" OR file_path LIKE '%.js'" +
+							" OR file_path LIKE '%.md'" +
+							") " +
+							" ORDER BY file_path",
+						Values: []any{
+							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+						},
+					}, func(row *sq.Row) Asset {
+						return Asset{
+							FileID:       row.UUID("file_id"),
+							Parent:       response.AssetDir,
+							Name:         path.Base(row.String("file_path")),
+							Size:         row.Int64("size"),
+							ModTime:      row.Time("mod_time"),
+							CreationTime: row.Time("creation_time"),
+							Content:      strings.TrimSpace(row.String("text")),
+						}
+					})
+					if err != nil && !errors.Is(err, sql.ErrNoRows) {
+						return err
+					}
+					response.Assets = assets
+					for i := range response.Assets {
+						asset := &response.Assets[i]
+						if strings.HasPrefix(asset.Content, "!alt ") {
+							altText, _, _ := strings.Cut(asset.Content, "\n")
+							asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+						}
+					}
+					return nil
+				})
+				err := group.Wait()
+				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.internalServerError(w, r, err)
 					return
-				}
-				for i := range response.Assets {
-					asset := &response.Assets[i]
-					if strings.HasPrefix(asset.Content, "!alt ") {
-						altText, _, _ := strings.Cut(asset.Content, "\n")
-						asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
-					}
 				}
 			} else {
 				dirEntries, err := nbrew.FS.ReadDir(path.Join(sitePrefix, response.AssetDir))
@@ -232,44 +283,90 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-				response.Assets, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
-					Dialect: databaseFS.Dialect,
-					Format: "SELECT {*}" +
-						" FROM files" +
-						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
-						" AND NOT is_dir" +
-						" AND (" +
-						"file_path LIKE '%.jpeg'" +
-						" OR file_path LIKE '%.jpg'" +
-						" OR file_path LIKE '%.png'" +
-						" OR file_path LIKE '%.webp'" +
-						" OR file_path LIKE '%.gif'" +
-						") " +
-						" ORDER BY file_path",
-					Values: []any{
-						sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
-					},
-				}, func(row *sq.Row) Asset {
-					return Asset{
-						FileID:       row.UUID("file_id"),
-						Name:         path.Base(row.String("file_path")),
-						Size:         row.Int64("size"),
-						ModTime:      row.Time("mod_time"),
-						CreationTime: row.Time("creation_time"),
-						Content:      strings.TrimSpace(row.String("text")),
+				group, groupctx := errgroup.WithContext(r.Context())
+				group.Go(func() error {
+					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "SELECT {*}" +
+							" FROM pinned_file" +
+							" JOIN files ON files.file_id = pinned_file.file_id" +
+							" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
+							" AND NOT files.is_dir" +
+							" AND (" +
+							"files.file_path LIKE '%.jpeg'" +
+							" OR files.file_path LIKE '%.jpg'" +
+							" OR files.file_path LIKE '%.png'" +
+							" OR files.file_path LIKE '%.webp'" +
+							" OR files.file_path LIKE '%.gif'" +
+							") " +
+							" ORDER BY pinned_file.creation_time, pinned_file.file_id",
+						Values: []any{
+							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+						},
+					}, func(row *sq.Row) Asset {
+						filePath := row.String("files.file_path")
+						return Asset{
+							FileID:       row.UUID("files.file_id"),
+							Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+							Name:         path.Base(filePath),
+							Size:         row.Int64("files.size"),
+							ModTime:      row.Time("files.mod_time"),
+							CreationTime: row.Time("files.creation_time"),
+						}
+					})
+					if err != nil {
+						return err
 					}
+					response.PinnedAssets = pinnedAssets
+					return nil
 				})
-				if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				group.Go(func() error {
+					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "SELECT {*}" +
+							" FROM files" +
+							" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
+							" AND NOT is_dir" +
+							" AND (" +
+							"file_path LIKE '%.jpeg'" +
+							" OR file_path LIKE '%.jpg'" +
+							" OR file_path LIKE '%.png'" +
+							" OR file_path LIKE '%.webp'" +
+							" OR file_path LIKE '%.gif'" +
+							") " +
+							" ORDER BY file_path",
+						Values: []any{
+							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+						},
+					}, func(row *sq.Row) Asset {
+						return Asset{
+							FileID:       row.UUID("file_id"),
+							Parent:       response.AssetDir,
+							Name:         path.Base(row.String("file_path")),
+							Size:         row.Int64("size"),
+							ModTime:      row.Time("mod_time"),
+							CreationTime: row.Time("creation_time"),
+							Content:      strings.TrimSpace(row.String("text")),
+						}
+					})
+					if err != nil && !errors.Is(err, sql.ErrNoRows) {
+						return err
+					}
+					response.Assets = assets
+					for i := range response.Assets {
+						asset := &response.Assets[i]
+						if strings.HasPrefix(asset.Content, "!alt ") {
+							altText, _, _ := strings.Cut(asset.Content, "\n")
+							asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+						}
+					}
+					return nil
+				})
+				err := group.Wait()
+				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.internalServerError(w, r, err)
 					return
-				}
-				for i := range response.Assets {
-					asset := &response.Assets[i]
-					if strings.HasPrefix(asset.Content, "!alt ") {
-						altText, _, _ := strings.Cut(asset.Content, "\n")
-						asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
-					}
 				}
 			} else {
 				dirEntries, err := nbrew.FS.ReadDir(path.Join(sitePrefix, response.AssetDir))
