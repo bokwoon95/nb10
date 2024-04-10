@@ -37,9 +37,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: uploadfile.go/createfile.go/file.go, if the image name is just "image" we need to an timestamp prefix to the name so that (1) we can continually upload files called "image.jpg" or whatever without naming conflicts and (2) images are sorted by creation date if sorted by name. We may need to do the monotonically increasing timestamp thing.
-TODO: create image post, which lets the user upload and image and its caption directly into a post without needing to specify a post body.
-    - As usual a timestamp prefix title will be randomly generated. This is great for quickly adding images to instagram-style photo galleries (but we really need to address the issue of figuring out how to efficiently fetch the header image to display in the postlist)
-    - If the post markdown leads with an image, is it still counted as text? Does it conflict with the implicit image list? Can we use both at the same time?
+TODO: why is directory.go not setting the necessary cookies whenever the user specifies sort and order?
 BUG: currently cannot regenerate the food postlist, dk why.
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
@@ -54,6 +52,9 @@ BUG: deleting a post category doesn't delete the output folder (food2 on notebre
 TODO: check if a user is able to delete their own site, and if so prevent it
     - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
     - We also need to add frontend checks to hide the delete button.
+TODO: create image post, which lets the user upload and image and its caption directly into a post without needing to specify a post body.
+    - As usual a timestamp prefix title will be randomly generated. This is great for quickly adding images to instagram-style photo galleries (but we really need to address the issue of figuring out how to efficiently fetch the header image to display in the postlist)
+    - If the post markdown leads with an image, is it still counted as text? Does it conflict with the implicit image list? Can we use both at the same time?
 TODO: invite.go and resetpassword.go
 TODO: users.go (what do we show about a user? allow them to change username? no)
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
