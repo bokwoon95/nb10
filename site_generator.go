@@ -841,6 +841,9 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		postData.Title = stripMarkdownStyles(siteGen.markdown, []byte(line))
 		break
 	}
+	if postData.Title == "" {
+		postData.Title = postData.Name
+	}
 	// Content
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
@@ -1474,6 +1477,9 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					continue
 				}
 				break
+			}
+			if posts[i].Title == "" {
+				posts[i].Title = posts[i].Name
 			}
 			var b strings.Builder
 			err := siteGen.markdown.Convert(posts[i].text, &b)

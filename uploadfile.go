@@ -193,6 +193,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	}
 	group, groupctx := errgroup.WithContext(r.Context())
 	startedAt := time.Now()
+	// timeCounter is a strictly-increasing sequence number starting from the
+	// current unix timestamp.
 	var timeCounter atomic.Int64
 	for {
 		part, err := reader.NextPart()
@@ -217,6 +219,15 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			continue
 		}
 		fileName = filenameSafe(fileName)
+		ext := path.Ext(fileName)
+		if (ext == ".jpeg" || ext == ".jpg" || ext == ".png" || ext == ".webp" || ext == ".gif") && strings.TrimSuffix(fileName, ext) == "image" {
+			var timestamp [8]byte
+			now := time.Now()
+			timeCounter.CompareAndSwap(0, now.Unix())
+			binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), timeCounter.Add(1))))
+			timestampSuffix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
+			fileName = "image-" + timestampSuffix + ext
+		}
 		filePath := path.Join(sitePrefix, response.Parent, fileName)
 		_, err = fs.Stat(nbrew.FS.WithContext(r.Context()), filePath)
 		if err != nil {
@@ -229,7 +240,6 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			response.FilesExist = append(response.FilesExist, fileName)
 			continue
 		}
-		ext := path.Ext(fileName)
 
 		// Since we don't do any image processing or page/post generation
 		// for notes, we can stream the file directly into the filesystem.

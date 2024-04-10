@@ -32,10 +32,10 @@
   <div><a href='/{{ join "files" $.SitePrefix $.Parent }}/'>&larr; back</a></div>
   {{- end }}
   <h1 class='f3 mv3 b'>
-    Rename <a href='/{{ join "files" $.SitePrefix $.Parent }}/{{ $.Prefix }}{{ $.From }}{{ $.Ext }}{{ if $.IsDir }}/{{ end }}'>{{ $.Prefix }}{{ $.From }}{{ $.Ext }}{{ if $.IsDir }}/{{ end }}</a>
+    Rename <a href='/{{ join "files" $.SitePrefix $.Parent $.Name }}{{ if $.IsDir }}/{{ end }}'>{{ $.Name }}{{ if $.IsDir }}/{{ end }}</a>
   </h1>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
-  <input type='hidden' name='name' value='{{ $.Prefix }}{{ $.From }}{{ $.Ext }}'>
+  <input type='hidden' name='name' value='{{ $.Name }}'>
   <div class='mv3'>
     <div class='b'>Old Name:</div>
     <div class='flex items-center'>

@@ -29,6 +29,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		Parent            string            `json:"parent"`
+		Name              string            `json:"name"`
 		From              string            `json:"from"`
 		To                string            `json:"to"`
 		Prefix            string            `json:"prefix"`
@@ -86,14 +87,14 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			writeResponse(w, r, response)
 			return
 		}
-		name := r.Form.Get("name")
-		if name == "" || strings.Contains(name, "/") {
+		response.Name = r.Form.Get("name")
+		if response.Name == "" || strings.Contains(response.Name, "/") {
 			response.Error = "InvalidFile"
 			writeResponse(w, r, response)
 			return
 		}
 		head, _, _ := strings.Cut(response.Parent, "/")
-		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent, name))
+		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent, response.Name))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				response.Error = "InvalidFile"
@@ -106,9 +107,9 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		response.IsDir = fileInfo.IsDir()
 		if response.IsDir {
-			response.From = name
+			response.From = response.Name
 		} else {
-			remainder := name
+			remainder := response.Name
 			if head == "posts" {
 				i := strings.Index(remainder, "-")
 				if i >= 0 {
@@ -137,12 +138,12 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		switch head {
 		case "notes", "pages", "posts", "output":
-			if response.Parent == "pages" && (name == "index.html" || name == "404.html") {
+			if response.Parent == "pages" && (response.Name == "index.html" || response.Name == "404.html") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
 				return
 			}
-			if response.Parent == "output/themes" && (name == "post.html" || name == "postlist.html") {
+			if response.Parent == "output/themes" && (response.Name == "post.html" || response.Name == "postlist.html") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
 				return
