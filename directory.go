@@ -220,7 +220,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		fmt.Printf("head=%q response.Sort=%q isDefaultSort=%v\n", head, response.Sort, isDefaultSort)
 		if isDefaultSort {
 			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.Path,
+				Path:     r.URL.EscapedPath(),
 				Name:     "sort",
 				Value:    "0",
 				MaxAge:   -1,
@@ -230,7 +230,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			})
 		} else {
 			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.Path,
+				Path:     r.URL.EscapedPath(),
 				Name:     "sort",
 				Value:    response.Sort,
 				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
