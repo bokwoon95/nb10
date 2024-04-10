@@ -338,6 +338,8 @@ func main() {
 
 		_, err1 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.CMSDomain, "["), "]"))
 		_, err2 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.ContentDomain, "["), "]"))
+		// TODO: there seems to be a logic bug here? Why am I appending
+		// ContentDomain after I check that CMSDomain is not an IP address?
 		if err1 != nil {
 			nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "img."+nbrew.ContentDomain, "www."+nbrew.ContentDomain)
 		}
