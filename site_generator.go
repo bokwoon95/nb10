@@ -1259,6 +1259,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			post.CreationTime = row.Time("creation_time")
 			post.ModificationTime = row.Time("mod_time")
 			post.text = row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "text")
+			if post.text == nil {
+				// Set text to non-nil to indicate that the post has already
+				// been read and it's empty, there is no need to read it again.
+				post.text = []byte{}
+			}
 			return post
 		})
 		if err != nil {

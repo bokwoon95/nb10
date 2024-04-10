@@ -115,7 +115,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.SitePrefix = sitePrefix
 		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.FileID = fileInfo.FileID
-			response.ModTime = fileInfo.ModTime()
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
@@ -127,15 +126,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
-		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-			response.CreationTime = fileInfo.CreationTime
-		} else {
-			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.FilePath)
-			}
-			response.CreationTime = CreationTime(absolutePath, fileInfo)
-		}
 		response.Size = fileInfo.Size()
 		response.ImgDomain = nbrew.ImgDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
