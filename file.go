@@ -187,12 +187,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							Size:         row.Int64("files.size"),
 							ModTime:      row.Time("files.mod_time"),
 							CreationTime: row.Time("files.creation_time"),
+							Content:      strings.TrimSpace(row.String("text")),
 						}
 					})
 					if err != nil {
 						return err
 					}
 					response.PinnedAssets = pinnedAssets
+					for i := range response.PinnedAssets {
+						asset := &response.PinnedAssets[i]
+						if strings.HasPrefix(asset.Content, "!alt ") {
+							altText, _, _ := strings.Cut(asset.Content, "\n")
+							asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+						}
+					}
 					return nil
 				})
 				group.Go(func() error {
@@ -312,12 +320,20 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							Size:         row.Int64("files.size"),
 							ModTime:      row.Time("files.mod_time"),
 							CreationTime: row.Time("files.creation_time"),
+							Content:      strings.TrimSpace(row.String("text")),
 						}
 					})
 					if err != nil {
 						return err
 					}
 					response.PinnedAssets = pinnedAssets
+					for i := range response.PinnedAssets {
+						asset := &response.PinnedAssets[i]
+						if strings.HasPrefix(asset.Content, "!alt ") {
+							altText, _, _ := strings.Cut(asset.Content, "\n")
+							asset.AltText = strings.TrimSpace(strings.TrimPrefix(altText, "!alt "))
+						}
+					}
 					return nil
 				})
 				group.Go(func() error {
