@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -209,6 +210,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	if r.Form.Has("sort") {
 		if (head == "notes" && response.Sort == "edited") || (head == "posts" && response.Sort == "created") || response.Sort == "name" {
+			fmt.Printf("sort=0\n")
 			http.SetCookie(w, &http.Cookie{
 				Path:     r.URL.Path,
 				Name:     "sort",
@@ -219,6 +221,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				SameSite: http.SameSiteLaxMode,
 			})
 		} else {
+			fmt.Printf("sort=%s\n", response.Sort)
 			http.SetCookie(w, &http.Cookie{
 				Path:     r.URL.Path,
 				Name:     "sort",
@@ -249,6 +252,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	if r.Form.Has("order") {
 		if ((response.Sort == "created" || response.Sort == "edited") && response.Order == "desc") || response.Order == "asc" {
+			fmt.Printf("order=0\n")
 			http.SetCookie(w, &http.Cookie{
 				Path:     r.URL.Path,
 				Name:     "order",
@@ -259,6 +263,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				SameSite: http.SameSiteLaxMode,
 			})
 		} else {
+			fmt.Printf("order=%s\n", response.Order)
 			http.SetCookie(w, &http.Cookie{
 				Path:     r.URL.Path,
 				Name:     "order",
