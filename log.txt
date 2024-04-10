@@ -37,10 +37,10 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: unpin is a destructive action, it should show a confirmation page like delete does.
+TODO: implement MySQL-style searching -minus to exclude, +plus to include, default is OR, quote to group.
 BUG: deleting a post doesn't regenerate the postlist to reflect the changes unless postlist is explicitly regenerated, dk why.
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
-TODO: we'll have to parse the search term ourselves and reassemble it to form a query that supports OR-by-default and exact phrase matches on all database backends.
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 BUG: deleting a post category's post.html and postlist.html does not regenerate them!!
 BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
