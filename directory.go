@@ -386,7 +386,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			" FROM pinned_file" +
 			" JOIN files ON files.file_id = pinned_file.file_id" +
 			" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-			" ORDER BY pinned_file.creation_time, pinned_file.file_id",
+			" ORDER BY files.file_path",
 		Values: []any{
 			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
 		},

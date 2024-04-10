@@ -174,7 +174,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							" OR files.file_path LIKE '%.js'" +
 							" OR files.file_path LIKE '%.md'" +
 							") " +
-							" ORDER BY pinned_file.creation_time, pinned_file.file_id",
+							" ORDER BY files.file_path",
 						Values: []any{
 							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
 						},
@@ -307,7 +307,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							" OR files.file_path LIKE '%.webp'" +
 							" OR files.file_path LIKE '%.gif'" +
 							") " +
-							" ORDER BY pinned_file.creation_time, pinned_file.file_id",
+							" ORDER BY files.file_path",
 						Values: []any{
 							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
 						},
