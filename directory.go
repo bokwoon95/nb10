@@ -209,6 +209,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 	}
 	if r.Form.Has("sort") {
+		fmt.Printf("head=%q response.Sort=%q\n", head, response.Sort)
 		if (head == "notes" && response.Sort == "edited") || (head == "posts" && response.Sort == "created") || response.Sort == "name" {
 			fmt.Printf("sort=0\n")
 			http.SetCookie(w, &http.Cookie{
