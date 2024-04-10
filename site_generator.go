@@ -1436,7 +1436,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					}
 				}()
 			} else {
-				file, err := siteGen.fsys.WithContext(groupctxA).Open(path.Join(siteGen.sitePrefix, "posts", category, posts[i].Name))
+				file, err := siteGen.fsys.WithContext(groupctxA).Open(path.Join(siteGen.sitePrefix, "posts", category, posts[i].Name+".md"))
 				if err != nil {
 					return err
 				}
