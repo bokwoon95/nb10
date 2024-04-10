@@ -52,6 +52,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		URL               template.URL      `json:"url,omitempty"`
 		BelongsTo         string            `json:"belongsTo"`
 		AssetDir          string            `json:"assetDir"`
+		PinnedAssets      []Asset           `json:"pinnedAssets"`
 		Assets            []Asset           `json:"assets"`
 		UploadCount       int64             `json:"uploadCount"`
 		UploadSize        int64             `json:"uploadSize"`
@@ -312,6 +313,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 		}
 
+		if response.PinnedAssets == nil {
+			response.PinnedAssets = []Asset{}
+		}
+		if response.Assets == nil {
+			response.Assets = []Asset{}
+		}
 		if r.Form.Has("api") {
 			w.Header().Set("Content-Type", "application/json")
 			encoder := json.NewEncoder(w)
@@ -388,7 +395,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			nbrew.internalServerError(w, r, err)
 			return
 		}
-		// w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		nbrew.executeTemplate(w, r, tmpl, &response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
