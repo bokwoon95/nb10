@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -216,6 +217,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		} else {
 			isDefaultSort = response.Sort == "name"
 		}
+		fmt.Printf("head=%q response.Sort=%q isDefaultSort=%s\n", head, response.Sort, isDefaultSort)
 		if isDefaultSort {
 			http.SetCookie(w, &http.Cookie{
 				Path:     r.URL.Path,
