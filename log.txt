@@ -36,7 +36,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-BUG: currently cannot regenerate the food postlist, dk why.
+BUG: deleting a post doesn't regenerate the postlist to reflect the changes unless postlist is explicitly regenerated, dk why.
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
 TODO: we'll have to parse the search term ourselves and reassemble it to form a query that supports OR-by-default and exact phrase matches on all database backends.
