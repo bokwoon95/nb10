@@ -36,7 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: why is directory.go not setting the necessary cookies whenever the user specifies sort and order?
 BUG: currently cannot regenerate the food postlist, dk why.
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
