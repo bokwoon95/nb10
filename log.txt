@@ -37,6 +37,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: unpin is a destructive action, it should show a confirmation page like delete does.
+    - TODO: unlike pin, unpin has to take in full file paths because pinned documents could be referencing files in other folders (if they get moved).
 TODO: implement MySQL-style searching -minus to exclude, +plus to include, default is OR, quote to group.
 BUG: deleting a post doesn't regenerate the postlist to reflect the changes unless postlist is explicitly regenerated, dk why.
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
