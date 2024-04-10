@@ -380,8 +380,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		scheme = "http"
 	}
 
-	// TODO: fetch both the pinned files and files concurrently?
-	response.PinnedFiles, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+	pinnedFileQuery := sq.Query{
 		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM pinned_file" +
@@ -391,7 +390,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		Values: []any{
 			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
 		},
-	}, func(row *sq.Row) File {
+	}
+	pinnedFileMapper := func(row *sq.Row) File {
 		filePath := row.String("files.file_path")
 		return File{
 			FileID:       row.UUID("files.file_id"),
@@ -402,17 +402,20 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			CreationTime: row.Time("files.creation_time"),
 			IsDir:        row.Bool("files.is_dir"),
 		}
-	})
-	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
-		return
 	}
 
 	if response.Sort == "name" {
 		response.From = r.Form.Get("from")
 		if response.From != "" {
 			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, pinnedFileQuery, pinnedFileMapper)
+				if err != nil {
+					return err
+				}
+				response.PinnedFiles = pinnedFiles
+				return nil
+			})
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Order == "asc" {
@@ -521,6 +524,14 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		response.Before = r.Form.Get("before")
 		if response.Before != "" {
 			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, pinnedFileQuery, pinnedFileMapper)
+				if err != nil {
+					return err
+				}
+				response.PinnedFiles = pinnedFiles
+				return nil
+			})
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Order == "asc" {
@@ -645,6 +656,14 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			timeParam := sq.TimeParam("timeParam", fromTime)
 			pathParam := sq.StringParam("pathParam", path.Join(response.SitePrefix, response.FilePath, response.From))
 			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, pinnedFileQuery, pinnedFileMapper)
+				if err != nil {
+					return err
+				}
+				response.PinnedFiles = pinnedFiles
+				return nil
+			})
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
@@ -795,6 +814,14 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			timeParam := sq.TimeParam("timeParam", beforeTime)
 			pathParam := sq.StringParam("pathParam", path.Join(response.SitePrefix, response.FilePath, response.Before))
 			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, pinnedFileQuery, pinnedFileMapper)
+				if err != nil {
+					return err
+				}
+				response.PinnedFiles = pinnedFiles
+				return nil
+			})
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
@@ -947,83 +974,99 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 	}
 
-	var order sq.Expression
-	if response.Sort == "name" {
-		if response.Order == "asc" {
-			order = sq.Expr("file_path ASC")
-		} else {
-			order = sq.Expr("file_path DESC")
+	group, groupctx := errgroup.WithContext(r.Context())
+	group.Go(func() error {
+		pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, pinnedFileQuery, pinnedFileMapper)
+		if err != nil {
+			return err
 		}
-	} else if response.Sort == "edited" {
-		if response.Order == "asc" {
-			order = sq.Expr("mod_time ASC, file_path ASC")
-		} else {
-			order = sq.Expr("mod_time DESC, file_path DESC")
-		}
-	} else if response.Sort == "created" {
-		if response.Order == "asc" {
-			order = sq.Expr("creation_time ASC, file_path ASC")
-		} else {
-			order = sq.Expr("creation_time DESC, file_path DESC")
-		}
-	}
-	files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
-		Dialect: databaseFS.Dialect,
-		Format: "SELECT {*}" +
-			" FROM files" +
-			" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-			" ORDER BY {order}" +
-			" LIMIT {limit} + 1",
-		Values: []any{
-			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-			sq.Param("order", order),
-			sq.IntParam("limit", response.Limit),
-		},
-	}, func(row *sq.Row) File {
-		filePath := row.String("files.file_path")
-		return File{
-			FileID:       row.UUID("files.file_id"),
-			Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
-			Name:         path.Base(filePath),
-			Size:         row.Int64("files.size"),
-			ModTime:      row.Time("files.mod_time"),
-			CreationTime: row.Time("files.creation_time"),
-			IsDir:        row.Bool("files.is_dir"),
-		}
+		response.PinnedFiles = pinnedFiles
+		return nil
 	})
+	group.Go(func() error {
+		var order sq.Expression
+		if response.Sort == "name" {
+			if response.Order == "asc" {
+				order = sq.Expr("file_path ASC")
+			} else {
+				order = sq.Expr("file_path DESC")
+			}
+		} else if response.Sort == "edited" {
+			if response.Order == "asc" {
+				order = sq.Expr("mod_time ASC, file_path ASC")
+			} else {
+				order = sq.Expr("mod_time DESC, file_path DESC")
+			}
+		} else if response.Sort == "created" {
+			if response.Order == "asc" {
+				order = sq.Expr("creation_time ASC, file_path ASC")
+			} else {
+				order = sq.Expr("creation_time DESC, file_path DESC")
+			}
+		}
+		files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format: "SELECT {*}" +
+				" FROM files" +
+				" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+				" ORDER BY {order}" +
+				" LIMIT {limit} + 1",
+			Values: []any{
+				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+				sq.Param("order", order),
+				sq.IntParam("limit", response.Limit),
+			},
+		}, func(row *sq.Row) File {
+			filePath := row.String("files.file_path")
+			return File{
+				FileID:       row.UUID("files.file_id"),
+				Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+				Name:         path.Base(filePath),
+				Size:         row.Int64("files.size"),
+				ModTime:      row.Time("files.mod_time"),
+				CreationTime: row.Time("files.creation_time"),
+				IsDir:        row.Bool("files.is_dir"),
+			}
+		})
+		if err != nil {
+			return err
+		}
+		response.Files = files
+		if len(response.Files) > response.Limit {
+			nextFile := response.Files[response.Limit]
+			response.Files = response.Files[:response.Limit]
+			uri := &url.URL{
+				Scheme: scheme,
+				Host:   r.Host,
+				Path:   r.URL.Path,
+			}
+			if response.Sort == "name" {
+				uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+					"&order=" + url.QueryEscape(response.Order) +
+					"&from=" + url.QueryEscape(nextFile.Name) +
+					"&limit=" + strconv.Itoa(response.Limit)
+			} else if response.Sort == "edited" {
+				uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+					"&order=" + url.QueryEscape(response.Order) +
+					"&fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
+					"&from=" + url.QueryEscape(nextFile.Name) +
+					"&limit=" + strconv.Itoa(response.Limit)
+			} else if response.Sort == "created" {
+				uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
+					"&order=" + url.QueryEscape(response.Order) +
+					"&fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
+					"&from=" + url.QueryEscape(nextFile.Name) +
+					"&limit=" + strconv.Itoa(response.Limit)
+			}
+			response.NextURL = uri.String()
+		}
+		return nil
+	})
+	err = group.Wait()
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 		nbrew.internalServerError(w, r, err)
 		return
-	}
-	response.Files = files
-	if len(response.Files) > response.Limit {
-		nextFile := response.Files[response.Limit]
-		response.Files = response.Files[:response.Limit]
-		uri := &url.URL{
-			Scheme: scheme,
-			Host:   r.Host,
-			Path:   r.URL.Path,
-		}
-		if response.Sort == "name" {
-			uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
-				"&order=" + url.QueryEscape(response.Order) +
-				"&from=" + url.QueryEscape(nextFile.Name) +
-				"&limit=" + strconv.Itoa(response.Limit)
-		} else if response.Sort == "edited" {
-			uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
-				"&order=" + url.QueryEscape(response.Order) +
-				"&fromTime=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
-				"&from=" + url.QueryEscape(nextFile.Name) +
-				"&limit=" + strconv.Itoa(response.Limit)
-		} else if response.Sort == "created" {
-			uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
-				"&order=" + url.QueryEscape(response.Order) +
-				"&fromTime=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
-				"&from=" + url.QueryEscape(nextFile.Name) +
-				"&limit=" + strconv.Itoa(response.Limit)
-		}
-		response.NextURL = uri.String()
 	}
 	writeResponse(w, r, response)
 	return
