@@ -191,11 +191,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		nbrew.internalServerError(w, r, err)
 		return
 	}
+	var timeCounter atomic.Int64
 	group, groupctx := errgroup.WithContext(r.Context())
 	startedAt := time.Now()
-	// timeCounter is a strictly-increasing sequence number starting from the
-	// current unix timestamp.
-	var timeCounter atomic.Int64
 	for {
 		part, err := reader.NextPart()
 		if err != nil {
@@ -220,11 +218,6 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		fileName = filenameSafe(fileName)
 		ext := path.Ext(fileName)
-		// When the browser uploads an image with no filename, it defaults to
-		// "image.jpeg" (or whatever the extension is). So a lot of unnamed
-		// images will end up uploaded with an identical name, causing filename
-		// conflicts. Deduplicate these names by appending a timestamp suffix
-		// to the filename.
 		if (ext == ".jpeg" || ext == ".jpg" || ext == ".png" || ext == ".webp" || ext == ".gif") && strings.TrimSuffix(fileName, ext) == "image" {
 			var timestamp [8]byte
 			now := time.Now()
