@@ -966,10 +966,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	} else {
 		dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(outputDir)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return nil
-			}
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		for _, dirEntry := range dirEntries {
