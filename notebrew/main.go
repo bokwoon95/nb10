@@ -183,9 +183,6 @@ func main() {
 				nbrew.CMSDomain = "localhost:6444"
 			}
 		}
-		if nbrew.ContentDomain == "" {
-			nbrew.ContentDomain = nbrew.CMSDomain
-		}
 
 		if nbrew.Port == 443 || nbrew.Port == 80 {
 			// IP4 and IP6.
@@ -271,6 +268,9 @@ func main() {
 					nbrew.CMSDomain = "[" + nbrew.IP6.String() + "]"
 				}
 			}
+		}
+		if nbrew.ContentDomain == "" {
+			nbrew.ContentDomain = nbrew.CMSDomain
 		}
 
 		// DNS.
