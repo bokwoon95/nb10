@@ -478,11 +478,11 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var cacheControl string
 	switch fileType.Ext {
 	case ".html":
-		cacheControl = "no-cache, must-revalidate"
+		cacheControl = "no-cache"
 	case ".eot", ".otf", ".ttf", ".woff", ".woff2":
-		cacheControl = "no-cache, stale-while-revalidate, max-age=31536000" /* 1 year */
+		cacheControl = "max-age=86400, stale-while-revalidate=31536000" /* 1 day, 1 year */
 	default:
-		cacheControl = "no-cache, stale-while-revalidate, max-age=120" /* 2 minutes */
+		cacheControl = "max-age=300, stale-while-revalidate=604800" /* 5 minutes, 1 week */
 	}
 	serveFile(w, r, file, fileInfo, fileType, cacheControl)
 }

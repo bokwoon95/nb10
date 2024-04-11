@@ -472,7 +472,7 @@ func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, t
 	var b [blake2b.Size256]byte
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Encoding", "gzip")
-	w.Header().Set("Cache-Control", "no-cache, must-revalidate")
+	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
