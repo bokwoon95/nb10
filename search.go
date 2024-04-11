@@ -184,6 +184,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
 					priority = 1
 				}
+				continue
 			}
 			if char == '-' {
 				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
