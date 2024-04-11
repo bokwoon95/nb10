@@ -61,7 +61,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				nbrew.notFound(w, r)
 				return
 			}
-			serveFile(w, r, file, fileInfo, fileType, "max-age=300, stale-while-revalidate=604800" /* 5 minutes, 1 week */)
+			serveFile(w, r, file, fileInfo, fileType, "max-age=2592000, stale-while-revalidate=31536000" /* 1 month, 1 year */)
 			return
 		}
 		var response Response

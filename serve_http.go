@@ -479,8 +479,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch fileType.Ext {
 	case ".html":
 		cacheControl = "no-cache"
+	case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+		cacheControl = "max-age=2592000, stale-while-revalidate=31536000" /* 1 month, 1 year */
 	case ".eot", ".otf", ".ttf", ".woff", ".woff2":
-		cacheControl = "max-age=86400, stale-while-revalidate=31536000" /* 1 day, 1 year */
+		cacheControl = "max-age=2592000, stale-while-revalidate=31536000" /* 1 month, 1 year */
 	default:
 		cacheControl = "max-age=300, stale-while-revalidate=604800" /* 5 minutes, 1 week */
 	}
