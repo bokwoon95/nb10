@@ -116,7 +116,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			if fileInfo.IsDir() {
+			if !fileInfo.IsDir() {
 				response.Error = "InvalidParent"
 				writeResponse(w, r, response)
 				return
@@ -287,7 +287,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			if fileInfo.IsDir() {
+			if !fileInfo.IsDir() {
 				response.Error = "InvalidParent"
 				writeResponse(w, r, response)
 				return
