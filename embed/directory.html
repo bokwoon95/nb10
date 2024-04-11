@@ -331,10 +331,11 @@
           <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'>
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
+          <span class='mr1 flex items-center'>{{ template "octicons-pin" }}</span>
           {{- if $file.IsDir }}
-          <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>
+          <span class='mr2 flex items-center'>{{ template "heroicons-folder-open" }}</span>
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
-          <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
+          <span class='mr2 flex items-center'>{{ template "heroicons-cog" }}</span>
           {{- end }}
           {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}
@@ -348,7 +349,6 @@
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
           <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
-          <span class='ml2 f6'>{{ template "octicons-pin" }}</span>
         </div>
         <div class='flex-grow-1'></div>
         <details class='relative ml1' data-autoclose-details>
@@ -390,9 +390,9 @@
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           {{- if $file.IsDir }}
-          <span class="mr2 flex items-center">{{ template "heroicons-folder-open" }}</span>
+          <span class='mr2 flex items-center'>{{ template "heroicons-folder-open" }}</span>
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
-          <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
+          <span class='mr2 flex items-center'>{{ template "heroicons-cog" }}</span>
           {{- end }}
           {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}

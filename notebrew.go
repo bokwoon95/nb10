@@ -808,6 +808,10 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 }
 
 func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
+	if serverErr == nil {
+		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)

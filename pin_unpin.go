@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"path"
 	"slices"
@@ -113,7 +114,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 		}
 		preparedExec.Close()
 	}()
-	switch nbrew.Dialect {
+	switch databaseFS.Dialect {
 	case "sqlite", "postgres":
 		preparedExec, err = sq.PrepareExec(r.Context(), databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
@@ -149,7 +150,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			return
 		}
 	default:
-		response.Error = "unspported dialect"
+		panic(fmt.Sprintf("unsupported dialect %q", databaseFS.Dialect))
 	}
 	group, groupctx := errgroup.WithContext(r.Context())
 	for _, name := range names {

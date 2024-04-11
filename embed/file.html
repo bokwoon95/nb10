@@ -397,11 +397,12 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
       {{- range $i, $asset := $.PinnedAssets }}
       <li class='pv2 bb'>
         <label for='pinned:{{ $asset.Parent }}:{{ $asset.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $asset.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
-          <div class='mr2 flex items-center' style='margin-top: 0.6rem;'>
+          <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
             <input type='checkbox' id='pinned:{{ $asset.Parent }}:{{ $asset.Name }}' name='name' value='{{ $asset.Name }}' class='pointer'>
           </div>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
+              <span class='mr1 flex items-center'>{{ template "octicons-pin" }}</span>
               {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
@@ -412,7 +413,6 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
               <a href='/{{ join "files" $.SitePrefix $asset.Parent $asset.Name }}' class='flex-wrap'>{{ $asset.Name }}</a>
               <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $asset.Size }}</span>
               <span class='ml2 f6 mid-gray'>{{ $asset.CreationTime.Format "2006-01-02" }}</span>
-              <span class='ml2 f6'>{{ template "octicons-pin" }}</span>
             </div>
             {{- if $asset.Content }}
             <pre class='ma0 pre-wrap break-word'>{{ $asset.Content }}</pre>
@@ -446,7 +446,7 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
       {{- range $i, $asset := $.Assets }}
       <li class='pv2 bb'>
         <label for='{{ $asset.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $asset.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
-          <div class='mr2 flex items-center' style='margin-top: 0.6rem;'>
+          <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
             <input type='checkbox' id='{{ $asset.Name }}' name='name' value='{{ $asset.Name }}' class='pointer'>
           </div>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
