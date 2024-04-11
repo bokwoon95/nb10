@@ -474,6 +474,10 @@ func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, t
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
+	if r.Method == "HEAD" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
@@ -569,6 +573,9 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -599,6 +606,9 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusBadRequest)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
@@ -606,6 +616,9 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -643,6 +656,9 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusUnauthorized)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
@@ -650,6 +666,9 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -686,6 +705,9 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusForbidden)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
@@ -693,6 +715,9 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -723,6 +748,9 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusNotFound)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
@@ -730,6 +758,9 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -760,6 +791,9 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusMethodNotAllowed)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
@@ -774,6 +808,9 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnsupportedMediaType)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -804,17 +841,27 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusUnsupportedMediaType)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
 func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
 	if serverErr == nil {
+		if r.Method == "HEAD" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
@@ -857,6 +904,9 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusInternalServerError)
+	if r.Method == "HEAD" {
+		return
+	}
 	buf.WriteTo(w)
 }
 
@@ -871,7 +921,11 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			if hasMaxAge {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
-				http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
+				if r.Method == "HEAD" {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
+				http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 				return
 			}
 			hasher := hashPool.Get().(hash.Hash)
@@ -895,11 +949,19 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			http.ServeContent(w, r, "", fileInfo.ModTime(), fileSeeker)
+			if r.Method == "HEAD" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 			return
 		}
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
+		if r.Method == "HEAD" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		_, err := io.Copy(w, file)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -918,7 +980,11 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				w.Header().Set("Content-Encoding", "gzip")
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
-				http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
+				if r.Method == "HEAD" {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
+				http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 				return
 			}
 			hasher := hashPool.Get().(hash.Hash)
@@ -937,7 +1003,11 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(databaseFile.buf.Bytes()))
+			if r.Method == "HEAD" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 			return
 		}
 	}
@@ -986,7 +1056,11 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
 		w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-		http.ServeContent(w, r, "", fileInfo.ModTime(), bytes.NewReader(buf.Bytes()))
+		if r.Method == "HEAD" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 		return
 	}
 
@@ -999,6 +1073,10 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
+	if r.Method == "HEAD" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	_, err := io.Copy(gzipWriter, file)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())

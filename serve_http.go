@@ -81,7 +81,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 	}
 
-	if r.Method == "GET" {
+	if r.Method == "GET" || r.Method == "HEAD" {
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 		err := r.ParseForm()
 		if err != nil {
@@ -373,9 +373,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// If we reach here, we are serving generated site content. Only GET
-	// requests are allowed.
-	if r.Method != "GET" {
+	// If we reach here, we are serving generated site content. Only GET and
+	// HEAD requests are allowed.
+	if r.Method != "GET" && r.Method != "HEAD" {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -410,11 +410,19 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if readSeeker, ok := reader.(io.ReadSeeker); ok {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", "max-age=31536000, immutable" /* 1 year */)
+				if r.Method == "HEAD" {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
 				http.ServeContent(w, r, "", time.Time{}, readSeeker)
 				return
 			}
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", "max-age=31536000, immutable" /* 1 year */)
+			if r.Method == "HEAD" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 			_, err = io.Copy(w, reader)
 			if err != nil {
 				logger.Error(err.Error())

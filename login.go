@@ -107,7 +107,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "GET":
+	case "GET", "HEAD":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
 			if nbrew.CaptchaConfig.VerificationURL != "" {
@@ -132,6 +132,10 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			}
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json")
+				if r.Method == "HEAD" {
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
 				encoder := json.NewEncoder(w)
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)

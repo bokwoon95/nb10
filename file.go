@@ -105,7 +105,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	}
 
 	switch r.Method {
-	case "GET":
+	case "GET", "HEAD":
 		var response Response
 		_, err := nbrew.getSession(r, "flash", &response)
 		if err != nil {
@@ -434,6 +434,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 		if r.Form.Has("api") {
 			w.Header().Set("Content-Type", "application/json")
+			if r.Method == "HEAD" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 			encoder := json.NewEncoder(w)
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)

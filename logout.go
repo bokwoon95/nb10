@@ -42,7 +42,7 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 	copy(authenticationTokenHash[:8], authenticationToken[:8])
 	copy(authenticationTokenHash[8:], checksum[:])
 	switch r.Method {
-	case "GET":
+	case "GET", "HEAD":
 		funcMap := map[string]any{
 			"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS": func() template.JS { return template.JS(BaselineJS) },
