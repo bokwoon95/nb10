@@ -207,37 +207,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			response.Sort = "name"
 		}
 	}
-	if r.Form.Has("sort") {
-		isDefaultSort := false
-		if head == "notes" {
-			isDefaultSort = response.Sort == "edited"
-		} else if head == "posts" {
-			isDefaultSort = response.Sort == "created"
-		} else {
-			isDefaultSort = response.Sort == "name"
-		}
-		if isDefaultSort {
-			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.EscapedPath(),
-				Name:     "sort",
-				Value:    "0",
-				MaxAge:   -1,
-				Secure:   r.TLS != nil,
-				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
-			})
-		} else {
-			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.EscapedPath(),
-				Name:     "sort",
-				Value:    response.Sort,
-				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
-				Secure:   r.TLS != nil,
-				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
-			})
-		}
-	}
 	response.Order = strings.ToLower(strings.TrimSpace(r.Form.Get("order")))
 	if response.Order == "" {
 		cookie, _ := r.Cookie("order")
@@ -255,33 +224,66 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			response.Order = "asc"
 		}
 	}
-	if r.Form.Has("order") {
-		isDefaultOrder := false
-		if response.Sort == "created" || response.Sort == "edited" {
-			isDefaultOrder = response.Order == "desc"
-		} else {
-			isDefaultOrder = response.Order == "asc"
+	if r.Form.Has("persist") {
+		if r.Form.Has("sort") {
+			isDefaultSort := false
+			if head == "notes" {
+				isDefaultSort = response.Sort == "edited"
+			} else if head == "posts" {
+				isDefaultSort = response.Sort == "created"
+			} else {
+				isDefaultSort = response.Sort == "name"
+			}
+			if isDefaultSort {
+				http.SetCookie(w, &http.Cookie{
+					Path:     r.URL.EscapedPath(),
+					Name:     "sort",
+					Value:    "0",
+					MaxAge:   -1,
+					Secure:   r.TLS != nil,
+					HttpOnly: true,
+					SameSite: http.SameSiteLaxMode,
+				})
+			} else {
+				http.SetCookie(w, &http.Cookie{
+					Path:     r.URL.EscapedPath(),
+					Name:     "sort",
+					Value:    response.Sort,
+					MaxAge:   int((time.Hour * 24 * 365).Seconds()),
+					Secure:   r.TLS != nil,
+					HttpOnly: true,
+					SameSite: http.SameSiteLaxMode,
+				})
+			}
 		}
-		if isDefaultOrder {
-			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.EscapedPath(),
-				Name:     "order",
-				Value:    "0",
-				MaxAge:   -1,
-				Secure:   r.TLS != nil,
-				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
-			})
-		} else {
-			http.SetCookie(w, &http.Cookie{
-				Path:     r.URL.EscapedPath(),
-				Name:     "order",
-				Value:    response.Order,
-				MaxAge:   int((time.Hour * 24 * 365).Seconds()),
-				Secure:   r.TLS != nil,
-				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
-			})
+		if r.Form.Has("order") {
+			isDefaultOrder := false
+			if response.Sort == "created" || response.Sort == "edited" {
+				isDefaultOrder = response.Order == "desc"
+			} else {
+				isDefaultOrder = response.Order == "asc"
+			}
+			if isDefaultOrder {
+				http.SetCookie(w, &http.Cookie{
+					Path:     r.URL.EscapedPath(),
+					Name:     "order",
+					Value:    "0",
+					MaxAge:   -1,
+					Secure:   r.TLS != nil,
+					HttpOnly: true,
+					SameSite: http.SameSiteLaxMode,
+				})
+			} else {
+				http.SetCookie(w, &http.Cookie{
+					Path:     r.URL.EscapedPath(),
+					Name:     "order",
+					Value:    response.Order,
+					MaxAge:   int((time.Hour * 24 * 365).Seconds()),
+					Secure:   r.TLS != nil,
+					HttpOnly: true,
+					SameSite: http.SameSiteLaxMode,
+				})
+			}
 		}
 	}
 
