@@ -277,7 +277,6 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		defer tx.Rollback()
 		preparedExec, err := sq.PrepareExec(r.Context(), tx, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "DELETE FROM pinned_file" +
 				" WHERE parent_id = {parentID}" +
