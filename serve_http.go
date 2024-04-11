@@ -409,12 +409,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer reader.Close()
 			if readSeeker, ok := reader.(io.ReadSeeker); ok {
 				w.Header().Set("Content-Type", fileType.ContentType)
-				w.Header().Set("Cache-Control", "max-age=31536000, immutable")
+				w.Header().Set("Cache-Control", "max-age=31536000, immutable" /* 1 year */)
 				http.ServeContent(w, r, "", time.Time{}, readSeeker)
 				return
 			}
 			w.Header().Set("Content-Type", fileType.ContentType)
-			w.Header().Set("Cache-Control", "max-age=31536000, immutable")
+			w.Header().Set("Cache-Control", "max-age=31536000, immutable" /* 1 year */)
 			_, err = io.Copy(w, reader)
 			if err != nil {
 				logger.Error(err.Error())
