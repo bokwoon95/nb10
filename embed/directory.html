@@ -326,7 +326,7 @@
     <li class='bb pv2'>
       <label for='pinned:{{ $file.Parent }}:{{ $file.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
         <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
-          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'>
+          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'>
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           <span class='mr1 flex items-center'>{{ template "octicons-pin" }}</span>
@@ -357,13 +357,13 @@
           <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
           {{- if $readOnly }}
             {{- if $.IsDatabaseFS }}
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
+            <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else if eq (join $file.Parent $file.Name) "pages/index.html" "pages/404.html" "output/themes/post.html" "output/themes/postlist.html"}}
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
             {{- if $.IsDatabaseFS }}
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
+            <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
@@ -371,7 +371,7 @@
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
             {{- if $.IsDatabaseFS }}
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
+            <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- end }}

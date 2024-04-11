@@ -107,6 +107,13 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	names = slices.Compact(names)
 	numPinned := atomic.Int64{}
 	creationTime := time.Now()
+	tx, err := databaseFS.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		nbrew.internalServerError(w, r, err)
+		return
+	}
+	defer tx.Rollback()
 	var preparedExec *sq.PreparedExec
 	defer func() {
 		if preparedExec == nil {
@@ -116,7 +123,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	}()
 	switch databaseFS.Dialect {
 	case "sqlite", "postgres":
-		preparedExec, err = sq.PrepareExec(r.Context(), databaseFS.DB, sq.Query{
+		preparedExec, err = sq.PrepareExec(r.Context(), tx, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "INSERT INTO pinned_file (parent_id, file_id, creation_time)" +
 				" SELECT {parentID}, file_id, {creationTime} FROM files WHERE file_path = {filePath}" +
@@ -133,7 +140,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			return
 		}
 	case "mysql":
-		preparedExec, err = sq.PrepareExec(r.Context(), databaseFS.DB, sq.Query{
+		preparedExec, err = sq.PrepareExec(r.Context(), tx, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "INSERT INTO pinned_file (parent_id, file_id, creation_time)" +
 				" SELECT {parentID}, file_id, {creationTime} FROM files WHERE file_path = {filePath}" +
@@ -170,6 +177,12 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 		})
 	}
 	err = group.Wait()
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		nbrew.internalServerError(w, r, err)
+		return
+	}
+	err = tx.Commit()
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 		nbrew.internalServerError(w, r, err)

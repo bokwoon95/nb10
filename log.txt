@@ -36,8 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: unpin is a destructive action, it should show a confirmation page like delete does.
-    - TODO: unlike pin, unpin has to take in full file paths because pinned documents could be referencing files in other folders (if they get moved).
 TODO: implement MySQL-style searching -minus to exclude, +plus to include, default is OR, quote to group.
 BUG: deleting a post doesn't regenerate the postlist to reflect the changes unless postlist is explicitly regenerated, dk why.
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
@@ -76,6 +74,7 @@ BUG: why does creating a new site keep saying unavailable but then creates every
 BUG: why does initially creating a site result in an invalid title and site description?
 BUG: creating a note with "60%" in the title seems to make the redirect do wonky things (it's still created, but the user is presented with some HTTP (??) error).
 BUG: pasting an image from themes into 404.html seems to lead to a broken file preview (the file is still there, and can be deleted, but it's being fetched as ".jpg" for some reason) (only if imgdomain is set).
+TODO: investigate if we can wipe out isValidParent for good if it's always just checking if the parent is under notes | pages | posts | themes and that it exists and is a directory.
 
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
