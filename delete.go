@@ -375,10 +375,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 					}
 				case "posts":
-					category := path.Dir(tail)
-					if category == "." {
-						category = ""
-					}
+					category := tail
 					if !strings.Contains(category, "/") {
 						if strings.HasSuffix(name, ".md") {
 							outputDir := path.Join("output/posts", tail, strings.TrimSuffix(name, ".md"))
