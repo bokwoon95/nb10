@@ -68,7 +68,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		cookie, _ := r.Cookie("clipboard")
 		if cookie != nil {
 			values, err := url.ParseQuery(cookie.Value)
-			if err == nil {
+			if err == nil && values.Get("sitePrefix") == sitePrefix {
 				if values.Has("cut") {
 					clipboard.Set("cut", "")
 				}

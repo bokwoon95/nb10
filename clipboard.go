@@ -18,7 +18,7 @@ import (
 )
 
 func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
-	isValidParent := func(sitePrefix, parent string) bool {
+	isValidParent := func(parent string) bool {
 		head, _, _ := strings.Cut(parent, "/")
 		switch head {
 		case "notes", "pages", "posts", "output":
@@ -50,7 +50,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 	switch action {
 	case "cut", "copy":
 		parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-		if !isValidParent(sitePrefix, parent) {
+		if !isValidParent(parent) {
 			http.Redirect(w, r, referer, http.StatusFound)
 			return
 		}
@@ -67,7 +67,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		clipboard.Set("parent", parent)
 		clipboard["name"] = names
 		http.SetCookie(w, &http.Cookie{
-			Path:     "/",
+			Path:     "/" + path.Join("files", sitePrefix) + "/",
 			Name:     "clipboard",
 			Value:    clipboard.Encode(),
 			MaxAge:   int(time.Hour.Seconds()),
@@ -78,7 +78,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		http.Redirect(w, r, referer, http.StatusFound)
 	case "clear":
 		http.SetCookie(w, &http.Cookie{
-			Path:     "/",
+			Path:     "/" + path.Join("files", sitePrefix) + "/",
 			Name:     "clipboard",
 			Value:    "0",
 			MaxAge:   -1,
@@ -91,9 +91,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		type Response struct {
 			Error             string            `json:"error,omitempty"`
 			IsCut             bool              `json:"isCut,omitempty"`
-			SrcSitePrefix     string            `json:"srcSitePrefix,omitempty"`
 			SrcParent         string            `json:"srcParent,omitempty"`
-			DestSitePrefix    string            `json:"destSitePrefix,omitempty"`
 			DestParent        string            `json:"destParent,omitempty"`
 			FilesNotExist     []string          `json:"filesNotExist,omitempty"`
 			FilesExist        []string          `json:"filesExist,omitempty"`
@@ -108,12 +106,11 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					if action == "cut" {
 						clipboard.Set("cut", "")
 					}
-					clipboard.Set("sitePrefix", response.SrcSitePrefix)
 					clipboard.Set("parent", response.SrcParent)
 					clipboard["name"] = append(clipboard["name"], response.FilesExist...)
 					clipboard["name"] = append(clipboard["name"], response.FilesInvalid...)
 					http.SetCookie(w, &http.Cookie{
-						Path:     "/",
+						Path:     "/" + path.Join("files", sitePrefix) + "/",
 						Name:     "clipboard",
 						Value:    clipboard.Encode(),
 						MaxAge:   int(time.Hour.Seconds()),
@@ -123,7 +120,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					})
 				} else {
 					http.SetCookie(w, &http.Cookie{
-						Path:     "/",
+						Path:     "/" + path.Join("files", sitePrefix) + "/",
 						Name:     "clipboard",
 						Value:    "0",
 						MaxAge:   -1,
@@ -160,16 +157,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":           "clipboard/paste",
-					"srcSitePrefix":  response.SrcSitePrefix,
-					"srcParent":      response.SrcParent,
-					"destSitePrefix": response.DestSitePrefix,
-					"destParent":     response.DestParent,
-					"isCut":          response.IsCut,
-					"filesNotExist":  response.FilesNotExist,
-					"filesExist":     response.FilesExist,
-					"filesInvalid":   response.FilesInvalid,
-					"filesPasted":    response.FilesPasted,
+					"from":          "clipboard/paste",
+					"srcParent":     response.SrcParent,
+					"destParent":    response.DestParent,
+					"isCut":         response.IsCut,
+					"filesNotExist": response.FilesNotExist,
+					"filesExist":    response.FilesExist,
+					"filesInvalid":  response.FilesInvalid,
+					"filesPasted":   response.FilesPasted,
 				},
 				"regenerationStats": response.RegenerationStats,
 			})
@@ -198,16 +193,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			writeResponse(w, r, response)
 			return
 		}
+		if clipboard.Get("sitePrefix") != sitePrefix {
+			response.Error = "SitePrefixNotMatch"
+			writeResponse(w, r, response)
+			return
+		}
 		response.IsCut = clipboard.Has("cut")
 		names := clipboard["name"]
 		slices.Sort(names)
 		names = slices.Compact(names)
-		response.SrcSitePrefix = clipboard.Get("sitePrefix")
-		if response.SrcSitePrefix != "" && !strings.HasPrefix(response.SrcSitePrefix, "@") && !strings.Contains(response.SrcSitePrefix, ".") {
-			response.Error = "InvalidSrcSitePrefix"
-			writeResponse(w, r, response)
-			return
-		}
 		if nbrew.DB != nil {
 			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -218,7 +212,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					" WHERE site.site_name = {siteName}" +
 					" AND users.username = {username}",
 				Values: []any{
-					sq.StringParam("siteName", strings.TrimPrefix(response.SrcSitePrefix, "@")),
+					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
 					sq.StringParam("username", user.Username),
 				},
 			})
@@ -233,30 +227,27 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}
 		response.SrcParent = path.Clean(strings.Trim(clipboard.Get("parent"), "/"))
-		if !isValidParent(response.SrcSitePrefix, response.SrcParent) {
+		if !isValidParent(response.SrcParent) {
 			response.Error = "InvalidSrcParent"
 			writeResponse(w, r, response)
 			return
 		}
-		response.DestSitePrefix = sitePrefix
 		response.DestParent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-		if !isValidParent(response.DestSitePrefix, response.DestParent) {
+		if !isValidParent(response.DestParent) {
 			response.Error = "InvalidDestParent"
 			writeResponse(w, r, response)
 			return
 		}
-		if response.SrcSitePrefix == response.DestSitePrefix {
-			if response.SrcParent == response.DestParent {
-				response.Error = "PasteSameDestination"
+		if response.SrcParent == response.DestParent {
+			response.Error = "PasteSameDestination"
+			writeResponse(w, r, response)
+			return
+		}
+		for _, name := range names {
+			if strings.HasPrefix(response.DestParent, path.Join(response.SrcParent, name)+"/") {
+				response.Error = "PasteIntoSelf"
 				writeResponse(w, r, response)
 				return
-			}
-			for _, name := range names {
-				if strings.HasPrefix(response.DestParent, path.Join(response.SrcParent, name)+"/") {
-					response.Error = "PasteIntoSelf"
-					writeResponse(w, r, response)
-					return
-				}
 			}
 		}
 		srcHead, srcTail, _ := strings.Cut(response.SrcParent, "/")
@@ -309,7 +300,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		for _, name := range names {
 			name := name
 			group.Go(func() error {
-				srcFilePath := path.Join(response.SrcSitePrefix, response.SrcParent, name)
+				srcFilePath := path.Join(sitePrefix, response.SrcParent, name)
 				srcFileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), srcFilePath)
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
@@ -318,7 +309,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					}
 					return err
 				}
-				destFilePath := path.Join(response.DestSitePrefix, response.DestParent, name)
+				destFilePath := path.Join(sitePrefix, response.DestParent, name)
 				_, err = fs.Stat(nbrew.FS.WithContext(groupctx), destFilePath)
 				if err != nil {
 					if !errors.Is(err, fs.ErrNotExist) {
@@ -469,11 +460,11 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					}
 					var srcOutputDir, destOutputDir string
 					if !srcFileInfo.IsDir() {
-						srcOutputDir = path.Join(response.SrcSitePrefix, "output/posts", srcTail, strings.TrimSuffix(name, ".md"))
-						destOutputDir = path.Join(response.DestSitePrefix, "output/posts", destTail, strings.TrimSuffix(name, ".md"))
+						srcOutputDir = path.Join(sitePrefix, "output/posts", srcTail, strings.TrimSuffix(name, ".md"))
+						destOutputDir = path.Join(sitePrefix, "output/posts", destTail, strings.TrimSuffix(name, ".md"))
 					} else {
-						srcOutputDir = path.Join(response.SrcSitePrefix, "output/posts", srcTail, name)
-						destOutputDir = path.Join(response.DestSitePrefix, "output/posts", destTail, name)
+						srcOutputDir = path.Join(sitePrefix, "output/posts", srcTail, name)
+						destOutputDir = path.Join(sitePrefix, "output/posts", destTail, name)
 					}
 					err = nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
 					if err != nil {
@@ -484,12 +475,12 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				var counterpart, srcOutputDir, destOutputDir string
 				if !srcFileInfo.IsDir() {
 					counterpart = strings.TrimSuffix(srcFilePath, ".html")
-					srcOutputDir = path.Join(response.SrcSitePrefix, "output", srcTail, strings.TrimSuffix(name, ".html"))
-					destOutputDir = path.Join(response.DestSitePrefix, "output", destTail, strings.TrimSuffix(name, ".html"))
+					srcOutputDir = path.Join(sitePrefix, "output", srcTail, strings.TrimSuffix(name, ".html"))
+					destOutputDir = path.Join(sitePrefix, "output", destTail, strings.TrimSuffix(name, ".html"))
 				} else {
 					counterpart = srcFilePath + ".html"
-					srcOutputDir = path.Join(response.SrcSitePrefix, "output", srcTail, name)
-					destOutputDir = path.Join(response.DestSitePrefix, "output", destTail, name)
+					srcOutputDir = path.Join(sitePrefix, "output", srcTail, name)
+					destOutputDir = path.Join(sitePrefix, "output", destTail, name)
 				}
 				var counterpartExists bool
 				counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
@@ -554,55 +545,41 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		close(pastedCh)
 		if srcHead == "posts" && destHead == "posts" {
 			func() {
-				srcSiteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
 					FS:                 nbrew.FS,
 					ContentDomain:      nbrew.ContentDomain,
 					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
 					ImgDomain:          nbrew.ImgDomain,
-					SitePrefix:         response.SrcSitePrefix,
+					SitePrefix:         sitePrefix,
 				})
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					return
 				}
 				srcCategory := srcTail
-				srcTemplate, err := srcSiteGen.PostListTemplate(r.Context(), srcCategory)
+				srcTemplate, err := siteGen.PostListTemplate(r.Context(), srcCategory)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
-				_, err = srcSiteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
+				_, err = siteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
-				}
-				destSiteGen := srcSiteGen
-				if response.SrcSitePrefix != response.DestSitePrefix {
-					destSiteGen, err = NewSiteGenerator(r.Context(), SiteGeneratorConfig{
-						FS:                 nbrew.FS,
-						ContentDomain:      nbrew.ContentDomain,
-						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-						ImgDomain:          nbrew.ImgDomain,
-						SitePrefix:         response.DestSitePrefix,
-					})
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						return
-					}
 				}
 				destCategory := destTail
-				destTemplate, err := destSiteGen.PostListTemplate(r.Context(), destCategory)
+				destTemplate, err := siteGen.PostListTemplate(r.Context(), destCategory)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
-				_, err = destSiteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
+				_, err = siteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())

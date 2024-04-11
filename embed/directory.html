@@ -80,7 +80,6 @@
     <div>{{ $error }}</div>
     {{- end }}
   {{- else }}
-    {{- $srcSitePrefix := index $.PostRedirectGet "srcSitePrefix" }}
     {{- $srcParent := index $.PostRedirectGet "srcParent" }}
     {{- $srcHead := head (index $.PostRedirectGet "srcParent") }}
     {{- $destHead := head (index $.PostRedirectGet "destParent") }}
@@ -96,7 +95,7 @@
         The following files were not pasted because a destination file already exists:
         <ul class='list-style-disc ph3'>
           {{- range $name := $filesExist }}
-          <li><a href='/{{ join "files" $srcSitePrefix $srcParent $name }}{{ if not (ext $name) }}/{{ end }}'>{{ $name }}</a></li>
+          <li><a href='/{{ join "files" $.SitePrefix $srcParent $name }}{{ if not (ext $name) }}/{{ end }}'>{{ $name }}</a></li>
           {{- end }}
         </ul>
       </div>
@@ -113,7 +112,7 @@
         {{- end }}
         <ul class='list-style-disc ph3'>
           {{- range $name := $filesInvalid }}
-          <li><a href='/{{ join "files" $srcSitePrefix $srcParent $name }}{{ if not (ext $name) }}/{{ end }}'>{{ $name }}</a></li>
+          <li><a href='/{{ join "files" $.SitePrefix $srcParent $name }}{{ if not (ext $name) }}/{{ end }}'>{{ $name }}</a></li>
           {{- end }}
         </ul>
       </div>
@@ -194,21 +193,20 @@
 </div>
 {{- end }}
 {{- if len $clipboard }}
-{{- $srcSitePrefix := $clipboard.Get "sitePrefix" }}
 {{- $srcParent := $clipboard.Get "parent" }}
 {{- $names := index $clipboard "name" }}
 <div class='dashed-border mv2 pa2 br2 flex items-center'>
   <div class='flex-grow-1 truncate'>
     {{- if eq (head $srcParent) "output" }}
       {{- if eq (head (tail $srcParent)) "themes" }}
-      <a href='/{{ join "files" $srcSitePrefix $srcParent }}/'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+      <a href='/{{ join "files" $.SitePrefix $srcParent }}/'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
       {{- else if eq (head (tail $srcParent)) "posts" }}
-      <a href='/{{ join "files" $srcSitePrefix $srcParent }}.md'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+      <a href='/{{ join "files" $.SitePrefix $srcParent }}.md'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
       {{- else }}
-      <a href='/{{ join "files" $srcSitePrefix "pages" (tail $srcParent) }}.html'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+      <a href='/{{ join "files" $.SitePrefix "pages" (tail $srcParent) }}.html'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
       {{- end }}
     {{- else }}
-    <a href='/{{ join "files" $srcSitePrefix $srcParent }}/'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+    <a href='/{{ join "files" $.SitePrefix $srcParent }}/'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
     {{- end }}
   </div>
   {{- if not $readOnly }}
