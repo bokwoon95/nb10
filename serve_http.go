@@ -410,10 +410,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if readSeeker, ok := reader.(io.ReadSeeker); ok {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", "max-age=31536000, immutable" /* 1 year */)
-				if r.Method == "HEAD" {
-					w.WriteHeader(http.StatusNoContent)
-					return
-				}
 				http.ServeContent(w, r, "", time.Time{}, readSeeker)
 				return
 			}

@@ -474,10 +474,6 @@ func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, t
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-	if r.Method == "HEAD" {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
@@ -921,10 +917,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			if hasMaxAge {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
-				if r.Method == "HEAD" {
-					w.WriteHeader(http.StatusNoContent)
-					return
-				}
 				http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 				return
 			}
@@ -949,10 +941,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			if r.Method == "HEAD" {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
 			http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 			return
 		}
@@ -980,10 +968,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				w.Header().Set("Content-Encoding", "gzip")
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
-				if r.Method == "HEAD" {
-					w.WriteHeader(http.StatusNoContent)
-					return
-				}
 				http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 				return
 			}
@@ -1003,10 +987,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			if r.Method == "HEAD" {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
 			http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 			return
 		}
@@ -1056,10 +1036,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
 		w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-		if r.Method == "HEAD" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 		return
 	}
