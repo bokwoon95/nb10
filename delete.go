@@ -47,21 +47,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
 
-	isValidParent := func(parent string) bool {
-		head, _, _ := strings.Cut(parent, "/")
-		switch head {
-		case "notes", "pages", "posts", "output":
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		}
-		return false
-	}
-
 	switch r.Method {
 	case "GET", "HEAD":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -117,7 +102,26 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			writeResponse(w, r, response)
 			return
 		}
-		if !isValidParent(response.Parent) {
+		head, _, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidParent"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if fileInfo.IsDir() {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
@@ -269,7 +273,26 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 
 		var response Response
 		response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
-		if !isValidParent(response.Parent) {
+		head, _, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidParent"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if fileInfo.IsDir() {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
