@@ -37,8 +37,6 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: unpin is a destructive action, it should show a confirmation page like delete does.
-    - TODO: oh my god, pinned file references could cross site boundaries: pin a file in a site, then copy it to another site.
-        - TODO: forbid cross-site pastes entirely?
     - TODO: unlike pin, unpin has to take in full file paths because pinned documents could be referencing files in other folders (if they get moved).
 TODO: implement MySQL-style searching -minus to exclude, +plus to include, default is OR, quote to group.
 BUG: deleting a post doesn't regenerate the postlist to reflect the changes unless postlist is explicitly regenerated, dk why.
