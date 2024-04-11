@@ -62,8 +62,6 @@ TODO: remove regenerate.go entirely after the regenerate button is purged from t
 TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
 TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
 BUG: can't add new images via file.html image upload "save".
-BUG: copying images in a post will result in an invalid link when you click the "3 files copied" link.
-BUG: I can't see notebrew.com notes/pages/posts/themes/output, only site.json. I suspect might be permission issue. Fix it.
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
 BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
 BUG: visiting /users/login/ when you're already logged in doesn't indicate that you are already logged in (nor does it prevent you from logging in again).
