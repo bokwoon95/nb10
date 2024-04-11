@@ -36,7 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: move the pin icon to the leftmost instead of rightmost (even before the folder icon). See if we can shrink it a little as well.
 TODO: unpin is a destructive action, it should show a confirmation page like delete does.
     - TODO: unlike pin, unpin has to take in full file paths because pinned documents could be referencing files in other folders (if they get moved).
 TODO: implement MySQL-style searching -minus to exclude, +plus to include, default is OR, quote to group.
