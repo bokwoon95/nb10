@@ -38,24 +38,13 @@
     <details>
       <summary class='pointer f6'>how to search</summary>
       <ul class='list-style-disc ph3'>
-        <li>Pass in one or more terms to search, separated by spaces. If the operator is OR, at least one term must be present in a match. If the operator is AND, all terms must be present in a match.</li>
+        <li>Pass in one or more terms to search, separated by spaces. If a term contains a space, wrap it in double quotes e.g. <code>apple iphone "steve jobs"</code>.</li>
         <li>Search is case-insensitive.</li>
         <li>Search only works for letters and numbers, not special characters.</li>
-        <li>Phrases containing a space should be wrapped in double quotes e.g. <code>apple iphone "steve jobs"</code></li>
-        <li>Exclude terms by prefixing it with a minus sign ("-") e.g. <code>apple -fruit -red</code></li>
+        <li>Prefixing a term with a plus sign ("+") means it <strong>must appear</strong> in a match e.g. <code>apple +iphone +"steve jobs"</code>.</li>
+        <li>Prefixing a term with a minus sign ("-") means it <strong>must not appear</strong> in a match e.g. <code>apple -iphone -"steve jobs"</code>.</li>
       </ul>
     </details>
-  </div>
-  <div class='mv3'>
-    <div class='b'>Operator:</div>
-    <label for='operator.OR' class='mr3 pointer nowrap'>
-      <input id='operator.OR' type='radio' name='operator' value='OR' class='pointer'{{ if ne $.Operator "AND" }} checked{{ end }}>
-      <span>OR</span>
-    </label>
-    <label for='operator.AND' class='mr3 pointer nowrap'>
-      <input id='operator.AND' type='radio' name='operator' value='AND' class='pointer'{{ if eq $.Operator "AND" }} checked{{ end }}>
-      <span>AND</span>
-    </label>
   </div>
   <div class='mv3'>
     <div class='b'>Extensions (leave blank to select all):</div>

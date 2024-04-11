@@ -25,7 +25,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	type Request struct {
 		Parent      string   `json:"parent"`
 		SearchTerms string   `json:"searchTerms"`
-		Operator    string   `json:"operator"`
 		Exts        []string `json:"exts"`
 	}
 	type Response struct {
@@ -37,7 +36,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
 		SearchTerms    string   `json:"searchTerms"`
-		Operator       string   `json:"operator"`
 		Exts           []string `json:"exts"`
 		Matches        []Match  `json:"matches"`
 	}
@@ -120,7 +118,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	request := Request{
 		Parent:      r.Form.Get("parent"),
 		SearchTerms: r.Form.Get("searchTerms"),
-		Operator:    r.Form.Get("operator"),
 		Exts:        r.Form["ext"],
 	}
 
@@ -133,10 +130,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.Username = user.Username
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
 	response.SearchTerms = strings.TrimSpace(request.SearchTerms)
-	response.Operator = strings.ToUpper(strings.TrimSpace(request.Operator))
-	if response.Operator != "OR" && response.Operator != "AND" {
-		response.Operator = "OR"
-	}
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
 			switch ext {
@@ -151,20 +144,28 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	if !isValidParent(response.Parent) {
 		response.Parent = "."
 	}
+	// pass in one or more terms, separated by spaces. terms which contain a space should be wrapped in double quotes e.g. apple iphone "steve jobs"
+	// search is case insensitive
+	// search only works for letters and numbers, not special characters
+	// prefixing a term with plus ("+") means every match *must include* that term
+	// prefixing a term with minus ("-") means every match *must exclude* that term
+	var terms []string
 	var includeTerms []string
 	var excludeTerms []string
-	exclude := false
+	priority := 0
 	inString := false
 	var b strings.Builder
 	for i, char := range response.SearchTerms {
 		if char == '"' {
 			if b.Len() > 0 {
-				if exclude {
+				if priority > 0 {
+					includeTerms = append(includeTerms, b.String())
+				} else if priority < 0 {
 					excludeTerms = append(excludeTerms, b.String())
 				} else {
-					includeTerms = append(includeTerms, b.String())
+					terms = append(terms, b.String())
 				}
-				exclude = false
+				priority = 0
 				b.Reset()
 			}
 			inString = !inString
@@ -178,10 +179,16 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			if unicode.IsSpace(char) {
 				continue
 			}
+			if char == '+' {
+				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
+				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
+					priority = 1
+				}
+			}
 			if char == '-' {
 				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
 				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
-					exclude = true
+					priority = -1
 				}
 				continue
 			}
@@ -189,25 +196,29 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			continue
 		}
 		if unicode.IsSpace(char) {
-			if exclude {
+			if priority > 0 {
+				includeTerms = append(includeTerms, b.String())
+			} else if priority < 0 {
 				excludeTerms = append(excludeTerms, b.String())
 			} else {
-				includeTerms = append(includeTerms, b.String())
+				terms = append(terms, b.String())
 			}
-			exclude = false
+			priority = 0
 			b.Reset()
 			continue
 		}
 		b.WriteRune(char)
 	}
 	if b.Len() > 0 {
-		if exclude {
+		if priority > 0 {
+			includeTerms = append(includeTerms, b.String())
+		} else if priority < 0 {
 			excludeTerms = append(excludeTerms, b.String())
 		} else {
-			includeTerms = append(includeTerms, b.String())
+			terms = append(terms, b.String())
 		}
 	}
-	if len(includeTerms) == 0 && len(excludeTerms) == 0 {
+	if len(terms) == 0 && len(includeTerms) == 0 && len(excludeTerms) == 0 {
 		writeResponse(w, r, response)
 		return
 	}
@@ -241,22 +252,25 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	switch databaseFS.Dialect {
 	case "sqlite":
 		var b strings.Builder
-		if len(excludeTerms) > 0 {
+		if len(includeTerms) > 0 || len(excludeTerms) > 0 {
 			b.WriteString("(")
 		}
-		if len(includeTerms) == 0 {
-			includeTerms = []string{""}
+		if len(terms) == 0 {
+			terms = []string{""}
 		}
-		for i, term := range includeTerms {
+		for i, term := range terms {
 			if i > 0 {
-				b.WriteString(" " + response.Operator + " ")
+				b.WriteString(" OR ")
 			}
 			b.WriteString(`"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
 		}
-		if len(excludeTerms) > 0 {
+		if len(includeTerms) > 0 || len(excludeTerms) > 0 {
 			b.WriteString(")")
-			for _, term := range excludeTerms {
-				b.WriteString(" NOT " + `"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
+			for _, includeTerm := range includeTerms {
+				b.WriteString(" AND " + `"` + strings.ReplaceAll(includeTerm, `"`, `""`) + `"`)
+			}
+			for _, excludeTerm := range excludeTerms {
+				b.WriteString(" NOT " + `"` + strings.ReplaceAll(excludeTerm, `"`, `""`) + `"`)
 			}
 		}
 		ftsQuery := b.String()
