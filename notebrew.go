@@ -947,7 +947,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
 		if r.Method == "HEAD" {
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 		_, err := io.Copy(w, file)
@@ -1050,7 +1050,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		gzipWriterPool.Put(gzipWriter)
 	}()
 	if r.Method == "HEAD" {
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 	_, err := io.Copy(gzipWriter, file)

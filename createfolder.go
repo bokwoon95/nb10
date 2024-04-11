@@ -66,7 +66,7 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json")
 				if r.Method == "HEAD" {
-					w.WriteHeader(http.StatusNoContent)
+					w.WriteHeader(http.StatusOK)
 					return
 				}
 				encoder := json.NewEncoder(w)

@@ -46,7 +46,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json")
 				if r.Method == "HEAD" {
-					w.WriteHeader(http.StatusNoContent)
+					w.WriteHeader(http.StatusOK)
 					return
 				}
 				encoder := json.NewEncoder(w)
