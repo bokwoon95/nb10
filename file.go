@@ -421,7 +421,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if isEditable {
 				next, _, _ := strings.Cut(tail, "/")
 				if next != "posts" && next != "themes" {
-					response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
+					dir := path.Dir(tail)
+					if dir == "." {
+						response.BelongsTo = "pages/index.html"
+					} else {
+						response.BelongsTo = path.Join("pages", dir+".html")
+					}
 				}
 			}
 		}
