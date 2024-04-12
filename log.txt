@@ -44,12 +44,13 @@ files-{timestamp}.tgz
 
 files-bokwoon-20240506123456.tgz
 
-export site
-export notes
+export files
 import files
 
 files/download/parent=xxx&name=xxx&name=xxx
 files/download/parent=xxx
+files/export/
+files/export/?name=notes
 
 TODO: export.go and download.go.
 TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).

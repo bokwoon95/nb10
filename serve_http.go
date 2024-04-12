@@ -367,6 +367,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "rename":
 			nbrew.rename(w, r, user, sitePrefix)
 			return
+		case "export":
+			nbrew.export(w, r, user, sitePrefix)
+			return
 		default:
 			nbrew.notFound(w, r)
 			return
@@ -516,6 +519,7 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)
 	defer func() {
+		gzipWriter.Close()
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
