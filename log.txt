@@ -36,7 +36,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: normalize fancy iphone quotes to ascii quote so that iphone users can search (japanese users may get a different set if double quotes -- check how they were able to determine selen was being impersonated by JP bozos)
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
