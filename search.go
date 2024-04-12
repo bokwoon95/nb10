@@ -253,26 +253,31 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	switch databaseFS.Dialect {
 	case "sqlite":
 		var b strings.Builder
-		if len(includeTerms) > 0 || len(excludeTerms) > 0 {
-			b.WriteString("(")
-		}
-		if len(terms) == 0 {
-			terms = []string{""}
-		}
-		for i, term := range terms {
-			if i > 0 {
-				b.WriteString(" OR ")
+		if len(terms) > 0 {
+			if len(includeTerms) > 0 || len(excludeTerms) > 0 {
+				b.WriteString("(")
 			}
-			b.WriteString(`"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
+			for i, term := range terms {
+				if i > 0 {
+					b.WriteString(" OR ")
+				}
+				b.WriteString(`"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
+			}
+			if len(includeTerms) > 0 || len(excludeTerms) > 0 {
+				b.WriteString(")")
+			}
 		}
-		if len(includeTerms) > 0 || len(excludeTerms) > 0 {
-			b.WriteString(")")
-			for _, includeTerm := range includeTerms {
-				b.WriteString(" AND " + `"` + strings.ReplaceAll(includeTerm, `"`, `""`) + `"`)
+		for _, includeTerm := range includeTerms {
+			if b.Len() > 0 {
+				b.WriteString(" AND ")
 			}
-			for _, excludeTerm := range excludeTerms {
-				b.WriteString(" NOT " + `"` + strings.ReplaceAll(excludeTerm, `"`, `""`) + `"`)
+			b.WriteString(`"` + strings.ReplaceAll(includeTerm, `"`, `""`) + `"`)
+		}
+		for _, excludeTerm := range excludeTerms {
+			if b.Len() > 0 {
+				b.WriteString(" NOT ")
 			}
+			b.WriteString(`"` + strings.ReplaceAll(excludeTerm, `"`, `""`) + `"`)
 		}
 		ftsQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
