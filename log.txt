@@ -37,8 +37,22 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: export vs download
-export.go => exports the entire site
+export.go => exports the entire site as notebrew-{sitename}-{timestamp}.tgz
+download.go =>
 
+files-{timestamp}.tgz
+
+files-bokwoon-20240506123456.tgz
+
+export site
+export notes
+import files
+
+files/download/parent=xxx&name=xxx&name=xxx
+files/download/parent=xxx
+
+TODO: export.go and download.go.
+TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
