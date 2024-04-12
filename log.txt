@@ -53,6 +53,7 @@ files/export/
 files/export/?name=notes
 
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
+    - TODO: also hide the "paste" button when inside post.html or postlist.html.
 TODO: export.go and download.go.
 TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
