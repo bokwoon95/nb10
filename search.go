@@ -156,7 +156,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	inString := false
 	var b strings.Builder
 	for i, char := range response.SearchTerms {
-		if char == '"' {
+		if char == '"' || char == '“' || char == '”' || char == '„' || char == '‟' {
 			if b.Len() > 0 {
 				if priority > 0 {
 					includeTerms = append(includeTerms, b.String())
