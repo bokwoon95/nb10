@@ -364,6 +364,39 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 		}
+		var home string
+		if response.SiteName == "" {
+			home = "home"
+		} else if strings.Contains(response.SiteName, ".") {
+			home = response.SiteName
+		} else {
+			home = response.SiteName + "." + nbrew.ContentDomain
+		}
+		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		defer writer.Close()
+		err = tmpl.Execute(writer, home)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		err = writer.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
 		siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
 			FS:                 nbrew.FS,
 			ContentDomain:      nbrew.ContentDomain,
@@ -377,38 +410,6 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
-		group.Go(func() error {
-			var home string
-			if response.SiteName == "" {
-				home = "home"
-			} else if strings.Contains(response.SiteName, ".") {
-				home = response.SiteName
-			} else {
-				home = response.SiteName + "." + nbrew.ContentDomain
-			}
-			tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			defer writer.Close()
-			err = tmpl.Execute(writer, home)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = writer.Close()
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			return nil
-		})
 		group.Go(func() error {
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 			if err != nil {

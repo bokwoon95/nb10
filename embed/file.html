@@ -171,7 +171,7 @@
   {{ $newName := index $.PostRedirectGet "newName" }}
   {{ $isDir := index $.PostRedirectGet "isDir" }}
   <div class='pv1'>
-    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} to <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>{{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
+    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>{{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
@@ -367,8 +367,14 @@
       </li>
     </ul>
   </details>
-  <span class='b'>assets</span>
-  <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap mh2'>create file</a>
+  <div class='pb2 flex flex-wrap bb'>
+    <span class='b'>assets</span>
+    {{- if eq $.FilePath "pages/index.html" }}
+    <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent=output' class='nowrap mh2'>create file</a>
+    {{- else }}
+    <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap mh2'>create file</a>
+    {{- end }}
+  </div>
   {{- else }}
   <details class='mv2'>
     <summary class='pointer f6'>how do I include images in my post?</summary>

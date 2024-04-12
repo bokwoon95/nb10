@@ -48,33 +48,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
 
-	isValidParent := func(parent string) bool {
-		head, tail, _ := strings.Cut(parent, "/")
-		switch head {
-		case "notes", "pages", "posts":
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		case "output":
-			next, _, _ := strings.Cut(tail, "/")
-			if next == "posts" {
-				return false
-			}
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		}
-		return false
-	}
-
 	switch r.Method {
 	case "GET", "HEAD":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -135,12 +108,30 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
-		if !isValidParent(response.Parent) {
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidParent"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if !fileInfo.IsDir() {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
 		}
-		head, tail, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case "notes":
 			response.Ext = ".txt"
@@ -285,12 +276,30 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			Ext:        request.Ext,
 			Content:    request.Content,
 		}
-		if !isValidParent(response.Parent) {
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidParent"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if !fileInfo.IsDir() {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
 		}
-		head, tail, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case "notes":
 			if request.Name != "" {

@@ -36,6 +36,9 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: export vs download
+export.go => exports the entire site
+
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
@@ -65,8 +68,6 @@ BUG: can't create a note with the full lorem ipsum text in the file name
     - {"time":"2024-03-23T01:13:56.838076+08:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).createfile","file":"github.com/bokwoon95/nb10/createfile.go","line":387},"msg":"CreateFile C:\\Users\\cbw\\notebrew-files\\notes\\Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum..txt: The filename, directory name, or volume label syntax is incorrect.","method":"POST","url":"http://localhost:6444/files/createfile/"}
 BUG: can't delete notebrew.com site
     - {"time":"2024-03-22T18:49:39.739177776+01:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).deletesite","file":"/root/nb10/deletesite.go","line":297},"msg":"constraint failed: FOREIGN KEY constraint failed (787)","method":"POST","url":"https://notebrew.com/files/deletesite/?name=notebrew.com","username":""}
-BUG: creating a .com site seems to make it empty? Where are my files?
-    - Why is my site.json not being created after I createsite? I need to manually navigate to site.json and save in order for the title and description to take effect.
 BUG: why is my html lang=''? I thought the default was "en"?
 BUG: why does creating a new site keep saying unavailable but then creates everything under the hood correctly? investigate.
 BUG: why does initially creating a site result in an invalid title and site description?
