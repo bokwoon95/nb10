@@ -43,8 +43,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	if len(names) == 0 {
 		gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 		gzipWriter.Reset(w)
-		defer gzipWriter.Close()
 		defer func() {
+			gzipWriter.Close()
 			gzipWriter.Reset(io.Discard)
 			gzipWriterPool.Put(gzipWriter)
 		}()
