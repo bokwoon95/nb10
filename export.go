@@ -72,6 +72,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			} else {
 				parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
 			}
+			// TODO: if we want to avoid the N+1 problems arising from calling
+			// fs.WalkDir, we'll need to walk the rows ourselves and uncompress
+			// gzippable files and fetching objects from ObjectStorage
+			// https://boehs.org/node/llms-destroying-internetaccordingly.
 		} else {
 		}
 		return
