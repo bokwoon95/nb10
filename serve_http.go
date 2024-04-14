@@ -519,7 +519,6 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)
 	defer func() {
-		gzipWriter.Close()
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()

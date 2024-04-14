@@ -451,7 +451,6 @@ func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, t
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(multiWriter)
 	defer func() {
-		gzipWriter.Close()
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
@@ -1017,7 +1016,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 		gzipWriter.Reset(multiWriter)
 		defer func() {
-			gzipWriter.Close()
 			gzipWriter.Reset(io.Discard)
 			gzipWriterPool.Put(gzipWriter)
 		}()
@@ -1048,7 +1046,6 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)
 	defer func() {
-		gzipWriter.Close()
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
