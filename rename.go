@@ -179,7 +179,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				}
 				redirectURL := "/" + path.Join("files", sitePrefix, "rename") + "/" +
 					"?parent=" + url.QueryEscape(response.Parent) +
-					"&name=" + url.QueryEscape(response.Prefix+response.From+response.Ext)
+					"&name=" + url.QueryEscape(response.Name)
 				http.Redirect(w, r, redirectURL, http.StatusFound)
 				return
 			}
@@ -399,7 +399,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			} else {
 				counterpartExists = true
 			}
-			oldOutputDir := path.Join(sitePrefix, "output", tail, response.From)
+			oldOutputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output", tail, response.To)
 			if !counterpartExists || counterpartFileInfo.IsDir() == response.IsDir {
 				err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
@@ -494,7 +494,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			response.RegenerationStats.Count = 1
 			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		case "posts":
-			oldOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.From)
+			oldOutputDir := path.Join(sitePrefix, "output/posts", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.To)
 			err = nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
 			if err != nil {
