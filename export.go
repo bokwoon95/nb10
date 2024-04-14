@@ -19,16 +19,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		return
 	}
 	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-	if parent == "." {
-		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			_ = databaseFS
-			if sitePrefix == "" {
-				return
-			}
-		} else {
-		}
-		return
-	}
 	head, _, _ := strings.Cut(parent, "/")
 	switch head {
 	case "notes", "pages", "posts", "output":
@@ -66,6 +56,16 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+	if parent == "." {
+		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+			_ = databaseFS
+			if sitePrefix == "" {
+				return
+			}
+		} else {
+		}
+		return
+	}
 	names := r.Form["name"]
 	if len(names) == 0 {
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
