@@ -47,10 +47,10 @@ files-bokwoon-20240506123456.tgz
 export files
 import files
 
-files/download/parent=xxx&name=xxx&name=xxx
-files/download/parent=xxx
 files/export/
-files/export/?name=notes
+files/export/?parent=notes
+files/export/parent=xxx
+files/export/parent=xxx&name=xxx&name=xxx
 
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.
