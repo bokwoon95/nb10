@@ -242,6 +242,7 @@ type LogFilter struct {
 }
 
 func (logFilter *LogFilter) Write(p []byte) (n int, err error) {
+	fmt.Println("[DEBUG] " + string(p))
 	if bytes.HasPrefix(p, []byte("http: TLS handshake error from ")) {
 		return 0, nil
 	}
