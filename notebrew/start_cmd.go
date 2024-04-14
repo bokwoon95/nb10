@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -56,7 +58,9 @@ func (cmd *StartCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	var server http.Server
+	server := http.Server{
+		ErrorLog: log.New(&LogFilter{Stderr: os.Stderr}, "", log.LstdFlags),
+	}
 	switch cmd.Notebrew.Port {
 	case 443:
 		server.Addr = ":443"
@@ -231,4 +235,15 @@ func (cmd *StartCmd) Run() error {
 	defer cancel()
 	server.Shutdown(ctx)
 	return nil
+}
+
+type LogFilter struct {
+	Stderr io.Writer
+}
+
+func (logFilter *LogFilter) Write(p []byte) (n int, err error) {
+	if bytes.HasPrefix(p, []byte("http: TLS handshake error from ")) {
+		return 0, nil
+	}
+	return logFilter.Stderr.Write(p)
 }

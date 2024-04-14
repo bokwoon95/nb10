@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -1276,7 +1277,9 @@ func main() {
 			return nil
 		}
 
-		var server http.Server
+		server := http.Server{
+			ErrorLog: log.New(&LogFilter{Stderr: os.Stderr}, "", log.LstdFlags),
+		}
 		switch nbrew.Port {
 		case 443:
 			server.Addr = ":443"
