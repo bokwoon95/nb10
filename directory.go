@@ -1007,6 +1007,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}
 		files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
