@@ -150,18 +150,20 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
   // Register the codemirror editor in the global editors array.
   globalThis.editors[index] = editor;
 
-  // Restore textarea cursor position from localStorage.
-  const textareaCursorPosition = Number(localStorage.getItem(`textareaCursorPosition:${window.location.pathname}:${index}`));
-  if (textareaCursorPosition && textareaCursorPosition <= textarea.value.length) {
-    textarea.setSelectionRange(textareaCursorPosition, textareaCursorPosition);
-  }
+  if (config.get("scrollIntoView")) {
+    // Restore textarea cursor position from localStorage.
+    const textareaCursorPosition = Number(localStorage.getItem(`textareaCursorPosition:${window.location.pathname}:${index}`));
+    if (textareaCursorPosition && textareaCursorPosition <= textarea.value.length) {
+      textarea.setSelectionRange(textareaCursorPosition, textareaCursorPosition);
+    }
 
-  // Restore editor cursor position from localStorage.
-  const editorCursorPosition = Number(localStorage.getItem(`editorCursorPosition:${window.location.pathname}:${index}`));
-  if (editorCursorPosition && editorCursorPosition <= textarea.value.length) {
-    editor.dispatch({
-      selection: { anchor: editorCursorPosition, head: editorCursorPosition },
-    });
+    // Restore editor cursor position from localStorage.
+    const editorCursorPosition = Number(localStorage.getItem(`editorCursorPosition:${window.location.pathname}:${index}`));
+    if (editorCursorPosition && editorCursorPosition <= textarea.value.length) {
+      editor.dispatch({
+        selection: { anchor: editorCursorPosition, head: editorCursorPosition },
+      });
+    }
   }
 
   // Configure word wrap.
@@ -218,13 +220,15 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
   // On form submit, synchronize the codemirror editor's contents with the
   // textarea it is paired with (before the form is submitted).
   form.addEventListener("submit", function() {
-    // Save the textarea cursor position to localStorage.
-    localStorage.setItem(`textareaCursorPosition:${window.location.pathname}:${index}`, textarea.selectionStart.toString());
-    // Save the editor cursor position to localStorage.
-    const ranges = editor.state.selection.ranges;
-    if (ranges.length > 0) {
-      const editorCursorPosition = ranges[0].from;
-      localStorage.setItem(`editorCursorPosition:${window.location.pathname}:${index}`, editorCursorPosition.toString());
+    if (config.get("scrollIntoView")) {
+      // Save the textarea cursor position to localStorage.
+      localStorage.setItem(`textareaCursorPosition:${window.location.pathname}:${index}`, textarea.selectionStart.toString());
+      // Save the editor cursor position to localStorage.
+      const ranges = editor.state.selection.ranges;
+      if (ranges.length > 0) {
+        const editorCursorPosition = ranges[0].from;
+        localStorage.setItem(`editorCursorPosition:${window.location.pathname}:${index}`, editorCursorPosition.toString());
+      }
     }
     // Copy the codemirror editor's contents to the textarea.
     if (ext == ".html" || ext == ".css" || ext == ".js") {
@@ -257,6 +261,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     }
     // Scroll to editor cursor position.
     if (config.get("scrollIntoView")) {
+      const editorCursorPosition = Number(localStorage.getItem(`editorCursorPosition:${window.location.pathname}:${index}`));
       if (editorCursorPosition && editorCursorPosition <= textarea.value.length) {
         editor.dispatch({
           effects: EditorView.scrollIntoView(editorCursorPosition, { y: "center" }),
