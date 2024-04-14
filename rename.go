@@ -187,7 +187,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				"postRedirectGet": map[string]any{
 					"from":    "rename",
 					"parent":  response.Parent,
-					"oldName": response.Prefix + response.From + response.Ext,
+					"oldName": response.Name,
 					"newName": response.Prefix + response.To + response.Ext,
 					"isDir":   response.IsDir,
 				},
@@ -254,16 +254,17 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 
 		response := Response{
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
+			Name:       request.Name,
 			To:         request.To,
 			FormErrors: make(url.Values),
 		}
-		if request.Name == "" || strings.Contains(request.Name, "/") {
+		if response.Name == "" || strings.Contains(response.Name, "/") {
 			response.Error = "InvalidFile"
 			writeResponse(w, r, response)
 			return
 		}
 		head, tail, _ := strings.Cut(response.Parent, "/")
-		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent, request.Name))
+		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent, response.Name))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				response.Error = "InvalidFile"
@@ -276,9 +277,9 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		response.IsDir = fileInfo.IsDir()
 		if response.IsDir {
-			response.From = request.Name
+			response.From = response.Name
 		} else {
-			remainder := request.Name
+			remainder := response.Name
 			ext := path.Ext(remainder)
 			if head == "posts" && ext == ".md" {
 				prefix, suffix, ok := strings.Cut(remainder, "-")
@@ -326,12 +327,12 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				return
 			}
 		case "pages", "posts", "output":
-			if response.Parent == "pages" && (request.Name == "index.html" || request.Name == "404.html") {
+			if response.Parent == "pages" && (response.Name == "index.html" || response.Name == "404.html") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
 				return
 			}
-			if response.Parent == "output/themes" && (request.Name == "post.html" || request.Name == "postlist.html") {
+			if response.Parent == "output/themes" && (response.Name == "post.html" || response.Name == "postlist.html") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
 				return
@@ -358,7 +359,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			writeResponse(w, r, response)
 			return
 		}
-		oldName := path.Join(sitePrefix, response.Parent, response.Prefix+response.From+response.Ext)
+		oldName := path.Join(sitePrefix, response.Parent, response.Name)
 		newName := path.Join(sitePrefix, response.Parent, response.Prefix+response.To+response.Ext)
 		_, err = fs.Stat(nbrew.FS.WithContext(r.Context()), newName)
 		if err != nil {
