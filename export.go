@@ -10,6 +10,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/bokwoon95/nb10/sq"
 )
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
@@ -59,8 +61,16 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	if parent == "." {
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 			_ = databaseFS
-			if sitePrefix == "" {
-				return
+			var parentFilter sq.Expression
+			_ = parentFilter
+			if parent == "." {
+				parentFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
+					" OR files.file_path LIKE 'pages/%'" +
+					" OR files.file_path LIKE 'posts/%'" +
+					" OR files.file_path LIKE 'output/%'" +
+					" OR files.parent_id IS NULL)")
+			} else {
+				parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
 			}
 		} else {
 		}
