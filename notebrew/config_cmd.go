@@ -836,7 +836,7 @@ type ObjectsConfig struct {
 }
 
 const objectsHelp = `# == objects keys == #
-# Choose between using a directory, an S3-compatible provider or an SFTP server to store objects. Only applicable if using the remote filesytem (see ` + "`notebrew config files`" + `).
+# Choose between using a directory, an S3-compatible provider or an SFTP server to store objects. Only applicable if using the database-backed filesytem (see ` + "`notebrew config files`" + `).
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider           - Object storage provider (possible values: directory, s3, sftp).
 # filePath           - Object storage root directory filePath (if using a directory).
