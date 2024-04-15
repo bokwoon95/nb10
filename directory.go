@@ -587,6 +587,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					}
 					response.PreviousURL = uri.String()
 				}
+				slices.Reverse(response.Files)
 				return nil
 			})
 			group.Go(func() error {
@@ -945,6 +946,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					}
 					response.PreviousURL = uri.String()
 				}
+				slices.Reverse(response.Files)
 				return nil
 			})
 			group.Go(func() error {
