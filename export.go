@@ -16,7 +16,6 @@ import (
 )
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
-	// parent=xxxx&name=xxxx&name=xxxx
 	type DatabaseFile struct {
 		FileID   ID
 		FilePath string
@@ -28,26 +27,28 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		return
 	}
 	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-	head, _, _ := strings.Cut(parent, "/")
-	switch head {
-	case "notes", "pages", "posts", "output":
-		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
+	if parent != "." {
+		head, _, _ := strings.Cut(parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					http.Error(w, "InvalidParent", http.StatusBadRequest)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if !fileInfo.IsDir() {
 				http.Error(w, "InvalidParent", http.StatusBadRequest)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		if !fileInfo.IsDir() {
+		default:
 			http.Error(w, "InvalidParent", http.StatusBadRequest)
 			return
 		}
-	default:
-		http.Error(w, "InvalidParent", http.StatusBadRequest)
-		return
 	}
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)

@@ -53,12 +53,15 @@ files/export/?parent=notes
 files/export/parent=xxx
 files/export/parent=xxx&name=xxx&name=xxx
 
+files/export/?parent=notes
+files/export/?parent=output/themes/plainsimple
+
 storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
-TODO: object_storage.go: SFTPObjectStorage
 TODO: export.go
+TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.
 TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
