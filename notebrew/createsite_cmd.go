@@ -60,11 +60,11 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 				return nil, err
 			}
 			cmd.SiteName = strings.TrimSpace(text)
-			if cmd.SiteName == "" {
+			switch cmd.SiteName {
+			case "":
 				fmt.Println("site name cannot be empty")
 				continue
-			}
-			if cmd.SiteName == "www" || cmd.SiteName == "img" || cmd.SiteName == "video" || cmd.SiteName == "cdn" {
+			case "www", "img", "video", "cdn", "storage":
 				fmt.Println("site name not allowed")
 				continue
 			}

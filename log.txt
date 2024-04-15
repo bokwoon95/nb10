@@ -1,5 +1,6 @@
 schema.go
 id.go
+object_storage.go
 fs.go
 fs_dir.go
 fs_database.go
@@ -51,6 +52,8 @@ files/export/
 files/export/?parent=notes
 files/export/parent=xxx
 files/export/parent=xxx&name=xxx&name=xxx
+
+storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.

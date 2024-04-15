@@ -219,11 +219,12 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 
-		if response.SiteName == "" {
+		switch response.SiteName {
+		case "":
 			response.FormErrors.Add("siteName", "required")
-		} else if response.SiteName == "www" || response.SiteName == "img" || response.SiteName == "video" || response.SiteName == "cdn" {
+		case "www", "img", "video", "cdn", "storage":
 			response.FormErrors.Add("siteName", "unavailable")
-		} else {
+		default:
 			hasForbiddenCharacters := false
 			digitCount := 0
 			for _, char := range response.SiteName {
