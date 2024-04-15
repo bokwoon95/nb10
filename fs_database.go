@@ -91,7 +91,6 @@ type DatabaseFile struct {
 	isFulltextIndexed bool
 	objectStorage     ObjectStorage
 	info              *DatabaseFileInfo
-	bytes             []byte
 	buf               *bytes.Buffer
 	gzipReader        *gzip.Reader
 	readCloser        io.ReadCloser
