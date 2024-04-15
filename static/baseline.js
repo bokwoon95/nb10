@@ -132,3 +132,11 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
     input.files = dataTransfer.files;
   });
 }
+
+for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
+  dataCheckboxLeader.addEventListener("click", function() {
+    for (const dataCheckboxFollower of document.querySelectorAll("[data-checkbox-follower]")) {
+      dataCheckboxFollower.checked = dataCheckboxLeader.checked;
+    }
+  });
+}

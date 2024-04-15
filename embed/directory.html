@@ -223,6 +223,7 @@
 
 <div class='mv2 flex flex-wrap items-center'>
   <div class='flex-grow-1'></div>
+  <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/'>view posts</a></div>
   <div class='flex items-center'>
     <details class='relative ml2' data-autoclose-details>
       <summary role='button' title='Sort' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
@@ -312,11 +313,10 @@
 </div>
 {{- end }}
 <div class='bb pb2 flex flex-wrap'>
-  <div>{{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}</div>
-  <div class='flex-grow-1'></div>
-  {{- if eq (head $.FilePath) "posts" }}
-  <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/'>view posts</a></div>
-  {{- end }}
+  <div class='flex flex-wrap items-center'>
+    <input type='checkbox' name='name' class='pointer mr2' data-checkbox-leader>
+    <span>{{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}</span>
+  </div>
 </div>
 {{- if $.Files }}
 <form>
@@ -324,9 +324,9 @@
   <ul>
     {{- range $file := $.PinnedFiles }}
     <li class='bb pv2'>
-      <label for='pinned:{{ $file.Parent }}:{{ $file.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
+      <label for='pinned:{{ $file.Parent }}:{{ $file.Name }}' class='flex items-start pointer' data-disable-click-selection>
         <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
-          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'>
+          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='pointer' data-checkbox-follower>
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           <span class='mr1 flex items-center'>{{ template "octicons-pin" }}</span>
@@ -382,9 +382,9 @@
     {{- end }}
     {{- range $file := $.Files }}
     <li class='bb pv2'>
-      <label for='{{ $file.Name }}' class='flex items-start{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }} pointer{{ end }}' data-disable-click-selection>
+      <label for='{{ $file.Name }}' class='flex items-start pointer' data-disable-click-selection>
         <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
-          <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='{{ if or (ne (head $.FilePath) "posts") (ne $file.Name "postlist.json") }}pointer{{ end }}'>
+          <input type='checkbox' id='{{ $file.Name }}' name='name' value='{{ $file.Name }}' class='pointer' data-checkbox-follower>
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           {{- if $file.IsDir }}

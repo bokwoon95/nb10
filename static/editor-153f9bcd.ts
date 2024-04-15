@@ -195,7 +195,7 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     const wordwrapInput = document.getElementById(wordwrapCheckboxID) as HTMLInputElement;
     if (wordwrapInput) {
       wordwrapInput.checked = wordwrapEnabled == "true";
-      wordwrapInput.addEventListener("change", function() {
+      wordwrapInput.addEventListener("click", function() {
         if (wordwrapInput.checked) {
           localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "true");
           editor.dispatch({
