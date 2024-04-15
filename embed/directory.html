@@ -315,9 +315,9 @@
 </div>
 {{- end }}
 <div class='bb pb2 flex flex-wrap'>
-  <div class='flex flex-wrap items-center'>
+  <div class=''>
     <input type='checkbox' name='name' class='pointer mr2' data-checkbox-leader>
-    <span>{{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}</span>
+    {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
   </div>
 </div>
 {{- if $.Files }}
