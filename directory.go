@@ -745,7 +745,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(mod_time < {timeParam} OR (mod_time = {timeParam} AND file_path < {pathParam})", timeParam, pathParam)
+						filter = sq.Expr("(mod_time < {timeParam} OR (mod_time = {timeParam} AND file_path < {pathParam}))", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					} else {
 						filter = sq.Expr("(mod_time > {timeParam} OR (mod_time = {timeParam} AND file_path > {pathParam}))", timeParam, pathParam)
