@@ -68,6 +68,7 @@ BUG: deleting a post category's post.html and postlist.html does not regenerate 
 BUG: Unable to create assets for pages/index.html (we need to make an exception for this).
 BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 BUG: rename.go: renaming posts should rightfully trigger a postlist regeneration because the link has changed.
+BUG: file.go: saving a markdown file should rightfully trigger a page regeneration for the page that depends on it.
 BUG: unable to create an image post with no post body (to S3).
 BUG: deleting a post category doesn't delete the output folder (food2 on notebrew.com)
 TODO: check if a user is able to delete their own site, and if so prevent it
