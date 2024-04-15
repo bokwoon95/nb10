@@ -869,6 +869,8 @@ func main() {
 				if err != nil {
 					return err
 				}
+			case "sftp":
+				// TODO: initialize SFTPObjectStorage.
 			default:
 				return fmt.Errorf("%s: unsupported provider %q (possible values: directory, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
 			}
