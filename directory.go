@@ -428,7 +428,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					order = sq.Expr("file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -484,7 +483,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					order = sq.Expr("file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT 1" +
 						" FROM files" +
@@ -544,7 +542,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					order = sq.Expr("file_path ASC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -600,7 +597,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					order = sq.Expr("file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -703,7 +699,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					}
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -794,7 +789,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					}
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT 1" +
 						" FROM files" +
@@ -894,7 +888,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					}
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -985,7 +978,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					}
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
@@ -1074,7 +1066,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}
 		files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +

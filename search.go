@@ -144,11 +144,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	if !isValidParent(response.Parent) {
 		response.Parent = "."
 	}
-	// pass in one or more terms, separated by spaces. terms which contain a space should be wrapped in double quotes e.g. apple iphone "steve jobs"
-	// search is case insensitive
-	// search only works for letters and numbers, not special characters
-	// prefixing a term with plus ("+") means every match *must include* that term
-	// prefixing a term with minus ("-") means every match *must exclude* that term
 	var terms []string
 	var includeTerms []string
 	var excludeTerms []string
@@ -281,7 +276,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		ftsQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
