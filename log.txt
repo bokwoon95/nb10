@@ -55,6 +55,8 @@ files/export/parent=xxx&name=xxx&name=xxx
 
 storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
+PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
+
 TODO: object_storage.go: SFTPObjectStorage
 TODO: export.go
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.

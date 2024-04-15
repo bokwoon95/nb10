@@ -91,6 +91,7 @@ type DatabaseFile struct {
 	isFulltextIndexed bool
 	objectStorage     ObjectStorage
 	info              *DatabaseFileInfo
+	bytes             []byte
 	buf               *bytes.Buffer
 	gzipReader        *gzip.Reader
 	readCloser        io.ReadCloser
@@ -998,8 +999,8 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format: "DELETE FROM pinned_file WHERE EXISTS (" +
-			"SELECT 1"+
-			" FROM files"+
+			"SELECT 1" +
+			" FROM files" +
 			" WHERE (file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\') " +
 			" AND files.file_id IN (pinned_file.parent_id, pinned_file.file_id)" +
 			")",

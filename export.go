@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"errors"
 	"io"
@@ -16,6 +17,12 @@ import (
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	// parent=xxxx&name=xxxx&name=xxxx
+	type DatabaseFile struct {
+		FileID   ID
+		FilePath string
+		IsDir    bool
+		Bytes    []byte
+	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.methodNotAllowed(w, r)
 		return
@@ -58,27 +65,52 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
-	if parent == "." {
-		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			_ = databaseFS
-			var parentFilter sq.Expression
-			_ = parentFilter
-			if parent == "." {
-				parentFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
-					" OR files.file_path LIKE 'pages/%'" +
-					" OR files.file_path LIKE 'posts/%'" +
-					" OR files.file_path LIKE 'output/%'" +
-					" OR files.parent_id IS NULL)")
-			} else {
-				parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
-			}
-			// TODO: if we want to avoid the N+1 problems arising from calling
-			// fs.WalkDir, we'll need to walk the rows ourselves and uncompress
-			// gzippable files and fetching objects from ObjectStorage
-			// https://boehs.org/node/llms-destroying-internetaccordingly.
-		} else {
+	gzipReader := gzipReaderPool.Get().(*gzip.Reader)
+	defer func() {
+		gzipReader.Reset(empty)
+		gzipReaderPool.Put(gzipReader)
+	}()
+	b := bufPool.Get().(*bytes.Buffer).Bytes()
+	defer func() {
+		if cap(b) <= maxPoolableBufferCapacity {
+			b = b[:0]
+			bufPool.Put(bytes.NewBuffer(b))
 		}
-		return
+	}()
+	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+		var parentFilter sq.Expression
+		if parent == "." {
+			parentFilter = sq.Expr("(file_path LIKE 'notes/%'" +
+				" OR file_path LIKE 'pages/%'" +
+				" OR file_path LIKE 'posts/%'" +
+				" OR file_path LIKE 'output/%'" +
+				" OR parent_id IS NULL)")
+		} else {
+			parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
+		}
+		sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format:  "SELECT {*} FROM files WHERE {parentFilter} ORDER BY file_path",
+			Values: []any{
+				sq.Param("parentFilter", parentFilter),
+			},
+		}, func(row *sq.Row) DatabaseFile {
+			file := DatabaseFile{
+				FileID:   row.UUID("file_id"),
+				FilePath: row.String("file_path"),
+				IsDir:    row.Bool("is_dir"),
+				Bytes:    row.Bytes(b[:0], "COALESCE(text, data)"),
+			}
+			if sitePrefix != "" {
+				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
+			}
+			return file
+		})
+		// TODO: if we want to avoid the N+1 problems arising from calling
+		// fs.WalkDir, we'll need to walk the rows ourselves and uncompress
+		// gzippable files and fetching objects from ObjectStorage
+		// https://boehs.org/node/llms-destroying-internetaccordingly.
+	} else {
 	}
 	names := r.Form["name"]
 	if len(names) == 0 {
