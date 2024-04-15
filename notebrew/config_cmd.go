@@ -839,7 +839,7 @@ const objectsHelp = `# == objects keys == #
 # Choose between using a directory, an S3-compatible provider or an SFTP server to store objects. Only applicable if using the database-backed filesytem (see ` + "`notebrew config files`" + `).
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider           - Object storage provider (possible values: directory, s3, sftp).
-# filePath           - Object storage root directory filePath (if using a directory).
+# filePath           - Object storage directory filePath (if using a directory).
 # endpoint           - Object storage provider endpoint (if using s3 or sftp).
 # region             - S3 region.
 # bucket             - S3 bucket.
