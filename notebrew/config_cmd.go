@@ -263,10 +263,10 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, objectsConfig.SecretAccessKey+"\n")
 			case "username":
 				io.WriteString(cmd.Stdout, objectsConfig.Username+"\n")
-			case "pemFilePath":
-				io.WriteString(cmd.Stdout, objectsConfig.PEMFilePath+"\n")
-			case "knownHostsFilePath":
-				io.WriteString(cmd.Stdout, objectsConfig.KnownHostsFilePath+"\n")
+			case "keyFile":
+				io.WriteString(cmd.Stdout, objectsConfig.KeyFile+"\n")
+			case "knownHostsFile":
+				io.WriteString(cmd.Stdout, objectsConfig.KnownHostsFile+"\n")
 			default:
 				io.WriteString(cmd.Stderr, objectsHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -611,10 +611,10 @@ func (cmd *ConfigCmd) Run() error {
 			objectsConfig.SecretAccessKey = cmd.Value.String
 		case "username":
 			objectsConfig.Username = cmd.Value.String
-		case "pemFilePath":
-			objectsConfig.PEMFilePath = cmd.Value.String
-		case "knownHostsFilePath":
-			objectsConfig.KnownHostsFilePath = cmd.Value.String
+		case "keyFile":
+			objectsConfig.KeyFile = cmd.Value.String
+		case "knownHostsFile":
+			objectsConfig.KnownHostsFile = cmd.Value.String
 		default:
 			io.WriteString(cmd.Stderr, objectsHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -823,31 +823,31 @@ const filesHelp = `# == files keys == #
 `
 
 type ObjectsConfig struct {
-	Provider           string `json:"provider"`
-	FilePath           string `json:"filePath"`
-	Endpoint           string `json:"endpoint"`
-	Region             string `json:"region"`
-	Bucket             string `json:"bucket"`
-	AccessKeyID        string `json:"accessKeyID"`
-	SecretAccessKey    string `json:"secretAccessKey"`
-	Username           string `json:"username"`
-	PEMFilePath        string `json:"pemFilePath"`
-	KnownHostsFilePath string `json:"knownHostsFilePath"`
+	Provider        string `json:"provider"`
+	FilePath        string `json:"filePath"`
+	Endpoint        string `json:"endpoint"`
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
+	AccessKeyID     string `json:"accessKeyID"`
+	SecretAccessKey string `json:"secretAccessKey"`
+	Username        string `json:"username"`
+	KeyFile         string `json:"keyFile"`
+	KnownHostsFile  string `json:"knownHostsFile"`
 }
 
 const objectsHelp = `# == objects keys == #
 # Choose between using a directory, an S3-compatible provider or an SFTP server to store objects. Only applicable if using the database-backed filesytem (see ` + "`notebrew config files`" + `).
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# provider           - Object storage provider (possible values: directory, s3, sftp).
-# filePath           - Object storage directory filePath (if using a directory).
-# endpoint           - Object storage provider endpoint (if using s3 or sftp).
-# region             - S3 region.
-# bucket             - S3 bucket.
-# accessKeyID        - S3 access key ID.
-# secretAccessKey    - S3 secret access key.
-# username           - SFTP username.
-# pemFilePath        - SFTP PEM filePath.
-# knownHostsFilePath - SFTP known_hosts filePath.
+# provider        - Object storage provider (possible values: directory, s3, sftp).
+# filePath        - Object storage directory filePath (if using a directory).
+# endpoint        - Object storage provider endpoint (if using s3 or sftp).
+# region          - S3 region.
+# bucket          - S3 bucket.
+# accessKeyID     - S3 access key ID.
+# secretAccessKey - S3 secret access key.
+# username        - SFTP username.
+# keyFile         - SFTP path to key file.
+# knownHostsFile  - SFTP path to known_hosts file.
 `
 
 type CaptchaConfig struct {
