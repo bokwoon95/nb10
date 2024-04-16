@@ -62,6 +62,8 @@ PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
 TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
+TODO: okay fine: add (bracket grouping) to search.go.
+    - I searched so hard for sing singing but couldn't find that one reddit thread containing all the singing tips. I really wanted to do +(sing singing).
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.
 TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
