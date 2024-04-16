@@ -60,6 +60,7 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
+TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
 TODO: okay fine: add (bracket grouping) to search.go.
