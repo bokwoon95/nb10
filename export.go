@@ -91,6 +91,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			nbrew.internalServerError(w, r, err)
 			return
 		}
+		// TODO: we cannot use AddFS, we want to custom encode CreationTime in
+		// a PaxRecord (so that it can be imported).
 		err = tarWriter.AddFS(subFS)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
