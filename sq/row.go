@@ -51,7 +51,10 @@ func (row *Row) Bytes(b []byte, format string, values ...any) []byte {
 	}()
 	scanDest := row.scanDest[row.index].(*sql.RawBytes)
 	if scanDest == nil {
-		return nil
+		if b == nil {
+			return nil
+		}
+		return b[:0]
 	}
 	if cap(b) < len(*scanDest) {
 		b = make([]byte, len(*scanDest))

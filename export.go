@@ -17,10 +17,12 @@ import (
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type DatabaseFile struct {
-		FileID   ID
-		FilePath string
-		IsDir    bool
-		Bytes    []byte
+		FileID       ID
+		FilePath     string
+		IsDir        bool
+		ModTime      time.Time
+		CreationTime time.Time
+		Bytes        []byte
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.methodNotAllowed(w, r)
@@ -50,6 +52,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 	}
+	// TODO: check for a "confirm" query param and initiate download only if it exists. Else, default to showing the user a confirmation page.
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)
 	defer func() {
@@ -66,10 +69,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
-	gzipReader := gzipReaderPool.Get().(*gzip.Reader)
+	gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
 	defer func() {
-		gzipReader.Reset(empty)
-		gzipReaderPool.Put(gzipReader)
+		if gzipReader != nil {
+			gzipReader.Reset(empty)
+			gzipReaderPool.Put(gzipReader)
+		}
 	}()
 	b := bufPool.Get().(*bytes.Buffer).Bytes()
 	defer func() {
@@ -78,68 +83,71 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			bufPool.Put(bytes.NewBuffer(b))
 		}
 	}()
-	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-		var parentFilter sq.Expression
-		if parent == "." {
-			parentFilter = sq.Expr("(file_path LIKE 'notes/%'" +
-				" OR file_path LIKE 'pages/%'" +
-				" OR file_path LIKE 'posts/%'" +
-				" OR file_path LIKE 'output/%'" +
-				" OR parent_id IS NULL)")
-		} else {
-			parentFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
+	databaseFS, ok := nbrew.FS.(*DatabaseFS)
+	if !ok || true {
+		subFS, err := fs.Sub(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, parent))
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
 		}
-		sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
+		err = tarWriter.AddFS(subFS)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		err = tarWriter.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		err = gzipWriter.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		return
+	}
+	if ok && false {
+		cursor, err := sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
-			Format:  "SELECT {*} FROM files WHERE {parentFilter} ORDER BY file_path",
+			Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
 			Values: []any{
-				sq.Param("parentFilter", parentFilter),
+				sq.Param("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, parent))+"/%"),
 			},
 		}, func(row *sq.Row) DatabaseFile {
+			b = row.Bytes(b[:0], "COALESCE(text, data)")
 			file := DatabaseFile{
 				FileID:   row.UUID("file_id"),
 				FilePath: row.String("file_path"),
 				IsDir:    row.Bool("is_dir"),
-				Bytes:    row.Bytes(b[:0], "COALESCE(text, data)"),
+				Bytes:    b,
 			}
 			if sitePrefix != "" {
 				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
 			}
 			return file
 		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		defer cursor.Close()
+		for cursor.Next() {
+		}
+		err = cursor.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
 		// TODO: if we want to avoid the N+1 problems arising from calling
 		// fs.WalkDir, we'll need to walk the rows ourselves and uncompress
 		// gzippable files and fetching objects from ObjectStorage
-		// https://boehs.org/node/llms-destroying-internetaccordingly.
-	} else {
-	}
-	names := r.Form["name"]
-	if len(names) == 0 {
-		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			_ = databaseFS
-		} else {
-			subFS, err := fs.Sub(nbrew.FS.WithContext(r.Context()), parent)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			err = tarWriter.AddFS(subFS)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				return
-			}
-			err = tarWriter.Close()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				return
-			}
-			err = gzipWriter.Close()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				return
-			}
-			return
-		}
+		// accordingly.
 	}
 }
