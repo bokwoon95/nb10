@@ -188,7 +188,6 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 
 		response := Response{
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
-			Name:       urlSafe(request.Name),
 			FormErrors: make(url.Values),
 		}
 		if !isValidParent(response.Parent) {
@@ -196,20 +195,25 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			writeResponse(w, r, response)
 			return
 		}
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		if head == "notes" {
+			response.Name = filenameSafe(request.Name)
+		} else {
+			response.Name = urlSafe(request.Name)
+		}
 		if response.Name == "" {
 			response.FormErrors.Add("name", "required")
 			response.Error = "FormErrorsPresent"
 			writeResponse(w, r, response)
 			return
 		}
-		_, ok := fileTypes[path.Ext(response.Name)]
+		_, ok := fileTypes[strings.ToLower(path.Ext(response.Name))]
 		if ok {
 			response.FormErrors.Add("name", "cannot end in a file extension")
 			response.Error = "FormErrorsPresent"
 			writeResponse(w, r, response)
 			return
 		}
-		head, tail, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case "pages":
 			err := nbrew.FS.MkdirAll(path.Join(sitePrefix, "output", tail, response.Name), 0755)

@@ -60,14 +60,16 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
-TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
+TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
+    - NOTE: to preserve timestamps when using DatabaseFS, we need to insert entries manually instead of relying on OpenWriter (which automatically sets the mod_time and creation_time for us).
+TODO: once we have export.go and import.go working, export the current site and switch notebrew over to a cheap VPS relying on a mounted Hetzner Cloud Volume for notebrew-objects (/mnt/notebrew-objects/)
+TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
 TODO: okay fine: add (bracket grouping) to search.go.
     - I searched so hard for sing singing but couldn't find that one reddit thread containing all the singing tips. I really wanted to do +(sing singing singer).
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.
-TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
