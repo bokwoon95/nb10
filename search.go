@@ -23,9 +23,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
-		Parent      string   `json:"parent"`
-		SearchTerms string   `json:"searchTerms"`
-		Exts        []string `json:"exts"`
+		Parent string   `json:"parent"`
+		Query  string   `json:"query"`
+		Exts   []string `json:"exts"`
 	}
 	type Response struct {
 		ContentBaseURL string   `json:"contentBaseURL"`
@@ -35,7 +35,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
-		SearchTerms    string   `json:"searchTerms"`
+		Query          string   `json:"query"`
 		Exts           []string `json:"exts"`
 		Matches        []Match  `json:"matches"`
 	}
@@ -116,9 +116,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 
 	request := Request{
-		Parent:      r.Form.Get("parent"),
-		SearchTerms: r.Form.Get("searchTerms"),
-		Exts:        r.Form["ext"],
+		Parent: r.Form.Get("parent"),
+		Query:  r.Form.Get("query"),
+		Exts:   r.Form["ext"],
 	}
 
 	var response Response
@@ -129,7 +129,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
-	response.SearchTerms = strings.TrimSpace(request.SearchTerms)
+	response.Query = strings.TrimSpace(request.Query)
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
 			switch ext {
@@ -150,7 +150,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	priority := 0
 	inString := false
 	var b strings.Builder
-	for i, char := range response.SearchTerms {
+	for i, char := range response.Query {
 		if char == '"' || char == '“' || char == '”' || char == '„' || char == '‟' {
 			if b.Len() > 0 {
 				if priority > 0 {
@@ -175,14 +175,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				continue
 			}
 			if char == '+' {
-				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
+				nextChar, _ := utf8.DecodeRuneInString(response.Query[i+1:])
 				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
 					priority = 1
 				}
 				continue
 			}
 			if char == '-' {
-				nextChar, _ := utf8.DecodeRuneInString(response.SearchTerms[i+1:])
+				nextChar, _ := utf8.DecodeRuneInString(response.Query[i+1:])
 				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
 					priority = -1
 				}
