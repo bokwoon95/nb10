@@ -397,6 +397,7 @@ func urlSafe(s string) string {
 var isFilenameUnsafe = [...]bool{
 	'<': true, '>': true, ':': true, '"': true, '/': true,
 	'\\': true, '|': true, '?': true, '*': true,
+	'#': true, /* '#' is technically allowed in filenames but plays havoc with URLs, so exclude */
 }
 
 func filenameSafe(s string) string {
