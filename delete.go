@@ -457,10 +457,16 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				if deleteAction.deleteFiles && deleteAction.deleteDirectories {
 					return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
 				}
-				_, tail, _ := strings.Cut(outputDir, "/")
+				head, tail, _ := strings.Cut(outputDir, "/")
 				if deleteAction.deleteFiles {
 					if tail != "" {
-						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), path.Join("pages", tail))
+						var counterpart string
+						if head == "posts" {
+							counterpart = path.Join(sitePrefix, "posts", tail)
+						} else {
+							counterpart = path.Join(sitePrefix, "pages", tail)
+						}
+						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), counterpart)
 						if err != nil {
 							if errors.Is(err, fs.ErrNotExist) {
 								return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
@@ -491,7 +497,13 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				}
 				if deleteAction.deleteDirectories {
 					if tail != "" {
-						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), path.Join("pages", tail+".html"))
+						var counterpart string
+						if head == "posts" {
+							counterpart = path.Join(sitePrefix, "posts", tail+".md")
+						} else {
+							counterpart = path.Join(sitePrefix, "pages", tail+".html")
+						}
+						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), counterpart)
 						if err != nil {
 							if errors.Is(err, fs.ErrNotExist) {
 								return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
