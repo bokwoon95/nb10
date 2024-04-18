@@ -344,6 +344,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					}
 					return err
 				}
+				isDir := fileInfo.IsDir()
 				if head == "posts" && name == "postlist.json" {
 					return nil
 				}
@@ -355,7 +356,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 				response.Files[i] = File{Name: name}
 				switch head {
 				case "pages":
-					if fileInfo.IsDir() {
+					if isDir {
 						outputDir := path.Join("output", tail, name)
 						outputDirsToDeleteMutex.Lock()
 						deleteAction := outputDirsToDelete[outputDir]
@@ -398,27 +399,38 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 						}
 					}
 				case "posts":
-					category := tail
-					if !strings.Contains(category, "/") {
-						if strings.HasSuffix(name, ".md") {
-							outputDir := path.Join("output/posts", tail, strings.TrimSuffix(name, ".md"))
+					if isDir {
+						if tail == "" {
+							category := name
+							outputDir := path.Join("output/posts", category)
 							outputDirsToDeleteMutex.Lock()
 							deleteAction := outputDirsToDelete[outputDir]
-							deleteAction.deleteFiles = true
 							deleteAction.deleteDirectories = true
 							outputDirsToDelete[outputDir] = deleteAction
 							outputDirsToDeleteMutex.Unlock()
-							regenerateCategoryPostList.Store(&category)
-						} else if name == "post.html" {
-							restoreCategoryPostHTML.Store(&category)
-							regenerateCategoryPosts.Store(&category)
-						} else if name == "postlist.html" {
-							restoreCategoryPostListHTML.Store(&category)
-							regenerateCategoryPostList.Store(&category)
+						}
+					} else {
+						if !strings.Contains(tail, "/") {
+							category := tail
+							if strings.HasSuffix(name, ".md") {
+								outputDir := path.Join("output/posts", tail, strings.TrimSuffix(name, ".md"))
+								outputDirsToDeleteMutex.Lock()
+								deleteAction := outputDirsToDelete[outputDir]
+								deleteAction.deleteFiles = true
+								outputDirsToDelete[outputDir] = deleteAction
+								outputDirsToDeleteMutex.Unlock()
+								regenerateCategoryPostList.Store(&category)
+							} else if name == "post.html" {
+								restoreCategoryPostHTML.Store(&category)
+								regenerateCategoryPosts.Store(&category)
+							} else if name == "postlist.html" {
+								restoreCategoryPostListHTML.Store(&category)
+								regenerateCategoryPostList.Store(&category)
+							}
 						}
 					}
 				case "output":
-					if !fileInfo.IsDir() {
+					if !isDir {
 						next, _, _ := strings.Cut(tail, "/")
 						if next == "posts" {
 							switch path.Ext(name) {
