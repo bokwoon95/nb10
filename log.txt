@@ -60,6 +60,7 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
+TODO: also apply the counterpart logic to posts in rename.go and clipboard.go (should be same as pages).
 TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
     - TODO: really not simple. I initially went with a checkbox-based file export, the problem with that is I cannot efficiently walk the filesystem but instead visit each name one by one (N+1 query, not a problem with SQLite but will be dog slow for Postgres and MySQL).
     - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
