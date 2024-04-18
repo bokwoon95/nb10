@@ -16,21 +16,21 @@
   {{- end }}
 </nav>
 {{- if eq $.Error "SiteNameNotProvided" "InvalidSiteName" "SiteNotFound" }}
-<div class='mv5 w-80 w-70-m w-60-l center'>
+<div class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <h3 class='mv3 b'>No site to delete</h3>
 </div>
 {{- else if eq $.Error "NotAuthorized" }}
-<div class='mv5 w-80 w-70-m w-60-l center'>
+<div class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <div class='mv3 b'>Not authorized</div>
 </div>
 {{- else }}
-<form method='post' class='mv5 w-80 w-70-m w-60-l center'>
+<form method='post' class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}

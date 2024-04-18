@@ -18,14 +18,14 @@
   {{- end }}
 </nav>
 {{- if eq $.Error "InvalidParent" }}
-<div class='mv5 w-80 w-70-m w-60-l center'>
+<div class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <div class='mv3 b tc'>Can't create a folder here.</div>
 </div>
 {{- else }}
-<form method='post' action='/{{ join "files" $.SitePrefix "createfolder" }}/' class='mv5 w-80 w-70-m w-60-l center'>
+<form method='post' action='/{{ join "files" $.SitePrefix "createfolder" }}/' class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}

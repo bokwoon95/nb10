@@ -16,7 +16,7 @@
   {{- end }}
 </nav>
 {{- if eq $.Error "MaxSitesReached" }}
-<div class='mv5 w-80 w-70-m w-60-l center'>
+<div class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}
@@ -30,7 +30,7 @@
   </ul>
 </div>
 {{- else }}
-<form method='post' action='/files/createsite/' class='mv5 w-80 w-70-m w-60-l center'>
+<form method='post' action='/files/createsite/' class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}

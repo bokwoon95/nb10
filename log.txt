@@ -61,15 +61,14 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
 TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
-    - TODO: really not simple. I initially went with a checkbox-based file export, the problem with that is I cannot efficiently walk the filesystem but instead visit each name one by one (N+1 query, not a problem with SQLite but will be dog slow for Postgres and MySQL).
+    - TODO: scrap the delete.html-style page, just go with a "Export 23.4 MB of files?" with a "<-- back" button and an "Export" button. We will do a genuine file-walking here and tally up the total size plus any additional output folders that we need to crawl.
     - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
         - pages/foo.html => output/foo (files only)
         - pages/foo => output/foo (folders only)
         - posts/foo.md => output/posts/foo (files only)
         - posts/foo => output/posts/foo (folders only)
     - But if we handle auto including output, there's no qualms with exporting pages separately or posts separately anymore. We can add a new "export" link to the dropdown menu in rootdirectory.html, and maybe change the logo from question mark back to the three dots ellipses.
-        - Exporting HTML pages and post templates is a minefield of its own because they may reference other templates, which might not exist in or be moved over to the destination site (so whatever page or post you export may throw template errors when you regenerate site).
-    - Now that we allow exporting pages and posts and themes individually, do we want to allow exporting individual page and post files separately? I think it's inevitable at this point. Just loop over each name and do a fetch all. Everything is *synchronous* because we can only write one thing at a time into the tarWriter.
+        - We will *not* chase template references as it is too computationally expensive.
 TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
     - NOTE: to preserve timestamps when using DatabaseFS, we need to insert entries manually instead of relying on OpenWriter (which automatically sets the mod_time and creation_time for us).
 - TODO: unvoidable, we need to remove data-checkbox-leader and data-checkbox-follower because there's no good use case with them (not cut copy pin/unpin or delete) and it only serves to slow operations down since an SQL query must be issued for each one.
