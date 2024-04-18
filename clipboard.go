@@ -455,6 +455,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					return nil
 				}
 				if srcHead == "posts" && destHead == "posts" {
+					// TODO: also apply the counterpart logic here.
 					if !isMove {
 						panic("unreachable: PostNoCopy")
 					}

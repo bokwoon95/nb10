@@ -494,6 +494,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			response.RegenerationStats.Count = 1
 			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		case "posts":
+			// TODO: copy the counterpart logic here.
 			oldOutputDir := path.Join(sitePrefix, "output/posts", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.To)
 			err = nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
