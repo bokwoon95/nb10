@@ -530,7 +530,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
-		// God deleting files seems deceptively simple (i.e. bloody complicated).
+		// Deleting the output files sounds deceptively simple (it's bloody complicated).
 		// 1. delete files
 		// 2. delete outputDir (if an entire post category was deleted, we also delete the entire output/posts/{category})
 		// 3. if index.html | 404.html was deleted, fill them in with embed/index.html | embed/404.html and regenerate the pages
