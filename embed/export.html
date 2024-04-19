@@ -29,27 +29,11 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <h3 class='mv3 b'>Export the following files(s)?</h3>
+  <h3 class='mv3 b'>Export {{ humanReadableFileSize $.Size }} of files?</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
-  <ul class='list-style-disc ph3'>
-    {{- range $file := $.Files }}
-    <li class='mv1'>
-      <input type='hidden' name='name' value='{{ $file.Name }}'>
-      {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
-        {{- if and $.ImgDomain $.IsDatabaseFS }}
-        <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
-        {{- else }}
-        <img src='/{{ join "files" $.SitePrefix $.Parent $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>
-        {{- end }}
-      {{- end }}
-      <a href='/{{ join "files" $.SitePrefix $.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
-      {{- if not $file.IsDir }}
-      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
-      {{- end }}
-      <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
-    </li>
-    {{- end }}
-  </ul>
+  {{- range $file := $.Files }}
+  <input type='hidden' name='name' value='{{ $file.Name }}'>
+  {{- end }}
   <button type='submit' name='confirm' value='' class='button ba br2 b--black pa2 mv3'>Export</button>
 </form>
 {{- end }}

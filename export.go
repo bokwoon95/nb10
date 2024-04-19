@@ -43,15 +43,17 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		Names  []string `json:"names"`
 	}
 	type Response struct {
-		ContentBaseURL string `json:"contentBaseURL"`
-		ImgDomain      string `json:"imgDomain"`
-		IsDatabaseFS   bool   `json:"isDatabaseFS"`
-		SitePrefix     string `json:"sitePrefix"`
-		UserID         ID     `json:"userID"`
-		Username       string `json:"username"`
-		Parent         string `json:"parent"`
-		Files          []File `json:"files"`
-		Error          string `json:"error"`
+		ContentBaseURL string   `json:"contentBaseURL"`
+		ImgDomain      string   `json:"imgDomain"`
+		IsDatabaseFS   bool     `json:"isDatabaseFS"`
+		SitePrefix     string   `json:"sitePrefix"`
+		UserID         ID       `json:"userID"`
+		Username       string   `json:"username"`
+		Parent         string   `json:"parent"`
+		Names          []string `json:"names"`
+		Files          []File   `json:"files"`
+		Error          string   `json:"error"`
+		Size           int64    `json:"size"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.methodNotAllowed(w, r)
@@ -292,14 +294,19 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			Values: []any{
 				sq.Param("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, parent))+"/%"),
 			},
-		}, func(row *sq.Row) DatabaseFile {
+		}, func(row *sq.Row) (file struct {
+			FileID       ID
+			FilePath     string
+			IsDir        bool
+			ModTime      time.Time
+			CreationTime time.Time
+			Bytes        []byte
+		}) {
 			b = row.Bytes(b[:0], "COALESCE(text, data)")
-			file := DatabaseFile{
-				FileID:   row.UUID("file_id"),
-				FilePath: row.String("file_path"),
-				IsDir:    row.Bool("is_dir"),
-				Bytes:    b,
-			}
+			file.FileID = row.UUID("file_id")
+			file.FilePath = row.String("file_path")
+			file.IsDir = row.Bool("is_dir")
+			file.Bytes = b
 			if sitePrefix != "" {
 				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
 			}
