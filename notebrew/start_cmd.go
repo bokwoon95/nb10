@@ -100,9 +100,6 @@ func (cmd *StartCmd) Run() error {
 		dynamicCertConfig.Storage = cmd.Notebrew.CertStorage
 		dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
 			DecisionFunc: func(ctx context.Context, name string) error {
-				if certmagic.MatchWildcard(name, "*."+cmd.Notebrew.ContentDomain) {
-					return nil
-				}
 				fileInfo, err := fs.Stat(cmd.Notebrew.FS.WithContext(ctx), name)
 				if err != nil {
 					return err

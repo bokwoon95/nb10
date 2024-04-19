@@ -414,7 +414,7 @@ func main() {
 						nbrew.ManagingDomains = append(nbrew.ManagingDomains, domain)
 					}
 				}
-			} else {
+			} else if nbrew.Port == 443 {
 				cmsDomainWildcard := "*." + nbrew.CMSDomain
 				cmsDomainWildcardAdded := false
 				contentDomainWildcard := "*." + nbrew.ContentDomain
