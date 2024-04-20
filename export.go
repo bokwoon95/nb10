@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,28 +19,6 @@ import (
 )
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
-	type DatabaseFile struct {
-		FileID       ID
-		FilePath     string
-		IsDir        bool
-		ModTime      time.Time
-		CreationTime time.Time
-		Bytes        []byte
-	}
-	type File struct {
-		FileID       ID        `json:"fileID"`
-		FilePath     string    `json:"filePath"`
-		Name         string    `json:"name"`
-		IsDir        bool      `json:"isDir"`
-		Size         int64     `json:"size"`
-		ModTime      time.Time `json:"modTime"`
-		CreationTime time.Time `json:"creationTime"`
-		Bytes        []byte    `json:"-"`
-	}
-	type Request struct {
-		Parent string   `json:"parent"`
-		Names  []string `json:"names"`
-	}
 	type Response struct {
 		ContentBaseURL string   `json:"contentBaseURL"`
 		ImgDomain      string   `json:"imgDomain"`
@@ -51,7 +28,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
 		Names          []string `json:"names"`
-		Files          []File   `json:"files"`
 		Error          string   `json:"error"`
 		Size           int64    `json:"size"`
 	}
@@ -138,62 +114,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		seen := make(map[string]bool)
 		group, groupctx := errgroup.WithContext(r.Context())
 		names := r.Form["name"]
-		response.Files = make([]File, len(names))
-		for i, name := range names {
-			i, name := i, filepath.ToSlash(name)
-			if strings.Contains(name, "/") {
-				continue
-			}
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
-			group.Go(func() error {
-				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-					_ = databaseFS
-				}
-				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
-				if err != nil {
-					if errors.Is(err, fs.ErrNotExist) {
-						return nil
-					}
-					return err
-				}
-				file := File{
-					Name:    fileInfo.Name(),
-					IsDir:   fileInfo.IsDir(),
-					Size:    fileInfo.Size(),
-					ModTime: fileInfo.ModTime(),
-				}
-				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-					file.FileID = fileInfo.FileID
-					file.CreationTime = fileInfo.CreationTime
-				} else {
-					var absolutePath string
-					if dirFS, ok := nbrew.FS.(*DirFS); ok {
-						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
-					}
-					file.CreationTime = CreationTime(absolutePath, fileInfo)
-				}
-				response.Files[i] = file
-				return nil
-			})
-		}
-		err = group.Wait()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		n := 0
-		for _, file := range response.Files {
-			if file.Name == "" {
-				continue
-			}
-			response.Files[n] = file
-			n++
-		}
-		response.Files = response.Files[:n]
+		_, _, _, _ = seen, group, groupctx, names
 		writeResponse(w, r, response)
 		return
 	}

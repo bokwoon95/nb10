@@ -17,7 +17,7 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
-{{- if or (eq $.Error "InvalidParent") (not $.Files) }}
+{{- if eq $.Error "InvalidParent" }}
 <div class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
@@ -31,8 +31,8 @@
   {{- end }}
   <h3 class='mv3 b'>Export {{ humanReadableFileSize $.Size }} of files?</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
-  {{- range $file := $.Files }}
-  <input type='hidden' name='name' value='{{ $file.Name }}'>
+  {{- range $name := $.Names }}
+  <input type='hidden' name='name' value='{{ $name }}'>
   {{- end }}
   <button type='submit' name='confirm' value='' class='button ba br2 b--black pa2 mv3'>Export</button>
 </form>
