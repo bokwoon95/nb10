@@ -133,6 +133,24 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
   });
 }
 
+for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-double-submit]")) {
+  if (dataPreventDoubleSubmit.tagName != "FORM") {
+    continue;
+  }
+  dataPreventDoubleSubmit.addEventListener("submit", function(event) {
+    event.preventDefault();
+    if (dataPreventDoubleSubmit.classList.contains("submitting")) {
+      return;
+    }
+    dataPreventDoubleSubmit.classList.add("submitting", "o-70");
+    const statusElement = dataPreventDoubleSubmit.querySelector("[role=status]");
+    if (statusElement) {
+      setTimeout(function() { statusElement.textContent = "submitting..." }, 500);
+    }
+    dataPreventDoubleSubmit.submit();
+  });
+}
+
 for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
   dataCheckboxLeader.addEventListener("click", function() {
     for (const dataCheckboxFollower of document.querySelectorAll("[data-checkbox-follower]")) {
