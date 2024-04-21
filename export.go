@@ -52,7 +52,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			gzipWriterPool.Put(gzipWriter)
 		}
 	}()
-	tarWriter := tar.NewWriter(w)
+	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
 
 	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
