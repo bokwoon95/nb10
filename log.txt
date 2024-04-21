@@ -60,10 +60,9 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
-type map[string]
-type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
-
-TODO: /files/exports/ =>
+TODO: /files/exports/
+    - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
+TODO: /files/imports/
 TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
     - TODO: scrap the delete.html-style page, just go with a "Export 23.4 MB of files?" with a "<-- back" button and an "Export" button. We will do a genuine file-walking here and tally up the total size plus any additional output folders that we need to crawl.
     - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
