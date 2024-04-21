@@ -25,7 +25,7 @@
   <div class='mv3 b tc'>No items to export</div>
 </div>
 {{- else }}
-<form method='get' class='mv5 w-80 center'>
+<form method='get' class='mv5 w-80 center' data-prevent-double-submit>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}

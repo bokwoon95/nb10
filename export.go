@@ -19,6 +19,114 @@ import (
 )
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
+	if r.Method != "GET" {
+		nbrew.methodNotAllowed(w, r)
+		return
+	}
+
+	var fileName string
+	if sitePrefix == "" {
+		fileName = "files-" + time.Now().UTC().Format("20060102150405") + ".tgz"
+	} else {
+		fileName = "files-" + strings.TrimPrefix(sitePrefix, "@") + "-" + time.Now().UTC().Format("20060102150405") + ".tgz"
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+
+	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
+	gzipWriter.Reset(w)
+	defer func() {
+		gzipWriter.Close()
+		gzipWriter.Reset(io.Discard)
+		gzipWriterPool.Put(gzipWriter)
+	}()
+	tarWriter := tar.NewWriter(gzipWriter)
+	defer tarWriter.Close()
+
+	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
+	if parent != "." {
+		head, _, _ := strings.Cut(parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				return
+			}
+			if !fileInfo.IsDir() {
+				return
+			}
+		default:
+			return
+		}
+	}
+
+	var b []byte
+	databaseFS, _ := nbrew.FS.(*DatabaseFS)
+	if databaseFS != nil {
+		b = bufPool.Get().(*bytes.Buffer).Bytes()
+		defer func() {
+			if cap(b) <= maxPoolableBufferCapacity {
+				b = b[:0]
+				bufPool.Put(bytes.NewBuffer(b))
+			}
+		}()
+	}
+	names := r.Form["name"]
+	seen := make(map[string]bool)
+	for _, name := range names {
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		if databaseFS != nil {
+			cursor, err := sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
+				Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
+				Values: []any{
+					sq.Param("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, parent))+"/%"),
+				},
+			}, func(row *sq.Row) (file struct {
+				FileID       ID
+				FilePath     string
+				IsDir        bool
+				ModTime      time.Time
+				CreationTime time.Time
+				Bytes        []byte
+			}) {
+				b = row.Bytes(b[:0], "COALESCE(text, data)")
+				file.FileID = row.UUID("file_id")
+				file.FilePath = row.String("file_path")
+				file.IsDir = row.Bool("is_dir")
+				file.Bytes = b
+				if sitePrefix != "" {
+					file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
+				}
+				return file
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			defer cursor.Close()
+			for cursor.Next() {
+			}
+			err = cursor.Close()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+		} else {
+		}
+	}
+}
+
+func (nbrew *Notebrew) export_Old(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Response struct {
 		ContentBaseURL string   `json:"contentBaseURL"`
 		ImgDomain      string   `json:"imgDomain"`
