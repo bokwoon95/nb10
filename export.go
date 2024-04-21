@@ -36,9 +36,9 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 
 	var fileName string
 	if sitePrefix == "" {
-		fileName = "files-" + time.Now().UTC().Format("20060102150405") + ".tgz"
+		fileName = "files-" + time.Now().UTC().Format("20060102150405") + ".tar"
 	} else {
-		fileName = "files-" + strings.TrimPrefix(sitePrefix, "@") + "-" + time.Now().UTC().Format("20060102150405") + ".tgz"
+		fileName = "files-" + strings.TrimPrefix(sitePrefix, "@") + "-" + time.Now().UTC().Format("20060102150405") + ".tar"
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
