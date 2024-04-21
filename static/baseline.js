@@ -144,7 +144,9 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     }
     dataPreventDoubleSubmit.classList.add("submitting", "o-70");
     const statusElement = dataPreventDoubleSubmit.querySelector("[role=status]");
-    statusElement.textContent = "submitting..."
+    if (statusElement) {
+      statusElement.textContent = "submitting...";
+    }
     dataPreventDoubleSubmit.submit();
     dataPreventDoubleSubmit.classList.add("remove", "o-70");
   });
