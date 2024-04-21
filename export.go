@@ -24,6 +24,13 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		nbrew.methodNotAllowed(w, r)
 		return
 	}
+	responseController := http.NewResponseController(w)
+	err := responseController.SetWriteDeadline(time.Now().Add(time.Hour))
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		nbrew.internalServerError(w, r, err)
+		return
+	}
 
 	var fileName string
 	if sitePrefix == "" {
