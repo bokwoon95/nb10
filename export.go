@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -64,44 +65,52 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 	}
 
-	var b []byte
-	databaseFS, _ := nbrew.FS.(*DatabaseFS)
-	if databaseFS != nil {
-		b = bufPool.Get().(*bytes.Buffer).Bytes()
-		defer func() {
-			if cap(b) <= maxPoolableBufferCapacity {
-				b = b[:0]
-				bufPool.Put(bytes.NewBuffer(b))
-			}
-		}()
-	}
 	names := r.Form["name"]
 	seen := make(map[string]bool)
-	for _, name := range names {
-		if seen[name] {
-			continue
-		}
-		seen[name] = true
-		if databaseFS != nil {
+	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+		buf := bufPool.Get().(*bytes.Buffer).Bytes()
+		defer func() {
+			if cap(buf) <= maxPoolableBufferCapacity {
+				buf = buf[:0]
+				bufPool.Put(bytes.NewBuffer(buf))
+			}
+		}()
+		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
+		defer func() {
+			if gzipReader != nil {
+				gzipReader.Reset(empty)
+				gzipReaderPool.Put(gzipReader)
+			}
+		}()
+		for _, name := range names {
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
 			cursor, err := sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
-				Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
+				Format:  "SELECT {*} FROM files WHERE file_path = {filePath} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
 				Values: []any{
-					sq.Param("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, parent))+"/%"),
+					sq.Param("filePath", path.Join(sitePrefix, parent, name)),
+					sq.Param("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, parent, name))+"/%"),
 				},
 			}, func(row *sq.Row) (file struct {
 				FileID       ID
 				FilePath     string
 				IsDir        bool
+				Size         int64
 				ModTime      time.Time
 				CreationTime time.Time
 				Bytes        []byte
 			}) {
-				b = row.Bytes(b[:0], "COALESCE(text, data)")
+				buf = row.Bytes(buf[:0], "COALESCE(text, data)")
 				file.FileID = row.UUID("file_id")
 				file.FilePath = row.String("file_path")
 				file.IsDir = row.Bool("is_dir")
-				file.Bytes = b
+				file.Size = row.Int64("size")
+				file.Bytes = buf
+				file.ModTime = row.Time("mod_time")
+				file.CreationTime = row.Time("creation_time")
 				if sitePrefix != "" {
 					file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
 				}
@@ -111,15 +120,85 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				getLogger(r.Context()).Error(err.Error())
 				return
 			}
-			defer cursor.Close()
 			for cursor.Next() {
+				file, err := cursor.Result()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					return
+				}
+				fileType, ok := fileTypes[path.Ext(file.FilePath)]
+				if !ok {
+					continue
+				}
+				fmt.Printf("dumping: %s\n", file.FilePath)
+				tarHeader := &tar.Header{
+					Name:    file.FilePath,
+					ModTime: file.ModTime,
+					Size:    file.Size,
+					PAXRecords: map[string]string{
+						"NOTEBREW.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+					},
+				}
+				if file.IsDir {
+					tarHeader.Typeflag = tar.TypeDir
+					tarHeader.Mode = 0755
+				} else {
+					tarHeader.Typeflag = tar.TypeReg
+					tarHeader.Mode = 0644
+				}
+				tarWriter.WriteHeader(tarHeader)
+				if fileType.IsObject {
+					reader, err := databaseFS.ObjectStorage.Get(r.Context(), file.FileID.String()+path.Ext(file.FilePath))
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						return
+					}
+					_, err = io.Copy(tarWriter, reader)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						return
+					}
+				} else {
+					if fileType.IsGzippable && !IsFulltextIndexed(file.FilePath) {
+						if gzipReader == nil {
+							gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
+							if err != nil {
+								getLogger(r.Context()).Error(err.Error())
+								return
+							}
+						} else {
+							err = gzipReader.Reset(bytes.NewReader(file.Bytes))
+							if err != nil {
+								getLogger(r.Context()).Error(err.Error())
+								return
+							}
+						}
+						_, err = io.Copy(tarWriter, gzipReader)
+						if err != nil {
+							getLogger(r.Context()).Error(err.Error())
+							return
+						}
+					} else {
+						_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
+						if err != nil {
+							getLogger(r.Context()).Error(err.Error())
+							return
+						}
+					}
+				}
 			}
 			err = cursor.Close()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				return
 			}
-		} else {
+		}
+	} else {
+		for _, name := range names {
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
 		}
 	}
 }

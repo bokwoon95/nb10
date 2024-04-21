@@ -146,7 +146,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		}
 		return nil, err
 	}
-	file.isFulltextIndexed = isFulltextIndexed(file.info.FilePath)
+	file.isFulltextIndexed = IsFulltextIndexed(file.info.FilePath)
 	if fileType.IsObject {
 		file.readCloser, err = file.objectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
@@ -163,13 +163,13 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 			// raw gzipped bytes.
 			r := bytes.NewReader(file.buf.Bytes())
 			file.gzipReader, _ = gzipReaderPool.Get().(*gzip.Reader)
-			if file.gzipReader != nil {
-				err = file.gzipReader.Reset(r)
+			if file.gzipReader == nil {
+				file.gzipReader, err = gzip.NewReader(r)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				file.gzipReader, err = gzip.NewReader(r)
+				err = file.gzipReader.Reset(r)
 				if err != nil {
 					return nil, err
 				}
@@ -344,7 +344,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	file := &DatabaseFileWriter{
 		ctx:               fsys.Context,
 		fileType:          fileType,
-		isFulltextIndexed: isFulltextIndexed(name),
+		isFulltextIndexed: IsFulltextIndexed(name),
 		db:                fsys.DB,
 		dialect:           fsys.Dialect,
 		objectStorage:     fsys.ObjectStorage,
@@ -1439,7 +1439,7 @@ func IsForeignKeyViolation(dialect string, errorCode string) bool {
 	}
 }
 
-func isFulltextIndexed(filePath string) bool {
+func IsFulltextIndexed(filePath string) bool {
 	ext := path.Ext(filePath)
 	head, tail, _ := strings.Cut(filePath, "/")
 	if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
