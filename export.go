@@ -109,7 +109,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
 				return
 			}
 			defer cursor.Close()
@@ -118,7 +117,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			err = cursor.Close()
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
 				return
 			}
 		} else {
