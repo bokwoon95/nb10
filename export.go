@@ -43,13 +43,13 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
 
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-	gzipWriter.Reset(w)
+	// gzipWriter.Reset(w)
 	defer func() {
 		gzipWriter.Close()
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
-	tarWriter := tar.NewWriter(gzipWriter)
+	tarWriter := tar.NewWriter(w)
 	defer tarWriter.Close()
 
 	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
@@ -342,12 +342,12 @@ func (nbrew *Notebrew) export_Old(w http.ResponseWriter, r *http.Request, user U
 		}
 	}
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-	// gzipWriter.Reset(w)
+	gzipWriter.Reset(w)
 	defer func() {
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
-	tarWriter := tar.NewWriter(w)
+	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
 	var fileName string
 	if sitePrefix == "" {
