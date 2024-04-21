@@ -193,66 +193,6 @@ func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string
 	return nil
 }
 
-type SFTPObjectStorage struct {
-	Client     *s3.Client
-	Bucket     string
-	PurgeCache func(ctx context.Context, key string) error
-	Logger     *slog.Logger
-}
-
-type InMemoryObjectStorage struct {
-	mu      sync.RWMutex
-	entries map[string][]byte
-}
-
-var _ ObjectStorage = (*InMemoryObjectStorage)(nil)
-
-func NewInMemoryObjectStorage() *InMemoryObjectStorage {
-	return &InMemoryObjectStorage{
-		mu:      sync.RWMutex{},
-		entries: make(map[string][]byte),
-	}
-}
-
-func (storage *InMemoryObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
-	storage.mu.RLock()
-	value, ok := storage.entries[key]
-	storage.mu.RUnlock()
-	if !ok {
-		return nil, &fs.PathError{Op: "get", Path: key, Err: fs.ErrNotExist}
-	}
-	return io.NopCloser(bytes.NewReader(value)), nil
-}
-
-func (storage *InMemoryObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
-	value, err := io.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	storage.mu.Lock()
-	storage.entries[key] = value
-	storage.mu.Unlock()
-	return nil
-}
-
-func (storage *InMemoryObjectStorage) Delete(ctx context.Context, key string) error {
-	storage.mu.Lock()
-	delete(storage.entries, key)
-	storage.mu.Unlock()
-	return nil
-}
-
-func (storage *InMemoryObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
-	storage.mu.Lock()
-	value, ok := storage.entries[srcKey]
-	if !ok {
-		return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
-	}
-	storage.entries[destKey] = value
-	storage.mu.Unlock()
-	return nil
-}
-
 type DirObjectStorage struct {
 	RootDir string
 	TempDir string
@@ -410,5 +350,65 @@ func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey strin
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type SFTPObjectStorage struct {
+	Client     *s3.Client
+	Bucket     string
+	PurgeCache func(ctx context.Context, key string) error
+	Logger     *slog.Logger
+}
+
+type InMemoryObjectStorage struct {
+	mu      sync.RWMutex
+	entries map[string][]byte
+}
+
+var _ ObjectStorage = (*InMemoryObjectStorage)(nil)
+
+func NewInMemoryObjectStorage() *InMemoryObjectStorage {
+	return &InMemoryObjectStorage{
+		mu:      sync.RWMutex{},
+		entries: make(map[string][]byte),
+	}
+}
+
+func (storage *InMemoryObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+	storage.mu.RLock()
+	value, ok := storage.entries[key]
+	storage.mu.RUnlock()
+	if !ok {
+		return nil, &fs.PathError{Op: "get", Path: key, Err: fs.ErrNotExist}
+	}
+	return io.NopCloser(bytes.NewReader(value)), nil
+}
+
+func (storage *InMemoryObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
+	value, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+	storage.mu.Lock()
+	storage.entries[key] = value
+	storage.mu.Unlock()
+	return nil
+}
+
+func (storage *InMemoryObjectStorage) Delete(ctx context.Context, key string) error {
+	storage.mu.Lock()
+	delete(storage.entries, key)
+	storage.mu.Unlock()
+	return nil
+}
+
+func (storage *InMemoryObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
+	storage.mu.Lock()
+	value, ok := storage.entries[srcKey]
+	if !ok {
+		return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
+	}
+	storage.entries[destKey] = value
+	storage.mu.Unlock()
 	return nil
 }
