@@ -64,7 +64,7 @@ func (cmd *StartCmd) Run() error {
 	switch cmd.Notebrew.Port {
 	case 443:
 		server.Addr = ":443"
-		server.Handler = http.TimeoutHandler(cmd.Notebrew, 60*time.Second, "The server took too long to process your request.")
+		server.Handler = cmd.Notebrew
 		server.ReadTimeout = 60 * time.Second
 		server.WriteTimeout = 60 * time.Second
 		server.IdleTimeout = 120 * time.Second
@@ -150,7 +150,7 @@ func (cmd *StartCmd) Run() error {
 		}
 	case 80:
 		server.Addr = ":80"
-		server.Handler = http.TimeoutHandler(cmd.Notebrew, 60*time.Second, "The server took too long to process your request.")
+		server.Handler = cmd.Notebrew
 	default:
 		if len(cmd.Notebrew.ProxyConfig.RealIPHeaders) == 0 && len(cmd.Notebrew.ProxyConfig.ProxyIPs) == 0 {
 			server.Addr = "localhost:" + strconv.Itoa(cmd.Notebrew.Port)

@@ -1285,7 +1285,7 @@ func main() {
 		switch nbrew.Port {
 		case 443:
 			server.Addr = ":443"
-			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
+			server.Handler = nbrew
 			server.ReadTimeout = 60 * time.Second
 			server.WriteTimeout = 60 * time.Second
 			server.IdleTimeout = 120 * time.Second
@@ -1371,7 +1371,7 @@ func main() {
 			}
 		case 80:
 			server.Addr = ":80"
-			server.Handler = http.TimeoutHandler(nbrew, 60*time.Second, "The server took too long to process your request.")
+			server.Handler = nbrew
 		default:
 			if len(nbrew.ProxyConfig.RealIPHeaders) == 0 && len(nbrew.ProxyConfig.ProxyIPs) == 0 {
 				server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
