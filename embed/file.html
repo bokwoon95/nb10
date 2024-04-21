@@ -296,7 +296,7 @@
     {{- end }}
   {{- end }}
 </div>
-<form method='post' enctype='multipart/form-data' class='mv2'>
+<form method='post' enctype='multipart/form-data' class='mv2' data-prevent-double-submit>
   {{- if $.RegenerationStats.TemplateError.ErrorMessage }}
   <div class='mv2 invalid-red'>
     <span class='b'>template error: </span>
