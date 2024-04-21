@@ -85,7 +85,7 @@
   {{- end }}
 </figure>
 {{- if $.IsDatabaseFS }}
-<form method='post' enctype='multipart/form-data' class='mv2'>
+<form method='post' enctype='multipart/form-data' class='mv2' data-prevent-double-submit>
   <div class='flex flex-wrap mv2'>
     <label for='content' class='b'>Caption</label>
     <div class='flex-grow-1'></div>
