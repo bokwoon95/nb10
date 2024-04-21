@@ -149,6 +149,9 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     }
     dataPreventDoubleSubmit.submit();
     dataPreventDoubleSubmit.classList.add("remove", "o-70");
+    if (statusElement) {
+      statusElement.textContent = "submitted!";
+    }
   });
 }
 
