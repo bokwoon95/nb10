@@ -46,11 +46,13 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(bufio.NewWriter(w))
 	defer func() {
-		gzipWriter.Close()
-		gzipWriter.Reset(io.Discard)
-		gzipWriterPool.Put(gzipWriter)
+		if gzipWriter != nil {
+			gzipWriter.Close()
+			gzipWriter.Reset(io.Discard)
+			gzipWriterPool.Put(gzipWriter)
+		}
 	}()
-	tarWriter := tar.NewWriter(gzipWriter)
+	tarWriter := tar.NewWriter(w)
 	defer tarWriter.Close()
 
 	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
