@@ -395,14 +395,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fileType, ok := fileTypes[path.Ext(urlPath)]
-			if !ok {
+			if !ok || !fileType.IsObject {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
-			}
-			switch fileType.Ext {
-			case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-				break
-			default:
-				return
 			}
 			reader, err := databaseFS.ObjectStorage.Get(r.Context(), urlPath)
 			if err != nil {
