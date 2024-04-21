@@ -144,10 +144,9 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     }
     dataPreventDoubleSubmit.classList.add("submitting", "o-70");
     const statusElement = dataPreventDoubleSubmit.querySelector("[role=status]");
-    if (statusElement) {
-      setTimeout(function() { statusElement.textContent = "submitting..." }, 100);
-    }
+    statusElement.textContent = "submitting..."
     dataPreventDoubleSubmit.submit();
+    dataPreventDoubleSubmit.classList.add("remove", "o-70");
   });
 }
 
