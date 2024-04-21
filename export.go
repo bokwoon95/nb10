@@ -24,6 +24,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		nbrew.methodNotAllowed(w, r)
 		return
 	}
+	// TODO: why is this not working!
 	responseController := http.NewResponseController(w)
 	err := responseController.SetWriteDeadline(time.Now().Add(time.Hour))
 	if err != nil {
