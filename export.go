@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
@@ -43,7 +44,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
 
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-	// gzipWriter.Reset(w)
+	gzipWriter.Reset(bufio.NewWriter(w))
 	defer func() {
 		if gzipWriter != nil {
 			gzipWriter.Close()
@@ -51,7 +52,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			gzipWriterPool.Put(gzipWriter)
 		}
 	}()
-	tarWriter := tar.NewWriter(w)
+	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
 
 	parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
