@@ -64,10 +64,15 @@ archives/import/
 archives/export/
 POST archives/?parent=.
 
-export to archives GET /archives/export/?parent=xxxx&name=xxxx | POST /archives/export/?parent=xxxx&name=xxxx
+export to archives GET /archives/export/?parent=xxxx&name=xxxx | POST /archives/export/ archiveName=xxxx&parent=xxxx&name=xxxx
+    - If an archive with that name already exists, return an error
 download from archives GET /archives/xxxx.tgz
 upload to archives POST /archives/ (skips files that already exist)
-import from archives POST /archives/xxxx.tgz
+    - If an archive with that name already exists, skip the file
+import from archives POST /archives/import/?name=xxxx.tgz&name=xxxx.tgz
+    - If a file from the archive already exists in the site, skip the file
+import themes from archives POST /archives/import/?themes&name=xxxx.tgz&name=xxxx.tgz
+    - If a file from the archive already exists in the site, skip the file
 
 TODO: /files/exports/
     - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
