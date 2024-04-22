@@ -74,7 +74,7 @@ import from archives POST /archives/import/?name=xxxx.tgz&name=xxxx.tgz
 import themes from archives POST /archives/import/?themes&name=xxxx.tgz&name=xxxx.tgz
     - If a file from the archive already exists in the site, skip the file
 
-TODO: oh... my god. If we don't vet archive contents, users can upload archives containing arbitrary files and use us as a sort of file hosting system. How??
+TODO: oh... my god. If we don't vet archive contents, users can upload archives containing arbitrary files and use us as a sort of file hosting system (illegal movie distribution). How??
     TODO: there *is* a solution
     - /imports/ where users can upload arbitrary archive files and *only* import the files or import the themes.
     - /exports/ which can only be populated by clicking "export" so it only ever contains valid html/css/js/md/txt/image files
