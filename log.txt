@@ -75,6 +75,12 @@ import themes from archives POST /archives/import/?themes&name=xxxx.tgz&name=xxx
     - If a file from the archive already exists in the site, skip the file
 
 TODO: oh... my god. If we don't vet archive contents, users can upload archives containing arbitrary files and use us as a sort of file hosting system. How??
+    TODO: there *is* a solution
+    - /imports/ where users can upload arbitrary archive files and *only* import the files or import the themes.
+    - /exports/ which can only be populated by clicking "export" so it only ever contains valid html/css/js/md/txt/image files
+    - actually: determined users can already circumvent this by bundling their executables/large files as images and clicking "export" so that it gets bundled into the tar gzip archive.
+    - no wait: but the image itself would have to be under 10 MB. Users still won't be able to abuse notebrew as an illegal file host because they'd have to squash the movie or whatever into under 10MB before compressing it into the archive to distribute it. Maybe we're okay? This is the way?
+
 
 TODO: /files/archives/
     - grep all occurrences of "output/themes" and add "archives" to it
