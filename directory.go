@@ -375,7 +375,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 
 	response.Limit, _ = strconv.Atoi(r.Form.Get("limit"))
 	if response.Limit <= 0 {
-		response.Limit = 300
+		response.Limit = 200
 	}
 	scheme := "https"
 	if r.TLS == nil {

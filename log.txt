@@ -60,6 +60,15 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
+archives/import/
+archives/export/
+POST archives/?parent=.
+
+export to archives GET /archives/export/?parent=xxxx&name=xxxx | POST /archives/export/?parent=xxxx&name=xxxx
+download from archives GET /archives/xxxx.tgz
+upload to archives POST /archives/ (skips files that already exist)
+import from archives POST /archives/xxxx.tgz
+
 TODO: /files/exports/
     - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
 TODO: /files/imports/
