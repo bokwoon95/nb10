@@ -74,6 +74,8 @@ import from archives POST /archives/import/?name=xxxx.tgz&name=xxxx.tgz
 import themes from archives POST /archives/import/?themes&name=xxxx.tgz&name=xxxx.tgz
     - If a file from the archive already exists in the site, skip the file
 
+TODO: oh... my god. If we don't vet archive contents, users can upload archives containing arbitrary files and use us as a sort of file hosting system. How??
+
 TODO: /files/archives/
     - grep all occurrences of "output/themes" and add "archives" to it
     - in the live site, insert "archives" for bokwoon.com and the main site. delete and recreate the other sites for the new createsite to create the "archives" directory.
