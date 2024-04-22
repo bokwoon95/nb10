@@ -74,10 +74,11 @@ import from archives POST /archives/import/?name=xxxx.tgz&name=xxxx.tgz
 import themes from archives POST /archives/import/?themes&name=xxxx.tgz&name=xxxx.tgz
     - If a file from the archive already exists in the site, skip the file
 
-TODO: /files/exports/
+TODO: /files/archives/
+    - grep all occurrences of "output/themes" and add "archives" to it
+    - in the live site, insert "archives" for bokwoon.com and the main site. delete and recreate the other sites for the new createsite to create the "archives" directory.
     - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
-TODO: /files/imports/
-TODO: export.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
+TODO: archives.go: make it both GET and POST, GET to confirm the user wants to export the given parent. Also we can fetch the approximate directory size that the user is choosing to export.
     - TODO: scrap the delete.html-style page, just go with a "Export 23.4 MB of files?" with a "<-- back" button and an "Export" button. We will do a genuine file-walking here and tally up the total size plus any additional output folders that we need to crawl.
     - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
         - pages/foo.html => output/foo (files only)
@@ -86,7 +87,7 @@ TODO: export.go: make it both GET and POST, GET to confirm the user wants to exp
         - posts/foo => output/posts/foo (folders only)
     - But if we handle auto including output, there's no qualms with exporting pages separately or posts separately anymore. We can add a new "export" link to the dropdown menu in rootdirectory.html, and maybe change the logo from question mark back to the three dots ellipses.
         - We will *not* chase template references as it is too computationally expensive.
-TODO: import.go (oh lawd the regeneration logic is going to be gnarly with this one).
+TODO: /archives/import/
     - NOTE: to preserve timestamps when using DatabaseFS, we need to insert entries manually instead of relying on OpenWriter (which automatically sets the mod_time and creation_time for us).
 - TODO: unvoidable, we need to remove data-checkbox-leader and data-checkbox-follower because there's no good use case with them (not cut copy pin/unpin or delete) and it only serves to slow operations down since an SQL query must be issued for each one.
 TODO: once we have export.go and import.go working, export the current site and switch notebrew over to a cheap VPS relying on a mounted Hetzner Cloud Volume for notebrew-objects (/mnt/notebrew-objects/)
