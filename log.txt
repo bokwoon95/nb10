@@ -81,6 +81,10 @@ TODO: oh... my god. If we don't vet archive contents, users can upload archives 
     - actually: determined users can already circumvent this by bundling their executables/large files as images and clicking "export" so that it gets bundled into the tar gzip archive.
     - no wait: but the image itself would have to be under 10 MB. Users still won't be able to abuse notebrew as an illegal file host because they'd have to squash the movie or whatever into under 10MB before compressing it into the archive to distribute it. Maybe we're okay? This is the way?
 
+GET /imports/xxxx.tgz (the button is called "upload tarballs", i.e. POST /imports/) => shows the import options (import all files | import themes) => POST /imports/xxxx.tgz?themes vs POST /imports/xxxx.tgz
+    - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
+GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.
+
 
 TODO: /files/archives/
     - grep all occurrences of "output/themes" and add "archives" to it
