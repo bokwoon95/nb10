@@ -887,11 +887,13 @@ func main() {
 		}
 		for _, dir := range []string{
 			"notes",
+			"pages",
+			"posts",
 			"output",
 			"output/posts",
 			"output/themes",
-			"pages",
-			"posts",
+			"imports",
+			"exports",
 		} {
 			err = nbrew.FS.Mkdir(dir, 0755)
 			if err != nil && !errors.Is(err, fs.ErrExist) {

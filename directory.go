@@ -158,7 +158,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 
 	head, _, _ := strings.Cut(filePath, "/")
-	if head != "notes" && head != "pages" && head != "posts" && head != "output" {
+	if head != "notes" && head != "pages" && head != "posts" && head != "output" && head != "imports" && head != "exports" {
 		nbrew.notFound(w, r)
 		return
 	}

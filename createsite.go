@@ -352,10 +352,13 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		dirs := []string{
 			"notes",
-			"output",
-			"output/themes",
 			"pages",
 			"posts",
+			"output",
+			"output/posts",
+			"output/themes",
+			"imports",
+			"exports",
 		}
 		for _, dir := range dirs {
 			err = nbrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)

@@ -188,10 +188,13 @@ func (cmd *CreatesiteCmd) Run() error {
 		}
 		dirs := []string{
 			"notes",
-			"output",
-			"output/themes",
 			"pages",
 			"posts",
+			"output",
+			"output/posts",
+			"output/themes",
+			"imports",
+			"exports",
 		}
 		for _, dir := range dirs {
 			err = cmd.Notebrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
