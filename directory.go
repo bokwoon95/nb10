@@ -237,7 +237,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			} else {
 				isDefaultSort = response.Sort == "name"
 			}
-			if isDefaultSort && sortCookie == nil {
+			if isDefaultSort {
 				http.SetCookie(w, &http.Cookie{
 					Path:     r.URL.EscapedPath(),
 					Name:     "sort",
@@ -266,7 +266,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			} else {
 				isDefaultOrder = response.Order == "asc"
 			}
-			if isDefaultOrder && orderCookie == nil {
+			if isDefaultOrder {
 				http.SetCookie(w, &http.Cookie{
 					Path:     r.URL.EscapedPath(),
 					Name:     "order",
