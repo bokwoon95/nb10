@@ -334,9 +334,9 @@
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           <span class='mr1 flex items-center'>📌</span>
           {{- if $file.IsDir }}
-          <span class='mr2 flex items-center'>📂</span>
+          <span class='mr1 flex items-center'>📂</span>
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
-          <span class='mr2 flex items-center'>{{ template "heroicons-cog" }}</span>
+          <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
           {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}
@@ -392,9 +392,9 @@
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           {{- if $file.IsDir }}
-          <span class='mr2 flex items-center'>📂</span>
+          <span class='mr1 flex items-center'>📂</span>
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
-          <span class='mr2 flex items-center'>{{ template "heroicons-cog" }}</span>
+          <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
           {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}

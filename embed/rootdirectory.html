@@ -129,7 +129,7 @@
   {{- range $file := $.Files }}
     {{- if eq $file.Name "notes" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>📓</span>
+      <span class='flex items-center mr1'>📓</span>
       <a href='/{{ join "files" $.SitePrefix "notes" }}/'>notes/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -146,7 +146,7 @@
     </li>
     {{- else if eq $file.Name "pages" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>📄</span>
+      <span class='flex items-center mr1'>📄</span>
       <a href='/{{ join "files" $.SitePrefix "pages" }}/'>pages/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -167,7 +167,7 @@
     </li>
     {{- else if eq $file.Name "posts" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>📝</span>
+      <span class='flex items-center mr1'>📝</span>
       <a href='/{{ join "files" $.SitePrefix "posts" }}/'>posts/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -184,7 +184,7 @@
     </li>
     {{- else if eq $file.Name "output/themes" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>🎨</span>
+      <span class='flex items-center mr1'>🎨</span>
       <a href='/{{ join "files" $.SitePrefix "output/themes" }}/'>themes/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -203,7 +203,7 @@
     </li>
     {{- else if eq $file.Name "output" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>🗃️</span>
+      <span class='flex items-center mr1'>🗃️</span>
       <a href='/{{ join "files" $.SitePrefix "output" }}/'>output/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -222,7 +222,7 @@
     </li>
     {{- else if eq $file.Name "site.json" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>⚙️</span>
+      <span class='flex items-center mr1'>⚙️</span>
       <a href='/{{ join "files" $.SitePrefix "site.json" }}/'>site.json</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -239,7 +239,7 @@
     </li>
     {{- else if eq $file.Name "imports" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>📥</span>
+      <span class='flex items-center mr1'>📥</span>
       <a href='/{{ join "files" $.SitePrefix "imports" }}/'>imports/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -256,7 +256,7 @@
     </li>
     {{- else if eq $file.Name "exports" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>📤</span>
+      <span class='flex items-center mr1'>📤</span>
       <a href='/{{ join "files" $.SitePrefix "exports" }}/'>exports/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
