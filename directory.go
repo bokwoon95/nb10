@@ -188,12 +188,18 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	response.FilePath = filePath
 	response.IsDir = true
-	response.Sort = strings.ToLower(strings.TrimSpace(r.Form.Get("sort")))
-	if response.Sort == "" {
-		cookie, _ := r.Cookie("sort")
-		if cookie != nil {
-			response.Sort = cookie.Value
+	var sortCookie, orderCookie *http.Cookie
+	for _, cookie := range r.Cookies() {
+		switch cookie.Name {
+		case "sort":
+			sortCookie = cookie
+		case "order":
+			orderCookie = cookie
 		}
+	}
+	response.Sort = strings.ToLower(strings.TrimSpace(r.Form.Get("sort")))
+	if response.Sort == "" && sortCookie != nil {
+		response.Sort = sortCookie.Value
 	}
 	switch response.Sort {
 	case "name", "edited", "created":
@@ -208,11 +214,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 	}
 	response.Order = strings.ToLower(strings.TrimSpace(r.Form.Get("order")))
-	if response.Order == "" {
-		cookie, _ := r.Cookie("order")
-		if cookie != nil {
-			response.Order = cookie.Value
-		}
+	if response.Order == "" && orderCookie != nil {
+		response.Order = orderCookie.Value
 	}
 	switch response.Order {
 	case "asc", "desc":
@@ -234,7 +237,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			} else {
 				isDefaultSort = response.Sort == "name"
 			}
-			if isDefaultSort {
+			if isDefaultSort && sortCookie == nil {
 				http.SetCookie(w, &http.Cookie{
 					Path:     r.URL.EscapedPath(),
 					Name:     "sort",
@@ -263,7 +266,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			} else {
 				isDefaultOrder = response.Order == "asc"
 			}
-			if isDefaultOrder {
+			if isDefaultOrder && orderCookie == nil {
 				http.SetCookie(w, &http.Cookie{
 					Path:     r.URL.EscapedPath(),
 					Name:     "order",
