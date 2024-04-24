@@ -579,7 +579,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
-							"&before=" + url.QueryEscape(response.Files[0].Name) +
+							"&before=" + url.QueryEscape(response.Files[len(response.Files)-1].Name) +
 							"&limit=" + strconv.Itoa(response.Limit),
 					}
 					response.PreviousURL = uri.String()
@@ -927,14 +927,14 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					if response.Sort == "edited" {
 						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
-							"&beforeTime=" + url.QueryEscape(response.Files[0].ModTime.UTC().Format(timeFormat)) +
-							"&before=" + url.QueryEscape(response.Files[0].Name) +
+							"&beforeTime=" + url.QueryEscape(response.Files[len(response.Files)-1].ModTime.UTC().Format(timeFormat)) +
+							"&before=" + url.QueryEscape(response.Files[len(response.Files)-1].Name) +
 							"&limit=" + strconv.Itoa(response.Limit)
 					} else if response.Sort == "created" {
 						uri.RawQuery = "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
-							"&beforeTime=" + url.QueryEscape(response.Files[0].CreationTime.UTC().Format(timeFormat)) +
-							"&before=" + url.QueryEscape(response.Files[0].Name) +
+							"&beforeTime=" + url.QueryEscape(response.Files[len(response.Files)-1].CreationTime.UTC().Format(timeFormat)) +
+							"&before=" + url.QueryEscape(response.Files[len(response.Files)-1].Name) +
 							"&limit=" + strconv.Itoa(response.Limit)
 					}
 					response.PreviousURL = uri.String()
