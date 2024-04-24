@@ -319,12 +319,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 
 			file, err := siteGen.fsys.WithContext(groupctx).Open(path.Join(siteGen.sitePrefix, "output", externalName))
 			if err != nil {
-				// If we cannot find the referenced template, it is not the
-				// external template's fault but rather the current template's
-				// fault for referencing a non-existent external template.
-				// Therefore we return the error (associating it with the
-				// current template) instead of adding it to the
-				// externalTemplateErrs list.
 				if errors.Is(err, fs.ErrNotExist) {
 					return TemplateError{
 						Name:         name,
@@ -339,11 +333,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 				return err
 			}
 			if fileInfo.IsDir() {
-				// If the referenced template is not a file but a directory, it
-				// is the current template's fault for referencing a directory
-				// instead of a file. Therefore we return the error
-				// (associating it with the current template) instead of adding
-				// it to the externalTemplateErrs list.
 				return TemplateError{
 					Name:         name,
 					ErrorMessage: strconv.Quote(externalName) + " is a folder",
