@@ -129,7 +129,7 @@
   {{- range $file := $.Files }}
     {{- if eq $file.Name "notes" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>📓</span>
       <a href='/{{ join "files" $.SitePrefix "notes" }}/'>notes/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -146,7 +146,7 @@
     </li>
     {{- else if eq $file.Name "pages" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>📄</span>
       <a href='/{{ join "files" $.SitePrefix "pages" }}/'>pages/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -167,7 +167,7 @@
     </li>
     {{- else if eq $file.Name "posts" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>📝</span>
       <a href='/{{ join "files" $.SitePrefix "posts" }}/'>posts/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -184,7 +184,7 @@
     </li>
     {{- else if eq $file.Name "output/themes" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>🎨</span>
       <a href='/{{ join "files" $.SitePrefix "output/themes" }}/'>themes/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -203,7 +203,7 @@
     </li>
     {{- else if eq $file.Name "output" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>🗃️</span>
       <a href='/{{ join "files" $.SitePrefix "output" }}/'>output/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -220,9 +220,26 @@
         </div>
       </details>
     </li>
+    {{- else if eq $file.Name "site.json" }}
+    <li class='flex flex-wrap items-center bb pv2'>
+      <span class='flex items-center mr2'>⚙️</span>
+      <a href='/{{ join "files" $.SitePrefix "site.json" }}/'>site.json</a>
+      <div class='flex-grow-1'></div>
+      <details class='relative' data-autoclose-details>
+        <summary role='button' class='flex items-center button ba br2 b--black h2 hide-marker ph1 pointer' data-disable-click-selection>
+          {{ template "heroicons-question-mark-circle" }}
+          {{ template "octicons-triangle-down" }}
+        </summary>
+        <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
+          <div class='ma2' style='min-width: 10rem;'>
+            Configures your site settings.
+          </div>
+        </div>
+      </details>
+    </li>
     {{- else if eq $file.Name "imports" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>📥</span>
       <a href='/{{ join "files" $.SitePrefix "imports" }}/'>imports/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -239,7 +256,7 @@
     </li>
     {{- else if eq $file.Name "exports" }}
     <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-folder-open" }}</span>
+      <span class='flex items-center mr2'>📤</span>
       <a href='/{{ join "files" $.SitePrefix "exports" }}/'>exports/</a>
       <div class='flex-grow-1'></div>
       <details class='relative' data-autoclose-details>
@@ -250,23 +267,6 @@
         <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
           <div class='ma2' style='min-width: 10rem;'>
             TODO: exports
-          </div>
-        </div>
-      </details>
-    </li>
-    {{- else if eq $file.Name "site.json" }}
-    <li class='flex flex-wrap items-center bb pv2'>
-      <span class='flex items-center mr2'>{{ template "heroicons-cog" }}</span>
-      <a href='/{{ join "files" $.SitePrefix "site.json" }}/'>site.json</a>
-      <div class='flex-grow-1'></div>
-      <details class='relative' data-autoclose-details>
-        <summary role='button' class='flex items-center button ba br2 b--black h2 hide-marker ph1 pointer' data-disable-click-selection>
-          {{ template "heroicons-question-mark-circle" }}
-          {{ template "octicons-triangle-down" }}
-        </summary>
-        <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
-          <div class='ma2' style='min-width: 10rem;'>
-            Configures your site settings.
           </div>
         </div>
       </details>

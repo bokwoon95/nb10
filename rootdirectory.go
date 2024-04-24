@@ -178,7 +178,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
-		for _, name := range []string{"notes", "pages", "posts", "output/themes", "output", "imports", "exports", "site.json"} {
+		for _, name := range []string{"notes", "pages", "posts", "output/themes", "output", "site.json", "imports", "exports"} {
 			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, name))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
@@ -235,19 +235,19 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			" WHEN {posts} THEN 3" +
 			" WHEN {themes} THEN 4" +
 			" WHEN {output} THEN 5" +
-			" WHEN {imports} THEN 6" +
-			" WHEN {exports} THEN 7" +
-			" WHEN {sitejson} THEN 8" +
+			" WHEN {sitejson} THEN 6" +
+			" WHEN {imports} THEN 7" +
+			" WHEN {exports} THEN 8" +
 			" END",
 		Values: []any{
 			sq.StringParam("notes", path.Join(sitePrefix, "notes")),
 			sq.StringParam("pages", path.Join(sitePrefix, "pages")),
 			sq.StringParam("posts", path.Join(sitePrefix, "posts")),
 			sq.StringParam("themes", path.Join(sitePrefix, "output/themes")),
+			sq.StringParam("sitejson", path.Join(sitePrefix, "site.json")),
 			sq.StringParam("output", path.Join(sitePrefix, "output")),
 			sq.StringParam("imports", path.Join(sitePrefix, "imports")),
 			sq.StringParam("exports", path.Join(sitePrefix, "exports")),
-			sq.StringParam("sitejson", path.Join(sitePrefix, "site.json")),
 		},
 	}, func(row *sq.Row) File {
 		return File{

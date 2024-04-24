@@ -332,9 +332,9 @@
           <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='pointer' data-checkbox-follower>
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
-          <span class='mr1 flex items-center'>{{ template "octicons-pin" }}</span>
+          <span class='mr1 flex items-center'>📌</span>
           {{- if $file.IsDir }}
-          <span class='mr2 flex items-center'>{{ template "heroicons-folder-open" }}</span>
+          <span class='mr2 flex items-center'>📂</span>
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr2 flex items-center'>{{ template "heroicons-cog" }}</span>
           {{- end }}
@@ -392,7 +392,7 @@
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           {{- if $file.IsDir }}
-          <span class='mr2 flex items-center'>{{ template "heroicons-folder-open" }}</span>
+          <span class='mr2 flex items-center'>📂</span>
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr2 flex items-center'>{{ template "heroicons-cog" }}</span>
           {{- end }}
