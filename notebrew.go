@@ -122,6 +122,10 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
+	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
+	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).
+	// if an import is in progress
+
 	CaptchaConfig struct {
 		WidgetScriptSrc template.URL
 		WidgetClass     string
