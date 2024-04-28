@@ -316,7 +316,9 @@
 </div>
 {{- end }}
 <div class='bb pb2 flex flex-wrap'>
-  {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
+  <div class=''>
+    {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
+  </div>
 </div>
 {{- if $.Files }}
 <form>
