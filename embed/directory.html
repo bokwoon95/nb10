@@ -316,10 +316,7 @@
 </div>
 {{- end }}
 <div class='bb pb2 flex flex-wrap'>
-  <div class=''>
-    <input type='checkbox' name='name' class='pointer mr1' data-checkbox-leader>
-    {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
-  </div>
+  {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
 </div>
 {{- if $.Files }}
 <form>
@@ -329,7 +326,7 @@
     <li class='bb pv2'>
       <label for='pinned:{{ $file.Parent }}:{{ $file.Name }}' class='flex items-start pointer' data-disable-click-selection>
         <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
-          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='pointer' data-checkbox-follower>
+          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='pointer'>
         </div>
         <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
           <span class='mr1 flex items-center'>📌</span>

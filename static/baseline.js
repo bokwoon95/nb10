@@ -150,11 +150,3 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     dataPreventDoubleSubmit.submit();
   });
 }
-
-for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
-  dataCheckboxLeader.addEventListener("click", function() {
-    for (const dataCheckboxFollower of document.querySelectorAll("[data-checkbox-follower]")) {
-      dataCheckboxFollower.checked = dataCheckboxLeader.checked;
-    }
-  });
-}
