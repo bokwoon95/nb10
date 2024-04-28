@@ -283,7 +283,13 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "":
 			nbrew.rootdirectory(w, r, user, sitePrefix, time.Time{})
 			return
-		case "posts", "notes", "pages", "output", "imports", "exports":
+		case "imports":
+			http.Error(w, "501 not implemented", http.StatusNotImplemented)
+			return
+		case "exports":
+			nbrew.exports(w, r, user, sitePrefix, tail)
+			return
+		case "posts", "notes", "pages", "output":
 			if head == "posts" && path.Base(tail) == "postlist.json" {
 				category := path.Dir(tail)
 				if category == "." {
@@ -366,9 +372,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "rename":
 			nbrew.rename(w, r, user, sitePrefix)
-			return
-		case "export":
-			nbrew.export(w, r, user, sitePrefix)
 			return
 		default:
 			nbrew.notFound(w, r)
