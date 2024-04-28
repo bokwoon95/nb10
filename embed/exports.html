@@ -26,37 +26,11 @@
         {{ template "octicons-triangle-down" }}
       </summary>
       <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
-        {{- if eq (head $.FilePath) "notes" }}
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ $.FilePath }}' class='nowrap'>📓 create note</a></div>
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfolder" }}?parent={{ $.FilePath }}' class='nowrap'>📂 create folder</a></div>
-        {{- else if eq (head $.FilePath) "pages" }}
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ $.FilePath }}' class='nowrap'>📄 create page</a></div>
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfolder" }}?parent={{ $.FilePath }}' class='nowrap'>📂 create folder</a></div>
-        {{- else if eq (head $.FilePath) "posts" }}
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ $.FilePath }}' class='nowrap'>📝 create post</a></div>
-          {{- if eq $.FilePath "posts" }}
-          <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfolder" }}?parent={{ $.FilePath }}' class='nowrap'>📂 create category</a></div>
-          {{- end }}
-        {{- else }}
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ $.FilePath }}' class='nowrap'>📄 create file</a></div>
-        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfolder" }}?parent={{ $.FilePath }}' class='nowrap'>📂 create folder</a></div>
-        {{- end }}
-        <hr>
-        <form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "uploadfile" }}/' class='pa2' data-prevent-double-submit>
-          <input type='hidden' name='parent' value='{{ $.FilePath }}'>
-          {{- if eq (head $.FilePath) "pages" }}
-          <input type='file' name='file' style='max-width: 220px;' accept='.html' multiple>
-          <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".html"]}'>
-          {{- else if eq (head $.FilePath) "posts" }}
-          <input type='file' name='file' style='max-width: 220px;' accept='.md' multiple>
-          <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".md"]}'>
-          {{- else }}
-          <input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.html,.css,.js,.md,.txt' multiple>
-          <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".html",".css",".js",".md",".txt"]}'>
-          {{- end }}
-          <button type='submit' class='button ba br2 b--black pa2 w-100 mt2'>upload</button>
-          <div role='status'></div>
-        </form>
+        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "exports" }}/?parent=.' class='nowrap'>🌐 export site</a></div>
+        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "exports" }}?parent=.&name=notes' class='nowrap'>📓 export notes</a></div>
+        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "exports" }}?parent=.&name=notes' class='nowrap'>📄 export pages</a></div>
+        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "exports" }}?parent=.&name=notes' class='nowrap'>📝 export posts</a></div>
+        <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "exports" }}?parent=.&name=notes' class='nowrap'>🎨 export themes</a></div>
       </div>
     </details>
   </div>
@@ -149,5 +123,19 @@
 {{- define "heroicons-ellipsis-horizontal" }}
 <svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24'>
   <path d='M5 12H5.01M12 12H12.01M19 12H19.01M6 12C6 12.5523 5.55228 13 5 13C4.44772 13 4 12.5523 4 12C4 11.4477 4.44772 11 5 11C5.55228 11 6 11.4477 6 12ZM13 12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12C11 11.4477 11.4477 11 12 11C12.5523 11 13 11.4477 13 12ZM20 12C20 12.5523 19.5523 13 19 13C18.4477 13 18 12.5523 18 12C18 11.4477 18.4477 11 19 11C19.5523 11 20 11.4477 20 12Z' stroke='#4A5568' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/>
+</svg>
+{{- end }}
+
+{{- define "octicons-upload" }}
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='16' height='16'>
+  <path d='M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z'></path>
+  <path d='M11.78 4.72a.749.749 0 1 1-1.06 1.06L8.75 3.811V9.5a.75.75 0 0 1-1.5 0V3.811L5.28 5.78a.749.749 0 1 1-1.06-1.06l3.25-3.25a.749.749 0 0 1 1.06 0l3.25 3.25Z'></path>
+</svg>
+{{- end }}
+
+{{- define "octicons-download" }}
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' width='16' height='16'>
+  <path d='M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z'></path>
+  <path d='M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z'></path>
 </svg>
 {{- end }}
