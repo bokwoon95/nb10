@@ -18,10 +18,12 @@ import (
 )
 
 func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
+	// TODO: exports only allows cut and copy, not paste
+	// TODO: imports only allow paste, not cut nor copy
 	isValidParent := func(parent string) bool {
 		head, _, _ := strings.Cut(parent, "/")
 		switch head {
-		case "notes", "pages", "posts", "output", "exports":
+		case "notes", "pages", "posts", "output":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
 			if err != nil {
 				return false
