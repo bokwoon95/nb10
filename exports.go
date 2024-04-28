@@ -151,6 +151,16 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 					return isInClipboard[name]
 				},
 			}
+			if r.Form.Has("export") {
+				tmpl, err := template.New("export.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/export.html")
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+				nbrew.executeTemplate(w, r, tmpl, &response)
+			}
 			tmpl, err := template.New("exports.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/exports.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
