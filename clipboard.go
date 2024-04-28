@@ -19,7 +19,7 @@ import (
 
 func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
 	// TODO: exports only allows cut and copy, not paste
-	// TODO: imports only allow paste, not cut nor copy
+	// TODO: imports only allows paste, not cut and copy
 	isValidParent := func(parent string) bool {
 		head, _, _ := strings.Cut(parent, "/")
 		switch head {
