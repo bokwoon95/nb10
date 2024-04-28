@@ -104,7 +104,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		}
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
-		case "notes", "pages", "posts", "output":
+		case "notes", "pages", "posts", "output", "imports", "exports":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
@@ -275,7 +275,7 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
-		case "notes", "pages", "posts", "output":
+		case "notes", "pages", "posts", "output", "imports", "exports":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {

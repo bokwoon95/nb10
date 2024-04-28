@@ -41,16 +41,7 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
-GET /exports/ => export site | export notes
-GET /exports/?parent=notes&tgzFileName=
-Tgz File Name:
-_______ .tgz
-
-r.Form.Has("parent") ? show_confirmation_page : show_exports
-POST /exports/ parent=xxxx&name=xxxx&name=xxxx
-parent := path.Clean("")
-
-GET /exports/
+exported files can be renamed, cut, copied and deleted
 
 GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imports/) => shows the import options (import all files | import themes) => POST /imports/xxxx.tgz?themes vs POST /imports/xxxx.tgz
     - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))

@@ -141,7 +141,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			response.Ext = ext
 		}
 		switch head {
-		case "notes", "pages", "posts", "output":
+		case "notes", "pages", "posts", "output", "imports", "exports":
 			if response.Parent == "pages" && (response.Name == "index.html" || response.Name == "404.html") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
@@ -326,7 +326,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
-		case "pages", "posts", "output":
+		case "pages", "posts", "output", "imports", "exports":
 			if response.Parent == "pages" && (response.Name == "index.html" || response.Name == "404.html") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
