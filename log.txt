@@ -42,7 +42,9 @@ storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
 GET /exports/ => export site | export notes
-GET /exports/?parent=notes
+GET /exports/?parent=notes&tgzFileName=
+Tgz File Name:
+_______ .tgz
 
 r.Form.Has("parent") ? show_confirmation_page : show_exports
 POST /exports/ parent=xxxx&name=xxxx&name=xxxx
