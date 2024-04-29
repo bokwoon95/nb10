@@ -47,7 +47,6 @@ GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imp
     - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
 GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.
 
-BUG: saving a note with % in the title causes a network error (I think caused by a faulty unescaped redirect (but shouldn't http.Redirect automatically escape its payload?)) 
 TODO: /files/exports/ and /files/imports/
     - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
     - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
@@ -101,6 +100,8 @@ BUG: why does initially creating a site result in an invalid title and site desc
 BUG: creating a note with "60%" in the title seems to make the redirect do wonky things (it's still created, but the user is presented with some HTTP (??) error).
 BUG: pasting an image from themes into 404.html seems to lead to a broken file preview (the file is still there, and can be deleted, but it's being fetched as ".jpg" for some reason) (only if imgdomain is set).
 TODO: investigate if we can wipe out isValidParent for good if it's always just checking if the parent is under notes | pages | posts | themes and that it exists and is a directory.
+TODO: consider adding an "optimize images for web" checkbox on all image uploads. so that reaction jpegs don't get repeatedly fried if saved over and over.
+- wait but we won't do anything if the dimensions fir within 1080p, so repeatedly submitting an already-resized image to notebrew should not do anything. I think we can keep it for now.
 
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
