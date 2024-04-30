@@ -22,14 +22,18 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <div class='mv3 b tc'>No items to delete</div>
+  <div class='mv3 b tc'>No files to export</div>
 </div>
 {{- else }}
 <form method='post' class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <h3 class='mv3 b'>Delete the following files(s)?</h3>
+  {{- if $.Parent }}
+  <h3 class='mv3 b'>Export the following files(s)?</h3>
+  {{- else }}
+  <h3 class='mv3 b'>Export the entire site?</h3>
+  {{- end }}
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
   <ul class='list-style-disc ph3'>
     {{- range $file := $.Files }}
@@ -50,6 +54,6 @@
     </li>
     {{- end }}
   </ul>
-  <button type='submit' class='button-danger ba br2 b--dark-red pa2 mv3'>Delete</button>
+  <button type='submit' class='button-danger ba br2 b--dark-red pa2 mv3'>Export</button>
 </form>
 {{- end }}

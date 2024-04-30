@@ -54,7 +54,6 @@ TODO: /files/exports/ and /files/imports/
         - pages/foo => output/foo (folders only)
         - posts/foo.md => output/posts/foo (files only)
         - posts/foo => output/posts/foo (folders only)
-- TODO: unvoidable, we need to remove data-checkbox-leader and data-checkbox-follower because there's no good use case with them (not cut copy pin/unpin or delete) and it only serves to slow operations down since an SQL query must be issued for each one.
 TODO: once we have export.go and import.go working, export the current site and switch notebrew over to a cheap VPS relying on a mounted Hetzner Cloud Volume for notebrew-objects (/mnt/notebrew-objects/)
 TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
