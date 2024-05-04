@@ -55,6 +55,7 @@ TODO: /files/exports/ and /files/imports/
         - posts/foo.md => output/posts/foo (files only)
         - posts/foo => output/posts/foo (folders only)
 TODO: once we have export.go and import.go working, export the current site and switch notebrew over to a cheap VPS relying on a mounted Hetzner Cloud Volume for notebrew-objects (/mnt/notebrew-objects/)
+TODO: post.html should have an "<-- index" link that links back to the post list page.
 TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
 TODO: okay fine: add (bracket grouping) to search.go.
