@@ -47,6 +47,14 @@ GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imp
     - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
 GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.
 
+only one export at a time so that multiple jobs won't attempt to write to the same file
+only one import at a time so that multiple jobs won't overwrite the same file in a site
+also, it's just better for the server CPU-wise
+a job must be tracked in map[string]string (sitePrefix => tgzFileName)
+a job can be cancelled in map[string]func() (sitePrefix => cancel())
+a job can be waited for completion in map[string]chan (sitePrefix => <-done)
+when a job's context is cancelled, it has to wait for the job to finish then delete the output file
+
 TODO: export.go
     - /exports/ is responsible for listing all the current exports. Downloading of exports happens from this page. It shows if there's any exports ongoing.
     - /export/ is responsible for actually exporting files. It redirects to /exports/.
