@@ -58,7 +58,7 @@
   </ul>
   {{- end }}
   <div class='mv3'>
-    <div><label for='outputName' class='b'>Output Name (optional):</label></div>
+    <div><label for='outputName' class='b'>Output name (optional):</label></div>
     <div class='flex items-center'>
       <input id='outputName' name='outputName' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "outputName" }} b--invalid-red{{ end }}'>
       <span class='ml2'>.tgz</span>
@@ -69,6 +69,6 @@
       {{- end }}
     </ul>
   </div>
-  <button type='submit' class='button ba br2 b--black pa2 mv3'>Export</button>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>Export</button>
 </form>
 {{- end }}
