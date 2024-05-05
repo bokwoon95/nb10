@@ -58,13 +58,13 @@
   </ul>
   {{- end }}
   <div class='mv3'>
-    <div><label for='tgzFileName' class='b'>Output Name (optional):</label></div>
+    <div><label for='outputName' class='b'>Output Name (optional):</label></div>
     <div class='flex items-center'>
-      <input id='tgzFileName' name='tgzFileName' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "tgzFileName" }} b--invalid-red{{ end }}'>
+      <input id='outputName' name='outputName' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "outputName" }} b--invalid-red{{ end }}'>
       <span class='ml2'>.tgz</span>
     </div>
     <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "tgzFileName" }}
+      {{- range $error := index $.FormErrors "outputName" }}
       <li>{{ $error }}</li>
       {{- end }}
     </ul>
