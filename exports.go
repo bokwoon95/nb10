@@ -70,61 +70,32 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		}
 		if r.Form.Has("export") {
 			var response struct {
-				ContentBaseURL  string         `json:"contentBaseURL"`
-				ImgDomain       string         `json:"imgDomain"`
-				IsDatabaseFS    bool           `json:"isDatabaseFS"`
-				SitePrefix      string         `json:"sitePrefix"`
-				UserID          ID             `json:"userID"`
-				Username        string         `json:"username"`
-				FileID          ID             `json:"fileID"`
-				FilePath        string         `json:"filePath"`
-				IsDir           bool           `json:"isDir"`
-				ModTime         time.Time      `json:"modTime"`
-				CreationTime    time.Time      `json:"creationTime"`
-				Files           []File         `json:"files"`
-				PostRedirectGet map[string]any `json:"postRedirectGet"`
+				ContentBaseURL string `json:"contentBaseURL"`
+				ImgDomain      string `json:"imgDomain"`
+				IsDatabaseFS   bool   `json:"isDatabaseFS"`
+				SitePrefix     string `json:"sitePrefix"`
+				UserID         ID     `json:"userID"`
+				Username       string `json:"username"`
+				Parent         string `json:"parent"`
+				Files          []File `json:"files"`
+				Error          string `json:"error"`
 			}
+			response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+			response.ImgDomain = nbrew.ImgDomain
+			_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+			response.SitePrefix = sitePrefix
+			response.UserID = user.UserID
+			response.Username = user.Username
 			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":                  path.Join,
-				"dir":                   path.Dir,
-				"base":                  path.Base,
 				"ext":                   path.Ext,
 				"hasPrefix":             strings.HasPrefix,
-				"hasSuffix":             strings.HasSuffix,
 				"trimPrefix":            strings.TrimPrefix,
-				"trimSuffix":            strings.TrimSuffix,
 				"humanReadableFileSize": humanReadableFileSize,
 				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 				"referer":               func() string { return referer },
-				"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
-				"float64ToInt64":        func(n float64) int64 { return int64(n) },
-				"head": func(s string) string {
-					head, _, _ := strings.Cut(s, "/")
-					return head
-				},
-				"tail": func(s string) string {
-					_, tail, _ := strings.Cut(s, "/")
-					return tail
-				},
-				"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
-					var b strings.Builder
-					b.WriteString("<a href='/files/'>files</a>")
-					segments := strings.Split(filePath, "/")
-					if sitePrefix != "" {
-						segments = append([]string{sitePrefix}, segments...)
-					}
-					for i := 0; i < len(segments); i++ {
-						if segments[i] == "" {
-							continue
-						}
-						href := "/files/" + path.Join(segments[:i+1]...) + "/"
-						b.WriteString(" / <a href='" + href + "'>" + segments[i] + "</a>")
-					}
-					b.WriteString(" /")
-					return template.HTML(b.String())
-				},
 			}
 			tmpl, err := template.New("export.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/export.html")
 			if err != nil {
