@@ -47,6 +47,11 @@ GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imp
     - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
 GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.
 
+TODO: export.go
+    - /exports/ is responsible for listing all the current exports. Downloading of exports happens from this page. It shows if there's any exports ongoing.
+    - /export/ is responsible for actually exporting files. It redirects to /exports/.
+    - /imports/ is responsible for listing all current imports. Uploading of tgz files happens from this page. It shows if there's any imports ongoing.
+    - /import/ is responsible for actually importing files. It redirects to /imports/.
 TODO: /files/exports/ and /files/imports/
     - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
     - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
