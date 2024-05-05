@@ -108,7 +108,9 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case ".":
-			break
+			response.ExportParent = true
+			writeResponse(w, r, response)
+			return
 		case "notes", "pages", "posts", "output":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
 			if err != nil {
@@ -136,10 +138,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		names := r.Form["name"]
 		response.Files = make([]File, len(names))
 		response.ExportParent = len(names) == 0
-		if response.Parent == "." {
-			writeResponse(w, r, response)
-			return
-		}
 		for i, name := range names {
 			i, name := i, filepath.ToSlash(name)
 			if strings.Contains(name, "/") {
