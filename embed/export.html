@@ -17,7 +17,7 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
-{{- if eq $.Error "InvalidParent" }}
+{{- if or (eq $.Error "InvalidParent") (and (not $.Files) (not $.ExportParent)) }}
 <div class='mv5 w-80 center'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
@@ -29,11 +29,13 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  {{- if $.Parent }}
-  <h3 class='mv3 b'>Export the following files(s)?</h3>
+  {{- if eq $.Parent "." }}
+  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>site</a>?</h3>
+  {{- else if $.ExportParent }}
+  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}/</a>?</h3>
+  <input type='hidden' name='parent' value='{{ $.Parent }}'>
   {{- else }}
-  <h3 class='mv3 b'>Export the entire site?</h3>
-  {{- end }}
+  <h3 class='mv3 b'>Export the following file(s)?</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
   <ul class='list-style-disc ph3'>
     {{- range $file := $.Files }}
@@ -54,6 +56,19 @@
     </li>
     {{- end }}
   </ul>
-  <button type='submit' class='button-danger ba br2 b--dark-red pa2 mv3'>Export</button>
+  {{- end }}
+  <div class='mv3'>
+    <div><label for='tgzFileName' class='b'>Output Name (optional):</label></div>
+    <div class='flex items-center'>
+      <input id='tgzFileName' name='tgzFileName' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "tgzFileName" }} b--invalid-red{{ end }}'>
+      <span class='ml2'>.tgz</span>
+    </div>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "tgzFileName" }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  <button type='submit' class='button ba br2 b--black pa2 mv3'>Export</button>
 </form>
 {{- end }}

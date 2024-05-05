@@ -12,7 +12,9 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -21,6 +23,177 @@ import (
 )
 
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
+	type File struct {
+		FileID       ID        `json:"fileID"`
+		Name         string    `json:"name"`
+		IsDir        bool      `json:"isDir"`
+		Size         int64     `json:"size"`
+		ModTime      time.Time `json:"modTime"`
+		CreationTime time.Time `json:"creationTime"`
+	}
+	type Request struct {
+		Parent string   `json:"parent"`
+		Names  []string `json:"names"`
+	}
+	type Response struct {
+		ContentBaseURL string     `json:"contentBaseURL"`
+		ImgDomain      string     `json:"imgDomain"`
+		IsDatabaseFS   bool       `json:"isDatabaseFS"`
+		SitePrefix     string     `json:"sitePrefix"`
+		UserID         ID         `json:"userID"`
+		Username       string     `json:"username"`
+		Parent         string     `json:"parent"`
+		Files          []File     `json:"files"`
+		ExportParent   bool       `json:"exportParent"`
+		Error          string     `json:"error"`
+		FormErrors     url.Values `json:"formErrors"`
+	}
+
+	switch r.Method {
+	case "GET", "HEAD":
+		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
+			if r.Form.Has("api") {
+				w.Header().Set("Content-Type", "application/json")
+				if r.Method == "HEAD" {
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+				encoder := json.NewEncoder(w)
+				encoder.SetEscapeHTML(false)
+				err := encoder.Encode(&response)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+				}
+				return
+			}
+			referer := nbrew.getReferer(r)
+			funcMap := map[string]any{
+				"join":                  path.Join,
+				"base":                  path.Base,
+				"ext":                   path.Ext,
+				"hasPrefix":             strings.HasPrefix,
+				"trimPrefix":            strings.TrimPrefix,
+				"humanReadableFileSize": humanReadableFileSize,
+				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
+				"referer":               func() string { return referer },
+			}
+			tmpl, err := template.New("export.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/export.html")
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+			nbrew.executeTemplate(w, r, tmpl, &response)
+		}
+
+		var response Response
+		_, err := nbrew.getSession(r, "flash", &response)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+		}
+		nbrew.clearSession(w, r, "flash")
+		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+		response.ImgDomain = nbrew.ImgDomain
+		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+		response.UserID = user.UserID
+		response.Username = user.Username
+		response.SitePrefix = sitePrefix
+		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
+		if response.Error != "" {
+			writeResponse(w, r, response)
+			return
+		}
+		head, _, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case ".", "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidParent"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if !fileInfo.IsDir() {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
+			response.Error = "InvalidParent"
+			writeResponse(w, r, response)
+			return
+		}
+		seen := make(map[string]bool)
+		group, groupctx := errgroup.WithContext(r.Context())
+		names := r.Form["name"]
+		response.Files = make([]File, len(names))
+		response.ExportParent = len(names) == 0
+		for i, name := range names {
+			i, name := i, filepath.ToSlash(name)
+			if strings.Contains(name, "/") {
+				continue
+			}
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			group.Go(func() error {
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						return nil
+					}
+					return err
+				}
+				file := File{
+					Name:    fileInfo.Name(),
+					IsDir:   fileInfo.IsDir(),
+					Size:    fileInfo.Size(),
+					ModTime: fileInfo.ModTime(),
+				}
+				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+					file.FileID = fileInfo.FileID
+					file.CreationTime = fileInfo.CreationTime
+				} else {
+					var absolutePath string
+					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+					}
+					file.CreationTime = CreationTime(absolutePath, fileInfo)
+				}
+				response.Files[i] = file
+				return nil
+			})
+		}
+		err = group.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		n := 0
+		for _, file := range response.Files {
+			if file.Name == "" {
+				continue
+			}
+			response.Files[n] = file
+			n++
+		}
+		response.Files = response.Files[:n]
+		writeResponse(w, r, response)
+	case "POST":
+	default:
+		nbrew.methodNotAllowed(w, r)
+	}
+}
+
+func (nbrew *Notebrew) export_OldV2(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	if r.Method != "GET" {
 		nbrew.methodNotAllowed(w, r)
 		return

@@ -286,9 +286,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "imports":
 			http.Error(w, "501 not implemented", http.StatusNotImplemented)
 			return
-		case "export":
-			nbrew.export(w, r, user, sitePrefix)
-			return
 		case "exports":
 			nbrew.exports(w, r, user, sitePrefix, tail)
 			return
@@ -349,6 +346,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch urlPath {
+		case "export":
+			nbrew.export(w, r, user, sitePrefix)
+			return
 		case "site.json":
 			nbrew.siteJSON(w, r, user, sitePrefix)
 			return

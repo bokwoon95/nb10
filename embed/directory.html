@@ -367,6 +367,7 @@
             {{- if $.IsDatabaseFS }}
             <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
             {{- end }}
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "export" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>export</button></div>
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
@@ -425,6 +426,7 @@
             {{- if $.IsDatabaseFS }}
             <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
             {{- end }}
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "export" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>export</button></div>
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
