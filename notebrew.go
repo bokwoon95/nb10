@@ -83,6 +83,13 @@ func init() {
 	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
 }
 
+type job struct {
+	sessionTokenHash [40]byte
+	data             json.RawMessage
+	cancel           func()
+	done             <-chan struct{}
+}
+
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
 	CMSDomain string // localhost:6444, example.com
@@ -121,6 +128,12 @@ type Notebrew struct {
 	// code. If the error is not a database error or if no underlying
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
+
+	mutex1            sync.RWMutex
+	importsInProgress map[string]job
+
+	mutex2            sync.RWMutex
+	exportsInProgress map[string]job
 
 	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
 	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).

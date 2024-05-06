@@ -472,6 +472,18 @@ func main() {
 					return fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "database.json"), dataSourceName, err)
 				}
 				nbrew.ErrorCode = sqliteErrorCode
+				defer func() {
+					nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+					nbrew.DB.Close()
+				}()
+				ticker := time.NewTicker(4 * time.Hour)
+				go func() {
+					for {
+						<-ticker.C
+						nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+					}
+				}()
+				defer ticker.Stop()
 			case "postgres":
 				values := make(url.Values)
 				for key, value := range databaseConfig.Params {
@@ -506,6 +518,7 @@ func main() {
 					}
 					return ""
 				}
+				defer nbrew.DB.Close()
 			case "mysql":
 				values := make(url.Values)
 				for key, value := range databaseConfig.Params {
@@ -543,6 +556,7 @@ func main() {
 					}
 					return ""
 				}
+				defer nbrew.DB.Close()
 			default:
 				return fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "database.json"), databaseConfig.Dialect)
 			}
@@ -566,19 +580,6 @@ func main() {
 			if err != nil {
 				return err
 			}
-			defer func() {
-				if nbrew.Dialect == "sqlite" {
-					nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-					ticker := time.NewTicker(4 * time.Hour)
-					go func() {
-						for {
-							<-ticker.C
-							nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-						}
-					}()
-				}
-				nbrew.DB.Close()
-			}()
 			_, err = sq.Exec(context.Background(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format:  "INSERT INTO site (site_id, site_name) VALUES ({siteID}, '')",
@@ -647,6 +648,18 @@ func main() {
 					return fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
 				}
 				errorCode = sqliteErrorCode
+				defer func() {
+					db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+					db.Close()
+				}()
+				ticker := time.NewTicker(4 * time.Hour)
+				go func() {
+					for {
+						<-ticker.C
+						db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+					}
+				}()
+				defer ticker.Stop()
 			case "postgres":
 				values := make(url.Values)
 				for key, value := range filesConfig.Params {
@@ -681,6 +694,7 @@ func main() {
 					}
 					return ""
 				}
+				defer db.Close()
 			case "mysql":
 				values := make(url.Values)
 				for key, value := range filesConfig.Params {
@@ -718,6 +732,7 @@ func main() {
 					}
 					return ""
 				}
+				defer db.Close()
 			default:
 				return fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), filesConfig.Dialect)
 			}
@@ -791,19 +806,6 @@ func main() {
 					}
 				}
 			}
-			defer func() {
-				if dialect == "sqlite" {
-					db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-					ticker := time.NewTicker(4 * time.Hour)
-					go func() {
-						for {
-							<-ticker.C
-							db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-						}
-					}()
-				}
-				db.Close()
-			}()
 
 			// Objects.
 			var objectStorage nb10.ObjectStorage
