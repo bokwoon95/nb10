@@ -55,6 +55,13 @@ a job can be cancelled in map[string]func() (sitePrefix => cancel())
 a job can be waited for completion in map[string]chan (sitePrefix => <-done)
 when a job's context is cancelled, it has to wait for the job to finish then delete the output file
 
+no job table! all in-memory!
+
+jobs are handled by goroutines which take in a context
+jobs must be cancelable at a moment's notice and must have a clearly defined cleanup plan once they are told to terminate
+jobs have an associated cancel() method to cancel their context
+jobs have only three statuses: pending, active and failed. a successful job should be automatically deleted upon completion, while a failed job should record its error in the table.
+
 TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
 TODO: export.go
     - /exports/ is responsible for listing all the current exports. Downloading of exports happens from this page. It shows if there's any exports ongoing.
