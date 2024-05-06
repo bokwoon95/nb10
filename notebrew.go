@@ -28,6 +28,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -83,11 +84,13 @@ func init() {
 	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
 }
 
+// totalBytes/processedBytes
 type job struct {
-	sessionTokenHash [40]byte
-	data             json.RawMessage
+	sessionTokenHash [40]byte // {"name":"my-file-output.tgz"} delete the session entry when cancelled
 	cancel           func()
 	done             <-chan struct{}
+	processed        *atomic.Int64
+	total            int64
 }
 
 // Notebrew represents a notebrew instance.
@@ -129,11 +132,11 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
-	mutex1            sync.RWMutex
-	importsInProgress map[string]job
+	mutex1     sync.RWMutex
+	importJobs map[string]job
 
-	mutex2            sync.RWMutex
-	exportsInProgress map[string]job
+	mutex2     sync.RWMutex
+	exportJobs map[string]job
 
 	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
 	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).
@@ -165,6 +168,55 @@ type Notebrew struct {
 	ContentSecurityPolicy string
 
 	Logger *slog.Logger
+}
+
+func (nbrew *Notebrew) Close() error {
+	var err error
+	var preparedExec *sq.PreparedExec
+	if nbrew.DB != nil {
+		preparedExec, err = sq.PrepareExec(context.Background(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "DELETE FROM sessions WHERE session_token_hash = {sessionTokenHash}",
+			Values: []any{
+				sq.BytesParam("sessionTokenHash", nil),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		defer preparedExec.Close()
+	}
+	// TODO: we also need to write out the imports.json and exports.json file.
+	var wg sync.WaitGroup
+	nbrew.mutex1.RLock()
+	for _, job := range nbrew.importJobs {
+		job := job
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			job.cancel()
+			if preparedExec != nil {
+				preparedExec.Exec(context.Background(), sq.BytesParam("sessionTokenHash", job.sessionTokenHash[:]))
+			}
+			<-job.done
+		}()
+	}
+	nbrew.mutex1.RUnlock()
+	nbrew.mutex2.RLock()
+	for _, job := range nbrew.exportJobs {
+		job := job
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			job.cancel()
+			if preparedExec != nil {
+				preparedExec.Exec(context.Background(), sq.BytesParam("sessionTokenHash", job.sessionTokenHash[:]))
+			}
+			<-job.done
+		}()
+	}
+	nbrew.mutex2.RUnlock()
+	return nil
 }
 
 type User struct {
