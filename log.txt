@@ -47,25 +47,11 @@ GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imp
     - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
 GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.
 
-only one export at a time so that multiple jobs won't attempt to write to the same file
-only one import at a time so that multiple jobs won't overwrite the same file in a site
-also, it's just better for the server CPU-wise
-a job must be tracked in map[string]string (sitePrefix => tgzFileName)
-a job can be cancelled in map[string]func() (sitePrefix => cancel())
-a job can be waited for completion in map[string]chan (sitePrefix => <-done)
-when a job's context is cancelled, it has to wait for the job to finish then delete the output file
-
-no job table! all in-memory!
-no! we need the simplest job queue implementation possible! otherwise it would possible
-- fileName
-
-exports => fileName string; cancel func(); done <-chan
-imports => fileName string; cancel func(); done <-chan
-
-jobs are handled by goroutines which take in a context
-jobs must be cancelable at a moment's notice and must have a clearly defined cleanup plan once they are told to terminate
-jobs have an associated cancel() method to cancel their context
-jobs have only three statuses: pending, active and failed. a successful job should be automatically deleted upon completion, while a failed job should record its error in the table.
+- A server can handle a maximum of 1 import/export job per sitePrefix.
+- The presence of an active job is broadcasted to all servers via a client's "import" or "export" session token (there can be more than one).
+- If the server handling the client's request is the one handling the import/export job, it knows there there is a job present -- it is already handling it. So it can show the client the job progress.
+- If the server handling the client's request is not the one handling the import/export job, it still knows there is a job present because it receives the client's "import" and "export" session tokens and it can see which ones are currently active (the ones that are in the session table).
+    - as an aside, that means that if it cannot find the entry in the session table it means the session is gone, and it should delete that session cookie.
 
 TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
 TODO: export.go
