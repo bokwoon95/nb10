@@ -281,7 +281,8 @@
           "default": "DATETIME",
           "postgres": "TIMESTAMPTZ"
         },
-        "notnull": true
+        "notnull": true,
+        "index": true
       },
       {
         "column": "start_time",
@@ -337,7 +338,8 @@
           "default": "DATETIME",
           "postgres": "TIMESTAMPTZ"
         },
-        "notnull": true
+        "notnull": true,
+        "index": true
       },
       {
         "column": "start_time",

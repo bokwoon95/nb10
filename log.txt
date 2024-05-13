@@ -43,6 +43,19 @@ PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
 
 exported files can be renamed, cut, copied and deleted
 
+queued | started | completed | failed | restart
+
+goroutines will touch base with the database every 1 MB or 1% of the total, whichever is bigger
+- when a goroutine touches base and detects that someone else has already cancelled the job, the goroutine is the one responsible for deleting the job from the database so that it will stop showing up on the user's job queue.
+- This means if a user cancels a 10 GB job, the goroutine will not know it has been cancelled until it has processed up to a 100 MB chunk. This may throw users off because it means a cancelled job is not neccessarily stopped.
+- once a goroutine has started, it will run to completion until notebrew shuts down and calls the parent cancel() function (use a waitGroup to track how many running jobs there are). This means cancel() isn't actually used to cancel individual jobs, instead the job itself will be maked as cancelled in the database and the goroutine will only know when it goes to synchronize processedBytes with the database.
+
+database:
+UPDATE export_job
+SET status = ''
+WHERE site_prefix = {sitePrefix}
+AND file_name = (select file_name from export_job where site_prefix = {sitePrefix} and status = 'open' order by creation_time)
+
 GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imports/) => shows the import options (import all files | import themes) => POST /imports/xxxx.tgz?themes vs POST /imports/xxxx.tgz
     - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
 GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.

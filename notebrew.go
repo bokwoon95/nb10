@@ -89,6 +89,7 @@ func init() {
 
 // the problem with queueing is that it becomes possible to queue on one machine and cancel on another. it's fine and dandy if you have a database, but what if you don't? What if you only have the map?
 // solution: if you push job, if database is present then add to the database (but not the map). if no database, then add it to the map. if you pop job, if database is present then select skip locked
+// 1. jobs need to update the processedBytes every max(1 MB, 1%)
 type job struct {
 	sitePrefix     string
 	fileName       string
