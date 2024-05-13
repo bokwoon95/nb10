@@ -235,5 +235,117 @@
         }
       }
     ]
+  },
+  {
+    "table": "import_job",
+    "primarykey": [
+      "site_prefix",
+      "file_name"
+    ],
+    "columns": [
+      {
+        "column": "site_prefix",
+        "type": {
+          "default": "VARCHAR(500)"
+        }
+      },
+      {
+        "column": "file_name",
+        "type": {
+          "default": "VARCHAR(500)"
+        }
+      },
+      {
+        "column": "status",
+        "type": {
+          "default": "VARCHAR(500)"
+        },
+        "notnull": true
+      },
+      {
+        "column": "total_bytes",
+        "type": {
+          "default": "BIGINT"
+        },
+        "notnull": true
+      },
+      {
+        "column": "processed_bytes",
+        "type": {
+          "default": "BIGINT"
+        }
+      },
+      {
+        "column": "creation_time",
+        "type": {
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        },
+        "notnull": true
+      },
+      {
+        "column": "start_time",
+        "type": {
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        }
+      }
+    ]
+  },
+  {
+    "table": "export_job",
+    "primarykey": [
+      "site_prefix",
+      "file_name"
+    ],
+    "columns": [
+      {
+        "column": "site_prefix",
+        "type": {
+          "default": "VARCHAR(500)"
+        }
+      },
+      {
+        "column": "file_name",
+        "type": {
+          "default": "VARCHAR(500)"
+        }
+      },
+      {
+        "column": "status",
+        "type": {
+          "default": "VARCHAR(500)"
+        },
+        "notnull": true
+      },
+      {
+        "column": "total_bytes",
+        "type": {
+          "default": "BIGINT"
+        },
+        "notnull": true
+      },
+      {
+        "column": "processed_bytes",
+        "type": {
+          "default": "BIGINT"
+        }
+      },
+      {
+        "column": "creation_time",
+        "type": {
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        },
+        "notnull": true
+      },
+      {
+        "column": "start_time",
+        "type": {
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        }
+      }
+    ]
   }
 ]

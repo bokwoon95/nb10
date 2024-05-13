@@ -28,7 +28,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -85,12 +84,21 @@ func init() {
 }
 
 // totalBytes/processedBytes
+// writers always write to the job struct. every 1 MB, persist the job struct to the database
+// readers always read from the database if it exists, else they read from the jobs map
+
+// the problem with queueing is that it becomes possible to queue on one machine and cancel on another. it's fine and dandy if you have a database, but what if you don't? What if you only have the map?
+// solution: if you push job, if database is present then add to the database (but not the map). if no database, then add it to the map. if you pop job, if database is present then select skip locked
 type job struct {
-	sessionTokenHash [40]byte // {"name":"my-file-output.tgz"} delete the session entry when cancelled
-	cancel           func()
-	done             <-chan struct{}
-	processed        *atomic.Int64
-	total            int64
+	sitePrefix     string
+	fileName       string
+	status         string // queued | started | completed | cancelled | restart
+	totalBytes     int64
+	processedBytes int64
+	creationTime   time.Time
+	startTime      time.Time
+	cancel         func()
+	done           chan struct{}
 }
 
 // Notebrew represents a notebrew instance.
@@ -133,10 +141,10 @@ type Notebrew struct {
 	ErrorCode func(error) string
 
 	mutex1     sync.RWMutex
-	importJobs map[string]job
+	importJobs map[string][]job
 
 	mutex2     sync.RWMutex
-	exportJobs map[string]job
+	exportJobs map[string][]job
 
 	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
 	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).
@@ -171,51 +179,6 @@ type Notebrew struct {
 }
 
 func (nbrew *Notebrew) Close() error {
-	var err error
-	var preparedExec *sq.PreparedExec
-	if nbrew.DB != nil {
-		preparedExec, err = sq.PrepareExec(context.Background(), nbrew.DB, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format:  "DELETE FROM sessions WHERE session_token_hash = {sessionTokenHash}",
-			Values: []any{
-				sq.BytesParam("sessionTokenHash", nil),
-			},
-		})
-		if err != nil {
-			return err
-		}
-		defer preparedExec.Close()
-	}
-	// TODO: we also need to write out the imports.json and exports.json file.
-	var wg sync.WaitGroup
-	nbrew.mutex1.RLock()
-	for _, job := range nbrew.importJobs {
-		job := job
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			job.cancel()
-			if preparedExec != nil {
-				preparedExec.Exec(context.Background(), sq.BytesParam("sessionTokenHash", job.sessionTokenHash[:]))
-			}
-			<-job.done
-		}()
-	}
-	nbrew.mutex1.RUnlock()
-	nbrew.mutex2.RLock()
-	for _, job := range nbrew.exportJobs {
-		job := job
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			job.cancel()
-			if preparedExec != nil {
-				preparedExec.Exec(context.Background(), sq.BytesParam("sessionTokenHash", job.sessionTokenHash[:]))
-			}
-			<-job.done
-		}()
-	}
-	nbrew.mutex2.RUnlock()
 	return nil
 }
 
