@@ -141,6 +141,10 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
+	baseContext context.Context
+	cancel      func()
+	waitGroup   sync.WaitGroup
+
 	mutex1     sync.RWMutex
 	importJobs map[string][]job
 
@@ -177,6 +181,15 @@ type Notebrew struct {
 	ContentSecurityPolicy string
 
 	Logger *slog.Logger
+}
+
+func New() *Notebrew {
+	ctx, cancel := context.WithCancel(context.Background())
+	nbrew := &Notebrew{
+		baseContext: ctx,
+		cancel:      cancel,
+	}
+	return nbrew
 }
 
 func (nbrew *Notebrew) Close() error {

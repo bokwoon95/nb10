@@ -113,11 +113,10 @@ func main() {
 			}
 			return nil
 		}
-		nbrew := &nb10.Notebrew{
-			Logger: slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-				AddSource: true,
-			})),
-		}
+		nbrew := nb10.New()
+		nbrew.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: true,
+		}))
 
 		// CMS domain.
 		b, err := os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
