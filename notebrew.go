@@ -141,10 +141,11 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
-	baseContext context.Context
-	cancel      func()
-	waitGroup   sync.WaitGroup
+	jobsContext   context.Context
+	cancelJobs    func()
+	jobsWaitGroup sync.WaitGroup
 
+	// What is the best way
 	mutex1     sync.RWMutex
 	importJobs map[string][]job
 
@@ -184,10 +185,10 @@ type Notebrew struct {
 }
 
 func New() *Notebrew {
-	ctx, cancel := context.WithCancel(context.Background())
+	jobsContext, cancelJobs := context.WithCancel(context.Background())
 	nbrew := &Notebrew{
-		baseContext: ctx,
-		cancel:      cancel,
+		jobsContext: jobsContext,
+		cancelJobs:  cancelJobs,
 	}
 	return nbrew
 }
