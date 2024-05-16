@@ -146,11 +146,11 @@ type Notebrew struct {
 	jobsWaitGroup sync.WaitGroup
 
 	// What is the best way
-	mutex1     sync.RWMutex
-	importJobs map[string]job
+	importJobMutex sync.RWMutex
+	importJob      map[string]job
 
-	mutex2     sync.RWMutex
-	exportJobs map[string]job
+	exportJobMutex sync.RWMutex
+	exportJob      map[string]job
 
 	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
 	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).
