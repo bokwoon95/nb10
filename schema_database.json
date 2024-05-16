@@ -238,9 +238,13 @@
   },
   {
     "table": "import_job",
-    "primarykey": [
-      "site_prefix",
-      "file_name"
+    "indexes": [
+      {
+        "unique": true,
+        "columns": [
+          "site_prefix"
+        ]
+      }
     ],
     "columns": [
       {
@@ -274,15 +278,6 @@
         "type": {
           "default": "BIGINT"
         }
-      },
-      {
-        "column": "creation_time",
-        "type": {
-          "default": "DATETIME",
-          "postgres": "TIMESTAMPTZ"
-        },
-        "notnull": true,
-        "index": true
       },
       {
         "column": "start_time",
@@ -295,9 +290,13 @@
   },
   {
     "table": "export_job",
-    "primarykey": [
-      "site_prefix",
-      "file_name"
+    "indexes": [
+      {
+        "unique": true,
+        "columns": [
+          "site_prefix"
+        ]
+      }
     ],
     "columns": [
       {
@@ -331,15 +330,6 @@
         "type": {
           "default": "BIGINT"
         }
-      },
-      {
-        "column": "creation_time",
-        "type": {
-          "default": "DATETIME",
-          "postgres": "TIMESTAMPTZ"
-        },
-        "notnull": true,
-        "index": true
       },
       {
         "column": "start_time",

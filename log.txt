@@ -39,7 +39,7 @@ notebrew/open_browser.go
 
 storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
 
-PaxRecords["NOTEBREW.creationTime"] = "2006-03-04"
+PaxRecords["NOTEBREW.file.creationTime"] = "2006-03-04"
 
 exported files can be renamed, cut, copied and deleted
 

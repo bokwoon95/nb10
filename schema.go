@@ -32,6 +32,7 @@ type rawTable struct {
 	Indexes []struct {
 		Dialect string
 		Type    string
+		Unique  bool
 		Columns []string
 	}
 	Constraints []struct {
@@ -138,6 +139,7 @@ func unmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
 			cache.AddOrUpdateIndex(table, ddl.Index{
 				IndexName: ddl.GenerateName(ddl.INDEX, rawTable.Table, rawIndex.Columns),
 				IndexType: rawIndex.Type,
+				IsUnique:  rawIndex.Unique,
 				Columns:   rawIndex.Columns,
 			})
 		}

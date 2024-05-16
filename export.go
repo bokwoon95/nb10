@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -622,4 +623,21 @@ func (nbrew *Notebrew) export_Old(w http.ResponseWriter, r *http.Request, user U
 		// gzippable files and fetching objects from ObjectStorage
 		// accordingly.
 	}
+}
+
+func (nbrew *Notebrew) exportJob(ctx context.Context, sitePrefix, fileName, parent string, names []string) {
+	defer func() {
+		if r := recover(); r != nil {
+			if nbrew.DB == nil {
+				return
+			}
+			sq.Exec(context.Background(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "DELETE FROM export_job WHERE site_prefix = {sitePrefix}",
+				Values: []any{
+					sq.StringParam("sitePrefix", sitePrefix),
+				},
+			})
+		}
+	}()
 }

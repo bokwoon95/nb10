@@ -96,7 +96,7 @@ type job struct {
 	status         string // queued | started | completed | cancelled | restart
 	totalBytes     int64
 	processedBytes int64
-	creationTime   time.Time
+	syncThreshold  int64
 	startTime      time.Time
 	cancel         func()
 	done           chan struct{}
@@ -147,10 +147,10 @@ type Notebrew struct {
 
 	// What is the best way
 	mutex1     sync.RWMutex
-	importJobs map[string][]job
+	importJobs map[string]job
 
 	mutex2     sync.RWMutex
-	exportJobs map[string][]job
+	exportJobs map[string]job
 
 	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
 	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).
