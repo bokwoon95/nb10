@@ -783,10 +783,17 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 				if fileType.IsObject {
 					reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 					if err != nil {
+						reader.Close()
 						cleanup(err)
 						return
 					}
 					_, err = io.Copy(tarWriter, reader)
+					if err != nil {
+						reader.Close()
+						cleanup(err)
+						return
+					}
+					err = reader.Close()
 					if err != nil {
 						cleanup(err)
 						return
