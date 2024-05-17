@@ -322,7 +322,7 @@ func (nbrew *Notebrew) export_OldV2(w http.ResponseWriter, r *http.Request, user
 					ModTime: file.ModTime,
 					Size:    file.Size,
 					PAXRecords: map[string]string{
-						"NOTEBREW.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
 					},
 				}
 				if file.IsDir {
@@ -691,7 +691,7 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 	}
 	defer writer.Close()
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-	gzipWriter.Reset(bufio.NewWriter(writer))
+	gzipWriter.Reset(writer)
 	defer func() {
 		gzipWriter.Close()
 		gzipWriter.Reset(io.Discard)
@@ -769,7 +769,7 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 					ModTime: file.ModTime,
 					Size:    file.Size,
 					PAXRecords: map[string]string{
-						"NOTEBREW.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
 					},
 				}
 				if file.IsDir {
