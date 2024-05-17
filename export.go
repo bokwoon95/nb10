@@ -646,8 +646,11 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 			}
 		}
 	}()
-	cleanup := func(cause error) {
-		if errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) {
+	cleanup := func(exitErr error) {
+		if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
+			if nbrew.DB == nil {
+				return
+			}
 			// status: started | restart
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -661,8 +664,8 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 			}
 			return
 		}
-		if cause != nil {
-			nbrew.Logger.Error(cause.Error())
+		if exitErr != nil {
+			nbrew.Logger.Error(exitErr.Error())
 		}
 		if nbrew.DB == nil {
 			nbrew.exportJobMutex.Lock()
