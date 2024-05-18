@@ -546,7 +546,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, filePath), http.StatusFound)
+			http.Redirect(w, r, strings.ReplaceAll("/"+path.Join("files", sitePrefix, filePath), "%", "%25"), http.StatusFound)
 		}
 		if nbrew.DB != nil {
 			// TODO: calculate the available storage space of the owner and add
