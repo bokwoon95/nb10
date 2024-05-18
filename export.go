@@ -12,11 +12,13 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -106,6 +108,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			writeResponse(w, r, response)
 			return
 		}
+
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case ".":
@@ -134,13 +137,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			writeResponse(w, r, response)
 			return
 		}
-		seen := make(map[string]bool)
-		group, groupctx := errgroup.WithContext(r.Context())
+
 		names := r.Form["name"]
-		response.Files = make([]File, len(names))
-		response.ExportParent = len(names) == 0
-		for i, name := range names {
-			i, name := i, filepath.ToSlash(name)
+		seen := make(map[string]bool)
+		n := 0
+		for _, name := range names {
+			name := filepath.ToSlash(name)
 			if strings.Contains(name, "/") {
 				continue
 			}
@@ -148,6 +150,16 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				continue
 			}
 			seen[name] = true
+			names[n] = name
+			n++
+		}
+		names = names[:n]
+
+		group, groupctx := errgroup.WithContext(r.Context())
+		response.Files = make([]File, len(names))
+		response.ExportParent = len(names) == 0
+		for i, name := range names {
+			i, name := i, name
 			group.Go(func() error {
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
@@ -182,7 +194,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			nbrew.internalServerError(w, r, err)
 			return
 		}
-		n := 0
+		n = 0
 		for _, file := range response.Files {
 			if file.Name == "" {
 				continue
@@ -193,6 +205,132 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.Files = response.Files[:n]
 		writeResponse(w, r, response)
 	case "POST":
+		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
+			if r.Form.Has("api") {
+				w.Header().Set("Content-Type", "application/json")
+				encoder := json.NewEncoder(w)
+				encoder.SetEscapeHTML(false)
+				err := encoder.Encode(&response)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+				}
+				return
+			}
+		}
+
+		var request Request
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
+		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		switch contentType {
+		case "application/json":
+			err := json.NewDecoder(r.Body).Decode(&request)
+			if err != nil {
+				nbrew.badRequest(w, r, err)
+				return
+			}
+		case "application/x-www-form-urlencoded", "multipart/form-data":
+			if contentType == "multipart/form-data" {
+				err := r.ParseMultipartForm(1 << 20 /* 1 MB */)
+				if err != nil {
+					nbrew.badRequest(w, r, err)
+					return
+				}
+			} else {
+				err := r.ParseForm()
+				if err != nil {
+					nbrew.badRequest(w, r, err)
+					return
+				}
+			}
+			request.Parent = r.Form.Get("parent")
+			request.Names = r.Form["name"]
+		default:
+			nbrew.unsupportedContentType(w, r)
+			return
+		}
+
+		response := Response{
+			Parent:     request.Parent,
+			FormErrors: url.Values{},
+			Files:      make([]File, 0, len(request.Names)),
+		}
+		seen := make(map[string]bool)
+		for _, name := range request.Names {
+			name := filepath.ToSlash(name)
+			if strings.Contains(name, "/") {
+				continue
+			}
+			if seen[name] {
+				continue
+			}
+			seen[name] = true
+			response.Files = append(response.Files, File{
+				Name: name,
+			})
+		}
+		head, _, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case ".":
+			response.ExportParent = true
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidParent"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if !fileInfo.IsDir() {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+			response.ExportParent = len(request.Names) == 0
+		default:
+			response.Error = "InvalidParent"
+			writeResponse(w, r, response)
+			return
+		}
+
+		var totalBytes atomic.Int64
+		_ = &totalBytes
+		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+			_ = databaseFS
+			if response.ExportParent {
+				// TODO: just get the total size of the parent, no need to loop the names
+			} else {
+			}
+			group, groupctx := errgroup.WithContext(r.Context())
+			_ = groupctx
+			for i, name := range request.Names {
+				i, name := i, name
+				_, _ = i, name
+				group.Go(func() error {
+					var parentFilter sq.Expression
+					_ = parentFilter
+					parent := path.Join(sitePrefix, response.Parent, name)
+					if parent == "." {
+						parentFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
+							" OR files.file_path LIKE 'pages/%'" +
+							" OR files.file_path LIKE 'posts/%'" +
+							" OR files.file_path LIKE 'output/%'" +
+							" OR files.parent_id IS NULL)")
+					} else {
+						parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
+					}
+					return nil
+				})
+			}
+		} else {
+		}
+
+		// 1. prepare the row to be inserted
+		// 2. attempt to acquire a slot (insert the row)
+		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
