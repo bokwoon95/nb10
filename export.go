@@ -267,6 +267,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			}
 			request.Parent = r.Form.Get("parent")
 			request.Names = r.Form["name"]
+			request.OutputName = r.Form.Get("outputName")
 		default:
 			nbrew.unsupportedContentType(w, r)
 			return
