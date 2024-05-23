@@ -216,6 +216,16 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				}
 				return
 			}
+			if response.Error != "" {
+				err := nbrew.setSession(w, r, "flash", &response)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "export")+"/", http.StatusFound)
+				return
+			}
 		}
 
 		var request Request
