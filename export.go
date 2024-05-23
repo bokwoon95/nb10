@@ -226,6 +226,17 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "export")+"/", http.StatusFound)
 				return
 			}
+			err := nbrew.setSession(w, r, "flash", map[string]any{
+				"postRedirectGet": map[string]any{
+					"from":       "export",
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "exports")+"/", http.StatusFound)
 		}
 
 		var request Request
