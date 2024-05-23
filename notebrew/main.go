@@ -1289,9 +1289,10 @@ func main() {
 		case 443:
 			server.Addr = ":443"
 			server.Handler = nbrew
-			server.ReadTimeout = 60 * time.Second
-			server.WriteTimeout = 60 * time.Second
-			server.IdleTimeout = 120 * time.Second
+			server.ReadHeaderTimeout = 1 * time.Minute
+			server.ReadTimeout = 10 * time.Minute
+			server.WriteTimeout = 10 * time.Minute
+			server.IdleTimeout = 10 * time.Minute
 			staticCertConfig := certmagic.NewDefault()
 			staticCertConfig.Storage = nbrew.CertStorage
 			if nbrew.DNSProvider != nil {
