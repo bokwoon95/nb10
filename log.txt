@@ -67,6 +67,7 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 - If the server handling the client's request is not the one handling the import/export job, it still knows there is a job present because it receives the client's "import" and "export" session tokens and it can see which ones are currently active (the ones that are in the session table).
     - as an aside, that means that if it cannot find the entry in the session table it means the session is gone, and it should delete that session cookie.
 
+TODO: change search to use Google's AND/OR system, and explicitly (if no AND or OR is provided, the phrase itself is searched).
 TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
 TODO: export.go
     - /exports/ is responsible for listing all the current exports. Downloading of exports happens from this page. It shows if there's any exports ongoing.
