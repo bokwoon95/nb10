@@ -35,8 +35,9 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
-		Parent string   `json:"parent"`
-		Names  []string `json:"names"`
+		Parent     string   `json:"parent"`
+		Names      []string `json:"names"`
+		OutputName string   `json:"outputName"`
 	}
 	type Response struct {
 		ContentBaseURL string     `json:"contentBaseURL"`
@@ -47,6 +48,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		Username       string     `json:"username"`
 		Parent         string     `json:"parent"`
 		Files          []File     `json:"files"`
+		OutputName     string     `json:"outputName"`
 		ExportParent   bool       `json:"exportParent"`
 		Error          string     `json:"error"`
 		FormErrors     url.Values `json:"formErrors"`
@@ -228,7 +230,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":       "export",
+					"from": "export",
 				},
 			})
 			if err != nil {
