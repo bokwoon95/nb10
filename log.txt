@@ -67,6 +67,7 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 - If the server handling the client's request is not the one handling the import/export job, it still knows there is a job present because it receives the client's "import" and "export" session tokens and it can see which ones are currently active (the ones that are in the session table).
     - as an aside, that means that if it cannot find the entry in the session table it means the session is gone, and it should delete that session cookie.
 
+TODO: don't redirect http to https if ?api is present. Also revoke the authentication token.
 TODO: add a "create note" or "create file" link in file.html so that users can constantly add new notes on the go by simply opening a tab to the page.
     should we enforce a 280 character limit on the title? no, users can put as much info as they want into the title. and it will still be subjected to the same character limitations as across all operating systems, because we want the backups to be freely portable between OS systems.
 TODO: change search to use Google's AND/OR system, and explicitly (if no AND or OR is provided, the phrase itself is searched).
