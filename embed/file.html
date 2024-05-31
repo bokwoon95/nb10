@@ -256,6 +256,8 @@
     <span>&boxv;</span>
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
     {{- end }}
+  <span>&boxv;</span>
+  <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create note</a>
   {{- else if eq (head $.FilePath) "pages" }}
   <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
   <span>&boxv;</span>
@@ -266,6 +268,8 @@
     {{- end }}
   <span>&boxv;</span>
   view: <a href='{{ $.URL }}'>page</a>
+  <span>&boxv;</span>
+  <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create page</a>
   {{- else if eq (head $.FilePath) "posts" }}
   <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
   <span>&boxv;</span>
@@ -278,6 +282,8 @@
     <span>&boxv;</span>
     view: <a href='{{ $.URL }}'>post</a>
     {{- end }}
+  <span>&boxv;</span>
+  <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create post</a>
   {{- else if eq (head $.FilePath) "output" }}
     {{- if $.BelongsTo }}
     <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
