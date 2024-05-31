@@ -1,6 +1,43 @@
 [
   {
     "table": "files",
+    "indexes": [
+      {
+        "dialect": "postgres",
+        "type": "GIN",
+        "columns": [
+          "fts"
+        ]
+      },
+      {
+        "dialect": "mysql",
+        "type": "FULLTEXT",
+        "columns": [
+          "file_name",
+          "text"
+        ]
+      },
+      {
+        "columns": [
+          "parent_id",
+          "file_path"
+        ]
+      },
+      {
+        "columns": [
+          "parent_id",
+          "mod_time",
+          "file_path"
+        ]
+      },
+      {
+        "columns": [
+          "parent_id",
+          "creation_time",
+          "file_path"
+        ]
+      }
+    ],
     "columns": [
       {
         "column": "file_id",
@@ -106,23 +143,6 @@
           "expression": "to_tsvector('english', regexp_replace(file_path, '^.+/', ''), text)",
           "stored": true
         }
-      }
-    ],
-    "indexes": [
-      {
-        "dialect": "postgres",
-        "type": "GIN",
-        "columns": [
-          "fts"
-        ]
-      },
-      {
-        "dialect": "mysql",
-        "type": "FULLTEXT",
-        "columns": [
-          "file_name",
-          "text"
-        ]
       }
     ]
   },
