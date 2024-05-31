@@ -670,34 +670,18 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) >= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) <= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) >= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) <= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					}
 				}
@@ -760,34 +744,18 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) < ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) > ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) < ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) > ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					}
 				}
@@ -859,34 +827,18 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) < ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) > ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) < ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) > ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					}
 				}
@@ -949,34 +901,18 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				var filter, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) >= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(mod_time, file_path) <= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) >= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					} else {
-						if databaseFS.Dialect == "mysql" {
-							filter = sq.Expr("ROW(creation_time, file_path) <= ROW({timeParam}, {pathParam})", timeParam, pathParam)
-						} else {
-							filter = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
-						}
+						filter = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					}
 				}
