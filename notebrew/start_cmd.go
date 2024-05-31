@@ -65,9 +65,9 @@ func (cmd *StartCmd) Run() error {
 	case 443:
 		server.Addr = ":443"
 		server.Handler = cmd.Notebrew
-		server.ReadTimeout = 60 * time.Second
-		server.WriteTimeout = 60 * time.Second
-		server.IdleTimeout = 120 * time.Second
+		server.ReadHeaderTimeout = 5 * time.Minute
+		server.WriteTimeout = 60 * time.Minute
+		server.IdleTimeout = 5 * time.Minute
 		staticCertConfig := certmagic.NewDefault()
 		staticCertConfig.Storage = cmd.Notebrew.CertStorage
 		if cmd.Notebrew.DNSProvider != nil {
