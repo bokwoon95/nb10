@@ -300,6 +300,8 @@
       <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
       {{- end }}
     {{- end }}
+    <span>&boxv;</span>
+    <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create file</a>
   {{- end }}
 </div>
 <form method='post' enctype='multipart/form-data' class='mv2' data-prevent-double-submit>
