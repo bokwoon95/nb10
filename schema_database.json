@@ -237,21 +237,23 @@
     ]
   },
   {
-    "table": "import_job",
+    "table": "imports",
     "indexes": [
       {
         "unique": true,
         "columns": [
-          "site_prefix"
+          "site_id"
         ]
       }
     ],
     "columns": [
       {
-        "column": "site_prefix",
+        "column": "site_id",
         "type": {
-          "default": "VARCHAR(500)"
-        }
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "notnull": true
       },
       {
         "column": "file_name",
@@ -260,11 +262,11 @@
         }
       },
       {
-        "column": "status",
+        "column": "start_time",
         "type": {
-          "default": "VARCHAR(500)"
-        },
-        "notnull": true
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        }
       },
       {
         "column": "total_bytes",
@@ -277,33 +279,28 @@
         "column": "processed_bytes",
         "type": {
           "default": "BIGINT"
-        }
-      },
-      {
-        "column": "start_time",
-        "type": {
-          "default": "DATETIME",
-          "postgres": "TIMESTAMPTZ"
         }
       }
     ]
   },
   {
-    "table": "export_job",
+    "table": "exports",
     "indexes": [
       {
         "unique": true,
         "columns": [
-          "site_prefix"
+          "site_id"
         ]
       }
     ],
     "columns": [
       {
-        "column": "site_prefix",
+        "column": "site_id",
         "type": {
-          "default": "VARCHAR(500)"
-        }
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "notnull": true
       },
       {
         "column": "file_name",
@@ -312,11 +309,11 @@
         }
       },
       {
-        "column": "status",
+        "column": "start_time",
         "type": {
-          "default": "VARCHAR(500)"
-        },
-        "notnull": true
+          "default": "DATETIME",
+          "postgres": "TIMESTAMPTZ"
+        }
       },
       {
         "column": "total_bytes",
@@ -329,13 +326,6 @@
         "column": "processed_bytes",
         "type": {
           "default": "BIGINT"
-        }
-      },
-      {
-        "column": "start_time",
-        "type": {
-          "default": "DATETIME",
-          "postgres": "TIMESTAMPTZ"
         }
       }
     ]
