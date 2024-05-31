@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -40,6 +41,7 @@ import (
 	"github.com/libdns/godaddy"
 	"github.com/libdns/namecheap"
 	"github.com/libdns/porkbun"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -1422,6 +1424,40 @@ func main() {
 			}()
 			go http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method != "GET" && r.Method != "HEAD" {
+					http.Error(w, "Use HTTPS", http.StatusBadRequest)
+					return
+				}
+				err := r.ParseForm()
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				if r.Form.Has("api") {
+					revokeAuthentication := func(authenticationTokenString string) {
+						authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
+						if err != nil {
+							return
+						}
+						var authenticationTokenHash [8 + blake2b.Size256]byte
+						checksum := blake2b.Sum256(authenticationToken[8:])
+						copy(authenticationTokenHash[:8], authenticationToken[:8])
+						copy(authenticationTokenHash[8:], checksum[:])
+						_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+							Dialect: nbrew.Dialect,
+							Format:  "DELETE FROM authentication WHERE authentication_token_hash = {authenticationTokenHash}",
+							Values: []any{
+								sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+							},
+						})
+					}
+					header := r.Header.Get("Authorization")
+					if header != "" {
+						revokeAuthentication(strings.TrimPrefix(header, "Notebrew "))
+					}
+					cookie, _ := r.Cookie("authentication")
+					if cookie != nil {
+						revokeAuthentication(cookie.Value)
+					}
 					http.Error(w, "Use HTTPS", http.StatusBadRequest)
 					return
 				}

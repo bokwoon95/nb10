@@ -172,13 +172,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				header := r.Header.Get("Authorization")
 				if strings.HasPrefix(header, "Notebrew ") {
 					authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
-				} else {
-					if r.Method == "GET" {
-						cookie, _ := r.Cookie("authentication")
-						if cookie != nil {
-							authenticationTokenString = cookie.Value
-						}
-					}
 				}
 			} else {
 				cookie, _ := r.Cookie("authentication")
