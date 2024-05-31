@@ -417,7 +417,7 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
           </div>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
-              <span class='mr1 flex items-center'>{{ template "octicons-pin" }}</span>
+              <span class='mr1 flex items-center'>📌</span>
               {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
