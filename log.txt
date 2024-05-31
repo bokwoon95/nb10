@@ -71,6 +71,7 @@ TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html", it overwri
 TODO: change import_job and export_job to imports and exports. Heck care that it's technically for active imports and exports and not an archive of all imports and exports like the name suggests, but the same argument could be made that import_job and export_job also sound like a long-term archive of all import and export jobs that have ever run.
 TODO: change search to use Google's AND/OR system, and explicitly (if no AND or OR is provided, the phrase itself is searched).
 TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
+    TODO: delete and export should also remove the margin around the page
 TODO: export.go
     - /exports/ is responsible for listing all the current exports. Downloading of exports happens from this page. It shows if there's any exports ongoing.
     - /export/ is responsible for actually exporting files. It redirects to /exports/.
