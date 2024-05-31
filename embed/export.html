@@ -30,7 +30,7 @@
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   {{- if eq $.Parent "." }}
-  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>site</a>?</h3>
+  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>the current site</a>?</h3>
   {{- else if $.ExportParent }}
   <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}/</a>?</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
