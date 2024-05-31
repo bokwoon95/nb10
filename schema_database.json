@@ -259,7 +259,8 @@
         "column": "file_name",
         "type": {
           "default": "VARCHAR(500)"
-        }
+        },
+        "notnull": true
       },
       {
         "column": "start_time",
@@ -306,7 +307,8 @@
         "column": "file_name",
         "type": {
           "default": "VARCHAR(500)"
-        }
+        },
+        "notnull": true
       },
       {
         "column": "start_time",
