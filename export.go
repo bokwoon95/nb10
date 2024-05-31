@@ -274,7 +274,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		response := Response{
-			Parent:     request.Parent,
+			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
 			FormErrors: url.Values{},
 			Files:      make([]File, 0, len(request.Names)),
 		}
