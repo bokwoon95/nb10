@@ -159,7 +159,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 
 		group, groupctx := errgroup.WithContext(r.Context())
 		response.Files = make([]File, len(names))
-		response.ExportParent = len(names) == 0
 		for i, name := range names {
 			i, name := i, name
 			group.Go(func() error {
