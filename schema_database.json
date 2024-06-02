@@ -311,6 +311,14 @@
         "notnull": true
       },
       {
+        "column": "source",
+        "type": {
+          "default": "JSON",
+          "postgres": "JSONB"
+        },
+        "notnull": true
+      },
+      {
         "column": "start_time",
         "type": {
           "default": "DATETIME",
