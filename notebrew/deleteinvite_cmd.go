@@ -121,7 +121,7 @@ func (cmd *DeleteinviteCmd) Run() error {
 	if result.RowsAffected == 1 {
 		fmt.Fprintln(cmd.Stdout, "1 invite deleted")
 	} else {
-		fmt.Fprintln(cmd.Stdout, strconv.FormatInt(result.RowsAffected, 10) + " invites deleted")
+		fmt.Fprintln(cmd.Stdout, strconv.FormatInt(result.RowsAffected, 10)+" invites deleted")
 	}
 	return nil
 }

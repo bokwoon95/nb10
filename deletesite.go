@@ -78,6 +78,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 					return
 				}
 				encoder := json.NewEncoder(w)
+				encoder.SetIndent("", "  ")
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {

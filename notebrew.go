@@ -621,6 +621,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error":   "BadRequest",
@@ -664,6 +665,7 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error": "NotAuthenticated",
@@ -714,6 +716,7 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error": "NotAuthorized",
@@ -763,6 +766,7 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error": "NotFound",
@@ -806,6 +810,7 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error":  "MethodNotAllowed",
@@ -856,6 +861,7 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error":   "UnsupportedMediaType",
@@ -907,6 +913,7 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error":   "InternalServerError",
