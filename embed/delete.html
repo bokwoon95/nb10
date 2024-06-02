@@ -18,14 +18,14 @@
   {{- end }}
 </nav>
 {{- if or (eq $.Error "InvalidParent") (not $.Files) }}
-<div class='mv5 w-80 center'>
+<div>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <div class='mv3 b tc'>No files to delete</div>
 </div>
 {{- else }}
-<form method='post' class='mv5 w-80 center'>
+<form method='post'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}

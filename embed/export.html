@@ -18,19 +18,19 @@
   {{- end }}
 </nav>
 {{- if or (eq $.Error "InvalidParent") (and (not $.Files) (not $.ExportParent)) }}
-<div class='mv5 w-80 center'>
+<div>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <div class='mv3 b tc'>No files to export</div>
 </div>
 {{- else }}
-<form method='post' class='mv5 w-80 center'>
+<form method='post'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   {{- if eq $.Parent "." }}
-  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>the whole site</a>?</h3>
+  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>the entire site</a>?</h3>
   {{- else if $.ExportParent }}
   <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}/</a>?</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>

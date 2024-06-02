@@ -135,6 +135,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
+			response.ExportParent = len(r.Form["name"]) == 0
 		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)

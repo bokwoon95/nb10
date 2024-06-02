@@ -19,14 +19,14 @@
   {{- end }}
 </nav>
 {{- if eq $.Error "InvalidFile" }}
-<div class='mv5 w-80 center'>
+<div>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <div class='mv3 b tc'>Nothing to rename.</div>
 </div>
 {{- else }}
-<form method='post' action='/{{ join "files" $.SitePrefix "rename" }}/' class='mv5 w-80 center'>
+<form method='post' action='/{{ join "files" $.SitePrefix "rename" }}/'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}
