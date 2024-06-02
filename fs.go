@@ -71,7 +71,6 @@ var fileTypes = map[string]FileType{
 	".webp":  {Ext: ".webp", ContentType: "image/webp", IsObject: true},
 	".gif":   {Ext: ".gif", ContentType: "image/gif", IsObject: true},
 	".svg":   {Ext: ".svg", ContentType: "image/svg+xml", IsGzippable: true},
-	".ico":   {Ext: ".ico", ContentType: "image/ico", IsGzippable: true},
 	".eot":   {Ext: ".eot", ContentType: "font/eot", IsGzippable: true},
 	".otf":   {Ext: ".otf", ContentType: "font/otf", IsGzippable: true},
 	".ttf":   {Ext: ".ttf", ContentType: "font/ttf", IsGzippable: true},
