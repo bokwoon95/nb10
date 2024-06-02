@@ -58,6 +58,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	urlPath := strings.Trim(r.URL.Path, "/")
 
+	err := r.ParseForm()
+	if err != nil {
+		nbrew.badRequest(w, r, err)
+		return
+	}
+
 	// Add request method and url to the logger.
 	logger := nbrew.Logger
 	if logger == nil {
@@ -79,15 +85,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Cross-Origin-Resource-Policy", "cross-origin")
 	if nbrew.CMSDomainHTTPS {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-	}
-
-	if r.Method == "GET" || r.Method == "HEAD" {
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
-		err := r.ParseForm()
-		if err != nil {
-			nbrew.badRequest(w, r, err)
-			return
-		}
 	}
 
 	// Handle the /users/* route on the CMS domain.
@@ -168,8 +165,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
 			var authenticationTokenString string
-			if r.Form.Has("api") {
-				header := r.Header.Get("Authorization")
+			header := r.Header.Get("Authorization")
+			if header != "" {
 				if strings.HasPrefix(header, "Notebrew ") {
 					authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
 				}

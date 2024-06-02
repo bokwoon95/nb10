@@ -17,8 +17,8 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var authenticationTokenString string
-	if r.Form.Has("api") {
-		header := r.Header.Get("Authorization")
+	header := r.Header.Get("Authorization")
+	if header != "" {
 		if strings.HasPrefix(header, "Notebrew ") {
 			authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
 		}

@@ -72,18 +72,20 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var authenticationTokenHash []byte
-	var rawAuthenticationToken string
+	var authenticationTokenString string
 	header := r.Header.Get("Authorization")
-	if strings.HasPrefix(header, "Notebrew ") {
-		rawAuthenticationToken = strings.TrimPrefix(header, "Notebrew ")
+	if header != "" {
+		if strings.HasPrefix(header, "Notebrew ") {
+			authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
+		}
 	} else {
 		cookie, _ := r.Cookie("authentication")
 		if cookie != nil {
-			rawAuthenticationToken = cookie.Value
+			authenticationTokenString = cookie.Value
 		}
 	}
-	if rawAuthenticationToken != "" {
-		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", rawAuthenticationToken))
+	if authenticationTokenString != "" {
+		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
 		if err == nil {
 			var hash [8 + blake2b.Size256]byte
 			checksum := blake2b.Sum256(authenticationToken[8:])

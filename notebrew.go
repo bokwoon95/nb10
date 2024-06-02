@@ -47,7 +47,7 @@ var (
 
 	RuntimeFS fs.FS = embedFS
 
-	logSessions = false
+	devMode = false
 
 	StylesCSS string
 
@@ -239,7 +239,7 @@ func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name s
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
-	if logSessions {
+	if devMode {
 		os.Stderr.WriteString(buf.String())
 	}
 	if nbrew.DB == nil {
