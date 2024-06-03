@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"net/http"
 	"net/url"
@@ -520,11 +521,462 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				gzipWriter.Reset(io.Discard)
 				gzipWriterPool.Put(gzipWriter)
 			}()
-			tarWriter := tar.NewWriter(gzipWriter)
+			tarWriter := tar.NewWriter(&exportWriter{
+				ctx:          nbrew.ctx,
+				preparedExec: preparedExec,
+				writer:       gzipWriter,
+			})
 			defer tarWriter.Close()
+			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+				buf := bufPool.Get().(*bytes.Buffer).Bytes()
+				defer func() {
+					if cap(buf) <= maxPoolableBufferCapacity {
+						buf = buf[:0]
+						bufPool.Put(bytes.NewBuffer(buf))
+					}
+				}()
+				gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
+				defer func() {
+					if gzipReader != nil {
+						gzipReader.Reset(empty)
+						gzipReaderPool.Put(gzipReader)
+					}
+				}()
+				for _, name := range names {
+					root := path.Join(sitePrefix, parent, name)
+					cursor, err := sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format:  "SELECT {*} FROM files WHERE file_path = {root} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
+						Values: []any{
+							sq.Param("root", root),
+							sq.Param("pattern", wildcardReplacer.Replace(root)+"/%"),
+						},
+					}, func(row *sq.Row) (file struct {
+						FileID       ID
+						FilePath     string
+						IsDir        bool
+						Size         int64
+						ModTime      time.Time
+						CreationTime time.Time
+						Bytes        []byte
+					}) {
+						buf = row.Bytes(buf[:0], "COALESCE(text, data)")
+						file.FileID = row.UUID("file_id")
+						file.FilePath = row.String("file_path")
+						file.IsDir = row.Bool("is_dir")
+						file.Size = row.Int64("size")
+						file.Bytes = buf
+						file.ModTime = row.Time("mod_time")
+						file.CreationTime = row.Time("creation_time")
+						if sitePrefix != "" {
+							file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
+						}
+						return file
+					})
+					if err != nil {
+						cleanup(err)
+						return
+					}
+					for cursor.Next() {
+						file, err := cursor.Result()
+						if err != nil {
+							cleanup(err)
+							return
+						}
+						fileType, ok := fileTypes[path.Ext(file.FilePath)]
+						if !ok {
+							continue
+						}
+						fmt.Printf("dumping: %s\n", file.FilePath)
+						tarHeader := &tar.Header{
+							Name:    file.FilePath,
+							ModTime: file.ModTime,
+							Size:    file.Size,
+							PAXRecords: map[string]string{
+								"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+							},
+						}
+						if file.IsDir {
+							tarHeader.Typeflag = tar.TypeDir
+							tarHeader.Mode = 0755
+						} else {
+							tarHeader.Typeflag = tar.TypeReg
+							tarHeader.Mode = 0644
+						}
+						tarWriter.WriteHeader(tarHeader)
+						if fileType.IsObject {
+							reader, err := databaseFS.ObjectStorage.Get(r.Context(), file.FileID.String()+path.Ext(file.FilePath))
+							if err != nil {
+								cleanup(err)
+								return
+							}
+							_, err = io.Copy(tarWriter, reader)
+							if err != nil {
+								cleanup(err)
+								return
+							}
+						} else {
+							if fileType.IsGzippable && !IsFulltextIndexed(file.FilePath) {
+								if gzipReader == nil {
+									gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
+									if err != nil {
+										cleanup(err)
+										return
+									}
+								} else {
+									err = gzipReader.Reset(bytes.NewReader(file.Bytes))
+									if err != nil {
+										cleanup(err)
+										return
+									}
+								}
+								_, err = io.Copy(tarWriter, gzipReader)
+								if err != nil {
+									cleanup(err)
+									return
+								}
+							} else {
+								_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
+								if err != nil {
+									cleanup(err)
+									return
+								}
+							}
+						}
+					}
+					err = cursor.Close()
+					if err != nil {
+						cleanup(err)
+						return
+					}
+				}
+			} else {
+				for _, name := range names {
+					root := path.Join(sitePrefix, parent, name)
+					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+						if err != nil {
+							if errors.Is(err, fs.ErrNotExist) {
+								return nil
+							}
+							return err
+						}
+						if dirEntry.IsDir() {
+							return nil
+						}
+						fileInfo, err := dirEntry.Info()
+						if err != nil {
+							return err
+						}
+						totalBytes.Add(fileInfo.Size())
+						return nil
+					})
+					if err != nil {
+						cleanup(err)
+						return
+					}
+				}
+			}
 		}()
 	default:
 		nbrew.methodNotAllowed(w, r)
+	}
+}
+
+type exportWriter struct {
+	ctx            context.Context
+	preparedExec   *sq.PreparedExec
+	writer         io.Writer
+	processedBytes int64
+}
+
+func (w *exportWriter) Write(p []byte) (n int, err error) {
+	n, err = w.writer.Write(p)
+	processedBytes := w.processedBytes + int64(n)
+	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
+		result, err := w.preparedExec.Exec(w.ctx, sq.Int64Param("processedBytes", processedBytes))
+		if err != nil {
+			return n, err
+		}
+		if result.RowsAffected == 0 {
+			return n, fmt.Errorf("canceled from database: %w", context.Canceled)
+		}
+		w.processedBytes = processedBytes
+	}
+	return n, nil
+}
+
+func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent string, names []string, fileName string) {
+	defer nbrew.waitGroup.Done()
+	cleanup := func(exitErr error) {
+		if exitErr == nil {
+			return
+		}
+		if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
+			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "UPDATE exports SET start_time = NULL WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+				Values: []any{
+					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+				},
+			})
+			if err != nil {
+				logger.Error(err.Error())
+			}
+		} else {
+			logger.Error(exitErr.Error())
+			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "DELETE FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+				Values: []any{
+					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+				},
+			})
+			if err != nil {
+				logger.Error(err.Error())
+			}
+		}
+	}
+	var db sq.DB
+	if nbrew.Dialect == "sqlite" {
+		db = nbrew.DB
+	} else {
+		conn, err := nbrew.DB.Conn(nbrew.ctx)
+		if err != nil {
+			cleanup(err)
+			return
+		}
+		defer conn.Close()
+		db = conn
+	}
+	preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
+		Dialect: nbrew.Dialect,
+		Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
+		Values: []any{
+			sq.Int64Param("processedBytes", 0),
+			sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+		},
+	})
+	if err != nil {
+		cleanup(err)
+		return
+	}
+	defer preparedExec.Close()
+	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
+	if err != nil {
+		cleanup(err)
+		return
+	}
+	defer writer.Close()
+	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
+	gzipWriter.Reset(writer)
+	defer func() {
+		gzipWriter.Close()
+		gzipWriter.Reset(io.Discard)
+		gzipWriterPool.Put(gzipWriter)
+	}()
+	tarWriter := tar.NewWriter(&exportWriter{
+		ctx:          nbrew.ctx,
+		preparedExec: preparedExec,
+		writer:       gzipWriter,
+	})
+	defer tarWriter.Close()
+	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+		buf := bufPool.Get().(*bytes.Buffer).Bytes()
+		defer func() {
+			if cap(buf) <= maxPoolableBufferCapacity {
+				buf = buf[:0]
+				bufPool.Put(bytes.NewBuffer(buf))
+			}
+		}()
+		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
+		defer func() {
+			if gzipReader != nil {
+				gzipReader.Reset(empty)
+				gzipReaderPool.Put(gzipReader)
+			}
+		}()
+		for _, name := range names {
+			root := path.Join(sitePrefix, parent, name)
+			cursor, err := sq.FetchCursor(nbrew.ctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
+				Format:  "SELECT {*} FROM files WHERE file_path = {root} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
+				Values: []any{
+					sq.Param("root", root),
+					sq.Param("pattern", wildcardReplacer.Replace(root)+"/%"),
+				},
+			}, func(row *sq.Row) (file struct {
+				FileID       ID
+				FilePath     string
+				IsDir        bool
+				Size         int64
+				ModTime      time.Time
+				CreationTime time.Time
+				Bytes        []byte
+			}) {
+				buf = row.Bytes(buf[:0], "COALESCE(text, data)")
+				file.FileID = row.UUID("file_id")
+				file.FilePath = row.String("file_path")
+				file.IsDir = row.Bool("is_dir")
+				file.Size = row.Int64("size")
+				file.Bytes = buf
+				file.ModTime = row.Time("mod_time")
+				file.CreationTime = row.Time("creation_time")
+				if sitePrefix != "" {
+					file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
+				}
+				return file
+			})
+			if err != nil {
+				cleanup(err)
+				return
+			}
+			for cursor.Next() {
+				file, err := cursor.Result()
+				if err != nil {
+					cleanup(err)
+					return
+				}
+				tarHeader := &tar.Header{
+					Name:    file.FilePath,
+					ModTime: file.ModTime,
+					Size:    file.Size,
+					PAXRecords: map[string]string{
+						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+					},
+				}
+				if file.IsDir {
+					fmt.Printf("dumping: %s\n", file.FilePath)
+					tarHeader.Typeflag = tar.TypeDir
+					tarHeader.Mode = 0755
+					err = tarWriter.WriteHeader(tarHeader)
+					if err != nil {
+						cleanup(err)
+						return
+					}
+					continue
+				}
+				fileType, ok := fileTypes[path.Ext(file.FilePath)]
+				if !ok {
+					continue
+				}
+				fmt.Printf("dumping: %s\n", file.FilePath)
+				tarHeader.Typeflag = tar.TypeReg
+				tarHeader.Mode = 0644
+				err = tarWriter.WriteHeader(tarHeader)
+				if err != nil {
+					cleanup(err)
+					return
+				}
+				if fileType.IsObject {
+					reader, err := databaseFS.ObjectStorage.Get(nbrew.ctx, file.FileID.String()+path.Ext(file.FilePath))
+					if err != nil {
+						cleanup(err)
+						return
+					}
+					_, err = io.Copy(tarWriter, reader)
+					if err != nil {
+						cleanup(err)
+						return
+					}
+				} else {
+					if fileType.IsGzippable && !IsFulltextIndexed(file.FilePath) {
+						if gzipReader == nil {
+							gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
+							if err != nil {
+								cleanup(err)
+								return
+							}
+						} else {
+							err = gzipReader.Reset(bytes.NewReader(file.Bytes))
+							if err != nil {
+								cleanup(err)
+								return
+							}
+						}
+						_, err = io.Copy(tarWriter, gzipReader)
+						if err != nil {
+							cleanup(err)
+							return
+						}
+					} else {
+						_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
+						if err != nil {
+							cleanup(err)
+							return
+						}
+					}
+				}
+			}
+			err = cursor.Close()
+			if err != nil {
+				cleanup(err)
+				return
+			}
+		}
+	} else {
+		for _, name := range names {
+			root := path.Join(sitePrefix, parent, name)
+			err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						return nil
+					}
+					return err
+				}
+				fileInfo, err := dirEntry.Info()
+				if err != nil {
+					return err
+				}
+				var absolutePath string
+				if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, parent, name)
+				}
+				creationTime := CreationTime(absolutePath, fileInfo)
+				tarHeader := &tar.Header{
+					Name:    filePath,
+					ModTime: fileInfo.ModTime(),
+					Size:    fileInfo.Size(),
+					PAXRecords: map[string]string{
+						"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02 15:04:05Z"),
+					},
+				}
+				if dirEntry.IsDir() {
+					fmt.Printf("dumping: %s\n", filePath)
+					tarHeader.Typeflag = tar.TypeDir
+					tarHeader.Mode = 0755
+					err = tarWriter.WriteHeader(tarHeader)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+				_, ok := fileTypes[path.Ext(filePath)]
+				if !ok {
+					return nil
+				}
+				fmt.Printf("dumping: %s\n", filePath)
+				tarHeader.Typeflag = tar.TypeReg
+				tarHeader.Mode = 0644
+				err = tarWriter.WriteHeader(tarHeader)
+				if err != nil {
+					return err
+				}
+				file, err := nbrew.FS.WithContext(nbrew.ctx).Open(filePath)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+				_, err = io.Copy(tarWriter, file)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				cleanup(err)
+				return
+			}
+		}
 	}
 }
 
@@ -953,217 +1405,5 @@ func (nbrew *Notebrew) export_Old(w http.ResponseWriter, r *http.Request, user U
 		// fs.WalkDir, we'll need to walk the rows ourselves and uncompress
 		// gzippable files and fetching objects from ObjectStorage
 		// accordingly.
-	}
-}
-
-func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, parent string, names []string) {
-	defer func() {
-		if r := recover(); r != nil {
-			if nbrew.DB == nil {
-				return
-			}
-			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "DELETE FROM export_job WHERE site_prefix = {sitePrefix}",
-				Values: []any{
-					sq.StringParam("sitePrefix", sitePrefix),
-				},
-			})
-			if err != nil {
-				nbrew.Logger.Error(err.Error())
-			}
-		}
-	}()
-	cleanup := func(exitErr error) {
-		if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
-			if nbrew.DB == nil {
-				return
-			}
-			// status: started | restart
-			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "UPDATE export_job SET status = 'restart' WHERE site_prefix = {sitePrefix}",
-				Values: []any{
-					sq.StringParam("sitePrefix", sitePrefix),
-				},
-			})
-			if err != nil {
-				nbrew.Logger.Error(err.Error())
-			}
-			return
-		}
-		if exitErr != nil {
-			nbrew.Logger.Error(exitErr.Error())
-		}
-		if nbrew.DB == nil {
-			return
-		}
-		_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format:  "DELETE FROM export_job WHERE site_prefix = {sitePrefix}",
-			Values: []any{
-				sq.StringParam("sitePrefix", sitePrefix),
-			},
-		})
-		if err != nil {
-			nbrew.Logger.Error(err.Error())
-		}
-	}
-	writer, err := nbrew.FS.WithContext(ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
-	if err != nil {
-		cleanup(err)
-		return
-	}
-	defer writer.Close()
-	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
-	gzipWriter.Reset(writer)
-	defer func() {
-		gzipWriter.Close()
-		gzipWriter.Reset(io.Discard)
-		gzipWriterPool.Put(gzipWriter)
-	}()
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close()
-	seen := make(map[string]bool)
-	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-		buf := bufPool.Get().(*bytes.Buffer).Bytes()
-		defer func() {
-			if cap(buf) <= maxPoolableBufferCapacity {
-				buf = buf[:0]
-				bufPool.Put(bytes.NewBuffer(buf))
-			}
-		}()
-		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
-		defer func() {
-			if gzipReader != nil {
-				gzipReader.Reset(empty)
-				gzipReaderPool.Put(gzipReader)
-			}
-		}()
-		for _, name := range names {
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
-			cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-				Dialect: databaseFS.Dialect,
-				Format:  "SELECT {*} FROM files WHERE file_path = {filePath} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
-				Values: []any{
-					sq.Param("filePath", path.Join(sitePrefix, parent, name)),
-					sq.Param("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, parent, name))+"/%"),
-				},
-			}, func(row *sq.Row) (file struct {
-				FileID       ID
-				FilePath     string
-				IsDir        bool
-				Size         int64
-				ModTime      time.Time
-				CreationTime time.Time
-				Bytes        []byte
-			}) {
-				buf = row.Bytes(buf[:0], "COALESCE(text, data)")
-				file.FileID = row.UUID("file_id")
-				file.FilePath = row.String("file_path")
-				file.IsDir = row.Bool("is_dir")
-				file.Size = row.Int64("size")
-				file.Bytes = buf
-				file.ModTime = row.Time("mod_time")
-				file.CreationTime = row.Time("creation_time")
-				if sitePrefix != "" {
-					file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
-				}
-				return file
-			})
-			if err != nil {
-				cleanup(err)
-				return
-			}
-			for cursor.Next() {
-				file, err := cursor.Result()
-				if err != nil {
-					cleanup(err)
-					return
-				}
-				fileType, ok := fileTypes[path.Ext(file.FilePath)]
-				if !ok {
-					continue
-				}
-				fmt.Printf("dumping: %s\n", file.FilePath)
-				tarHeader := &tar.Header{
-					Name:    file.FilePath,
-					ModTime: file.ModTime,
-					Size:    file.Size,
-					PAXRecords: map[string]string{
-						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
-					},
-				}
-				if file.IsDir {
-					tarHeader.Typeflag = tar.TypeDir
-					tarHeader.Mode = 0755
-				} else {
-					tarHeader.Typeflag = tar.TypeReg
-					tarHeader.Mode = 0644
-				}
-				tarWriter.WriteHeader(tarHeader)
-				if fileType.IsObject {
-					reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
-					if err != nil {
-						reader.Close()
-						cleanup(err)
-						return
-					}
-					_, err = io.Copy(tarWriter, reader)
-					if err != nil {
-						reader.Close()
-						cleanup(err)
-						return
-					}
-					err = reader.Close()
-					if err != nil {
-						cleanup(err)
-						return
-					}
-				} else {
-					if fileType.IsGzippable && !IsFulltextIndexed(file.FilePath) {
-						if gzipReader == nil {
-							gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
-							if err != nil {
-								cleanup(err)
-								return
-							}
-						} else {
-							err = gzipReader.Reset(bytes.NewReader(file.Bytes))
-							if err != nil {
-								cleanup(err)
-								return
-							}
-						}
-						_, err = io.Copy(tarWriter, gzipReader)
-						if err != nil {
-							cleanup(err)
-							return
-						}
-					} else {
-						_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
-						if err != nil {
-							cleanup(err)
-							return
-						}
-					}
-				}
-			}
-			err = cursor.Close()
-			if err != nil {
-				cleanup(err)
-				return
-			}
-		}
-	} else {
-		for _, name := range names {
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
-		}
 	}
 }
