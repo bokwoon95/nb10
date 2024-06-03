@@ -53,10 +53,11 @@ type FS interface {
 }
 
 type FileType struct {
-	Ext         string
-	ContentType string
-	IsGzippable bool
-	IsObject    bool
+	Ext          string
+	ContentType  string
+	IsGzippable  bool
+	IsObject     bool
+	IsAttachment bool
 }
 
 var fileTypes = map[string]FileType{
@@ -78,5 +79,5 @@ var fileTypes = map[string]FileType{
 	".woff2": {Ext: ".woff2", ContentType: "font/woff2"},
 	".atom":  {Ext: ".atom", ContentType: "application/atom+xml; charset=utf-8", IsGzippable: true},
 	".json":  {Ext: ".json", ContentType: "application/json", IsGzippable: true},
-	".tgz":   {Ext: ".tgz", ContentType: "application/octet-stream", IsObject: true},
+	".tgz":   {Ext: ".tgz", ContentType: "application/octet-stream", IsObject: true, IsAttachment: true},
 }
