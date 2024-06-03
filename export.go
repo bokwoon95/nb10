@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -278,21 +279,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response := Response{
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
 			FormErrors: url.Values{},
-			Files:      make([]File, 0, len(request.Names)),
-		}
-		seen := make(map[string]bool)
-		for _, name := range request.Names {
-			name := filepath.ToSlash(name)
-			if strings.Contains(name, "/") {
-				continue
-			}
-			if seen[name] {
-				continue
-			}
-			seen[name] = true
-			response.Files = append(response.Files, File{
-				Name: name,
-			})
 		}
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
@@ -322,36 +308,102 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
-		var totalBytes atomic.Int64
-		_ = &totalBytes
-		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			_ = databaseFS
-			if response.ExportParent {
-				// TODO: just get the total size of the parent, no need to loop the names
-			} else {
+		var names []string
+		parent := response.Parent
+		if response.ExportParent {
+			names = []string{path.Base(parent)}
+			parent = path.Dir(parent)
+		} else {
+			names = slices.Clone(request.Names)
+			seen := make(map[string]bool)
+			n := 0
+			for _, name := range request.Names {
+				name := filepath.ToSlash(name)
+				if strings.Contains(name, "/") {
+					continue
+				}
+				if seen[name] {
+					continue
+				}
+				seen[name] = true
+				names[n] = name
+				n++
 			}
+			names = names[:n]
+		}
+
+		// Figure out the totalBytes we are going to have to process.
+		var totalBytes atomic.Int64
+		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 			group, groupctx := errgroup.WithContext(r.Context())
-			_ = groupctx
-			for i, name := range request.Names {
-				i, name := i, name
-				_, _ = i, name
+			for _, name := range names {
+				name := name
 				group.Go(func() error {
-					var parentFilter sq.Expression
-					_ = parentFilter
-					parent := path.Join(sitePrefix, response.Parent, name)
-					if parent == "." {
-						parentFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
+					var filePathFilter sq.Expression
+					filePath := path.Join(sitePrefix, parent, name)
+					if filePath == "." {
+						filePathFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
 							" OR files.file_path LIKE 'pages/%'" +
 							" OR files.file_path LIKE 'posts/%'" +
 							" OR files.file_path LIKE 'output/%'" +
 							" OR files.parent_id IS NULL)")
 					} else {
-						parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
+						filePathFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(filePath)+"/%")
+					}
+					n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format:  "SELECT {*} FROM files WHERE {filePathFilter}",
+						Values: []any{
+							sq.Param("filePathFilter", filePathFilter),
+						},
+					}, func(row *sq.Row) int64 {
+						return row.Int64("sum(coalesce(size, 0))")
+					})
+					if err != nil {
+						return err
+					}
+					totalBytes.Add(n)
+					return nil
+				})
+			}
+			err := group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+		} else {
+			group, groupctx := errgroup.WithContext(r.Context())
+			for _, name := range names {
+				name := name
+				group.Go(func() error {
+					filePath := path.Join(sitePrefix, parent, name)
+					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), filePath, func(filePath string, dirEntry fs.DirEntry, err error) error {
+						if err != nil {
+							return err
+						}
+						if dirEntry.IsDir() {
+							return nil
+						}
+						fileInfo, err := dirEntry.Info()
+						if err != nil {
+							return err
+						}
+						totalBytes.Add(fileInfo.Size())
+						return nil
+					})
+					if err != nil {
+						return err
 					}
 					return nil
 				})
 			}
-		} else {
+			err := group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
 		}
 
 		// 1. prepare the row to be inserted
