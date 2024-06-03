@@ -699,6 +699,7 @@ type exportWriter struct {
 func (w *exportWriter) Write(p []byte) (n int, err error) {
 	n, err = w.writer.Write(p)
 	processedBytes := w.processedBytes + int64(n)
+	fmt.Printf("old=%d, new=%d\n", w.processedBytes, processedBytes)
 	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
 		result, err := w.preparedExec.Exec(w.ctx, sq.Int64Param("processedBytes", processedBytes))
 		if err != nil {
