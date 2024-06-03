@@ -26,6 +26,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -965,7 +966,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
 				if fileType.IsAttachment {
-					w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 				}
 				http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 				return
@@ -992,7 +993,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			if fileType.IsAttachment {
-				w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 			}
 			http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 			return
@@ -1000,7 +1001,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
 		if fileType.IsAttachment {
-			w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 		}
 		if r.Method == "HEAD" {
 			w.WriteHeader(http.StatusOK)
@@ -1025,7 +1026,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
 				if fileType.IsAttachment {
-					w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 				}
 				http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 				return
@@ -1047,7 +1048,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			if fileType.IsAttachment {
-				w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 			}
 			http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 			return
@@ -1099,7 +1100,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		w.Header().Set("Cache-Control", cacheControl)
 		w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 		if fileType.IsAttachment {
-			w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 		}
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 		return
@@ -1109,7 +1110,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 	w.Header().Set("Content-Type", fileType.ContentType)
 	w.Header().Set("Cache-Control", cacheControl)
 	if fileType.IsAttachment {
-		w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
+		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
 	}
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)
