@@ -322,16 +322,27 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		startTime := time.Now().UTC()
-		outputName := response.OutputName
-		if outputName == "" {
-			outputName = strings.ReplaceAll(startTime.Format("2006-01-02-150405.999"), ".", "-")
+		if response.OutputName == "" {
+			response.OutputName = "files-" + strings.ReplaceAll(startTime.Format("2006-01-02-150405.999"), ".", "-")
 		}
-		fileName := outputName + ".tgz"
+		fileName := response.OutputName + ".tgz"
+		_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "exports", fileName))
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+		} else {
+			response.FormErrors.Add("outputName", "file name already exists")
+			writeResponse(w, r, response)
+			return
+		}
 
 		b, err := json.Marshal(map[string]any{
 			"parent":     response.Parent,
 			"names":      response.Names,
-			"outputName": outputName,
+			"outputName": response.OutputName,
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -347,14 +358,18 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			names = []string{path.Base(response.Parent)}
 		}
 
+		// 1. prepare the row to be inserted
+		// 2. attempt to acquire a slot (insert the row)
+		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 		var totalBytes atomic.Int64
-		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			group, groupctx := errgroup.WithContext(r.Context())
-			for _, name := range names {
-				name := name
-				group.Go(func() error {
+		databaseFS, _ := nbrew.FS.(*DatabaseFS)
+		group, groupctx := errgroup.WithContext(r.Context())
+		for _, name := range names {
+			name := name
+			group.Go(func() error {
+				root := path.Join(sitePrefix, parent, name)
+				if databaseFS != nil {
 					var filter sq.Expression
-					root := path.Join(sitePrefix, parent, name)
 					if root == "." {
 						filter = sq.Expr("(files.file_path LIKE 'notes/%'" +
 							" OR files.file_path LIKE 'pages/%'" +
@@ -377,22 +392,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						return err
 					}
 					totalBytes.Add(n)
-					return nil
-				})
-			}
-			err := group.Wait()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-		} else {
-			group, groupctx := errgroup.WithContext(r.Context())
-			for _, name := range names {
-				name := name
-				group.Go(func() error {
-					root := path.Join(sitePrefix, parent, name)
-					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(_ string, dirEntry fs.DirEntry, err error) error {
+				} else {
+					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
 						if err != nil {
 							if errors.Is(err, fs.ErrNotExist) {
 								return nil
@@ -412,17 +413,16 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					if err != nil {
 						return err
 					}
-					return nil
-				})
-			}
-			err := group.Wait()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
+				}
+				return nil
+			})
 		}
-
+		err = group.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO exports (site_id, file_name, source, start_time, total_bytes)" +
@@ -482,6 +482,31 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 				}
 			}
+			var db sq.DB
+			if nbrew.Dialect == "sqlite" {
+				db = nbrew.DB
+			} else {
+				conn, err := nbrew.DB.Conn(nbrew.ctx)
+				if err != nil {
+					cleanup(err)
+					return
+				}
+				defer conn.Close()
+				db = conn
+			}
+			preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
+				Values: []any{
+					sq.Int64Param("processedBytes", 0),
+					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+				},
+			})
+			if err != nil {
+				cleanup(err)
+				return
+			}
+			defer preparedExec.Close()
 			writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 			if err != nil {
 				cleanup(err)
@@ -498,9 +523,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			tarWriter := tar.NewWriter(gzipWriter)
 			defer tarWriter.Close()
 		}()
-		// 1. prepare the row to be inserted
-		// 2. attempt to acquire a slot (insert the row)
-		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
