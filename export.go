@@ -425,6 +425,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO exports (site_id, file_name, source, start_time, total_bytes)" +
 				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {source}, {startTime}, {totalBytes})",
@@ -460,6 +461,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				}
 				if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
 					_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+						Debug:   true,
 						Dialect: nbrew.Dialect,
 						Format:  "UPDATE exports SET start_time = NULL WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
 						Values: []any{
@@ -472,6 +474,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				} else {
 					logger.Error(err.Error())
 					_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+						Debug:   true,
 						Dialect: nbrew.Dialect,
 						Format:  "DELETE FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
 						Values: []any{
@@ -496,6 +499,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				db = conn
 			}
 			preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
+				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
 				Values: []any{
@@ -545,6 +549,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				for _, name := range names {
 					root := path.Join(sitePrefix, parent, name)
 					cursor, err := sq.FetchCursor(r.Context(), databaseFS.DB, sq.Query{
+						Debug:   true,
 						Dialect: databaseFS.Dialect,
 						Format:  "SELECT {*} FROM files WHERE file_path = {root} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
 						Values: []any{
@@ -676,7 +681,9 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 				}
 			}
+			cleanup(nil)
 		}()
+		writeResponse(w, r, response)
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
