@@ -141,20 +141,9 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
-	jobsContext   context.Context
-	cancelJobs    func()
-	jobsWaitGroup sync.WaitGroup
-
-	// What is the best way
-	importJobMutex sync.RWMutex
-	importJob      map[string]job
-
-	exportJobMutex sync.RWMutex
-	exportJob      map[string]job
-
-	// ExportsInProgress map[string]string ($sitePrefix => $sitePrefix/exports/$fileName)
-	// if an export is in progress, its link will not be clickable (but if somebody manually GETs the link, they still can download it albeit an incomplete corrupted archive).
-	// if an import is in progress
+	ctx       context.Context
+	cancel    func()
+	waitGroup sync.WaitGroup
 
 	CaptchaConfig struct {
 		WidgetScriptSrc template.URL
@@ -185,15 +174,17 @@ type Notebrew struct {
 }
 
 func New() *Notebrew {
-	jobsContext, cancelJobs := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	nbrew := &Notebrew{
-		jobsContext: jobsContext,
-		cancelJobs:  cancelJobs,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	return nbrew
 }
 
 func (nbrew *Notebrew) Close() error {
+	nbrew.cancel()
+	nbrew.waitGroup.Wait()
 	return nil
 }
 

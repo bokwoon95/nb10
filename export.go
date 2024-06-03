@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -109,10 +108,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-		if response.Error != "" {
-			writeResponse(w, r, response)
-			return
-		}
 
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
@@ -279,6 +274,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 
 		response := Response{
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
+			Names:      make([]string, 0, len(request.Names)),
+			OutputName: filenameSafe(request.OutputName),
 			FormErrors: url.Values{},
 		}
 		head, _, _ := strings.Cut(response.Parent, "/")
@@ -302,60 +299,76 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
-			response.ExportParent = len(request.Names) == 0
+			if len(request.Names) == 0 {
+				response.ExportParent = true
+			} else {
+				seen := make(map[string]bool)
+				for _, name := range request.Names {
+					name := filepath.ToSlash(name)
+					if strings.Contains(name, "/") {
+						continue
+					}
+					if seen[name] {
+						continue
+					}
+					seen[name] = true
+					response.Names = append(response.Names, name)
+				}
+			}
 		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
 		}
 
-		var names []string
+		startTime := time.Now().UTC()
+		outputName := response.OutputName
+		if outputName == "" {
+			outputName = strings.ReplaceAll(startTime.Format("2006-01-02-150405.999"), ".", "-")
+		}
+		fileName := outputName + ".tgz"
+
+		b, err := json.Marshal(map[string]any{
+			"parent":     response.Parent,
+			"names":      response.Names,
+			"outputName": outputName,
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		source := string(b)
+
 		parent := response.Parent
+		names := response.Names
 		if response.ExportParent {
-			names = []string{path.Base(parent)}
-			parent = path.Dir(parent)
-		} else {
-			names = slices.Clone(request.Names)
-			seen := make(map[string]bool)
-			n := 0
-			for _, name := range request.Names {
-				name := filepath.ToSlash(name)
-				if strings.Contains(name, "/") {
-					continue
-				}
-				if seen[name] {
-					continue
-				}
-				seen[name] = true
-				names[n] = name
-				n++
-			}
-			names = names[:n]
+			parent = path.Dir(response.Parent)
+			names = []string{path.Base(response.Parent)}
 		}
 
-		// Figure out the totalBytes we are going to have to process.
 		var totalBytes atomic.Int64
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 			group, groupctx := errgroup.WithContext(r.Context())
 			for _, name := range names {
 				name := name
 				group.Go(func() error {
-					var filePathFilter sq.Expression
-					filePath := path.Join(sitePrefix, parent, name)
-					if filePath == "." {
-						filePathFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
+					var filter sq.Expression
+					root := path.Join(sitePrefix, parent, name)
+					if root == "." {
+						filter = sq.Expr("(files.file_path LIKE 'notes/%'" +
 							" OR files.file_path LIKE 'pages/%'" +
 							" OR files.file_path LIKE 'posts/%'" +
 							" OR files.file_path LIKE 'output/%'" +
 							" OR files.parent_id IS NULL)")
 					} else {
-						filePathFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(filePath)+"/%")
+						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
 					}
 					n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
-						Format:  "SELECT {*} FROM files WHERE {filePathFilter}",
+						Format:  "SELECT {*} FROM files WHERE {filter}",
 						Values: []any{
-							sq.Param("filePathFilter", filePathFilter),
+							sq.Param("filter", filter),
 						},
 					}, func(row *sq.Row) int64 {
 						return row.Int64("sum(coalesce(size, 0))")
@@ -378,9 +391,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			for _, name := range names {
 				name := name
 				group.Go(func() error {
-					filePath := path.Join(sitePrefix, parent, name)
-					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), filePath, func(filePath string, dirEntry fs.DirEntry, err error) error {
+					root := path.Join(sitePrefix, parent, name)
+					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(_ string, dirEntry fs.DirEntry, err error) error {
 						if err != nil {
+							if errors.Is(err, fs.ErrNotExist) {
+								return nil
+							}
 							return err
 						}
 						if dirEntry.IsDir() {
@@ -407,6 +423,81 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			}
 		}
 
+		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "INSERT INTO exports (site_id, file_name, source, start_time, total_bytes)" +
+				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {source}, {startTime}, {totalBytes})",
+			Values: []any{
+				sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+				sq.StringParam("fileName", fileName),
+				sq.StringParam("source", source),
+				sq.TimeParam("startTime", startTime),
+				sq.Int64Param("totalBytes", totalBytes.Load()),
+			},
+		})
+		if err != nil {
+			if nbrew.ErrorCode != nil {
+				errorCode := nbrew.ErrorCode(err)
+				if IsKeyViolation(nbrew.Dialect, errorCode) {
+					response.Error = "there is an ongoing export, please try again once it has completed"
+					writeResponse(w, r, response)
+					return
+				}
+			}
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+
+		logger := getLogger(r.Context())
+		nbrew.waitGroup.Add(1)
+		go func() {
+			defer nbrew.waitGroup.Done()
+			cleanup := func(exitErr error) {
+				if exitErr == nil {
+					return
+				}
+				if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
+					_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+						Dialect: nbrew.Dialect,
+						Format:  "UPDATE exports SET start_time = NULL WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+						Values: []any{
+							sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+						},
+					})
+					if err != nil {
+						logger.Error(err.Error())
+					}
+				} else {
+					logger.Error(err.Error())
+					_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+						Dialect: nbrew.Dialect,
+						Format:  "DELETE FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+						Values: []any{
+							sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+						},
+					})
+					if err != nil {
+						logger.Error(err.Error())
+					}
+				}
+			}
+			writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
+			if err != nil {
+				cleanup(err)
+				return
+			}
+			defer writer.Close()
+			gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
+			gzipWriter.Reset(writer)
+			defer func() {
+				gzipWriter.Close()
+				gzipWriter.Reset(io.Discard)
+				gzipWriterPool.Put(gzipWriter)
+			}()
+			tarWriter := tar.NewWriter(gzipWriter)
+			defer tarWriter.Close()
+		}()
 		// 1. prepare the row to be inserted
 		// 2. attempt to acquire a slot (insert the row)
 		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
@@ -847,9 +938,6 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 	defer func() {
 		if r := recover(); r != nil {
 			if nbrew.DB == nil {
-				nbrew.exportJobMutex.Lock()
-				delete(nbrew.exportJob, sitePrefix)
-				nbrew.exportJobMutex.Unlock()
 				return
 			}
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
@@ -886,9 +974,6 @@ func (nbrew *Notebrew) runExportJob(ctx context.Context, sitePrefix, fileName, p
 			nbrew.Logger.Error(exitErr.Error())
 		}
 		if nbrew.DB == nil {
-			nbrew.exportJobMutex.Lock()
-			delete(nbrew.exportJob, sitePrefix)
-			nbrew.exportJobMutex.Unlock()
 			return
 		}
 		_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{

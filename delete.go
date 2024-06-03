@@ -99,10 +99,6 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-		if response.Error != "" {
-			writeResponse(w, r, response)
-			return
-		}
 		head, _, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case "notes", "pages", "posts", "output", "imports", "exports":

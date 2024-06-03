@@ -116,6 +116,7 @@ func main() {
 			return nil
 		}
 		nbrew := nb10.New()
+		defer nbrew.Close()
 		nbrew.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 		}))
