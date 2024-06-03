@@ -103,6 +103,21 @@ type job struct {
 	done           chan struct{}
 }
 
+type importData struct {
+	fileName       string
+	startTime      time.Time
+	totalBytes     int64
+	processedBytes int64
+}
+
+type exportData struct {
+	fileName       string
+	source         []byte
+	startTime      time.Time
+	totalBytes     int64
+	processedBytes int64
+}
+
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
 	CMSDomain string // localhost:6444, example.com
@@ -142,10 +157,6 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
-	ctx       context.Context
-	cancel    func()
-	waitGroup sync.WaitGroup
-
 	CaptchaConfig struct {
 		WidgetScriptSrc template.URL
 		WidgetClass     string
@@ -172,6 +183,13 @@ type Notebrew struct {
 	ContentSecurityPolicy string
 
 	Logger *slog.Logger
+
+	ctx       context.Context
+	cancel    func()
+	waitGroup sync.WaitGroup
+	mutex     sync.RWMutex
+	importMap map[string]importData
+	exportMap map[string]exportData
 }
 
 func New() *Notebrew {
