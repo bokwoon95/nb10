@@ -48,9 +48,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		UserID         ID         `json:"userID"`
 		Username       string     `json:"username"`
 		Parent         string     `json:"parent"`
-		Files          []File     `json:"files"`
+		Names          []string   `json:"names"`
 		OutputName     string     `json:"outputName"`
 		ExportParent   bool       `json:"exportParent"`
+		Files          []File     `json:"files"`
 		Error          string     `json:"error"`
 		FormErrors     url.Values `json:"formErrors"`
 	}
