@@ -716,7 +716,7 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 			}
 			var absolutePath string
 			if dirFS, ok := nbrew.FS.(*DirFS); ok {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, parent, name)
+				absolutePath = path.Join(dirFS.RootDir, filePath)
 			}
 			creationTime := CreationTime(absolutePath, fileInfo)
 			tarHeader := &tar.Header{
