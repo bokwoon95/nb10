@@ -479,8 +479,8 @@ func (w *exportWriter) Write(p []byte) (n int, err error) {
 		if result.RowsAffected == 0 {
 			return n, fmt.Errorf("canceled from database: %w", context.Canceled)
 		}
-		w.processedBytes = processedBytes
 	}
+	w.processedBytes = processedBytes
 	return n, nil
 }
 
@@ -576,12 +576,22 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 		}()
 		for _, name := range names {
 			root := path.Join(sitePrefix, parent, name)
+			var filter sq.Expression
+			if root == "." {
+				filter = sq.Expr("file_path = 'notes' OR file_path LIKE 'notes/%'" +
+					" OR file_path = 'pages' OR file_path LIKE 'pages/%'" +
+					" OR file_path = 'posts' OR file_path LIKE 'posts/%'" +
+					" OR file_path = 'output' OR file_path LIKE 'output/%'" +
+					" OR file_path = 'site.json'")
+			} else {
+				filter = sq.Expr("file_path = {} OR file_path LIKE {} ESCAPE '\\'", root, wildcardReplacer.Replace(root)+"/%")
+			}
 			cursor, err := sq.FetchCursor(nbrew.ctx, databaseFS.DB, sq.Query{
+				Debug:   true,
 				Dialect: databaseFS.Dialect,
-				Format:  "SELECT {*} FROM files WHERE file_path = {root} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
+				Format:  "SELECT {*} FROM files WHERE {filter} ORDER BY file_path",
 				Values: []any{
-					sq.Param("root", root),
-					sq.Param("pattern", wildcardReplacer.Replace(root)+"/%"),
+					sq.Param("filter", filter),
 				},
 			}, func(row *sq.Row) (file struct {
 				FileID       ID
@@ -693,67 +703,78 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 			}
 		}
 	} else {
-		for _, name := range names {
-			root := path.Join(sitePrefix, parent, name)
-			err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
-				if err != nil {
-					if errors.Is(err, fs.ErrNotExist) {
-						return nil
-					}
-					return err
-				}
-				fileInfo, err := dirEntry.Info()
-				if err != nil {
-					return err
-				}
-				var absolutePath string
-				if dirFS, ok := nbrew.FS.(*DirFS); ok {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, parent, name)
-				}
-				creationTime := CreationTime(absolutePath, fileInfo)
-				tarHeader := &tar.Header{
-					Name:    filePath,
-					ModTime: fileInfo.ModTime(),
-					Size:    fileInfo.Size(),
-					PAXRecords: map[string]string{
-						"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02 15:04:05Z"),
-					},
-				}
-				if dirEntry.IsDir() {
-					fmt.Printf("dumping: %s\n", filePath)
-					tarHeader.Typeflag = tar.TypeDir
-					tarHeader.Mode = 0755
-					err = tarWriter.WriteHeader(tarHeader)
-					if err != nil {
-						return err
-					}
+		fn := func(filePath string, dirEntry fs.DirEntry, err error) error {
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				_, ok := fileTypes[path.Ext(filePath)]
-				if !ok {
-					return nil
-				}
+				return err
+			}
+			fileInfo, err := dirEntry.Info()
+			if err != nil {
+				return err
+			}
+			var absolutePath string
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, parent, name)
+			}
+			creationTime := CreationTime(absolutePath, fileInfo)
+			tarHeader := &tar.Header{
+				Name:    filePath,
+				ModTime: fileInfo.ModTime(),
+				Size:    fileInfo.Size(),
+				PAXRecords: map[string]string{
+					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02 15:04:05Z"),
+				},
+			}
+			if dirEntry.IsDir() {
 				fmt.Printf("dumping: %s\n", filePath)
-				tarHeader.Typeflag = tar.TypeReg
-				tarHeader.Mode = 0644
+				tarHeader.Typeflag = tar.TypeDir
+				tarHeader.Mode = 0755
 				err = tarWriter.WriteHeader(tarHeader)
 				if err != nil {
 					return err
 				}
-				file, err := nbrew.FS.WithContext(nbrew.ctx).Open(filePath)
-				if err != nil {
-					return err
-				}
-				defer file.Close()
-				_, err = io.Copy(tarWriter, file)
-				if err != nil {
-					return err
-				}
 				return nil
-			})
+			}
+			_, ok := fileTypes[path.Ext(filePath)]
+			if !ok {
+				return nil
+			}
+			fmt.Printf("dumping: %s\n", filePath)
+			tarHeader.Typeflag = tar.TypeReg
+			tarHeader.Mode = 0644
+			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				cleanup(err)
-				return
+				return err
+			}
+			file, err := nbrew.FS.WithContext(nbrew.ctx).Open(filePath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = io.Copy(tarWriter, file)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		for _, name := range names {
+			root := path.Join(sitePrefix, parent, name)
+			if root == "." {
+				for _, root := range []string{"notes", "pages", "posts", "output", "site.json"} {
+					err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, fn)
+					if err != nil {
+						cleanup(err)
+						return
+					}
+				}
+			} else {
+				err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, fn)
+				if err != nil {
+					cleanup(err)
+					return
+				}
 			}
 		}
 	}
