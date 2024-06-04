@@ -91,17 +91,6 @@
     {{- end }}
   </ul>
 </form>
-  {{- if or $.PreviousURL $.NextURL }}
-  <div class='mv3 flex flex-wrap items-center'>
-    {{- if $.PreviousURL }}
-    <a href='{{ $.PreviousURL }}'>&larr; previous</a>
-    {{- end }}
-    <span class='flex-grow-1'></span>
-    {{- if $.NextURL }}
-    <a href='{{ $.NextURL }}'>next &rarr;</a>
-    {{- end }}
-  </div>
-  {{- end }}
 {{- else }}
   <div class='mv4 tc'>
     folder is empty

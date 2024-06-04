@@ -299,6 +299,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			nbrew.internalServerError(w, r, err)
 			return
 		}
+		response.Files = make([]File, 0, len(dirEntries))
 		for _, dirEntry := range dirEntries {
 			fileInfo, err := dirEntry.Info()
 			if err != nil {

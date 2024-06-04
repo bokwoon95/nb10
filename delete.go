@@ -205,9 +205,9 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":       "delete",
-					"numDeleted": len(response.Files),
-					"numErrors":  len(response.DeleteErrors),
+					"from":         "delete",
+					"numDeleted":   len(response.Files),
+					"deleteErrors": response.DeleteErrors,
 				},
 				"regenerationStats": response.RegenerationStats,
 			})

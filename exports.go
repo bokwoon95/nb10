@@ -10,6 +10,9 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/bokwoon95/nb10/sq"
+	"golang.org/x/sync/errgroup"
 )
 
 func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User, sitePrefix, tgzFileName string) {
@@ -38,6 +41,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		IsDir           bool           `json:"isDir"`
 		ModTime         time.Time      `json:"modTime"`
 		CreationTime    time.Time      `json:"creationTime"`
+		PinnedFiles     []File         `json:"pinnedfiles"`
 		Files           []File         `json:"files"`
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
 	}
@@ -242,6 +246,111 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		}
 		response.FilePath = "exports"
 		response.IsDir = true
+
+		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+			group, groupctx := errgroup.WithContext(r.Context())
+			group.Go(func() error {
+				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM pinned_file" +
+						" JOIN files ON files.file_id = pinned_file.file_id" +
+						" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+						" ORDER BY files.file_path",
+					Values: []any{
+						sq.StringParam("filePath", path.Join(sitePrefix, "exports")),
+					},
+				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
+					return File{
+						FileID:       row.UUID("files.file_id"),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
+					}
+				})
+				if err != nil {
+					return err
+				}
+				response.PinnedFiles = pinnedFiles
+				return nil
+			})
+			group.Go(func() error {
+				files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+						" ORDER BY file_path",
+					Values: []any{
+						sq.StringParam("filePath", path.Join(sitePrefix, "exports")),
+					},
+				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
+					return File{
+						FileID:       row.UUID("files.file_id"),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
+					}
+				})
+				if err != nil {
+					return err
+				}
+				response.Files = files
+				return nil
+			})
+			err = group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+		} else {
+			dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, "exports"))
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			response.Files = make([]File, 0, len(dirEntries))
+			for _, dirEntry := range dirEntries {
+				fileInfo, err := dirEntry.Info()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				name := fileInfo.Name()
+				var absolutePath string
+				if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, "exports", name)
+				}
+				file := File{
+					Parent:       path.Join(sitePrefix, "exports"),
+					Name:         name,
+					IsDir:        fileInfo.IsDir(),
+					Size:         fileInfo.Size(),
+					ModTime:      fileInfo.ModTime(),
+					CreationTime: CreationTime(absolutePath, fileInfo),
+				}
+				if file.IsDir {
+					response.Files = append(response.Files, file)
+					continue
+				}
+				_, ok := fileTypes[path.Ext(file.Name)]
+				if !ok {
+					continue
+				}
+				response.Files = append(response.Files, file)
+			}
+		}
 		writeResponse(w, r, response)
 	case "POST":
 		if tgzFileName != "" {
