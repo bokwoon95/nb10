@@ -62,7 +62,7 @@
       {
         "column": "file_path",
         "type": {
-          "default": "VARCHAR(500)"
+          "default": "VARCHAR(1500)"
         },
         "unique": true,
         "notnull": true
