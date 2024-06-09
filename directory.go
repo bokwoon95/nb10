@@ -45,8 +45,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		Sort              string            `json:"sort"`
 		Order             string            `json:"order"`
 		From              string            `json:"from"`
+		FromCreated       string            `json:"fromCreated"`
+		FromEdited        string            `json:"fromEdited"`
 		FromTime          string            `json:"fromTime"`
 		Before            string            `json:"before"`
+		BeforeCreated     string            `json:"beforeCreated"`
+		BeforeEdited      string            `json:"beforeEdited"`
 		BeforeTime        string            `json:"beforeTime"`
 		Limit             int               `json:"limit"`
 		PreviousURL       string            `json:"previousURL"`
@@ -411,8 +415,27 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 	}
 
+	const timeFormat = "2006-01-02T150405.999999999Z"
+	response.From = r.Form.Get("from")
+	fromCreated, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromCreated"), time.UTC)
+	if !fromCreated.IsZero() {
+		response.FromCreated = fromCreated.Format(timeFormat)
+	}
+	fromEdited, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromEdited"), time.UTC)
+	if !fromEdited.IsZero() {
+		response.FromEdited = fromEdited.Format(timeFormat)
+	}
+	response.Before = r.Form.Get("before")
+	beforeCreated, _ := time.ParseInLocation(timeFormat, r.Form.Get("beforeCreated"), time.UTC)
+	if !beforeCreated.IsZero() {
+		response.BeforeCreated = beforeCreated.Format(timeFormat)
+	}
+	beforeEdited, _ := time.ParseInLocation(timeFormat, r.Form.Get("beforeEdited"), time.UTC)
+	if !beforeEdited.IsZero() {
+		response.BeforeEdited = beforeEdited.Format(timeFormat)
+	}
+
 	if response.Sort == "name" {
-		response.From = r.Form.Get("from")
 		if response.From != "" {
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
@@ -650,7 +673,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 	}
 
-	const timeFormat = "2006-01-02T150405.999999999Z"
 	if response.Sort == "edited" || response.Sort == "created" {
 		fromTime, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromTime"), time.UTC)
 		from := r.Form.Get("from")
