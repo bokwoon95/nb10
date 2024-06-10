@@ -1464,5 +1464,40 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 
+	response.Limit, _ = strconv.Atoi(r.Form.Get("limit"))
+	if response.Limit <= 0 {
+		response.Limit = 200
+	}
+	scheme := "https"
+	_ = scheme
+	if r.TLS == nil {
+		scheme = "http"
+	}
+
+	pinnedFileQuery := sq.Query{
+		Dialect: databaseFS.Dialect,
+		Format: "SELECT {*}" +
+			" FROM pinned_file" +
+			" JOIN files ON files.file_id = pinned_file.file_id" +
+			" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+			" ORDER BY files.file_path",
+		Values: []any{
+			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+		},
+	}
+	pinnedFileMapper := func(row *sq.Row) File {
+		filePath := row.String("files.file_path")
+		return File{
+			FileID:       row.UUID("files.file_id"),
+			Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+			Name:         path.Base(filePath),
+			Size:         row.Int64("files.size"),
+			ModTime:      row.Time("files.mod_time"),
+			CreationTime: row.Time("files.creation_time"),
+			IsDir:        row.Bool("files.is_dir"),
+		}
+	}
+	_, _ = pinnedFileQuery, pinnedFileMapper
+
 	writeResponse(w, r, response)
 }
