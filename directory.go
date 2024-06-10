@@ -1166,7 +1166,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					if values.Has("cut") {
 						clipboard.Set("cut", "")
 					}
-					clipboard.Set("sitePrefix", values.Get("sitePrefix"))
+					clipboard.Set("sitePrefix", sourceSitePrefix)
 					clipboard.Set("parent", values.Get("parent"))
 					for _, name := range values["name"] {
 						if isInClipboard[name] {
