@@ -1499,5 +1499,25 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	}
 	_, _ = pinnedFileQuery, pinnedFileMapper
 
+	const timeFormat = "2006-01-02T150405.999999999Z"
+	response.From = r.Form.Get("from")
+	fromCreated, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromCreated"), time.UTC)
+	if !fromCreated.IsZero() {
+		response.FromCreated = fromCreated.Format(timeFormat)
+	}
+	fromEdited, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromEdited"), time.UTC)
+	if !fromEdited.IsZero() {
+		response.FromEdited = fromEdited.Format(timeFormat)
+	}
+	response.Before = r.Form.Get("before")
+	beforeCreated, _ := time.ParseInLocation(timeFormat, r.Form.Get("beforeCreated"), time.UTC)
+	if !beforeCreated.IsZero() {
+		response.BeforeCreated = beforeCreated.Format(timeFormat)
+	}
+	beforeEdited, _ := time.ParseInLocation(timeFormat, r.Form.Get("beforeEdited"), time.UTC)
+	if !beforeEdited.IsZero() {
+		response.BeforeEdited = beforeEdited.Format(timeFormat)
+	}
+
 	writeResponse(w, r, response)
 }
