@@ -1375,5 +1375,94 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			}
 		}
 	}
+
+	databaseFS, ok := nbrew.FS.(*DatabaseFS)
+	_ = databaseFS
+	if !ok {
+		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, filePath))
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		response.Files = make([]File, 0, len(dirEntries))
+		for _, dirEntry := range dirEntries {
+			fileInfo, err := dirEntry.Info()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			name := fileInfo.Name()
+			var absolutePath string
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath, name)
+			}
+			file := File{
+				Parent:       filePath,
+				Name:         name,
+				IsDir:        fileInfo.IsDir(),
+				Size:         fileInfo.Size(),
+				ModTime:      fileInfo.ModTime(),
+				CreationTime: CreationTime(absolutePath, fileInfo),
+			}
+			if file.IsDir {
+				response.Files = append(response.Files, file)
+				continue
+			}
+			_, ok := fileTypes[path.Ext(file.Name)]
+			if !ok {
+				continue
+			}
+			response.Files = append(response.Files, file)
+		}
+		switch response.Sort {
+		case "name":
+			if response.Order == "desc" {
+				slices.Reverse(response.Files)
+			}
+		case "edited":
+			slices.SortFunc(response.Files, func(a, b File) int {
+				if a.ModTime.Equal(b.ModTime) {
+					return strings.Compare(a.Name, b.Name)
+				}
+				if a.ModTime.Before(b.ModTime) {
+					if response.Order == "asc" {
+						return -1
+					} else {
+						return 1
+					}
+				} else {
+					if response.Order == "asc" {
+						return 1
+					} else {
+						return -1
+					}
+				}
+			})
+		case "created":
+			slices.SortFunc(response.Files, func(a, b File) int {
+				if a.CreationTime.Equal(b.CreationTime) {
+					return strings.Compare(a.Name, b.Name)
+				}
+				if a.CreationTime.Before(b.CreationTime) {
+					if response.Order == "asc" {
+						return -1
+					} else {
+						return 1
+					}
+				} else {
+					if response.Order == "asc" {
+						return 1
+					} else {
+						return -1
+					}
+				}
+			})
+		}
+		writeResponse(w, r, response)
+		return
+	}
+
 	writeResponse(w, r, response)
 }
