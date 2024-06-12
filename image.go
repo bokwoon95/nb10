@@ -323,9 +323,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.Content = strings.TrimSpace(request.Content)
 		_, err := sq.Exec(r.Context(), databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
-			Format:  "UPDATE files SET text = {content} WHERE file_path = {filePath}",
+			Format:  "UPDATE files SET text = {content}, mod_time = {modTime} WHERE file_path = {filePath}",
 			Values: []any{
 				sq.StringParam("content", response.Content),
+				sq.TimeParam("modTime", time.Now().UTC()),
 				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
 			},
 		})
