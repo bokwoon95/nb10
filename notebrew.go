@@ -421,23 +421,12 @@ func urlSafe(s string) string {
 	var count int
 	var b strings.Builder
 	b.Grow(len(s))
-	openQuote := true
 	for _, char := range s {
 		if count >= 80 {
 			break
 		}
 		if char == ' ' {
 			b.WriteRune('-')
-			count++
-			continue
-		}
-		if char == '"' {
-			if openQuote {
-				b.WriteRune('“')
-			} else {
-				b.WriteRune('”')
-			}
-			openQuote = !openQuote
 			count++
 			continue
 		}
@@ -468,29 +457,39 @@ var isFilenameUnsafe = [...]bool{
 	'#': true, /* '#' is technically allowed in filenames but plays havoc with URLs, so exclude */
 }
 
+// https://stackoverflow.com/a/31976060
+var filenameReplacementChars = [...]rune{
+	'<':  '❮', // U+276E, HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
+	'>':  '❯', // U+276F, HEAVY RIGHT-POINTING ANGLE QUOTATION MARK ORNAMENT
+	':':  '꞉', // U+A789, MODIFIER LETTER COLON
+	'"':  '″', // U+2033, DOUBLE PRIME
+	'/':  '⧸', // U+29F8, BIG SOLIDUS
+	'\\': '⧹', // U+29F9, BIG REVERSE SOLIDUS
+	'|':  '│', // U+2502, BOX DRAWINGS LIGHT VERTICAL
+	'?':  '❔', // U+2754, WHITE QUESTION MARK ORNAMENT
+	'*':  '∗', // U+2217, ASTERISK OPERATOR
+	'#':  '＃', // U+FF03, FULLWIDTH NUMBER SIGN
+}
+
 func filenameSafe(s string) string {
 	s = strings.TrimSpace(s)
 	var b strings.Builder
 	b.Grow(len(s))
-	openQuote := true
 	for _, char := range s {
 		if char >= 0 && char <= 31 {
 			continue
 		}
-		if char == '"' {
-			if openQuote {
-				b.WriteRune('“')
-			} else {
-				b.WriteRune('”')
-			}
-			openQuote = !openQuote
-			continue
-		}
 		n := int(char)
-		if n < len(isFilenameUnsafe) && isFilenameUnsafe[n] {
+		if int(char) >= len(filenameReplacementChars) {
+			b.WriteRune(char)
 			continue
 		}
-		b.WriteRune(char)
+		replacementChar := filenameReplacementChars[n]
+		if replacementChar == 0 {
+			b.WriteRune(char)
+			continue
+		}
+		b.WriteRune(replacementChar)
 	}
 	return strings.Trim(b.String(), ".")
 }
