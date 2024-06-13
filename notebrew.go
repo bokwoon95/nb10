@@ -459,7 +459,7 @@ var filenameReplacementChars = [...]rune{
 	'/':  '⧸', // U+29F8, BIG SOLIDUS
 	'\\': '⧹', // U+29F9, BIG REVERSE SOLIDUS
 	'|':  '│', // U+2502, BOX DRAWINGS LIGHT VERTICAL
-	'?':  '❔', // U+2754, WHITE QUESTION MARK ORNAMENT
+	'?':  '？', // U+FF1F, FULLWIDTH QUESTION MARK
 	'*':  '∗', // U+2217, ASTERISK OPERATOR
 }
 
