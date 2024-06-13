@@ -468,7 +468,6 @@ var filenameReplacementChars = [...]rune{
 	'|':  '│', // U+2502, BOX DRAWINGS LIGHT VERTICAL
 	'?':  '❔', // U+2754, WHITE QUESTION MARK ORNAMENT
 	'*':  '∗', // U+2217, ASTERISK OPERATOR
-	'#':  '＃', // U+FF03, FULLWIDTH NUMBER SIGN
 }
 
 func filenameSafe(s string) string {
