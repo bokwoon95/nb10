@@ -421,12 +421,23 @@ func urlSafe(s string) string {
 	var count int
 	var b strings.Builder
 	b.Grow(len(s))
+	openQuote := true
 	for _, char := range s {
 		if count >= 80 {
 			break
 		}
 		if char == ' ' {
 			b.WriteRune('-')
+			count++
+			continue
+		}
+		if char == '"' {
+			if openQuote {
+				b.WriteRune('“')
+			} else {
+				b.WriteRune('”')
+			}
+			openQuote = !openQuote
 			count++
 			continue
 		}
@@ -461,8 +472,18 @@ func filenameSafe(s string) string {
 	s = strings.TrimSpace(s)
 	var b strings.Builder
 	b.Grow(len(s))
+	openQuote := true
 	for _, char := range s {
 		if char >= 0 && char <= 31 {
+			continue
+		}
+		if char == '"' {
+			if openQuote {
+				b.WriteRune('“')
+			} else {
+				b.WriteRune('”')
+			}
+			openQuote = !openQuote
 			continue
 		}
 		n := int(char)
