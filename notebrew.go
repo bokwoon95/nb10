@@ -451,13 +451,6 @@ func urlSafe(s string) string {
 }
 
 // https://stackoverflow.com/a/31976060
-var isFilenameUnsafe = [...]bool{
-	'<': true, '>': true, ':': true, '"': true, '/': true,
-	'\\': true, '|': true, '?': true, '*': true,
-	'#': true, /* '#' is technically allowed in filenames but plays havoc with URLs, so exclude */
-}
-
-// https://stackoverflow.com/a/31976060
 var filenameReplacementChars = [...]rune{
 	'<':  '❮', // U+276E, HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
 	'>':  '❯', // U+276F, HEAVY RIGHT-POINTING ANGLE QUOTATION MARK ORNAMENT
