@@ -480,7 +480,7 @@ func filenameSafe(s string) string {
 			continue
 		}
 		n := int(char)
-		if int(char) >= len(filenameReplacementChars) {
+		if n >= len(filenameReplacementChars) {
 			b.WriteRune(char)
 			continue
 		}

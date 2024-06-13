@@ -315,19 +315,25 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		switch head {
 		case "notes":
+			var b strings.Builder
+			b.Grow(len(response.To))
 			for _, char := range response.To {
 				if char >= 0 && char <= 31 {
 					continue
 				}
 				n := int(char)
-				if n >= len(isFilenameUnsafe) || !isFilenameUnsafe[n] {
+				if n >= len(filenameReplacementChars) {
+					b.WriteRune(char)
 					continue
 				}
-				response.FormErrors.Add("to", fmt.Sprintf("cannot include character %q", string(char)))
-				response.Error = "FormErrorsPresent"
-				writeResponse(w, r, response)
-				return
+				replacementChar := filenameReplacementChars[n]
+				if replacementChar == 0 {
+					b.WriteRune(char)
+					continue
+				}
+				b.WriteRune(replacementChar)
 			}
+			response.To = b.String()
 		case "pages", "posts", "output", "imports", "exports":
 			if response.Parent == "pages" && (response.Name == "index.html" || response.Name == "404.html") {
 				response.Error = "InvalidFile"
