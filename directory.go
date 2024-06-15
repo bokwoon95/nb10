@@ -1469,59 +1469,145 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 
-	response.Limit, _ = strconv.Atoi(r.Form.Get("limit"))
-	if response.Limit <= 0 {
-		response.Limit = 200
-	}
 	scheme := "https"
 	_ = scheme
 	if r.TLS == nil {
 		scheme = "http"
 	}
 
-	pinnedFileQuery := sq.Query{
-		Dialect: databaseFS.Dialect,
-		Format: "SELECT {*}" +
-			" FROM pinned_file" +
-			" JOIN files ON files.file_id = pinned_file.file_id" +
-			" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-			" ORDER BY files.file_path",
-		Values: []any{
-			sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-		},
-	}
-	pinnedFileMapper := func(row *sq.Row) File {
-		filePath := row.String("files.file_path")
-		return File{
-			FileID:       row.UUID("files.file_id"),
-			Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
-			Name:         path.Base(filePath),
-			Size:         row.Int64("files.size"),
-			ModTime:      row.Time("files.mod_time"),
-			CreationTime: row.Time("files.creation_time"),
-			IsDir:        row.Bool("files.is_dir"),
+	const dateFormat = "2006-01-02"
+	const zuluTimeFormat = "2006-01-02T150405.999999999Z"
+	const timeFormat = "2006-01-02T150405.999999999-0700"
+	var fromEdited, beforeEdited, fromCreated, beforeCreated time.Time
+	response.From = r.Form.Get("from")
+	response.Before = r.Form.Get("before")
+	if r.Form.Has("fromEdited") {
+		s := r.Form.Get("fromEdited")
+		if len(s) == len(dateFormat) {
+			fromEdited, err = time.ParseInLocation(dateFormat, s, time.UTC)
+			if err == nil {
+				response.FromEdited = fromEdited.Format(dateFormat)
+			}
+		} else if strings.HasSuffix(s, "Z") {
+			fromEdited, err = time.ParseInLocation(zuluTimeFormat, s, time.UTC)
+			if err == nil {
+				response.FromEdited = fromEdited.Format(zuluTimeFormat)
+			}
+		} else {
+			fromEdited, err = time.ParseInLocation(timeFormat, s, time.UTC)
+			if err == nil {
+				response.FromEdited = fromEdited.Format(timeFormat)
+			}
 		}
 	}
-	_, _ = pinnedFileQuery, pinnedFileMapper
+	if r.Form.Has("beforeEdited") {
+		s := r.Form.Get("beforeEdited")
+		if len(s) == len(dateFormat) {
+			beforeEdited, err = time.ParseInLocation(dateFormat, s, time.UTC)
+			if err == nil {
+				response.BeforeEdited = beforeEdited.Format(dateFormat)
+			}
+		} else if strings.HasSuffix(s, "Z") {
+			beforeEdited, err = time.ParseInLocation(zuluTimeFormat, s, time.UTC)
+			if err == nil {
+				response.BeforeEdited = beforeEdited.Format(zuluTimeFormat)
+			}
+		} else {
+			beforeEdited, err = time.ParseInLocation(timeFormat, s, time.UTC)
+			if err == nil {
+				response.BeforeEdited = beforeEdited.Format(timeFormat)
+			}
+		}
+	}
+	if r.Form.Has("fromCreated") {
+		s := r.Form.Get("fromCreated")
+		if len(s) == len(dateFormat) {
+			fromCreated, err = time.ParseInLocation(dateFormat, s, time.UTC)
+			if err == nil {
+				response.FromCreated = fromCreated.Format(dateFormat)
+			}
+		} else if strings.HasSuffix(s, "Z") {
+			fromCreated, err = time.ParseInLocation(zuluTimeFormat, s, time.UTC)
+			if err == nil {
+				response.FromCreated = fromCreated.Format(zuluTimeFormat)
+			}
+		} else {
+			fromCreated, err = time.ParseInLocation(timeFormat, s, time.UTC)
+			if err == nil {
+				response.FromCreated = fromCreated.Format(timeFormat)
+			}
+		}
+	}
+	if r.Form.Has("beforeCreated") {
+		s := r.Form.Get("beforeCreated")
+		if len(s) == len(dateFormat) {
+			beforeCreated, err = time.ParseInLocation(dateFormat, s, time.UTC)
+			if err == nil {
+				response.BeforeCreated = beforeCreated.Format(dateFormat)
+			}
+		} else if strings.HasSuffix(s, "Z") {
+			beforeCreated, err = time.ParseInLocation(zuluTimeFormat, s, time.UTC)
+			if err == nil {
+				response.BeforeCreated = beforeCreated.Format(zuluTimeFormat)
+			}
+		} else {
+			beforeCreated, err = time.ParseInLocation(timeFormat, s, time.UTC)
+			if err == nil {
+				response.BeforeCreated = beforeCreated.Format(timeFormat)
+			}
+		}
+	}
+	response.Limit, _ = strconv.Atoi(r.Form.Get("limit"))
+	if response.Limit <= 0 {
+		response.Limit = 200
+	}
 
-	const timeFormat = "2006-01-02T150405.999999999Z"
-	response.From = r.Form.Get("from")
-	fromCreated, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromCreated"), time.UTC)
-	if !fromCreated.IsZero() {
-		response.FromCreated = fromCreated.Format(timeFormat)
-	}
-	fromEdited, _ := time.ParseInLocation(timeFormat, r.Form.Get("fromEdited"), time.UTC)
-	if !fromEdited.IsZero() {
-		response.FromEdited = fromEdited.Format(timeFormat)
-	}
-	response.Before = r.Form.Get("before")
-	beforeCreated, _ := time.ParseInLocation(timeFormat, r.Form.Get("beforeCreated"), time.UTC)
-	if !beforeCreated.IsZero() {
-		response.BeforeCreated = beforeCreated.Format(timeFormat)
-	}
-	beforeEdited, _ := time.ParseInLocation(timeFormat, r.Form.Get("beforeEdited"), time.UTC)
-	if !beforeEdited.IsZero() {
-		response.BeforeEdited = beforeEdited.Format(timeFormat)
+	group, groupctx := errgroup.WithContext(r.Context())
+	group.Go(func() error {
+		pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format: "SELECT {*}" +
+				" FROM pinned_file" +
+				" JOIN files ON files.file_id = pinned_file.file_id" +
+				" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+				" ORDER BY files.file_path",
+			Values: []any{
+				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+			},
+		}, func(row *sq.Row) File {
+			filePath := row.String("files.file_path")
+			return File{
+				FileID:       row.UUID("files.file_id"),
+				Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+				Name:         path.Base(filePath),
+				Size:         row.Int64("files.size"),
+				ModTime:      row.Time("files.mod_time"),
+				CreationTime: row.Time("files.creation_time"),
+				IsDir:        row.Bool("files.is_dir"),
+			}
+		})
+		if err != nil {
+			return err
+		}
+		response.PinnedFiles = pinnedFiles
+		return nil
+	})
+	switch response.Sort {
+	case "name":
+		if response.Before == "" {
+		} else if response.From == "" {
+		} else {
+		}
+	case "edited":
+		if response.BeforeEdited == "" {
+		} else if response.FromEdited == "" {
+		} else {
+		}
+	case "created":
+		if response.BeforeCreated == "" {
+		} else if response.FromCreated == "" {
+		} else {
+		}
 	}
 
 	writeResponse(w, r, response)
