@@ -1594,19 +1594,19 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	})
 	switch response.Sort {
 	case "name":
-		if response.Before == "" {
-		} else if response.From == "" {
-		} else {
+		if response.From != "" && response.Before != "" {
+		} else if response.From != "" {
+		} else if response.Before != "" {
 		}
 	case "edited":
-		if response.BeforeEdited == "" {
-		} else if response.FromEdited == "" {
-		} else {
+		if response.FromEdited != "" && response.BeforeEdited != "" {
+		} else if response.FromEdited != "" {
+		} else if response.BeforeEdited != "" {
 		}
 	case "created":
-		if response.BeforeCreated == "" {
-		} else if response.FromCreated == "" {
-		} else {
+		if response.FromCreated != "" && response.BeforeCreated != "" {
+		} else if response.FromCreated != "" {
+		} else if response.BeforeCreated != "" {
 		}
 	}
 	err = group.Wait()
