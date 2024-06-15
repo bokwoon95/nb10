@@ -1609,6 +1609,11 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		} else {
 		}
 	}
-
+	err = group.Wait()
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		nbrew.internalServerError(w, r, err)
+		return
+	}
 	writeResponse(w, r, response)
 }
