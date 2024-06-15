@@ -1469,12 +1469,6 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 
-	scheme := "https"
-	_ = scheme
-	if r.TLS == nil {
-		scheme = "http"
-	}
-
 	const dateFormat = "2006-01-02"
 	const zuluTimeFormat = "2006-01-02T150405.999999999Z"
 	const timeFormat = "2006-01-02T150405.999999999-0700"
@@ -1561,6 +1555,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	if response.Limit <= 0 {
 		response.Limit = 200
 	}
+	scheme := "https"
+	if r.TLS == nil {
+		scheme = "http"
+	}
 
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() error {
@@ -1596,17 +1594,116 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	case "name":
 		if response.From != "" && response.Before != "" {
 		} else if response.From != "" {
+			group.Go(func() error {
+				var filter, order sq.Expression
+				if response.Order == "asc" {
+					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.From))
+					order = sq.Expr("file_path ASC")
+				} else {
+					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.From))
+					order = sq.Expr("file_path DESC")
+				}
+				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+						" AND {filter}" +
+						" ORDER BY {order}" +
+						" LIMIT {limit} + 1",
+					Values: []any{
+						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+						sq.Param("filter", filter),
+						sq.Param("order", order),
+						sq.IntParam("limit", response.Limit),
+					},
+				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
+					return File{
+						FileID:       row.UUID("files.file_id"),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
+					}
+				})
+				if err != nil {
+					return err
+				}
+				response.Files = files
+				if len(response.Files) > response.Limit {
+					nextFile := response.Files[response.Limit]
+					response.Files = response.Files[:response.Limit]
+					uri := &url.URL{
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&from=" + url.QueryEscape(nextFile.Name) +
+							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+							"&limit=" + strconv.Itoa(response.Limit),
+					}
+					response.NextURL = uri.String()
+				}
+				return nil
+			})
+			group.Go(func() error {
+				var filter, order sq.Expression
+				if response.Order == "asc" {
+					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.From))
+					order = sq.Expr("file_path DESC")
+				} else {
+					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.From))
+					order = sq.Expr("file_path ASC")
+				}
+				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT 1" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+						" AND {filter}" +
+						" ORDER BY {order}",
+					Values: []any{
+						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+						sq.Param("filter", filter),
+						sq.Param("order", order),
+					},
+				})
+				if err != nil {
+					return err
+				}
+				if hasPreviousFile {
+					uri := &url.URL{
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&before=" + url.QueryEscape(response.From) +
+							"&limit=" + strconv.Itoa(response.Limit),
+					}
+					response.PreviousURL = uri.String()
+				}
+				return nil
+			})
 		} else if response.Before != "" {
+		} else {
 		}
 	case "edited":
 		if response.FromEdited != "" && response.BeforeEdited != "" {
 		} else if response.FromEdited != "" {
 		} else if response.BeforeEdited != "" {
+		} else {
 		}
 	case "created":
 		if response.FromCreated != "" && response.BeforeCreated != "" {
 		} else if response.FromCreated != "" {
 		} else if response.BeforeCreated != "" {
+		} else {
 		}
 	}
 	err = group.Wait()
