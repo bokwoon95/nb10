@@ -63,12 +63,12 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 - If the server handling the client's request is not the one handling the import/export job, it still knows there is a job present because it receives the client's "import" and "export" session tokens and it can see which ones are currently active (the ones that are in the session table).
     - as an aside, that means that if it cannot find the entry in the session table it means the session is gone, and it should delete that session cookie.
 
-TODO: rename
 TODO: directory.go: use separate from and before fields: from (name), fromCreated (creationTime), fromEdited (modTime)
+TODO: change search to use AND by default, and introduce a new input field that is OR.
+    TODO: for the page <title>, include the number of results in it.
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
 TODO: after clicking "view in folder", it should be possible to change the sort from name to create/edited and still have it work. This is done by directory.html taking into consideration the current from/fromTime/before/beforeTime values and incorporating it into the link.
-TODO: change search to use Google's AND/OR system, and explicitly (if no AND or OR is provided, the phrase itself is searched).
 TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
     TODO: delete and export should also remove the margin around the page
 TODO: export.go
