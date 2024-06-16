@@ -1961,9 +1961,9 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 		} else {
-			//--------------------------//
-			// Read name from the start //
-			//--------------------------//
+			//-----------------------------//
+			// Read from the start by name //
+			//-----------------------------//
 			group.Go(func() error {
 				defer close(waitFiles)
 				var order sq.Expression
@@ -2021,15 +2021,39 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		}
 	case "edited":
 		if response.FromEdited != "" && response.BeforeEdited != "" {
+			//--------------------------------------------//
+			// Read everything between modification times //
+			//--------------------------------------------//
 		} else if response.FromEdited != "" {
+			//-----------------------------------------//
+			// Read everything after modification time //
+			//-----------------------------------------//
 		} else if response.BeforeEdited != "" {
+			//------------------------------------------//
+			// Read everything before modification time //
+			//------------------------------------------//
 		} else {
+			//------------------------------------------//
+			// Read from the start by modification time //
+			//------------------------------------------//
 		}
 	case "created":
 		if response.FromCreated != "" && response.BeforeCreated != "" {
+			//----------------------------------------//
+			// Read everything between creation times //
+			//----------------------------------------//
 		} else if response.FromCreated != "" {
+			//-------------------------------------//
+			// Read everything after creation time //
+			//-------------------------------------//
 		} else if response.BeforeCreated != "" {
+			//--------------------------------------//
+			// Read everything before creation time //
+			//--------------------------------------//
 		} else {
+			//--------------------------------------//
+			// Read from the start by creation time //
+			//--------------------------------------//
 		}
 	}
 	err = group.Wait()
