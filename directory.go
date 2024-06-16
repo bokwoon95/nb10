@@ -1567,10 +1567,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			Format: "SELECT {*}" +
 				" FROM pinned_file" +
 				" JOIN files ON files.file_id = pinned_file.file_id" +
-				" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+				" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 				" ORDER BY files.file_path",
 			Values: []any{
-				sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+				sq.StringParam("parent", path.Join(sitePrefix, filePath)),
 			},
 		}, func(row *sq.Row) File {
 			filePath := row.String("files.file_path")
@@ -1610,12 +1610,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
-						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 						" AND {filter}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
-						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
 						sq.Param("filter", filter),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
@@ -1667,11 +1667,11 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT 1" +
 						" FROM files" +
-						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 						" AND {filter}" +
 						" ORDER BY {order}",
 					Values: []any{
-						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
+						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
 						sq.Param("filter", filter),
 						sq.Param("order", order),
 					},
@@ -1700,6 +1700,113 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 		} else if response.Before != "" {
+			group.Go(func() error {
+				var filter, order sq.Expression
+				if response.Order == "asc" {
+					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.Before))
+					order = sq.Expr("file_path DESC")
+				} else {
+					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.Before))
+					order = sq.Expr("file_path ASC")
+				}
+				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
+						" AND {filter}" +
+						" ORDER BY {order}" +
+						" LIMIT {limit} + 1",
+					Values: []any{
+						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
+						sq.Param("filter", filter),
+						sq.Param("order", order),
+						sq.IntParam("limit", response.Limit),
+					},
+				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
+					return File{
+						FileID:       row.UUID("files.file_id"),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
+					}
+				})
+				if err != nil {
+					return err
+				}
+				response.Files = files
+				slices.Reverse(response.Files)
+				if len(response.Files) > response.Limit {
+					response.Files = response.Files[1:]
+					firstFile := response.Files[0]
+					uri := &url.URL{
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&before=" + url.QueryEscape(firstFile.Name) +
+							"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
+							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+							"&limit=" + strconv.Itoa(response.Limit),
+					}
+					response.PreviousURL = uri.String()
+				}
+				return nil
+			})
+			group.Go(func() error {
+				var filter, order sq.Expression
+				if response.Order == "asc" {
+					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.Before))
+					order = sq.Expr("file_path ASC")
+				} else {
+					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.Before))
+					order = sq.Expr("file_path DESC")
+				}
+				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
+						" AND {filter}" +
+						" ORDER BY {order}" +
+						" LIMIT 1",
+					Values: []any{
+						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
+						sq.Param("filter", filter),
+						sq.Param("order", order),
+					},
+				}, func(row *sq.Row) File {
+					return File{
+						Name:         path.Base(row.String("file_path")),
+						ModTime:      row.Time("mod_time"),
+						CreationTime: row.Time("creation_time"),
+					}
+				})
+				if err != nil {
+					if errors.Is(err, sql.ErrNoRows) {
+						return nil
+					}
+					return err
+				}
+				uri := &url.URL{
+					Scheme: scheme,
+					Host:   r.Host,
+					Path:   r.URL.Path,
+					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+						"&order=" + url.QueryEscape(response.Order) +
+						"&from=" + url.QueryEscape(nextFile.Name) +
+						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+						"&limit=" + strconv.Itoa(response.Limit),
+				}
+				response.NextURL = uri.String()
+				return nil
+			})
 		} else {
 		}
 	case "edited":
