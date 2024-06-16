@@ -1594,7 +1594,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	case "name":
 		if response.From != "" && response.Before != "" {
 		} else if response.From != "" {
+			// waitFiles unblocks when it is safe to read from response.Files.
+			var waitFiles chan struct{}
 			group.Go(func() error {
+				defer close(waitFiles)
 				var filter, order sq.Expression
 				if response.Order == "asc" {
 					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.From))
@@ -1677,16 +1680,22 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					return err
 				}
 				if hasPreviousFile {
-					uri := &url.URL{
-						Scheme: scheme,
-						Host:   r.Host,
-						Path:   r.URL.Path,
-						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
-							"&order=" + url.QueryEscape(response.Order) +
-							"&before=" + url.QueryEscape(response.From) +
-							"&limit=" + strconv.Itoa(response.Limit),
+					<-waitFiles
+					if len(response.Files) > 0 {
+						firstFile := response.Files[0]
+						uri := &url.URL{
+							Scheme: scheme,
+							Host:   r.Host,
+							Path:   r.URL.Path,
+							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+								"&order=" + url.QueryEscape(response.Order) +
+								"&before=" + url.QueryEscape(firstFile.Name) +
+								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+								"&limit=" + strconv.Itoa(response.Limit),
+						}
+						response.PreviousURL = uri.String()
 					}
-					response.PreviousURL = uri.String()
 				}
 				return nil
 			})
