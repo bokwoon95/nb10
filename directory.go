@@ -1749,10 +1749,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				defer close(waitFiles)
 				var filter, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.From))
+					filter = sq.Expr("file_path >= {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.From))
+					filter = sq.Expr("file_path <= {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -1806,10 +1806,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.From))
+					filter = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.From))
+					filter = sq.Expr("file_path > {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
@@ -1856,10 +1856,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				defer close(waitFiles)
 				var filter, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.Before))
+					filter = sq.Expr("file_path < {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.Before))
+					filter = sq.Expr("file_path > {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path ASC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -1914,10 +1914,10 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.Before))
+					filter = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.Before))
+					filter = sq.Expr("file_path <= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
