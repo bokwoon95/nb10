@@ -1593,7 +1593,13 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	switch response.Sort {
 	case "name":
 		if response.From != "" && response.Before != "" {
+			//-------------------------------//
+			// Read everything between names //
+			//-------------------------------//
 		} else if response.From != "" {
+			//----------------------------//
+			// Read everything after name //
+			//----------------------------//
 			// waitFiles unblocks when it is safe to read from response.Files.
 			var waitFiles chan struct{}
 			group.Go(func() error {
@@ -1700,6 +1706,9 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 		} else if response.Before != "" {
+			//-----------------------------//
+			// Read everything before name //
+			//-----------------------------//
 			group.Go(func() error {
 				var filter, order sq.Expression
 				if response.Order == "asc" {
@@ -1739,10 +1748,9 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					return err
 				}
 				response.Files = files
-				slices.Reverse(response.Files)
 				if len(response.Files) > response.Limit {
-					response.Files = response.Files[1:]
-					firstFile := response.Files[0]
+					firstFile := response.Files[response.Limit]
+					response.Files = response.Files[:response.Limit]
 					uri := &url.URL{
 						Scheme: scheme,
 						Host:   r.Host,
@@ -1756,6 +1764,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					}
 					response.PreviousURL = uri.String()
 				}
+				slices.Reverse(response.Files)
 				return nil
 			})
 			group.Go(func() error {
@@ -1808,6 +1817,62 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 		} else {
+			//--------------------------//
+			// Read name from the start //
+			//--------------------------//
+			group.Go(func() error {
+				var order sq.Expression
+				if response.Order == "asc" {
+					order = sq.Expr("file_path ASC")
+				} else {
+					order = sq.Expr("file_path DESC")
+				}
+				files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
+						" ORDER BY {order}" +
+						" LIMIT {limit} + 1",
+					Values: []any{
+						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
+						sq.Param("order", order),
+						sq.IntParam("limit", response.Limit),
+					},
+				}, func(row *sq.Row) File {
+					filePath := row.String("files.file_path")
+					return File{
+						FileID:       row.UUID("files.file_id"),
+						Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
+						Name:         path.Base(filePath),
+						Size:         row.Int64("files.size"),
+						ModTime:      row.Time("files.mod_time"),
+						CreationTime: row.Time("files.creation_time"),
+						IsDir:        row.Bool("files.is_dir"),
+					}
+				})
+				if err != nil {
+					return err
+				}
+				response.Files = files
+				if len(response.Files) > response.Limit {
+					nextFile := response.Files[response.Limit]
+					response.Files = response.Files[:response.Limit]
+					uri := &url.URL{
+						Scheme: scheme,
+						Host:   r.Host,
+						Path:   r.URL.Path,
+						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
+							"&order=" + url.QueryEscape(response.Order) +
+							"&from=" + url.QueryEscape(nextFile.Name) +
+							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+							"&limit=" + strconv.Itoa(response.Limit),
+					}
+					response.NextURL = uri.String()
+				}
+				return nil
+			})
 		}
 	case "edited":
 		if response.FromEdited != "" && response.BeforeEdited != "" {
