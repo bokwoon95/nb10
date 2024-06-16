@@ -1470,8 +1470,8 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	}
 
 	const dateFormat = "2006-01-02"
-	const zuluTimeFormat = "2006-01-02T150405.999999999Z"
 	const timeFormat = "2006-01-02T150405.999999999-0700"
+	const zuluTimeFormat = "2006-01-02T150405.999999999Z"
 	var fromEdited, beforeEdited, fromCreated, beforeCreated time.Time
 	response.From = r.Form.Get("from")
 	response.Before = r.Form.Get("before")
