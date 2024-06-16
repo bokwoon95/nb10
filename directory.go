@@ -1560,9 +1560,11 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		scheme = "http"
 	}
 
-	// waitFiles unblocks when it is safe to read from response.Files. This is
-	// only checked within the errgroup's goroutines -- once all errgroup
-	// goroutines are completed, it is always safe to read from response.Files.
+	// waitFiles unblocks when it is safe to read from response.Files.
+	//
+	// This is only checked within the errgroup's goroutines -- once all
+	// errgroup goroutines are completed, it is always safe to read from
+	// response.Files.
 	var waitFiles chan struct{}
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() error {
