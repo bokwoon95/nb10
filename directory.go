@@ -1382,7 +1382,6 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	}
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
-	_ = databaseFS
 	if !ok {
 		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, filePath))
 		if err != nil {
