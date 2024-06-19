@@ -1130,11 +1130,9 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		From              string            `json:"from"`
 		FromCreated       string            `json:"fromCreated"`
 		FromEdited        string            `json:"fromEdited"`
-		FromTime          string            `json:"fromTime"`
 		Before            string            `json:"before"`
 		BeforeCreated     string            `json:"beforeCreated"`
 		BeforeEdited      string            `json:"beforeEdited"`
-		BeforeTime        string            `json:"beforeTime"`
 		Limit             int               `json:"limit"`
 		PreviousURL       string            `json:"previousURL"`
 		NextURL           string            `json:"nextURL"`
