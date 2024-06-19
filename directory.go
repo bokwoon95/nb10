@@ -447,12 +447,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.From))
+					condition = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.From))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.From))
+					condition = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.From))
 					order = sq.Expr("file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -460,12 +460,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
 					},
@@ -502,12 +502,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.From))
+					condition = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.From))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.From))
+					condition = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.From))
 					order = sq.Expr("file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
@@ -515,11 +515,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT 1" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				})
@@ -561,12 +561,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.Before))
+					condition = sq.Expr("file_path < {}", path.Join(sitePrefix, filePath, response.Before))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.Before))
+					condition = sq.Expr("file_path > {}", path.Join(sitePrefix, filePath, response.Before))
 					order = sq.Expr("file_path ASC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -574,12 +574,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
 					},
@@ -616,12 +616,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.Before))
+					condition = sq.Expr("file_path >= {}", path.Join(sitePrefix, filePath, response.Before))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.Before))
+					condition = sq.Expr("file_path <= {}", path.Join(sitePrefix, filePath, response.Before))
 					order = sq.Expr("file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
@@ -629,12 +629,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT 1",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				}, func(row *sq.Row) File {
@@ -691,21 +691,21 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					} else {
-						filter = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					} else {
-						filter = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					}
 				}
@@ -714,12 +714,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
 					},
@@ -765,21 +765,21 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					} else {
-						filter = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					} else {
-						filter = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					}
 				}
@@ -788,11 +788,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT 1" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				})
@@ -848,21 +848,21 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					} else {
-						filter = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) < ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					} else {
-						filter = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) > ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					}
 				}
@@ -871,12 +871,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
 					},
@@ -922,21 +922,21 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Sort == "edited" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time ASC, file_path ASC")
 					} else {
-						filter = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(mod_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("mod_time DESC, file_path DESC")
 					}
 				} else if response.Sort == "created" {
 					if response.Order == "asc" {
-						filter = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) >= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time ASC, file_path ASC")
 					} else {
-						filter = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
+						condition = sq.Expr("(creation_time, file_path) <= ({timeParam}, {pathParam})", timeParam, pathParam)
 						order = sq.Expr("creation_time DESC, file_path DESC")
 					}
 				}
@@ -945,12 +945,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {filePath})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT 1",
 					Values: []any{
 						sq.StringParam("filePath", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				}, func(row *sq.Row) File {
@@ -1603,15 +1603,15 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			//-------------------------------//
 			group.Go(func() error {
 				defer close(waitFiles)
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {from} AND filePath < {before}",
+					condition = sq.Expr("file_path >= {from} AND filePath < {before}",
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path > {before} AND file_path <= {from}",
+					condition = sq.Expr("file_path > {before} AND file_path <= {from}",
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
@@ -1622,11 +1622,11 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				}, func(row *sq.Row) File {
@@ -1648,12 +1648,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
+					condition = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
+					condition = sq.Expr("file_path > {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
@@ -1661,11 +1661,11 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT 1" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				})
@@ -1693,12 +1693,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
+					condition = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
+					condition = sq.Expr("file_path <= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
@@ -1706,12 +1706,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT 1",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				}, func(row *sq.Row) File {
@@ -1747,12 +1747,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			//----------------------------//
 			group.Go(func() error {
 				defer close(waitFiles)
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
+					condition = sq.Expr("file_path >= {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
+					condition = sq.Expr("file_path <= {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -1760,12 +1760,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
 					},
@@ -1804,12 +1804,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
+					condition = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
+					condition = sq.Expr("file_path > {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
 					order = sq.Expr("file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
@@ -1817,11 +1817,11 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT 1" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				})
@@ -1854,12 +1854,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			//-----------------------------//
 			group.Go(func() error {
 				defer close(waitFiles)
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path < {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
+					condition = sq.Expr("file_path < {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path DESC")
 				} else {
-					filter = sq.Expr("file_path > {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
+					condition = sq.Expr("file_path > {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path ASC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -1867,12 +1867,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT {limit} + 1",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 						sq.IntParam("limit", response.Limit),
 					},
@@ -1912,12 +1912,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return nil
 			})
 			group.Go(func() error {
-				var filter, order sq.Expression
+				var condition, order sq.Expression
 				if response.Order == "asc" {
-					filter = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
+					condition = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path ASC")
 				} else {
-					filter = sq.Expr("file_path <= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
+					condition = sq.Expr("file_path <= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
 					order = sq.Expr("file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
@@ -1925,12 +1925,12 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
-						" AND {filter}" +
+						" AND {condition}" +
 						" ORDER BY {order}" +
 						" LIMIT 1",
 					Values: []any{
 						sq.StringParam("parent", path.Join(sitePrefix, filePath)),
-						sq.Param("filter", filter),
+						sq.Param("condition", condition),
 						sq.Param("order", order),
 					},
 				}, func(row *sq.Row) File {
