@@ -1467,8 +1467,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	var fromEdited, beforeEdited, fromCreated, beforeCreated time.Time
 	response.From = r.Form.Get("from")
 	response.Before = r.Form.Get("before")
-	if r.Form.Has("fromEdited") {
-		s := r.Form.Get("fromEdited")
+	if s := r.Form.Get("fromEdited"); s != "" {
 		if len(s) == len(dateFormat) {
 			fromEdited, err = time.ParseInLocation(dateFormat, s, time.UTC)
 			if err == nil {
@@ -1486,8 +1485,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			}
 		}
 	}
-	if r.Form.Has("beforeEdited") {
-		s := r.Form.Get("beforeEdited")
+	if s := r.Form.Get("beforeEdited"); s != "" {
 		if len(s) == len(dateFormat) {
 			beforeEdited, err = time.ParseInLocation(dateFormat, s, time.UTC)
 			if err == nil {
@@ -1505,8 +1503,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			}
 		}
 	}
-	if r.Form.Has("fromCreated") {
-		s := r.Form.Get("fromCreated")
+	if s := r.Form.Get("fromCreated"); s != "" {
 		if len(s) == len(dateFormat) {
 			fromCreated, err = time.ParseInLocation(dateFormat, s, time.UTC)
 			if err == nil {
@@ -1524,8 +1521,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 			}
 		}
 	}
-	if r.Form.Has("beforeCreated") {
-		s := r.Form.Get("beforeCreated")
+	if s := r.Form.Get("beforeCreated"); s != "" {
 		if len(s) == len(dateFormat) {
 			beforeCreated, err = time.ParseInLocation(dateFormat, s, time.UTC)
 			if err == nil {
