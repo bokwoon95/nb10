@@ -1096,11 +1096,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	return
 }
 
-var timeFormats = []string{
-	"2006-01-02T15:04:05.999999999-07:00",
-	"2006-01-02",
-}
-
 func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
