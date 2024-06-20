@@ -325,7 +325,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if fileInfo.IsDir() {
-				nbrew.directory(w, r, user, sitePrefix, urlPath, fileInfo)
+				nbrew.directoryV2(w, r, user, sitePrefix, urlPath, fileInfo)
 				return
 			}
 			nbrew.file(w, r, user, sitePrefix, urlPath, file, fileInfo)

@@ -1227,7 +1227,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				return isInClipboard[name]
 			},
 		}
-		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory.html")
+		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directoryV2.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
