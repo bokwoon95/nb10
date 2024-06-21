@@ -18,7 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
+func (nbrew *Notebrew) directory_Old(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
@@ -148,7 +148,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return isInClipboard[name]
 			},
 		}
-		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory.html")
+		tmpl, err := template.New("directory_old.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory_old.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
@@ -1096,7 +1096,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	return
 }
 
-func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
+func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
@@ -1123,17 +1123,20 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		Sort              string            `json:"sort"`
 		Order             string            `json:"order"`
 		From              string            `json:"from"`
-		FromCreated       string            `json:"fromCreated"`
 		FromEdited        string            `json:"fromEdited"`
+		FromCreated       string            `json:"fromCreated"`
 		Before            string            `json:"before"`
-		BeforeCreated     string            `json:"beforeCreated"`
 		BeforeEdited      string            `json:"beforeEdited"`
+		BeforeCreated     string            `json:"beforeCreated"`
 		Limit             int               `json:"limit"`
 		PreviousURL       string            `json:"previousURL"`
 		NextURL           string            `json:"nextURL"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
+	const dateFormat = "2006-01-02"
+	const timeFormat = "2006-01-02T150405.999999999-0700"
+	const zuluTimeFormat = "2006-01-02T150405.999999999Z"
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if response.PinnedFiles == nil {
 			response.PinnedFiles = []File{}
@@ -1226,8 +1229,30 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 				}
 				return isInClipboard[name]
 			},
+			"sortBy": func(sort string) template.URL {
+				queryParams := "?persist&sort=" + url.QueryEscape(sort) + "&order=" + url.QueryEscape(response.Order)
+				if response.IsDatabaseFS && len(response.Files) > 0 {
+					firstFile := response.Files[0]
+					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
+						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
+						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+						"&limit=" + strconv.Itoa(response.Limit)
+				}
+				return template.URL(queryParams)
+			},
+			"orderBy": func(order string) template.URL {
+				queryParams := "?persist&sort=" + url.QueryEscape(response.Sort) + "&order=" + url.QueryEscape(order)
+				if response.IsDatabaseFS && len(response.Files) > 0 {
+					firstFile := response.Files[0]
+					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
+						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
+						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+						"&limit=" + strconv.Itoa(response.Limit)
+				}
+				return template.URL(queryParams)
+			},
 		}
-		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directoryV2.html")
+		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory.html")
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
@@ -1461,9 +1486,6 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 
-	const dateFormat = "2006-01-02"
-	const timeFormat = "2006-01-02T150405.999999999-0700"
-	const zuluTimeFormat = "2006-01-02T150405.999999999Z"
 	var fromEdited, beforeEdited, fromCreated, beforeCreated time.Time
 	response.From = r.Form.Get("from")
 	response.Before = r.Form.Get("before")
@@ -1552,7 +1574,7 @@ func (nbrew *Notebrew) directoryV2(w http.ResponseWriter, r *http.Request, user 
 	//
 	// This is only used within an errgroup goroutine -- once all errgroup
 	// goroutines have completed, it is always safe to read from response.Files.
-	var waitFiles chan struct{}
+	waitFiles := make(chan struct{})
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() error {
 		pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{

@@ -32,7 +32,7 @@ func (id ID) String() string {
 	if id.IsZero() {
 		return ""
 	}
-	var b [32 + 4]byte
+	var b [32 + 4]byte // 32 ASCII + 4 dashes
 	hex.Encode(b[:], id[:4])
 	b[8] = '-'
 	hex.Encode(b[9:13], id[4:6])
@@ -49,7 +49,7 @@ func (id ID) MarshalJSON() ([]byte, error) {
 	if id.IsZero() {
 		return []byte(`""`), nil
 	}
-	var array [32 + 4 + 2]byte
+	var array [32 + 4 + 2]byte // 32 ASCII + 4 dashes + 2 quotes
 	array[0], array[len(array)-1] = '"', '"'
 	b := array[1 : len(array)-1]
 	hex.Encode(b[:], id[:4])

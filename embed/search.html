@@ -114,7 +114,7 @@
       {{- end }}
       <a href='/{{ join "files" $.SitePrefix $match.FilePath }}' class='b'>{{ $match.FilePath }}</a>
       <span class='ml1 f6 mid-gray'>{{ $match.CreationTime.Format "2006-01-02" }}</span>
-      <a href='/{{ join "files" $.SitePrefix (dir $match.FilePath) }}?sort=name&from={{ base $match.FilePath }}&limit=1' class='ml1 f6'>view in folder</a>
+      <a href='/{{ join "files" $.SitePrefix (dir $match.FilePath) }}?sort=name&from={{ base $match.FilePath }}&fromEdited={{ $match.ModTime.UTC.Format "2006-01-02T150405.999999999Z" }}&fromCreated={{ $match.CreationTime.UTC.Format "2006-01-02T150405.999999999Z" }}&limit=1' class='ml1 f6'>view in folder</a>
     </div>
     <pre class='pre-wrap break-word'>{{ $match.Preview }}</pre>
   </li>

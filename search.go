@@ -20,6 +20,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		FileID       ID        `json:"fileID"`
 		FilePath     string    `json:"filePath"`
 		Preview      string    `json:"preview"`
+		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
@@ -296,6 +297,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				FileID:       row.UUID("files.file_id"),
 				FilePath:     row.String("files.file_path"),
 				Preview:      row.String("CASE WHEN files.file_path LIKE '%.json' THEN '' ELSE substr(files.text, 1, 500) END"),
+				ModTime:      row.Time("files.mod_time"),
 				CreationTime: row.Time("files.creation_time"),
 			}
 			if sitePrefix != "" {
