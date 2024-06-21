@@ -44,6 +44,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
       </div>
       <div title='{{ $post.Preview }}' class='my-1 text-sm'>
         {{ $post.Preview }}
+        {{ if ne (len $post.Preview) (len $post.Content) }}<a href='{{ $post.Name }}/'>read more</a>{{ end }}
       </div>
     </li>
     {{ end }}
