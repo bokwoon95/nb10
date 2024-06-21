@@ -1469,6 +1469,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}
 				break
 			}
+			fmt.Printf("remainder: %q\n", string(remainder))
 			posts[i].HasMore = len(bytes.TrimSpace(remainder)) > 0
 			if posts[i].Title == "" {
 				posts[i].Title = posts[i].Name
