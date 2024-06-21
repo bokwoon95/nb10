@@ -1141,6 +1141,7 @@ type Post struct {
 	Name             string
 	Title            string
 	Preview          string
+	HasMore          bool
 	Content          template.HTML
 	CreationTime     time.Time
 	ModificationTime time.Time
@@ -1468,6 +1469,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}
 				break
 			}
+			posts[i].HasMore = len(bytes.TrimSpace(remainder)) > 0
 			if posts[i].Title == "" {
 				posts[i].Title = posts[i].Name
 			}
