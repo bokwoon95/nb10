@@ -1145,9 +1145,8 @@ type Post struct {
 	Content          template.HTML
 	CreationTime     time.Time
 	ModificationTime time.Time
-	// nil indicates the post contents have been read, non-nil but empty slice
-	// (i.e. []byte{}) indicates the post contents have been read but it is
-	// empty.
+	// A nil []byte slice indicates a lack of a value, a non-nil but empty byte
+	// slice indicates an empty value.
 	text []byte
 }
 
