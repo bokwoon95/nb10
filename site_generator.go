@@ -1848,6 +1848,7 @@ var funcMap = map[string]any{
 	"hasSuffix":             strings.HasSuffix,
 	"trimPrefix":            strings.TrimPrefix,
 	"trimSuffix":            strings.TrimSuffix,
+	"trimSpace":             strings.TrimSpace,
 	"humanReadableFileSize": humanReadableFileSize,
 	"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 	"head": func(s string) string {
