@@ -244,7 +244,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		if len(response.OptionalTerms) > 0 {
 			if len(response.MandatoryTerms) > 0 {
-				b.WriteString(" AND (" + response.MandatoryTerms[len(response.MandatoryTerms)-1])
+				b.WriteString(` AND ("` + response.MandatoryTerms[len(response.MandatoryTerms)-1] + `"`)
 			}
 			for _, optionalTerm := range response.OptionalTerms {
 				if b.Len() > 0 {
