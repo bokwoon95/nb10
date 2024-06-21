@@ -236,30 +236,31 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	switch databaseFS.Dialect {
 	case "sqlite":
 		var b strings.Builder
-		if len(response.MandatoryTerms) == 1 {
-			b.WriteString(`"` + response.MandatoryTerms[0] + `"`)
-			if len(response.OptionalTerms) > 0 {
-				b.WriteString(` AND "` + response.MandatoryTerms[0] + `"`)
-			}
-		} else {
-			for _, mandatoryTerm := range response.MandatoryTerms {
-				if b.Len() > 0 {
-					b.WriteString(" AND ")
-				}
-				b.WriteString(`"` + mandatoryTerm + `"`)
-			}
-		}
-		for _, optionalTerm := range response.OptionalTerms {
+		for _, mandatoryTerm := range response.MandatoryTerms {
 			if b.Len() > 0 {
-				b.WriteString(" OR ")
+				b.WriteString(" AND ")
 			}
-			b.WriteString(`"` + strings.ReplaceAll(optionalTerm, `"`, ``) + `"`)
+			b.WriteString(`"` + mandatoryTerm + `"`)
+		}
+		if len(response.OptionalTerms) > 0 {
+			if len(response.MandatoryTerms) > 0 {
+				b.WriteString(" (" + response.MandatoryTerms[len(response.MandatoryTerms)-1])
+			}
+			for _, optionalTerm := range response.OptionalTerms {
+				if b.Len() > 0 {
+					b.WriteString(" OR ")
+				}
+				b.WriteString(`"` + optionalTerm + `"`)
+			}
+			if len(response.MandatoryTerms) > 0 {
+				b.WriteString(")")
+			}
 		}
 		for _, excludeTerm := range response.ExcludeTerms {
 			if b.Len() > 0 {
 				b.WriteString(" NOT ")
 			}
-			b.WriteString(`"` + strings.ReplaceAll(excludeTerm, `"`, ``) + `"`)
+			b.WriteString(`"` + excludeTerm + `"`)
 		}
 		ftsQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
