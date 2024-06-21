@@ -1465,9 +1465,6 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}
 				if posts[i].Preview == "" {
 					posts[i].Preview = stripMarkdownStyles(siteGen.markdown, line)
-					fmt.Printf("text: %q\n", string(posts[i].text))
-					fmt.Printf("line: %q\n", string(line))
-					fmt.Printf("remainder: %q\n", string(remainder))
 					posts[i].HasMore = len(bytes.TrimSpace(remainder)) > 0
 					continue
 				}
