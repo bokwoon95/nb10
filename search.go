@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
 )
+
+var quoteReplacer = strings.NewReplacer(`"`, ``, `“`, ``, `”`, ``, `„`, ``, `‟`, ``)
 
 func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Match struct {
@@ -24,9 +25,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		CreationTime time.Time `json:"creationTime"`
 	}
 	type Request struct {
-		Parent string   `json:"parent"`
-		Query  string   `json:"query"`
-		Exts   []string `json:"exts"`
+		Parent         string   `json:"parent"`
+		MustInclude    string   `json:"mustInclude"`
+		MayInclude     string   `json:"mayInclude"`
+		Exclude        string   `json:"exclude"`
+		MandatoryTerms []string `json:"mandatoryTerms"`
+		OptionalTerms  []string `json:"optionalTerms"`
+		ExcludeTerms   []string `json:"excludeTerms"`
+		Exts           []string `json:"exts"`
 	}
 	type Response struct {
 		ContentBaseURL string   `json:"contentBaseURL"`
@@ -36,7 +42,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
 		Parent         string   `json:"parent"`
-		Query          string   `json:"query"`
+		MandatoryTerms []string `json:"mandatoryTerms"`
+		OptionalTerms  []string `json:"optionalTerms"`
+		ExcludeTerms   []string `json:"excludeTerms"`
 		Exts           []string `json:"exts"`
 		Matches        []Match  `json:"matches"`
 	}
@@ -106,6 +114,29 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				_, ok := extMap[ext]
 				return ok
 			},
+			"joinTerms": func(termsList ...[]string) string {
+				var b strings.Builder
+				for _, terms := range termsList {
+					for _, term := range terms {
+						if b.Len() > 0 {
+							b.WriteString(" ")
+						}
+						hasSpace := false
+						for _, char := range term {
+							if unicode.IsSpace(char) {
+								hasSpace = true
+								break
+							}
+						}
+						if hasSpace {
+							b.WriteString(`"` + term + `"`)
+						} else {
+							b.WriteString(term)
+						}
+					}
+				}
+				return b.String()
+			},
 		}
 		tmpl, err := template.New("search.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/search.html")
 		if err != nil {
@@ -118,9 +149,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 
 	request := Request{
-		Parent: r.Form.Get("parent"),
-		Query:  r.Form.Get("query"),
-		Exts:   r.Form["ext"],
+		Parent:         r.Form.Get("parent"),
+		MustInclude:    r.Form.Get("mustInclude"),
+		MayInclude:     r.Form.Get("mayInclude"),
+		Exclude:        r.Form.Get("exclude"),
+		MandatoryTerms: r.Form["mandatoryTerm"],
+		OptionalTerms:  r.Form["optionalTerm"],
+		ExcludeTerms:   r.Form["excludeTerm"],
+		Exts:           r.Form["ext"],
 	}
 
 	var response Response
@@ -131,7 +167,27 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
-	response.Query = strings.TrimSpace(request.Query)
+	// Mandatory terms.
+	for _, mandatoryTerm := range request.MandatoryTerms {
+		response.MandatoryTerms = append(response.MandatoryTerms, quoteReplacer.Replace(mandatoryTerm))
+	}
+	for _, mandatoryTerm := range splitTerms(request.MustInclude) {
+		response.MandatoryTerms = append(response.MandatoryTerms, quoteReplacer.Replace(mandatoryTerm))
+	}
+	// Optional terms.
+	for _, optionalTerm := range request.OptionalTerms {
+		response.OptionalTerms = append(response.OptionalTerms, quoteReplacer.Replace(optionalTerm))
+	}
+	for _, optionalTerm := range splitTerms(request.MayInclude) {
+		response.OptionalTerms = append(response.OptionalTerms, quoteReplacer.Replace(optionalTerm))
+	}
+	// Exclude terms.
+	for _, exludeTerm := range request.ExcludeTerms {
+		response.ExcludeTerms = append(response.ExcludeTerms, quoteReplacer.Replace(exludeTerm))
+	}
+	for _, exludeTerm := range splitTerms(request.Exclude) {
+		response.ExcludeTerms = append(response.ExcludeTerms, quoteReplacer.Replace(exludeTerm))
+	}
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
 			switch ext {
@@ -146,93 +202,23 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	if !isValidParent(response.Parent) {
 		response.Parent = "."
 	}
-	var terms []string
-	var includeTerms []string
-	var excludeTerms []string
-	priority := 0
-	inString := false
-	var b strings.Builder
-	for i, char := range response.Query {
-		if char == '"' || char == '“' || char == '”' || char == '„' || char == '‟' {
-			if b.Len() > 0 {
-				if priority > 0 {
-					includeTerms = append(includeTerms, b.String())
-				} else if priority < 0 {
-					excludeTerms = append(excludeTerms, b.String())
-				} else {
-					terms = append(terms, b.String())
-				}
-				priority = 0
-				b.Reset()
-			}
-			inString = !inString
-			continue
-		}
-		if inString {
-			b.WriteRune(char)
-			continue
-		}
-		if b.Len() == 0 {
-			if unicode.IsSpace(char) {
-				continue
-			}
-			if char == '+' {
-				nextChar, _ := utf8.DecodeRuneInString(response.Query[i+1:])
-				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
-					priority = 1
-				}
-				continue
-			}
-			if char == '-' {
-				nextChar, _ := utf8.DecodeRuneInString(response.Query[i+1:])
-				if nextChar != utf8.RuneError && !unicode.IsSpace(nextChar) {
-					priority = -1
-				}
-				continue
-			}
-			b.WriteRune(char)
-			continue
-		}
-		if unicode.IsSpace(char) {
-			if priority > 0 {
-				includeTerms = append(includeTerms, b.String())
-			} else if priority < 0 {
-				excludeTerms = append(excludeTerms, b.String())
-			} else {
-				terms = append(terms, b.String())
-			}
-			priority = 0
-			b.Reset()
-			continue
-		}
-		b.WriteRune(char)
-	}
-	if b.Len() > 0 {
-		if priority > 0 {
-			includeTerms = append(includeTerms, b.String())
-		} else if priority < 0 {
-			excludeTerms = append(excludeTerms, b.String())
-		} else {
-			terms = append(terms, b.String())
-		}
-	}
-	if len(terms) == 0 && len(includeTerms) == 0 && len(excludeTerms) == 0 {
+	if len(response.MandatoryTerms) == 0 && len(response.OptionalTerms) == 0 {
 		writeResponse(w, r, response)
 		return
 	}
 	var err error
-	var parentFilter sq.Expression
+	var parentCondition sq.Expression
 	parent := path.Join(sitePrefix, response.Parent)
 	if parent == "." {
-		parentFilter = sq.Expr("(files.file_path LIKE 'notes/%'" +
+		parentCondition = sq.Expr("(files.file_path LIKE 'notes/%'" +
 			" OR files.file_path LIKE 'pages/%'" +
 			" OR files.file_path LIKE 'posts/%'" +
 			" OR files.file_path LIKE 'output/%'" +
 			" OR files.parent_id IS NULL)")
 	} else {
-		parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
+		parentCondition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
 	}
-	extensionFilter := sq.Expr("1 = 1")
+	extensionCondition := sq.Expr("1 = 1")
 	if len(response.Exts) > 0 {
 		var b strings.Builder
 		var args []any
@@ -245,36 +231,35 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			args = append(args, "%"+ext)
 		}
 		b.WriteString(")")
-		extensionFilter = sq.Expr(b.String(), args...)
+		extensionCondition = sq.Expr(b.String(), args...)
 	}
 	switch databaseFS.Dialect {
 	case "sqlite":
 		var b strings.Builder
-		if len(terms) > 0 {
-			if len(includeTerms) > 0 || len(excludeTerms) > 0 {
-				b.WriteString("(")
+		if len(response.MandatoryTerms) == 1 {
+			b.WriteString(`"` + response.MandatoryTerms[0] + `"`)
+			if len(response.OptionalTerms) > 0 {
+				b.WriteString(` AND "` + response.MandatoryTerms[0] + `"`)
 			}
-			for i, term := range terms {
-				if i > 0 {
-					b.WriteString(" OR ")
+		} else {
+			for _, mandatoryTerm := range response.MandatoryTerms {
+				if b.Len() > 0 {
+					b.WriteString(" AND ")
 				}
-				b.WriteString(`"` + strings.ReplaceAll(term, `"`, `""`) + `"`)
-			}
-			if len(includeTerms) > 0 || len(excludeTerms) > 0 {
-				b.WriteString(")")
+				b.WriteString(`"` + mandatoryTerm + `"`)
 			}
 		}
-		for _, includeTerm := range includeTerms {
+		for _, optionalTerm := range response.OptionalTerms {
 			if b.Len() > 0 {
-				b.WriteString(" AND ")
+				b.WriteString(" OR ")
 			}
-			b.WriteString(`"` + strings.ReplaceAll(includeTerm, `"`, `""`) + `"`)
+			b.WriteString(`"` + strings.ReplaceAll(optionalTerm, `"`, ``) + `"`)
 		}
-		for _, excludeTerm := range excludeTerms {
+		for _, excludeTerm := range response.ExcludeTerms {
 			if b.Len() > 0 {
 				b.WriteString(" NOT ")
 			}
-			b.WriteString(`"` + strings.ReplaceAll(excludeTerm, `"`, `""`) + `"`)
+			b.WriteString(`"` + strings.ReplaceAll(excludeTerm, `"`, ``) + `"`)
 		}
 		ftsQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
@@ -283,14 +268,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			Format: "SELECT {*}" +
 				" FROM files" +
 				" JOIN files_fts5 ON files_fts5.rowid = files.rowid" +
-				" WHERE {parentFilter}" +
+				" WHERE {parentCondition}" +
 				" AND files_fts5 MATCH {ftsQuery}" +
-				" AND {extensionFilter}" +
+				" AND {extensionCondition}" +
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
-				sq.Param("parentFilter", parentFilter),
+				sq.Param("parentCondition", parentCondition),
 				sq.StringParam("ftsQuery", ftsQuery),
-				sq.Param("extensionFilter", extensionFilter),
+				sq.Param("extensionCondition", extensionCondition),
 			},
 		}, func(row *sq.Row) Match {
 			match := Match{
@@ -316,4 +301,36 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		// SELECT * FROM files WHERE MATCH (file_name, text) AGAINST ('("apple" "steve jobs") -"iphone"' IN BOOLEAN MODE)
 	}
 	writeResponse(w, r, response)
+}
+
+func splitTerms(s string) []string {
+	var terms []string
+	var b strings.Builder
+	inString := false
+	for _, char := range s {
+		if char == '"' || char == '“' || char == '”' || char == '„' || char == '‟' {
+			inString = !inString
+			if b.Len() > 0 {
+				terms = append(terms, b.String())
+				b.Reset()
+			}
+			continue
+		}
+		if inString {
+			b.WriteRune(char)
+			continue
+		}
+		if unicode.IsSpace(char) {
+			if b.Len() > 0 {
+				terms = append(terms, b.String())
+				b.Reset()
+			}
+			continue
+		}
+		b.WriteRune(char)
+	}
+	if b.Len() > 0 {
+		terms = append(terms, b.String())
+	}
+	return terms
 }

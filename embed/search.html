@@ -5,7 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<title>{{ if $.Query }}'{{ $.Query }}' - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}{{ else }}search{{ end }}</title>
+<title>{{ if or $.MandatoryTerms $.OptionalTerms }}'{{ joinTerms $.MandatoryTerms $.OptionalTerms }}' - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}{{ else }}search{{ end }}</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
@@ -29,23 +29,29 @@
   {{- else }}
   <h1 class='f3 mv3 b'>Search</h1>
   {{- end }}
-  {{- if $.Query }}
-  <h2><i>'{{ $.Query }}' - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
+  {{- if or $.MandatoryTerms $.OptionalTerms }}
+  <h2><i>'{{ joinTerms $.MandatoryTerms $.OptionalTerms }}' - {{ len $.Matches }} result{{ if ne (len $.Matches) 1 }}s{{ end }}</i></h2>
   {{- end }}
   <div class='mv3'>
-    <div><label for='query' class='b'>Search terms (space separated):</label></div>
-    <input id='query' name='query' value='{{ $.Query }}' placeholder='search terms' class='pv1 ph2 br2 ba w-100' required>
-    <details>
-      <summary class='pointer f6 mt1'>how to search</summary>
-      <ul class='list-style-disc ph3'>
-        <li>Pass in one or more terms to search, separated by spaces. If a term contains a space, wrap it in double quotes e.g. <code>apple iphone "steve jobs"</code> (&#8220;fancy double quotes&#8221; are also allowed).</li>
-        <li>Search is case-insensitive.</li>
-        <li>Search only works for letters and numbers, not special characters.</li>
-        <li>Prefixing a term with a plus sign ("+") means it <strong>must appear</strong> in a match e.g. <code>apple +iphone +"steve jobs"</code>.</li>
-        <li>Prefixing a term with a minus sign ("-") means it <strong>must not appear</strong> in a match e.g. <code>apple -iphone -"steve jobs"</code>.</li>
-      </ul>
-    </details>
+    <div><label for='mustInclude' class='b'>Must include:</label></div>
+    <input id='mustInclude' name='mustInclude' value='{{ joinTerms $.MandatoryTerms }}' placeholder='mandatory search terms' class='pv1 ph2 br2 ba w-100'>
   </div>
+  <div class='mv3'>
+    <div><label for='mayInclude' class='b'>May include:</label></div>
+    <input id='mayInclude' name='mayInclude' value='{{ joinTerms $.OptionalTerms }}' placeholder='optional search terms' class='pv1 ph2 br2 ba w-100'>
+  </div>
+  <div class='mv3'>
+    <div><label for='exclude' class='b'>Exclude:</label></div>
+    <input id='exclude' name='exclude' value='{{ joinTerms $.ExcludeTerms }}' placeholder='exclude search terms' class='pv1 ph2 br2 ba w-100'>
+  </div>
+  <details>
+    <summary class='pointer f6 mt1'>how to search</summary>
+    <ul class='list-style-disc ph3'>
+      <li>Pass in one or more terms to search, separated by spaces. If a term contains a space, wrap it in double quotes e.g. <code>apple iphone "steve jobs"</code>. &#8220;Fancy double quotes&#8221; are also allowed.</li>
+      <li>Search is case-insensitive.</li>
+      <li>Search only works for letters and numbers, not special characters.</li>
+    </ul>
+  </details>
   <div class='mv3'>
     <div class='b'>Extensions (leave blank to select all):</div>
     <div class='flex flex-wrap items-center'>
@@ -121,7 +127,7 @@
   {{- end }}
 </ul>
 {{- else }}
-  {{- if $.Query }}
+  {{- if or $.MandatoryTerms $.OptionalTerms }}
   <div class='mv2 tc'>- No matches -</div>
   {{- end }}
 {{- end }}
