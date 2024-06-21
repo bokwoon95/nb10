@@ -968,7 +968,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("beforeEdited", beforeEdited),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("mod_time ASC, file_path ASC")
 				} else {
 					condition = sq.Expr("(mod_time, file_path) > ({beforeTime}, {before}) AND (mod_time, file_path) <= ({fromEdited}, {from})",
 						sq.TimeParam("beforeEdited", beforeEdited),
@@ -976,7 +976,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("fromEdited", fromEdited),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("mod_time DESC, file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
@@ -1015,13 +1015,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("fromEdited", fromEdited),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("mod_time DESC, file_path DESC")
 				} else {
 					condition = sq.Expr("(mod_time, file_path) > ({fromEdited}, {from})",
 						sq.TimeParam("fromEdited", fromEdited),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("mod_time ASC, file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
@@ -1066,13 +1066,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("beforeEdited", beforeEdited),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("mod_time ASC, file_path ASC")
 				} else {
 					condition = sq.Expr("(mod_time, file_path) <= ({beforeEdited}, {before})",
 						sq.TimeParam("beforeEdited", beforeEdited),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("mod_time DESC, file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
@@ -1432,7 +1432,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("beforeCreated", beforeCreated),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("creation_time ASC, file_path ASC")
 				} else {
 					condition = sq.Expr("(creation_time, file_path) > ({beforeTime}, {before}) AND (creation_time, file_path) <= ({fromCreated}, {from})",
 						sq.TimeParam("beforeCreated", beforeCreated),
@@ -1440,7 +1440,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("fromCreated", fromCreated),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("creation_time DESC, file_path DESC")
 				}
 				files, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
@@ -1479,13 +1479,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("fromCreated", fromCreated),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("creation_time DESC, file_path DESC")
 				} else {
 					condition = sq.Expr("(creation_time, file_path) > ({fromCreated}, {from})",
 						sq.TimeParam("fromCreated", fromCreated),
 						sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)),
 					)
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("creation_time ASC, file_path ASC")
 				}
 				hasPreviousFile, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
@@ -1530,13 +1530,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						sq.TimeParam("beforeCreated", beforeCreated),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
-					order = sq.Expr("file_path ASC")
+					order = sq.Expr("creation_time ASC, file_path ASC")
 				} else {
 					condition = sq.Expr("(creation_time, file_path) <= ({beforeCreated}, {before})",
 						sq.TimeParam("beforeCreated", beforeCreated),
 						sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)),
 					)
-					order = sq.Expr("file_path DESC")
+					order = sq.Expr("creation_time DESC, file_path DESC")
 				}
 				nextFile, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
