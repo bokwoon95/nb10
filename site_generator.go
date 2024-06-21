@@ -1465,13 +1465,13 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}
 				if posts[i].Preview == "" {
 					posts[i].Preview = stripMarkdownStyles(siteGen.markdown, line)
+					fmt.Printf("text: %q\n", string(posts[i].text))
+					fmt.Printf("remainder: %q\n", string(remainder))
+					posts[i].HasMore = len(bytes.TrimSpace(remainder)) > 0
 					continue
 				}
 				break
 			}
-			fmt.Printf("text: %q\n", string(posts[i].text))
-			fmt.Printf("remainder: %q\n", string(remainder))
-			posts[i].HasMore = len(bytes.TrimSpace(remainder)) > 0
 			if posts[i].Title == "" {
 				posts[i].Title = posts[i].Name
 			}
