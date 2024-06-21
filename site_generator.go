@@ -1851,6 +1851,7 @@ var funcMap = map[string]any{
 	"trimSpace":             strings.TrimSpace,
 	"humanReadableFileSize": humanReadableFileSize,
 	"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
+	"toString":             func(a ...any) string { return fmt.Sprint(a...) },
 	"head": func(s string) string {
 		head, _, _ := strings.Cut(s, "/")
 		return head
