@@ -312,6 +312,17 @@
   {{- end }}
 </div>
 {{- end }}
+{{- if or $.PreviousURL $.NextURL }}
+<div class='mv2 flex flex-wrap items-center'>
+  {{- if $.PreviousURL }}
+  <a href='{{ $.PreviousURL }}'>&larr; previous</a>
+  {{- end }}
+  <span class='flex-grow-1'></span>
+  {{- if $.NextURL }}
+  <a href='{{ $.NextURL }}'>next &rarr;</a>
+  {{- end }}
+</div>
+{{- end }}
 <div class='bb pb2 flex flex-wrap'>
   <div class=''>
     {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
