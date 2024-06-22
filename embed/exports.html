@@ -20,7 +20,7 @@
 </nav>
 {{- if eq (index $.PostRedirectGet "from") "export" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div class='pv1'>started export for {{ index $.PostRedirectGet "fileName" }}</div>
+  <div class='pv1'>export {{ index $.PostRedirectGet "fileName" }}</div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
@@ -162,7 +162,7 @@
           <img src='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}?raw' class='h3 w3 mr1'>
           {{- end }}
           {{- end }}
-          <a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
+          <span class='b'>{{ $file.Name }}</span>
           {{- if not $file.IsDir }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
@@ -175,6 +175,7 @@
             {{ template "octicons-triangle-down" }}
           </summary>
           <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
+          <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}'>download</a></div>
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>

@@ -137,6 +137,12 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
   if (dataPreventDoubleSubmit.tagName != "FORM") {
     continue;
   }
+  const config = new Map();
+  const obj = JSON.parse(dataInsert.getAttribute("data-prevent-double-submit") || "{}");
+  for (const [key, value] of Object.entries(obj)) {
+    config.set(key, value);
+  }
+  const statusText = config.get("statusText");
   dataPreventDoubleSubmit.addEventListener("submit", function(event) {
     event.preventDefault();
     if (dataPreventDoubleSubmit.classList.contains("submitting")) {
@@ -145,7 +151,11 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     dataPreventDoubleSubmit.classList.add("submitting", "o-70");
     const statusElement = dataPreventDoubleSubmit.querySelector("[role=status]");
     if (statusElement) {
-      statusElement.textContent = "submitting...";
+      if (statusText) {
+        statusElement.textContent = statusText;
+      } else {
+        statusElement.textContent = "submitting...";
+      }
     }
     dataPreventDoubleSubmit.submit();
   });
