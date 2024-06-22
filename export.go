@@ -229,7 +229,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from": "export",
+					"from":     "export",
+					"fileName": response.OutputName + ".tgz",
 				},
 			})
 			if err != nil {
@@ -469,6 +470,8 @@ type exportWriter struct {
 	processedBytes int64
 }
 
+var errExportCanceled = fmt.Errorf("export canceled")
+
 func (w *exportWriter) Write(p []byte) (n int, err error) {
 	n, err = w.writer.Write(p)
 	processedBytes := w.processedBytes + int64(n)
@@ -478,7 +481,7 @@ func (w *exportWriter) Write(p []byte) (n int, err error) {
 			return n, err
 		}
 		if result.RowsAffected == 0 {
-			return n, fmt.Errorf("canceled from database: %w", context.Canceled)
+			return n, errExportCanceled
 		}
 	}
 	w.processedBytes = processedBytes
@@ -499,7 +502,7 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 				logger.Error(err.Error())
 			}
 		} else {
-			if exitErr != nil {
+			if exitErr != nil && !errors.Is(exitErr, errExportCanceled) {
 				logger.Error(exitErr.Error())
 			}
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
@@ -772,6 +775,21 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 				}
 			}
 		}
+	}
+	err = tarWriter.Close()
+	if err != nil {
+		cleanup(err)
+		return
+	}
+	err = gzipWriter.Close()
+	if err != nil {
+		cleanup(err)
+		return
+	}
+	err = writer.Close()
+	if err != nil {
+		cleanup(err)
+		return
 	}
 	cleanup(nil)
 }

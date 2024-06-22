@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User, sitePrefix, tgzFileName string) {
+func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
@@ -24,6 +24,12 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
 		Size         int64     `json:"size"`
+	}
+	type Job struct {
+		FileName       string    `json:"fileName"`
+		StartTime      time.Time `json:"startTime"`
+		TotalBytes     int64     `json:"totalBytes"`
+		ProcessedBytes int64     `json:"processedBytes"`
 	}
 	type Request struct {
 		Parent string
@@ -41,6 +47,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		IsDir           bool           `json:"isDir"`
 		ModTime         time.Time      `json:"modTime"`
 		CreationTime    time.Time      `json:"creationTime"`
+		Jobs            []Job          `json:"jobs"`
 		PinnedFiles     []File         `json:"pinnedfiles"`
 		Files           []File         `json:"files"`
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
@@ -48,12 +55,12 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 
 	switch r.Method {
 	case "GET":
-		if tgzFileName != "" {
-			if strings.Contains(tgzFileName, "/") || !strings.HasSuffix(tgzFileName, ".tgz") {
+		if action != "" {
+			if strings.Contains(action, "/") || !strings.HasSuffix(action, ".tgz") {
 				nbrew.notFound(w, r)
 				return
 			}
-			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, "exports", tgzFileName))
+			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, "exports", action))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					nbrew.notFound(w, r)
@@ -70,45 +77,6 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				return
 			}
 			serveFile(w, r, file, fileInfo, fileTypes[".tgz"], "no-cache")
-			return
-		}
-		if r.Form.Has("export") {
-			var response struct {
-				ContentBaseURL string `json:"contentBaseURL"`
-				ImgDomain      string `json:"imgDomain"`
-				IsDatabaseFS   bool   `json:"isDatabaseFS"`
-				SitePrefix     string `json:"sitePrefix"`
-				UserID         ID     `json:"userID"`
-				Username       string `json:"username"`
-				Parent         string `json:"parent"`
-				Files          []File `json:"files"`
-				Error          string `json:"error"`
-			}
-			response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
-			response.ImgDomain = nbrew.ImgDomain
-			_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
-			response.SitePrefix = sitePrefix
-			response.UserID = user.UserID
-			response.Username = user.Username
-			referer := nbrew.getReferer(r)
-			funcMap := map[string]any{
-				"join":                  path.Join,
-				"ext":                   path.Ext,
-				"hasPrefix":             strings.HasPrefix,
-				"trimPrefix":            strings.TrimPrefix,
-				"humanReadableFileSize": humanReadableFileSize,
-				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
-				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
-				"referer":               func() string { return referer },
-			}
-			tmpl, err := template.New("export.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/export.html")
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			nbrew.executeTemplate(w, r, tmpl, &response)
 			return
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -247,8 +215,31 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		response.FilePath = "exports"
 		response.IsDir = true
 
+		group, groupctx := errgroup.WithContext(r.Context())
+		if nbrew.DB != nil {
+			group.Go(func() error {
+				jobs, err := sq.FetchAll(groupctx, nbrew.DB, sq.Query{
+					Dialect: nbrew.Dialect,
+					Format:  "SELECT {*} FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+					Values: []any{
+						sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+					},
+				}, func(row *sq.Row) Job {
+					return Job{
+						FileName:       row.String("file_name"),
+						StartTime:      row.Time("start_time"),
+						TotalBytes:     row.Int64("total_bytes"),
+						ProcessedBytes: row.Int64("processed_bytes"),
+					}
+				})
+				if err != nil {
+					return err
+				}
+				response.Jobs = jobs
+				return nil
+			})
+		}
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
 				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
@@ -306,54 +297,53 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				response.Files = files
 				return nil
 			})
-			err = group.Wait()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
 		} else {
-			dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, "exports"))
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			response.Files = make([]File, 0, len(dirEntries))
-			for _, dirEntry := range dirEntries {
-				fileInfo, err := dirEntry.Info()
+			group.Go(func() error {
+				dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(path.Join(sitePrefix, "exports"))
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
-					return
+					return err
 				}
-				name := fileInfo.Name()
-				var absolutePath string
-				if dirFS, ok := nbrew.FS.(*DirFS); ok {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, "exports", name)
-				}
-				file := File{
-					Parent:       path.Join(sitePrefix, "exports"),
-					Name:         name,
-					IsDir:        fileInfo.IsDir(),
-					Size:         fileInfo.Size(),
-					ModTime:      fileInfo.ModTime(),
-					CreationTime: CreationTime(absolutePath, fileInfo),
-				}
-				if file.IsDir {
+				response.Files = make([]File, 0, len(dirEntries))
+				for _, dirEntry := range dirEntries {
+					fileInfo, err := dirEntry.Info()
+					if err != nil {
+						return err
+					}
+					name := fileInfo.Name()
+					var absolutePath string
+					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						absolutePath = path.Join(dirFS.RootDir, sitePrefix, "exports", name)
+					}
+					file := File{
+						Parent:       path.Join(sitePrefix, "exports"),
+						Name:         name,
+						IsDir:        fileInfo.IsDir(),
+						Size:         fileInfo.Size(),
+						ModTime:      fileInfo.ModTime(),
+						CreationTime: CreationTime(absolutePath, fileInfo),
+					}
+					if file.IsDir {
+						response.Files = append(response.Files, file)
+						continue
+					}
+					_, ok := fileTypes[path.Ext(file.Name)]
+					if !ok {
+						continue
+					}
 					response.Files = append(response.Files, file)
-					continue
 				}
-				_, ok := fileTypes[path.Ext(file.Name)]
-				if !ok {
-					continue
-				}
-				response.Files = append(response.Files, file)
-			}
+				return nil
+			})
+		}
+		err = group.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
 		}
 		writeResponse(w, r, response)
 	case "POST":
-		if tgzFileName != "" {
+		if action != "" {
 			nbrew.notFound(w, r)
 			return
 		}

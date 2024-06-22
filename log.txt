@@ -63,6 +63,10 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 - If the server handling the client's request is not the one handling the import/export job, it still knows there is a job present because it receives the client's "import" and "export" session tokens and it can see which ones are currently active (the ones that are in the session table).
     - as an aside, that means that if it cannot find the entry in the session table it means the session is gone, and it should delete that session cookie.
 
+/exports/ POST does nothing?
+/exports/my-export-file.tgz
+/exports/cancel/
+
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
 TODO: after clicking "view in folder", it should be possible to change the sort from name to create/edited and still have it work. This is done by directory.html taking into consideration the current from/fromTime/before/beforeTime values and incorporating it into the link.
@@ -83,8 +87,6 @@ TODO: /files/exports/ and /files/imports/
 TODO: once we have export.go and import.go working, export the current site and switch notebrew over to a cheap VPS relying on a mounted Hetzner Cloud Volume for notebrew-objects (/mnt/notebrew-objects/)
 TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
-TODO: okay fine: add (bracket grouping) to search.go.
-    - I searched so hard for sing singing but couldn't find that one reddit thread containing all the singing tips. I really wanted to do +(sing singing singer).
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
