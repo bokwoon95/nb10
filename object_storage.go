@@ -311,10 +311,12 @@ func (storage *DirObjectStorage) Delete(ctx context.Context, key string) error {
 	if len(key) < 4 {
 		return &fs.PathError{Op: "delete", Path: key, Err: fs.ErrInvalid}
 	}
+	fmt.Printf("os.Remove(%s)\n", filepath.Join(storage.RootDir, key[:4], key))
 	err = os.Remove(filepath.Join(storage.RootDir, key[:4], key))
 	if err != nil {
 		return err
 	}
+	fmt.Printf("err: %v\n", err)
 	return nil
 }
 

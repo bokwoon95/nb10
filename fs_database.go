@@ -958,6 +958,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			" OR file_path LIKE '%.png'" +
 			" OR file_path LIKE '%.webp'" +
 			" OR file_path LIKE '%.gif'" +
+			" OR file_path LIKE '%.tgz'" +
 			")",
 		Values: []any{
 			sq.StringParam("name", name),

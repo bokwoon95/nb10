@@ -452,7 +452,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 
 		logger := getLogger(r.Context())
 		nbrew.waitGroup.Add(1)
-		go nbrew.doExport(logger, sitePrefix, parent, names, fileName)
+		go func() {
+			defer nbrew.waitGroup.Done()
+			nbrew.doExport(logger, sitePrefix, parent, names, fileName)
+		}()
 		writeResponse(w, r, response)
 	default:
 		nbrew.methodNotAllowed(w, r)
@@ -483,11 +486,7 @@ func (w *exportWriter) Write(p []byte) (n int, err error) {
 }
 
 func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent string, names []string, fileName string) {
-	defer nbrew.waitGroup.Done()
 	cleanup := func(exitErr error) {
-		if exitErr == nil {
-			return
-		}
 		if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -500,7 +499,9 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 				logger.Error(err.Error())
 			}
 		} else {
-			logger.Error(exitErr.Error())
+			if exitErr != nil {
+				logger.Error(exitErr.Error())
+			}
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format:  "DELETE FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
@@ -632,7 +633,6 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 					},
 				}
 				if file.IsDir {
-					fmt.Printf("dumping: %s\n", file.FilePath)
 					tarHeader.Typeflag = tar.TypeDir
 					tarHeader.Mode = 0755
 					err = tarWriter.WriteHeader(tarHeader)
@@ -646,7 +646,6 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 				if !ok {
 					continue
 				}
-				fmt.Printf("dumping: %s\n", file.FilePath)
 				tarHeader.Typeflag = tar.TypeReg
 				tarHeader.Mode = 0644
 				err = tarWriter.WriteHeader(tarHeader)
@@ -726,7 +725,6 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 				},
 			}
 			if dirEntry.IsDir() {
-				fmt.Printf("dumping: %s\n", filePath)
 				tarHeader.Typeflag = tar.TypeDir
 				tarHeader.Mode = 0755
 				err = tarWriter.WriteHeader(tarHeader)
@@ -739,7 +737,6 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 			if !ok {
 				return nil
 			}
-			fmt.Printf("dumping: %s\n", filePath)
 			tarHeader.Typeflag = tar.TypeReg
 			tarHeader.Mode = 0644
 			err = tarWriter.WriteHeader(tarHeader)
@@ -776,4 +773,5 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 			}
 		}
 	}
+	cleanup(nil)
 }
