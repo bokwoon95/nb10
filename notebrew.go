@@ -84,40 +84,6 @@ func init() {
 	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
 }
 
-// totalBytes/processedBytes
-// writers always write to the job struct. every 1 MB, persist the job struct to the database
-// readers always read from the database if it exists, else they read from the jobs map
-
-// the problem with queueing is that it becomes possible to queue on one machine and cancel on another. it's fine and dandy if you have a database, but what if you don't? What if you only have the map?
-// solution: if you push job, if database is present then add to the database (but not the map). if no database, then add it to the map. if you pop job, if database is present then select skip locked
-// 1. jobs need to update the processedBytes every max(1 MB, 1%)
-type job struct {
-	sitePrefix     string
-	fileName       string
-	status         string // queued | started | completed | cancelled | restart
-	totalBytes     int64
-	processedBytes int64
-	syncThreshold  int64
-	startTime      time.Time
-	cancel         func()
-	done           chan struct{}
-}
-
-type importData struct {
-	fileName       string
-	startTime      time.Time
-	totalBytes     int64
-	processedBytes int64
-}
-
-type exportData struct {
-	fileName       string
-	source         []byte
-	startTime      time.Time
-	totalBytes     int64
-	processedBytes int64
-}
-
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
 	CMSDomain string // localhost:6444, example.com
@@ -187,9 +153,6 @@ type Notebrew struct {
 	ctx       context.Context
 	cancel    func()
 	waitGroup sync.WaitGroup
-	mutex     sync.RWMutex
-	importMap map[string]importData
-	exportMap map[string]exportData
 }
 
 func New() *Notebrew {

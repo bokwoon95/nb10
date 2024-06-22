@@ -1,3 +1,4 @@
+{{- $clipboard := clipboard }}
 <!DOCTYPE html>
 <html lang='en'>
 <meta charset='utf-8'>
@@ -24,6 +25,75 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+{{- if eq (index $.PostRedirectGet "from") "delete" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
+  {{- $numErrors := len (index $.PostRedirectGet "deleteErrors") }}
+  <div class='pv1'>
+    🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
+    {{ if $numErrors }} ({{ $numErrors }} error{{ if ne $numErrors 1.0 }}s{{ end }}){{ end }}
+    {{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
+{{- if eq (index $.PostRedirectGet "from") "rename" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{ $parent := index $.PostRedirectGet "parent" }}
+  {{ $oldName := index $.PostRedirectGet "oldName" }}
+  {{ $newName := index $.PostRedirectGet "newName" }}
+  {{ $isDir := index $.PostRedirectGet "isDir" }}
+  <div class='pv1'>
+    renamed {{ $oldName }}{{ if $isDir }}/{{ end }} =&gt; <a href='/{{ join "files" $.SitePrefix $parent $newName }}{{ if $isDir }}/{{ end }}'>{{ $newName }}{{ if $isDir}}/{{ end }}</a>{{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
+{{- if eq (index $.PostRedirectGet "from") "pin" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{ $numPinned := index $.PostRedirectGet "numPinned" }}
+  <div class='pv1'>
+    pinned {{ $numPinned }} file{{ if ne $numPinned 1.0 }}s{{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
+{{- if eq (index $.PostRedirectGet "from") "unpin" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{ $numUnpinned := index $.PostRedirectGet "numUnpinned" }}
+  <div class='pv1'>
+    unpinned {{ $numUnpinned }} file{{ if ne $numUnpinned 1.0 }}s{{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
+{{- if len $clipboard }}
+{{- $srcParent := $clipboard.Get "parent" }}
+{{- $names := index $clipboard "name" }}
+<div class='dashed-border mv2 pa2 br2 flex items-center'>
+  <div class='flex-grow-1 truncate'>
+    {{- if eq (head $srcParent) "output" }}
+      {{- if eq (head (tail $srcParent)) "themes" }}
+      <a href='/{{ join "files" $.SitePrefix $srcParent }}/?sort=name&from={{ index $names 0 }}'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+      {{- else if eq (head (tail $srcParent)) "posts" }}
+      <a href='/{{ join "files" $.SitePrefix (tail $srcParent) }}.md'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+      {{- else }}
+      <a href='/{{ join "files" $.SitePrefix "pages" (tail $srcParent) }}.html'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+      {{- end }}
+    {{- else }}
+    <a href='/{{ join "files" $.SitePrefix $srcParent }}/?sort=name&from={{ index $names 0 }}'>{{ len $names }} file{{ if ne (len $names) 1 }}s{{ end }} {{ if $clipboard.Has "cut" }}cut{{ else }}copied{{ end }}</a>: {{ range $i, $name := $names }}{{ if $i }}, {{ end }}{{ $name }}{{ end }}
+    {{- end }}
+  </div>
+  <form method='post' action='/{{ join "files" $.SitePrefix "clipboard/clear" }}' class='ml2'>
+    <button type='submit' class='button-danger ba br2 b--dark-red pv2 ph2'>clear</button>
+  </form>
+</div>
+{{- end }}
+
 <div class='mv2 flex flex-wrap items-center'>
   <div class='flex-grow-1'></div>
   <div class='flex items-center'>
