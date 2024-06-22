@@ -532,10 +532,10 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 		}
 		preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
+			Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE export_id = {exportID}",
 			Values: []any{
 				sq.Int64Param("processedBytes", 0),
-				sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+				sq.UUIDParam("exportID", exportID),
 			},
 		})
 		if err != nil {
