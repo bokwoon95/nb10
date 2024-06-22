@@ -425,6 +425,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			nbrew.internalServerError(w, r, err)
 			return
 		}
+		logger := getLogger(r.Context())
+		if nbrew.DB == nil {
+			err := nbrew.doExport2(logger, sitePrefix, parent, names, fileName)
+			if err != nil {
+			}
+		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO exports (site_id, file_name, source, start_time, total_bytes)" +
@@ -451,7 +457,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
-		logger := getLogger(r.Context())
 		nbrew.waitGroup.Add(1)
 		go func() {
 			defer nbrew.waitGroup.Done()
@@ -463,7 +468,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 }
 
-type exportWriter struct {
+type progressWriter struct {
 	ctx            context.Context
 	preparedExec   *sq.PreparedExec
 	writer         io.Writer
@@ -472,7 +477,7 @@ type exportWriter struct {
 
 var errExportCanceled = fmt.Errorf("export canceled")
 
-func (w *exportWriter) Write(p []byte) (n int, err error) {
+func (w *progressWriter) Write(p []byte) (n int, err error) {
 	n, err = w.writer.Write(p)
 	processedBytes := w.processedBytes + int64(n)
 	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
@@ -558,7 +563,7 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
-	tarWriter := tar.NewWriter(&exportWriter{
+	tarWriter := tar.NewWriter(&progressWriter{
 		ctx:          nbrew.ctx,
 		preparedExec: preparedExec,
 		writer:       gzipWriter,
@@ -814,8 +819,12 @@ func (nbrew *Notebrew) doExport2(logger *slog.Logger, sitePrefix string, parent 
 				logger.Error(err.Error())
 			}
 		} else {
-			if err != nil && !errors.Is(err, errExportCanceled) {
-				logger.Error(err.Error())
+			if err != nil {
+				if errors.Is(err, errExportCanceled) {
+					err = nil
+				} else {
+					logger.Error(err.Error())
+				}
 			}
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -829,30 +838,6 @@ func (nbrew *Notebrew) doExport2(logger *slog.Logger, sitePrefix string, parent 
 			}
 		}
 	}()
-	var db sq.DB
-	if nbrew.Dialect == "sqlite" {
-		db = nbrew.DB
-	} else {
-		var conn *sql.Conn
-		conn, err = nbrew.DB.Conn(nbrew.ctx)
-		if err != nil {
-			return err
-		}
-		defer conn.Close()
-		db = conn
-	}
-	preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
-		Dialect: nbrew.Dialect,
-		Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
-		Values: []any{
-			sq.Int64Param("processedBytes", 0),
-			sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	defer preparedExec.Close()
 	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 	if err != nil {
 		return err
@@ -865,11 +850,41 @@ func (nbrew *Notebrew) doExport2(logger *slog.Logger, sitePrefix string, parent 
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
-	tarWriter := tar.NewWriter(&exportWriter{
-		ctx:          nbrew.ctx,
-		preparedExec: preparedExec,
-		writer:       gzipWriter,
-	})
+	var tarWriter *tar.Writer
+	if nbrew.DB == nil {
+		tarWriter = tar.NewWriter(gzipWriter)
+	} else {
+		var db sq.DB
+		if nbrew.Dialect == "sqlite" {
+			db = nbrew.DB
+		} else {
+			var conn *sql.Conn
+			conn, err = nbrew.DB.Conn(nbrew.ctx)
+			if err != nil {
+				return err
+			}
+			defer conn.Close()
+			db = conn
+		}
+		var preparedExec *sq.PreparedExec
+		preparedExec, err = sq.PrepareExec(nbrew.ctx, db, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
+			Values: []any{
+				sq.Int64Param("processedBytes", 0),
+				sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		defer preparedExec.Close()
+		tarWriter = tar.NewWriter(&progressWriter{
+			ctx:          nbrew.ctx,
+			preparedExec: preparedExec,
+			writer:       gzipWriter,
+		})
+	}
 	defer tarWriter.Close()
 	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 		buf := bufPool.Get().(*bytes.Buffer).Bytes()
