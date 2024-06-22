@@ -425,7 +425,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO exports (site_id, file_name, source, start_time, total_bytes)" +
 				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {source}, {startTime}, {totalBytes})",
@@ -490,6 +489,9 @@ func (w *exportWriter) Write(p []byte) (n int, err error) {
 
 func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent string, names []string, fileName string) {
 	cleanup := func(exitErr error) {
+		if nbrew.DB == nil {
+			return
+		}
 		if errors.Is(exitErr, context.Canceled) || errors.Is(exitErr, context.DeadlineExceeded) {
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -703,7 +705,7 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 			}
 		}
 	} else {
-		fn := func(filePath string, dirEntry fs.DirEntry, err error) error {
+		walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
@@ -761,14 +763,14 @@ func (nbrew *Notebrew) doExport(logger *slog.Logger, sitePrefix string, parent s
 			root := path.Join(sitePrefix, parent, name)
 			if root == "." {
 				for _, root := range []string{"notes", "pages", "posts", "output", "site.json"} {
-					err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, fn)
+					err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, walkDirFunc)
 					if err != nil {
 						cleanup(err)
 						return
 					}
 				}
 			} else {
-				err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, fn)
+				err := fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, walkDirFunc)
 				if err != nil {
 					cleanup(err)
 					return

@@ -65,7 +65,7 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 
 /exports/ POST does nothing?
 /exports/my-export-file.tgz
-/exports/cancel/
+/exports/cancel/?fileName=abcd
 
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
