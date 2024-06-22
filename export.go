@@ -530,8 +530,7 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 			defer conn.Close()
 			db = conn
 		}
-		var preparedExec *sq.PreparedExec
-		preparedExec, err = sq.PrepareExec(nbrew.ctx, db, sq.Query{
+		preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format:  "UPDATE exports SET processed_bytes = {processedBytes} WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName}) AND start_time IS NOT NULL",
 			Values: []any{
@@ -586,8 +585,7 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 			} else {
 				filter = sq.Expr("file_path = {} OR file_path LIKE {} ESCAPE '\\'", root, wildcardReplacer.Replace(root)+"/%")
 			}
-			var cursor *sq.Cursor[File]
-			cursor, err = sq.FetchCursor(nbrew.ctx, databaseFS.DB, sq.Query{
+			cursor, err := sq.FetchCursor(nbrew.ctx, databaseFS.DB, sq.Query{
 				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format:  "SELECT {*} FROM files WHERE {filter} ORDER BY file_path",
@@ -612,8 +610,7 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 				return err
 			}
 			for cursor.Next() {
-				var file File
-				file, err = cursor.Result()
+				file, err := cursor.Result()
 				if err != nil {
 					return err
 				}
@@ -645,8 +642,7 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 					return err
 				}
 				if fileType.IsObject {
-					var reader io.ReadCloser
-					reader, err = databaseFS.ObjectStorage.Get(nbrew.ctx, file.FileID.String()+path.Ext(file.FilePath))
+					reader, err := databaseFS.ObjectStorage.Get(nbrew.ctx, file.FileID.String()+path.Ext(file.FilePath))
 					if err != nil {
 						return err
 					}
