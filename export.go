@@ -470,8 +470,6 @@ type progressWriter struct {
 	processedBytes int64
 }
 
-var errExportCanceled = fmt.Errorf("export canceled")
-
 func (w *progressWriter) Write(p []byte) (n int, err error) {
 	n, err = w.writer.Write(p)
 	processedBytes := w.processedBytes + int64(n)
@@ -481,7 +479,7 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 			return n, err
 		}
 		if result.RowsAffected == 0 {
-			return n, errExportCanceled
+			return n, fmt.Errorf("export canceled")
 		}
 	}
 	w.processedBytes = processedBytes
@@ -794,7 +792,7 @@ func (nbrew *Notebrew) doExport_Old(logger *slog.Logger, sitePrefix string, pare
 				logger.Error(err.Error())
 			}
 		} else {
-			if exitErr != nil && !errors.Is(exitErr, errExportCanceled) {
+			if exitErr != nil {
 				logger.Error(exitErr.Error())
 			}
 			_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
