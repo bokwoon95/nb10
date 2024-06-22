@@ -456,8 +456,8 @@ var filenameReplacementChars = [...]rune{
 	'>':  '❯', // U+276F, HEAVY RIGHT-POINTING ANGLE QUOTATION MARK ORNAMENT
 	':':  '꞉', // U+A789, MODIFIER LETTER COLON
 	'"':  '″', // U+2033, DOUBLE PRIME
-	'/':  '⧸', // U+29F8, BIG SOLIDUS
-	'\\': '⧹', // U+29F9, BIG REVERSE SOLIDUS
+	'/':  '／', // U+FF0F, FULLWIDTH SOLIDUS
+	'\\': '＼', // U+FF3C, FULLWIDTH REVERSE SOLIDUS
 	'|':  '│', // U+2502, BOX DRAWINGS LIGHT VERTICAL
 	'?':  '？', // U+FF1F, FULLWIDTH QUESTION MARK
 	'*':  '∗', // U+2217, ASTERISK OPERATOR
