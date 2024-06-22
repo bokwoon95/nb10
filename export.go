@@ -622,7 +622,7 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 					ModTime: file.ModTime,
 					Size:    file.Size,
 					PAXRecords: map[string]string{
-						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02 15:04:05Z"),
+						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
 					},
 				}
 				if file.IsDir {
@@ -710,7 +710,7 @@ func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, n
 				ModTime: fileInfo.ModTime(),
 				Size:    fileInfo.Size(),
 				PAXRecords: map[string]string{
-					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02 15:04:05Z"),
+					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
 				},
 			}
 			if dirEntry.IsDir() {
