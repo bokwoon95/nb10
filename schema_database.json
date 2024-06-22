@@ -248,12 +248,24 @@
     ],
     "columns": [
       {
+        "column": "import_id",
+        "type": {
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "primarykey": true
+      },
+      {
         "column": "site_id",
         "type": {
           "default": "BINARY(16)",
           "postgres": "UUID"
         },
-        "notnull": true
+        "notnull": true,
+        "references": {
+          "table": "site",
+          "column": "site_id"
+        }
       },
       {
         "column": "file_name",
@@ -296,25 +308,29 @@
     ],
     "columns": [
       {
+        "column": "export_id",
+        "type": {
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "primarykey": true
+      },
+      {
         "column": "site_id",
         "type": {
           "default": "BINARY(16)",
           "postgres": "UUID"
         },
-        "notnull": true
+        "notnull": true,
+        "references": {
+          "table": "site",
+          "column": "site_id"
+        }
       },
       {
         "column": "file_name",
         "type": {
           "default": "VARCHAR(500)"
-        },
-        "notnull": true
-      },
-      {
-        "column": "source",
-        "type": {
-          "default": "JSON",
-          "postgres": "JSONB"
         },
         "notnull": true
       },

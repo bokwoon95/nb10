@@ -341,18 +341,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
-		b, err := json.Marshal(map[string]any{
-			"parent":     response.Parent,
-			"names":      response.Names,
-			"outputName": response.OutputName,
-		})
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		source := string(b)
-
 		parent := response.Parent
 		names := response.Names
 		if response.ExportParent {
@@ -425,8 +413,9 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			nbrew.internalServerError(w, r, err)
 			return
 		}
+		exportID := NewID()
 		if nbrew.DB == nil {
-			err = nbrew.doExport(sitePrefix, parent, names, fileName)
+			err = nbrew.doExport(exportID, sitePrefix, parent, names, fileName)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
@@ -435,12 +424,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		} else {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO exports (site_id, file_name, source, start_time, total_bytes)" +
-					" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {source}, {startTime}, {totalBytes})",
+				Format: "INSERT INTO exports (export_id, site_id, file_name, start_time, total_bytes)" +
+					" VALUES ({exportID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {startTime}, {totalBytes})",
 				Values: []any{
+					sq.UUIDParam("exportID", exportID),
 					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
 					sq.StringParam("fileName", fileName),
-					sq.StringParam("source", source),
 					sq.TimeParam("startTime", startTime),
 					sq.Int64Param("totalBytes", totalBytes.Load()),
 				},
@@ -462,7 +451,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			logger := getLogger(r.Context())
 			go func() {
 				defer nbrew.waitGroup.Done()
-				err := nbrew.doExport(sitePrefix, parent, names, fileName)
+				err := nbrew.doExport(exportID, sitePrefix, parent, names, fileName)
 				if err != nil {
 					logger.Error(err.Error())
 				}
@@ -499,40 +488,20 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (nbrew *Notebrew) doExport(sitePrefix string, parent string, names []string, fileName string) (err error) {
+func (nbrew *Notebrew) doExport(exportID ID, sitePrefix string, parent string, names []string, fileName string) error {
 	defer func() {
 		if nbrew.DB == nil {
 			return
 		}
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			_, cleanupErr := sq.Exec(context.Background(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "UPDATE exports SET start_time = NULL WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
-				Values: []any{
-					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-				},
-			})
-			if cleanupErr != nil {
-				err = cleanupErr
-			}
-		} else {
-			if err != nil {
-				if errors.Is(err, errExportCanceled) {
-					err = nil
-				}
-			}
-			_, cleanupErr := sq.Exec(context.Background(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "DELETE FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
-				Values: []any{
-					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-				},
-			})
-			if cleanupErr != nil {
-				if err == nil {
-					err = cleanupErr
-				}
-			}
+		_, cleanupErr := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "DELETE FROM exports WHERE export_id = {exportID}",
+			Values: []any{
+				sq.UUIDParam("exportID", exportID),
+			},
+		})
+		if cleanupErr != nil {
+			nbrew.Logger.Error(cleanupErr.Error())
 		}
 	}()
 	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
