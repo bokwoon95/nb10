@@ -15,7 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
+func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User, sitePrefix, fileName string) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
@@ -55,12 +55,12 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 
 	switch r.Method {
 	case "GET":
-		if action != "" {
-			if strings.Contains(action, "/") || !strings.HasSuffix(action, ".tgz") {
+		if fileName != "" {
+			if strings.Contains(fileName, "/") || !strings.HasSuffix(fileName, ".tgz") {
 				nbrew.notFound(w, r)
 				return
 			}
-			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, "exports", action))
+			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, "exports", fileName))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					nbrew.notFound(w, r)
@@ -343,7 +343,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		}
 		writeResponse(w, r, response)
 	case "POST":
-		if action != "" {
+		if fileName != "" {
 			nbrew.notFound(w, r)
 			return
 		}
