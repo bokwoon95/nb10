@@ -17,23 +17,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var errInvalid = fmt.Errorf("src file is invalid or is a directory containing files that are invalid")
+
 func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user User, sitePrefix, action string) {
-	// TODO: we allow users to cut and copy from exports, but not paste
-	// TODO: we allow users to paste into imports, but not cut and copy
-	isValidParent := func(parent string) bool {
-		head, _, _ := strings.Cut(parent, "/")
-		switch head {
-		case "notes", "pages", "posts", "output":
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		}
-		return false
-	}
 	if r.Method != "POST" {
 		nbrew.methodNotAllowed(w, r)
 		return
@@ -52,7 +38,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 	switch action {
 	case "cut", "copy":
 		parent := path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-		if !isValidParent(parent) {
+		head, _, _ := strings.Cut(parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output", "exports":
+			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, parent))
+			if err != nil || !fileInfo.IsDir() {
+				http.Redirect(w, r, referer, http.StatusFound)
+				return
+			}
+		default:
 			http.Redirect(w, r, referer, http.StatusFound)
 			return
 		}
@@ -230,13 +224,31 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}
 		response.SrcParent = path.Clean(strings.Trim(clipboard.Get("parent"), "/"))
-		if !isValidParent(response.SrcParent) {
+		srcHead, srcTail, _ := strings.Cut(response.SrcParent, "/")
+		switch srcHead {
+		case "notes", "pages", "posts", "output", "exports":
+			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.SrcParent))
+			if err != nil || !fileInfo.IsDir() {
+				response.Error = "InvalidSrcParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidSrcParent"
 			writeResponse(w, r, response)
 			return
 		}
 		response.DestParent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
-		if !isValidParent(response.DestParent) {
+		destHead, destTail, _ := strings.Cut(response.DestParent, "/")
+		switch destHead {
+		case "notes", "pages", "posts", "output", "exports":
+			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.DestParent))
+			if err != nil || !fileInfo.IsDir() {
+				response.Error = "InvalidDestParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidDestParent"
 			writeResponse(w, r, response)
 			return
@@ -253,8 +265,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				return
 			}
 		}
-		srcHead, srcTail, _ := strings.Cut(response.SrcParent, "/")
-		destHead, destTail, _ := strings.Cut(response.DestParent, "/")
 		if destHead == "posts" {
 			if srcHead != "posts" {
 				response.Error = "PostNoPaste"
@@ -298,7 +308,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}()
 		moveNotAllowed := (srcHead == "pages" && destHead != "pages") || (srcHead == "posts" && destHead != "posts")
-		errInvalid := fmt.Errorf("src file is invalid or is a directory containing files that are invalid")
 		group, groupctx := errgroup.WithContext(r.Context())
 		for _, name := range names {
 			name := name
