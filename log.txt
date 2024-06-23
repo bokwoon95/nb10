@@ -67,7 +67,6 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 /exports/my-export-file.tgz
 /exports/cancel/?fileName=abcd
 
-TODO: figure out how to accurately report the export progress, by only reporting progress actual file contents written and not the tar header.
 TODO: when you initially click export, show the total file size of the fileName.
 TODO: import.go
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
