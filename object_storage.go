@@ -158,11 +158,11 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 }
 
 func (storage *S3ObjectStorage) Delete(ctx context.Context, key string) error {
-	fmt.Printf("S3ObjectStorage.Delete: %s\n", key)
 	_, err := storage.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
 	})
+	fmt.Printf("S3ObjectStorage.Delete: %s %v\n", key, err)
 	if err != nil {
 		return err
 	}
