@@ -116,7 +116,6 @@ func main() {
 			return nil
 		}
 		nbrew := nb10.New()
-		defer nbrew.Close()
 		nbrew.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			AddSource: true,
 		}))
@@ -1412,6 +1411,7 @@ func main() {
 			return err
 		}
 
+		defer nbrew.Close()
 		wait := make(chan os.Signal, 1)
 		signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 		if server.Addr == ":443" {

@@ -12,6 +12,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"net/http"
 	"net/url"
@@ -452,7 +453,13 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				defer nbrew.waitGroup.Done()
 				err := nbrew.doExport(exportJobID, sitePrefix, parent, names, fileName)
 				if err != nil {
-					logger.Error(err.Error())
+					logger.Error(err.Error(),
+						slog.String("exportJobID", exportJobID.String()),
+						slog.String("sitePrefix", sitePrefix),
+						slog.String("parent", parent),
+						slog.String("names", strings.Join(names, "|")),
+						slog.String("fileName", fileName),
+					)
 				}
 			}()
 		}
@@ -470,6 +477,10 @@ type progressWriter struct {
 }
 
 func (w *progressWriter) Write(p []byte) (n int, err error) {
+	err = w.ctx.Err()
+	if err != nil {
+		return 0, err
+	}
 	n, err = w.writer.Write(p)
 	processedBytes := w.processedBytes + int64(n)
 	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
@@ -501,7 +512,10 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			nbrew.Logger.Error(cleanupErr.Error())
 		}
 	}()
-	time.Sleep(time.Hour)
+	select {
+	case <-time.After(time.Hour):
+	case <-nbrew.ctx.Done():
+	}
 	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 	if err != nil {
 		return err
