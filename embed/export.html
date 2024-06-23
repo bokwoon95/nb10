@@ -25,17 +25,17 @@
   <div class='mv3 b tc'>No files to export</div>
 </div>
 {{- else }}
-<form method='post' data-prevent-double-submit='{"statusText":"export in progress, please wait..."}'>
+<form method='post' data-prevent-double-submit='{"statusText":"exporting, please wait..."}'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   {{- if eq $.Parent "." }}
-  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>the entire site</a>?</h3>
+  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix }}/'>the entire site</a>? ({{ humanReadableFileSize $.TotalBytes }})</h3>
   {{- else if $.ExportParent }}
-  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}/</a>?</h3>
+  <h3 class='mv3 b'>Export <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}/</a>? ({{ humanReadableFileSize $.TotalBytes }})</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
   {{- else }}
-  <h3 class='mv3 b'>Export the following file(s)?</h3>
+  <h3 class='mv3 b'>Export the following file(s)? ({{ humanReadableFileSize $.TotalBytes }})</h3>
   <input type='hidden' name='parent' value='{{ $.Parent }}'>
   <ul class='list-style-disc ph3'>
     {{- range $file := $.Files }}
