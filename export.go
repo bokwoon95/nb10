@@ -501,6 +501,7 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			nbrew.Logger.Error(cleanupErr.Error())
 		}
 	}()
+	time.Sleep(time.Hour)
 	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 	if err != nil {
 		return err
