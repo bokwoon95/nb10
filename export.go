@@ -712,7 +712,6 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 				filter = sq.Expr("file_path = {} OR file_path LIKE {} ESCAPE '\\'", root, wildcardReplacer.Replace(root)+"/%")
 			}
 			cursor, err := sq.FetchCursor(nbrew.ctx, databaseFS.DB, sq.Query{
-				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format:  "SELECT {*} FROM files WHERE {filter} ORDER BY file_path",
 				Values: []any{
