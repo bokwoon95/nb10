@@ -48,7 +48,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		IsDir           bool           `json:"isDir"`
 		ModTime         time.Time      `json:"modTime"`
 		CreationTime    time.Time      `json:"creationTime"`
-		Jobs            []ExportJob    `json:"jobs"`
+		ExportJobs      []ExportJob    `json:"exportJobs"`
 		PinnedFiles     []File         `json:"pinnedfiles"`
 		Files           []File         `json:"files"`
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
@@ -219,14 +219,18 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		group, groupctx := errgroup.WithContext(r.Context())
 		if nbrew.DB != nil {
 			group.Go(func() error {
-				jobs, err := sq.FetchAll(groupctx, nbrew.DB, sq.Query{
+				exportJobs, err := sq.FetchAll(groupctx, nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
-					Format:  "SELECT {*} FROM exports WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+					Format: "SELECT {*}" +
+						" FROM export_job" +
+						" WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})" +
+						" ORDER BY start_time DESC",
 					Values: []any{
 						sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
 					},
 				}, func(row *sq.Row) ExportJob {
 					return ExportJob{
+						ExportJobID:    row.UUID("export_job_id"),
 						FileName:       row.String("file_name"),
 						StartTime:      row.Time("start_time"),
 						TotalBytes:     row.Int64("total_bytes"),
@@ -236,7 +240,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				if err != nil {
 					return err
 				}
-				response.Jobs = jobs
+				response.ExportJobs = exportJobs
 				return nil
 			})
 		}
@@ -351,7 +355,4 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
-}
-
-func (nbrew *Notebrew) exportsCancel() {
 }

@@ -531,7 +531,7 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 		}
 		preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "UPDATE export_job SET processed_bytes = {processedBytes} WHERE export_id = {exportJobID}",
+			Format:  "UPDATE export_job SET processed_bytes = {processedBytes} WHERE export_job_id = {exportJobID}",
 			Values: []any{
 				sq.Int64Param("processedBytes", 0),
 				sq.UUIDParam("exportJobID", exportJobID),
