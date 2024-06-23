@@ -42,7 +42,11 @@
         <img src='/{{ join "files" $.SitePrefix $.Parent $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>
         {{- end }}
       {{- end }}
+      {{- if eq $.Parent "exports" }}
+      <span class='b'>{{ $file.Name }}</span>
+      {{- else }}
       <a href='/{{ join "files" $.SitePrefix $.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
+      {{- end }}
       {{- if not $file.IsDir }}
       <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
       {{- end }}
