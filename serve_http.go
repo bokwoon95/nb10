@@ -369,6 +369,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "cancelimports":
 		case "cancelexports":
+			nbrew.cancelexports(w, r, user, sitePrefix)
+			return
 		default:
 			nbrew.notFound(w, r)
 			return
