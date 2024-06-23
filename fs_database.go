@@ -22,7 +22,7 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 )
 
-var wildcardReplacer = strings.NewReplacer("%", "\\%", "_", "\\_")
+var wildcardReplacer = strings.NewReplacer(`%`, `\%`, `_`, `\_`, `\`, `\\`)
 
 var gzipReaderPool = sync.Pool{}
 
