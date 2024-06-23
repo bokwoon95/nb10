@@ -512,10 +512,6 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			nbrew.Logger.Error(cleanupErr.Error())
 		}
 	}()
-	select {
-	case <-time.After(time.Hour):
-	case <-nbrew.ctx.Done():
-	}
 	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 	if err != nil {
 		return err
