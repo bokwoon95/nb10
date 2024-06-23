@@ -469,19 +469,22 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 }
 
-type progressWriter struct {
+type exportWriter struct {
 	ctx            context.Context
-	preparedExec   *sq.PreparedExec
 	writer         io.Writer
+	preparedExec   *sq.PreparedExec
 	processedBytes int64
 }
 
-func (w *progressWriter) Write(p []byte) (n int, err error) {
+func (w *exportWriter) Write(p []byte) (n int, err error) {
 	err = w.ctx.Err()
 	if err != nil {
 		return 0, err
 	}
 	n, err = w.writer.Write(p)
+	if w.preparedExec == nil {
+		return n, err
+	}
 	processedBytes := w.processedBytes + int64(n)
 	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
 		result, err := w.preparedExec.Exec(w.ctx, sq.Int64Param("processedBytes", processedBytes))
@@ -552,10 +555,10 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			return err
 		}
 		defer preparedExec.Close()
-		tarWriter = tar.NewWriter(&progressWriter{
+		tarWriter = tar.NewWriter(&exportWriter{
 			ctx:          nbrew.ctx,
-			preparedExec: preparedExec,
 			writer:       gzipWriter,
+			preparedExec: preparedExec,
 		})
 	}
 	defer tarWriter.Close()
