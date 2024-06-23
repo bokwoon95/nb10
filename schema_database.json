@@ -237,7 +237,7 @@
     ]
   },
   {
-    "table": "imports",
+    "table": "import_job",
     "indexes": [
       {
         "unique": true,
@@ -248,7 +248,7 @@
     ],
     "columns": [
       {
-        "column": "import_id",
+        "column": "import_job_id",
         "type": {
           "default": "BINARY(16)",
           "postgres": "UUID"
@@ -297,7 +297,7 @@
     ]
   },
   {
-    "table": "exports",
+    "table": "export_job",
     "indexes": [
       {
         "unique": true,
@@ -308,7 +308,7 @@
     ],
     "columns": [
       {
-        "column": "export_id",
+        "column": "export_job_id",
         "type": {
           "default": "BINARY(16)",
           "postgres": "UUID"

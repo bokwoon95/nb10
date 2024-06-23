@@ -25,7 +25,8 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		CreationTime time.Time `json:"creationTime"`
 		Size         int64     `json:"size"`
 	}
-	type Job struct {
+	type ExportJob struct {
+		ExportJobID    ID        `json:"exportJobID"`
 		FileName       string    `json:"fileName"`
 		StartTime      time.Time `json:"startTime"`
 		TotalBytes     int64     `json:"totalBytes"`
@@ -47,7 +48,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		IsDir           bool           `json:"isDir"`
 		ModTime         time.Time      `json:"modTime"`
 		CreationTime    time.Time      `json:"creationTime"`
-		Jobs            []Job          `json:"jobs"`
+		Jobs            []ExportJob    `json:"jobs"`
 		PinnedFiles     []File         `json:"pinnedfiles"`
 		Files           []File         `json:"files"`
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
@@ -224,8 +225,8 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 					Values: []any{
 						sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
 					},
-				}, func(row *sq.Row) Job {
-					return Job{
+				}, func(row *sq.Row) ExportJob {
+					return ExportJob{
 						FileName:       row.String("file_name"),
 						StartTime:      row.Time("start_time"),
 						TotalBytes:     row.Int64("total_bytes"),
@@ -350,4 +351,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
+}
+
+func (nbrew *Notebrew) exportsCancel() {
 }
