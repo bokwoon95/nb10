@@ -138,7 +138,7 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     continue;
   }
   const config = new Map();
-  const obj = JSON.parse(dataInsert.getAttribute("data-prevent-double-submit") || "{}");
+  const obj = JSON.parse(dataPreventDoubleSubmit.getAttribute("data-prevent-double-submit") || "{}");
   for (const [key, value] of Object.entries(obj)) {
     config.set(key, value);
   }
