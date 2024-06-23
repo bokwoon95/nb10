@@ -70,7 +70,6 @@ GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=x
 TODO: import.go
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
-TODO: after clicking "view in folder", it should be possible to change the sort from name to create/edited and still have it work. This is done by directory.html taking into consideration the current from/fromTime/before/beforeTime values and incorporating it into the link.
 TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
     TODO: delete and export should also remove the margin around the page
 TODO: export.go
