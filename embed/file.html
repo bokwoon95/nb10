@@ -12,8 +12,10 @@
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
-  &bull;
-  <a href='{{ $.ContentBaseURL }}' class='ma2 white'>{{ if hasPrefix $.ContentBaseURL "https://" }}{{ trimPrefix $.ContentBaseURL "https://" }}{{ else }}{{ trimPrefix $.ContentBaseURL "http://" }}{{ end }}</a>
+  {{- if $.SitePrefix }}
+  &bull;<a href='/{{ join "files" $.SitePrefix }}/' class='ma2 white'>{{ $.SitePrefix }}</a>
+  {{- end }}
+  &bull;<a href='{{ $.ContentBaseURL }}' class='ma2 white'>view site</a>
   <span class='flex-grow-1'></span>
   {{- if not $.UserID.IsZero }}
   <a href='' class='ma2 white'>{{ if $.Username }}@{{ $.Username }}{{ else }}user{{ end }}</a>
