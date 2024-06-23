@@ -241,7 +241,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		response.DestParent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		destHead, destTail, _ := strings.Cut(response.DestParent, "/")
 		switch destHead {
-		case "notes", "pages", "posts", "output", "exports":
+		case "notes", "pages", "posts", "output", "imports":
 			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.DestParent))
 			if err != nil || !fileInfo.IsDir() {
 				response.Error = "InvalidDestParent"
