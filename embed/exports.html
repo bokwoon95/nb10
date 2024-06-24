@@ -145,6 +145,51 @@
 <form>
   <input type='hidden' name='parent' value='{{ $.FilePath }}'>
   <ul>
+    {{- range $file := $.PinnedFiles }}
+    <li class='bb pv2'>
+      <label for='pinned:{{ $file.Parent }}:{{ $file.Name }}' class='flex items-start pointer' data-disable-click-selection>
+        <div class='mr1 flex items-center' style='margin-top: 0.6rem;'>
+          <input type='checkbox' id='pinned:{{ $file.Parent }}:{{ $file.Name }}' name='name' value='{{ join $file.Parent $file.Name }}' class='pointer'>
+        </div>
+        <div class='flex flex-wrap break-word items-center mt1 br2{{ if isInClipboard $file.Name }} dashed-border{{ end }}'>
+          <span class='mr1 flex items-center'>📌</span>
+          {{- if $file.IsDir }}
+          <span class='mr1 flex items-center'>📂</span>
+          {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
+          <span class='mr1 flex items-center'>⚙️</span>
+          {{- end }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and $.ImgDomain $.IsDatabaseFS }}
+          <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
+          {{- else }}
+          <img src='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}?raw' class='h3 w3 mr1'>
+          {{- end }}
+          {{- end }}
+          <a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ if eq $file.Parent $.FilePath }}{{ $file.Name }}{{ else }}/{{ join $file.Parent $file.Name }}{{ end }}{{ if $file.IsDir }}/{{ end }}</a>
+          {{- if not $file.IsDir }}
+          <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
+          {{- end }}
+          <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
+        </div>
+        <div class='flex-grow-1'></div>
+        <details class='relative ml1' data-autoclose-details>
+          <summary role='button' title='more actions' class='flex items-center button ba br2 b--black h2 hide-marker ph2 pointer' data-disable-click-selection>
+            {{ template "heroicons-ellipsis-horizontal" }}
+            {{ template "octicons-triangle-down" }}
+          </summary>
+          <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
+            <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+              {{- if $.IsDatabaseFS }}
+              <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
+              {{- end }}
+            <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+          </div>
+        </details>
+      </label>
+    </li>
+    {{- end }}
     {{- range $file := $.Files }}
     <li class='bb pv2'>
       <label for='{{ $file.Name }}' class='flex items-start pointer' data-disable-click-selection>
@@ -177,10 +222,13 @@
             {{ template "octicons-triangle-down" }}
           </summary>
           <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
-          <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
-          <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
-          <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
-          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
+            <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
+            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+              {{- if $.IsDatabaseFS }}
+              <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
+              {{- end }}
+            <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           </div>
         </details>
       </label>

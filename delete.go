@@ -150,9 +150,9 @@ func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User,
 					Size:    fileInfo.Size(),
 					ModTime: fileInfo.ModTime(),
 				}
-				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-					file.FileID = fileInfo.FileID
-					file.CreationTime = fileInfo.CreationTime
+				if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+					file.FileID = databaseFileInfo.FileID
+					file.CreationTime = databaseFileInfo.CreationTime
 				} else {
 					var absolutePath string
 					if dirFS, ok := nbrew.FS.(*DirFS); ok {

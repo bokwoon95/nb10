@@ -32,10 +32,6 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		TotalBytes     int64     `json:"totalBytes"`
 		ProcessedBytes int64     `json:"processedBytes"`
 	}
-	type Request struct {
-		Parent string
-		Names  []string
-	}
 	type Response struct {
 		ContentBaseURL  string         `json:"contentBaseURL"`
 		ImgDomain       string         `json:"imgDomain"`
@@ -348,10 +344,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		}
 		writeResponse(w, r, response)
 	case "POST":
-		if fileName != "" {
-			nbrew.notFound(w, r)
-			return
-		}
+		nbrew.methodNotAllowed(w, r)
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
