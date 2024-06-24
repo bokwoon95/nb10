@@ -16,17 +16,20 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		Root     string `json:"root"`
 	}
 	type Response struct {
-		ContentBaseURL string `json:"contentBaseURL"`
-		ImgDomain      string `json:"imgDomain"`
-		IsDatabaseFS   bool   `json:"isDatabaseFS"`
-		SitePrefix     string `json:"sitePrefix"`
-		UserID         ID     `json:"userID"`
-		Username       string `json:"username"`
-		ThemesOnly     bool   `json:"themesOnly"`
-		FileName       string `json:"fileName"`
-		Root           string `json:"root"`
-		Size           int64  `json:"size"`
-		Error          string `json:"error"`
+		ContentBaseURL string   `json:"contentBaseURL"`
+		ImgDomain      string   `json:"imgDomain"`
+		IsDatabaseFS   bool     `json:"isDatabaseFS"`
+		SitePrefix     string   `json:"sitePrefix"`
+		UserID         ID       `json:"userID"`
+		Username       string   `json:"username"`
+		ThemesOnly     bool     `json:"themesOnly"`
+		FileName       string   `json:"fileName"`
+		Root           string   `json:"root"`
+		Size           int64    `json:"size"`
+		FilesExist     []string `json:"filesExist"`
+		FilesInvalid   []string `json:"filesInvalid"`
+		FilesPasted    []string `json:"filesPasted"`
+		Error          string   `json:"error"`
 	}
 
 	switch r.Method {
@@ -68,7 +71,6 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 			nbrew.executeTemplate(w, r, tmpl, &response)
 		}
-
 		var response Response
 		_, err := nbrew.getSession(r, "flash", &response)
 		if err != nil {
@@ -83,7 +85,6 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		response.SitePrefix = sitePrefix
 		response.FileName = r.Form.Get("fileName")
 		response.Root = path.Clean(strings.Trim(r.Form.Get("root"), "/"))
-
 		if !strings.HasSuffix(response.FileName, ".tgz") {
 			response.Error = "InvalidFileType"
 			writeResponse(w, r, response)
@@ -106,7 +107,6 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 			return
 		}
 		response.Size = fileInfo.Size()
-
 		writeResponse(w, r, response)
 	case "POST":
 	default:

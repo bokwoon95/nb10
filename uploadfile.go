@@ -23,13 +23,13 @@ import (
 
 func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Response struct {
-		Error             string            `json:"error,omitempty"`
+		Error             string            `json:"error"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		Parent            string            `json:"parent"`
 		UploadCount       int64             `json:"uploadCount"`
 		UploadSize        int64             `json:"uploadSize"`
-		FilesExist        []string          `json:"fileExist,omitempty"`
-		FilesTooBig       []string          `json:"filesTooBig,omitempty"`
+		FilesExist        []string          `json:"fileExist"`
+		FilesTooBig       []string          `json:"filesTooBig"`
 	}
 	if r.Method != "POST" {
 		nbrew.methodNotAllowed(w, r)

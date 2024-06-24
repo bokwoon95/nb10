@@ -85,14 +85,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		http.Redirect(w, r, referer, http.StatusFound)
 	case "paste":
 		type Response struct {
-			Error             string            `json:"error,omitempty"`
-			IsCut             bool              `json:"isCut,omitempty"`
-			SrcParent         string            `json:"srcParent,omitempty"`
-			DestParent        string            `json:"destParent,omitempty"`
-			FilesNotExist     []string          `json:"filesNotExist,omitempty"`
-			FilesExist        []string          `json:"filesExist,omitempty"`
-			FilesInvalid      []string          `json:"filesInvalid,omitempty"`
-			FilesPasted       []string          `json:"filesPasted,omitmepty"`
+			Error             string            `json:"error"`
+			IsCut             bool              `json:"isCut"`
+			SrcParent         string            `json:"srcParent"`
+			DestParent        string            `json:"destParent"`
+			FilesNotExist     []string          `json:"filesNotExist"`
+			FilesExist        []string          `json:"filesExist"`
+			FilesInvalid      []string          `json:"filesInvalid"`
+			FilesPasted       []string          `json:"filesPasted"`
 			RegenerationStats RegenerationStats `json:"regenerationStats"`
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {

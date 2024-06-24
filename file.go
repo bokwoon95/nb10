@@ -52,7 +52,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		CreationTime      time.Time         `json:"creationTime"`
 		Size              int64             `json:"size"`
 		Content           string            `json:"content"`
-		URL               template.URL      `json:"url,omitempty"`
+		URL               template.URL      `json:"url"`
 		BelongsTo         string            `json:"belongsTo"`
 		AssetDir          string            `json:"assetDir"`
 		PinnedAssets      []Asset           `json:"pinnedAssets"`
