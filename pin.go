@@ -75,7 +75,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 		Parent: path.Clean(strings.Trim(r.Form.Get("parent"), "/")),
 	}
 	head, _, _ := strings.Cut(response.Parent, "/")
-	if head != "notes" && head != "pages" && head != "posts" && head != "output" {
+	if head != "notes" && head != "pages" && head != "posts" && head != "output" && head != "imports" && head != "exports" {
 		response.Error = "InvalidParent"
 		writeResponse(w, r, response)
 		return

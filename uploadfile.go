@@ -160,6 +160,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
+	case "imports":
+		break
 	default:
 		response.Error = "InvalidParent"
 		writeResponse(w, r, response)
@@ -353,6 +355,19 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				regenerationCount.Add(1)
 				return nil
 			})
+			continue
+		}
+
+		if head == "imports" {
+			if ext != ".tgz" {
+				continue
+			}
+			err := writeFile(r.Context(), filePath, part)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
 			continue
 		}
 

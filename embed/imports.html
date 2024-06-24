@@ -20,6 +20,41 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
+{{- if eq (index $.PostRedirectGet "from") "uploadfile" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{- $uploadCount := index $.PostRedirectGet "uploadCount" }}
+  {{- $filesExist := index $.PostRedirectGet "filesExist" }}
+  {{- $filesTooBig := index $.PostRedirectGet "filesTooBig" }}
+  {{- $uploadSize := float64ToInt64 (index $.PostRedirectGet "uploadSize") }}
+  <div class='pv1'>
+    <div>uploaded {{ $uploadCount }} file{{ if ne $uploadCount 1.0 }}s{{ end }} ({{ humanReadableFileSize $uploadSize }} total)</div>
+    {{- if $filesExist }}
+    <br>
+    <div>
+      The following files were not uploaded because a destination file already exists:
+      <ul class='list-style-disc ph3'>
+        {{- range $name := $filesExist }}
+        <li>{{ $name }}</li>
+        {{- end }}
+      </ul>
+    </div>
+    {{- end }}
+    {{- if $filesTooBig }}
+    <br>
+    <div>
+      The following files were not uploaded because they are too big (max 10 MB per file):
+      <ul class='list-style-disc ph3'>
+        {{- range $name := $filesTooBig }}
+        <li>{{ $name }}</li>
+        {{- end }}
+      </ul>
+    </div>
+    {{- end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if eq (index $.PostRedirectGet "from") "import" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>import {{ index $.PostRedirectGet "fileName" }}</div>
@@ -117,6 +152,7 @@
       </summary>
       <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
         <form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "uploadfile" }}/' class='pa2' data-prevent-double-submit>
+          <input type='hidden' name='parent' value='{{ $.FilePath }}'>
           <div class='b'>upload file to import:</div>
           <div><input type='file' name='file' style='max-width: 220px;' accept='.tgz' multiple></div>
           <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".tgz"]}'></div>
@@ -193,8 +229,6 @@
           </summary>
           <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
             <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
               {{- if $.IsDatabaseFS }}
               <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
               {{- end }}
@@ -237,8 +271,6 @@
           </summary>
           <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
             <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
-            <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
               {{- if $.IsDatabaseFS }}
               <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
               {{- end }}
