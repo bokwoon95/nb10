@@ -39,13 +39,17 @@
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <h3 class='mv3 b'>Import <a href='/{{ join "files" $.SitePrefix "imports" $.FileName }}'>{{ $.FileName }}</a>? ({{ humanReadableFileSize $.Size }})</h3>
-  <div class='mv3'>
-    <input id='output/themes' type='radio' name='root' value='output/themes' class='pointer' checked>
-    <label for='output/themes' class='pointer'>import only themes</label>
+  <div class='mv3 flex items-center'>
+    <input id='root:output/themes' type='radio' name='root' value='output/themes' class='pointer' checked>
+    <label for='root:output/themes' class='pointer ml2'>import only themes</label>
   </div>
-  <div class='mv3'>
-    <input id='.' type='radio' name='root' value='.' class='pointer'>
-    <label for='.' class='pointer'>import all files</label>
+  <div class='mv3 flex items-center'>
+    <input id='root:' type='radio' name='root' value='' class='pointer'>
+    <label for='root:' class='pointer ml2'>import all files</label>
+  </div>
+  <div class='mv3 flex items-center'>
+    <input id='overwriteExistingFiles' type='checkbox' name='overwriteExistingFiles' class='pointer'>
+    <label for='overwriteExistingFiles' class='pointer ml2'>overwrite existing files</label>
   </div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>import</button>
   <div role='status'></div>

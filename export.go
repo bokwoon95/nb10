@@ -481,9 +481,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			names = []string{path.Base(response.Parent)}
 		}
 
-		// 1. prepare the row to be inserted
-		// 2. attempt to acquire a slot (insert the row)
-		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 		var totalBytes atomic.Int64
 		group, groupctx := errgroup.WithContext(r.Context())
 		for _, name := range names {
@@ -545,10 +542,13 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			nbrew.internalServerError(w, r, err)
 			return
 		}
+		// 1. prepare the row to be inserted
+		// 2. attempt to acquire a slot (insert the row)
+		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 		exportJobID := NewID()
 		response.TotalBytes = totalBytes.Load()
 		if nbrew.DB == nil {
-			err = nbrew.doExport(exportJobID, sitePrefix, parent, names, fileName)
+			err = nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, fileName)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
@@ -584,7 +584,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			logger := getLogger(r.Context())
 			go func() {
 				defer nbrew.waitGroup.Done()
-				err := nbrew.doExport(exportJobID, sitePrefix, parent, names, fileName)
+				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, fileName)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("exportJobID", exportJobID.String()),
@@ -602,14 +602,14 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 }
 
-type exportWriter struct {
+type progressWriter struct {
 	ctx            context.Context
 	writer         io.Writer
 	preparedExec   *sq.PreparedExec
 	processedBytes int64
 }
 
-func (w *exportWriter) Write(p []byte) (n int, err error) {
+func (w *progressWriter) Write(p []byte) (n int, err error) {
 	err = w.ctx.Err()
 	if err != nil {
 		return 0, err
@@ -632,7 +632,7 @@ func (w *exportWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string, names []string, fileName string) error {
+func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, fileName string) error {
 	defer func() {
 		if nbrew.DB == nil {
 			return
@@ -648,7 +648,7 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			nbrew.Logger.Error(err.Error())
 		}
 	}()
-	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
+	writer, err := nbrew.FS.WithContext(ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 	if err != nil {
 		return err
 	}
@@ -669,14 +669,14 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			db = nbrew.DB
 		} else {
 			var conn *sql.Conn
-			conn, err = nbrew.DB.Conn(nbrew.ctx)
+			conn, err = nbrew.DB.Conn(ctx)
 			if err != nil {
 				return err
 			}
 			defer conn.Close()
 			db = conn
 		}
-		preparedExec, err := sq.PrepareExec(nbrew.ctx, db, sq.Query{
+		preparedExec, err := sq.PrepareExec(ctx, db, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format:  "UPDATE export_job SET processed_bytes = {processedBytes} WHERE export_job_id = {exportJobID}",
 			Values: []any{
@@ -688,8 +688,8 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			return err
 		}
 		defer preparedExec.Close()
-		tarWriter = tar.NewWriter(&exportWriter{
-			ctx:          nbrew.ctx,
+		tarWriter = tar.NewWriter(&progressWriter{
+			ctx:          ctx,
 			writer:       gzipWriter,
 			preparedExec: preparedExec,
 		})
@@ -731,7 +731,7 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			} else {
 				filter = sq.Expr("file_path = {} OR file_path LIKE {} ESCAPE '\\'", root, wildcardReplacer.Replace(root)+"/%")
 			}
-			cursor, err := sq.FetchCursor(nbrew.ctx, databaseFS.DB, sq.Query{
+			cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format:  "SELECT {*} FROM files WHERE {filter} ORDER BY file_path",
 				Values: []any{
@@ -787,7 +787,7 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 					return err
 				}
 				if fileType.IsObject {
-					reader, err := databaseFS.ObjectStorage.Get(nbrew.ctx, file.FileID.String()+path.Ext(file.FilePath))
+					reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 					if err != nil {
 						return err
 					}
@@ -873,7 +873,7 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			if err != nil {
 				return err
 			}
-			file, err := nbrew.FS.WithContext(nbrew.ctx).Open(filePath)
+			file, err := nbrew.FS.WithContext(ctx).Open(filePath)
 			if err != nil {
 				return err
 			}
@@ -888,13 +888,13 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 			root := path.Join(sitePrefix, parent, name)
 			if root == "." {
 				for _, root := range []string{"notes", "pages", "posts", "output", "site.json"} {
-					err = fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, walkDirFunc)
+					err = fs.WalkDir(nbrew.FS.WithContext(ctx), root, walkDirFunc)
 					if err != nil {
 						return err
 					}
 				}
 			} else {
-				err = fs.WalkDir(nbrew.FS.WithContext(nbrew.ctx), root, walkDirFunc)
+				err = fs.WalkDir(nbrew.FS.WithContext(ctx), root, walkDirFunc)
 				if err != nil {
 					return err
 				}
