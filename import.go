@@ -424,6 +424,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		_, err = fs.Stat(nbrew.FS.WithContext(ctx), path.Join(sitePrefix, header.Name))
 		// TODO: make sure that the 1 MB limit is applied to text files and 10 MB limit is applied to image files.
+		// TODO: to simplify implementation just bail loudly and produly whenever you encounter a large file that goes over the MaxBytesLimit.
 	}
 	return nil
 }
