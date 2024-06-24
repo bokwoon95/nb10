@@ -328,7 +328,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.clipboard(w, r, user, sitePrefix, tail)
 			return
 		case "imports":
-			http.Error(w, "501 not implemented", http.StatusNotImplemented)
+			nbrew.imports(w, r, user, sitePrefix, tail)
 			return
 		case "exports":
 			nbrew.exports(w, r, user, sitePrefix, tail)
