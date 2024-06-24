@@ -183,7 +183,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		nbrew.executeTemplate(w, r, tmpl, &response)
 	}
-	if r.Method != "GET" {
+	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.methodNotAllowed(w, r)
 		return
 	}

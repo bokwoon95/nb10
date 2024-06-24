@@ -50,7 +50,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		PostRedirectGet map[string]any `json:"postRedirectGet"`
 	}
 
-	if r.Method != "GET" {
+	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.methodNotAllowed(w, r)
 		return
 	}
