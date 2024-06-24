@@ -19,25 +19,35 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
-{{- if or (eq $.Error "InvalidParent") (and (not $.Files) (not $.ImportParent)) }}
+{{- if eq $.Error "FileNotExist" "InvalidFileType" }}
 <div>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <div class='mv3 b tc'>No files to export</div>
+  <div class='mv3 b tc'>No file to import</div>
 </div>
-{{- else if eq $.Error "ExportLimitReached" }}
+{{- else if eq $.Error "ImportLimitReached" }}
 <div>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <div class='mv3 b tc'>There is an ongoing export, please try again once it has completed or <a href='/{{ join "files" $.SitePrefix "exports" }}/'>cancel it from the exports page</a></div>
+  <div class='mv3 b tc'>There is an ongoing import, please try again once it has completed or <a href='/{{ join "files" $.SitePrefix "imports" }}/'>cancel it from the imports page</a></div>
 </div>
 {{- else }}
 <form method='post' data-prevent-double-submit='{"statusText":"importing, please wait..."}'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>Export</button>
+  <h3 class='mv3 b'>Import <a href='/{{ join "files" $.SitePrefix "imports" $.FileName }}'>{{ $.FileName }}</a>? ({{ humanReadableFileSize $.Size }})</h3>
+  <div class='mv3'>
+    <input id='output/themes' type='radio' name='root' value='output/themes' class='pointer' checked>
+    <label for='output/themes' class='pointer'>import only themes</label>
+  </div>
+  <div class='mv3'>
+    <input id='.' type='radio' name='root' value='.' class='pointer'>
+    <label for='.' class='pointer'>import all files</label>
+  </div>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>import</button>
+  <div role='status'></div>
 </form>
 {{- end }}

@@ -352,7 +352,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.createfile(w, r, user, sitePrefix)
 			return
 		case "delete":
-			nbrew.delete(w, r, user, sitePrefix)
+			nbrew.delet(w, r, user, sitePrefix)
 			return
 		case "search":
 			nbrew.search(w, r, user, sitePrefix)
@@ -364,6 +364,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.rename(w, r, user, sitePrefix)
 			return
 		case "import":
+			nbrew.importt(w, r, user, sitePrefix)
+			return
 		case "export":
 			nbrew.export(w, r, user, sitePrefix)
 			return

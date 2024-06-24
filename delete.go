@@ -20,7 +20,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) delete(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
+func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Name         string    `json:"name"`

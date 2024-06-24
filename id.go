@@ -119,25 +119,6 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (id ID) MarshalText() ([]byte, error) {
-	if id.IsZero() {
-		return []byte(`""`), nil
-	}
-	var array [32 + 4 + 2]byte // 32 ASCII + 4 dashes + 2 quotes
-	array[0], array[len(array)-1] = '"', '"'
-	b := array[1 : len(array)-1]
-	hex.Encode(b[:], id[:4])
-	b[8] = '-'
-	hex.Encode(b[9:13], id[4:6])
-	b[13] = '-'
-	hex.Encode(b[14:18], id[6:8])
-	b[18] = '-'
-	hex.Encode(b[19:23], id[8:10])
-	b[23] = '-'
-	hex.Encode(b[24:], id[10:])
-	return array[:], nil
-}
-
 // Copyright (c) 2009,2014 Google Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without

@@ -153,7 +153,7 @@
       <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
         <form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "uploadfile" }}/' class='pa2' data-prevent-double-submit>
           <input type='hidden' name='parent' value='{{ $.FilePath }}'>
-          <div class='b'>upload file to import:</div>
+          <div class='b'>upload tgz file to import:</div>
           <div><input type='file' name='file' style='max-width: 220px;' accept='.tgz' multiple></div>
           <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".tgz"]}'></div>
           <div><button type='submit' class='button ba br2 b--black pa2 w-100 mt2'>upload</button></div>
@@ -270,7 +270,7 @@
             {{ template "octicons-triangle-down" }}
           </summary>
           <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
-            <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "import" }}/'>import</a></div>
+            <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "import" }}/?fileName={{ $file.Name }}'>import</a></div>
             <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
               {{- if $.IsDatabaseFS }}
               <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
