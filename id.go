@@ -24,6 +24,30 @@ func NewID() ID {
 	return id
 }
 
+func ParseID(s string) (ID, error) {
+	if len(s) == 0 {
+		return ID{}, nil
+	}
+	if len(s) != 36 {
+		return ID{}, errors.New("invalid ID")
+	}
+	var id ID
+	for i, x := range [16]int{
+		0, 2, 4, 6,
+		9, 11,
+		14, 16,
+		19, 21,
+		24, 26, 28, 30, 32, 34,
+	} {
+		v, ok := xtob(s[x], s[x+1])
+		if !ok {
+			return ID{}, errors.New("invalid ID")
+		}
+		id[i] = v
+	}
+	return id, nil
+}
+
 func (id ID) IsZero() bool {
 	return id == ID{}
 }
@@ -93,6 +117,25 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 		(*id)[i] = v
 	}
 	return nil
+}
+
+func (id ID) MarshalText() ([]byte, error) {
+	if id.IsZero() {
+		return []byte(`""`), nil
+	}
+	var array [32 + 4 + 2]byte // 32 ASCII + 4 dashes + 2 quotes
+	array[0], array[len(array)-1] = '"', '"'
+	b := array[1 : len(array)-1]
+	hex.Encode(b[:], id[:4])
+	b[8] = '-'
+	hex.Encode(b[9:13], id[4:6])
+	b[13] = '-'
+	hex.Encode(b[14:18], id[6:8])
+	b[18] = '-'
+	hex.Encode(b[19:23], id[8:10])
+	b[23] = '-'
+	hex.Encode(b[24:], id[10:])
+	return array[:], nil
 }
 
 // Copyright (c) 2009,2014 Google Inc. All rights reserved.

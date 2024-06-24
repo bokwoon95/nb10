@@ -27,6 +27,18 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+{{- if eq (index $.PostRedirectGet "from") "cancelexports" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  {{ $numCanceled := index $.PostRedirectGet "numCanceled" }}
+  {{- if eq $numCanceled 0.0 }}
+  <div class='pv1'>no exports to cancel</div>
+  {{- else }}
+  <div class='pv1'>canceled export</div>
+  {{- end }}
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if eq (index $.PostRedirectGet "from") "delete" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
@@ -134,7 +146,7 @@
         {{ template "octicons-triangle-down" }}
       </summary>
       <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
-        <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "cancelexports" }}/?exportJobID={{ $exportJob.ExportJobID }}'>cancel</a></div>
+        <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "cancelexports" }}/?exportJobID={{ $exportJob.ExportJobID }}' class='dark-red'>cancel</a></div>
       </div>
     </details>
   </li>

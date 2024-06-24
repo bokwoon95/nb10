@@ -158,6 +158,26 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 
+		if nbrew.DB != nil {
+			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT 1 FROM export_job WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})",
+				Values: []any{
+					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if exists {
+				response.Error = "ExportLimitReached"
+				writeResponse(w, r, response)
+				return
+			}
+		}
+
 		if response.ExportParent {
 			root := path.Join(sitePrefix, response.Parent)
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
@@ -551,7 +571,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				if nbrew.ErrorCode != nil {
 					errorCode := nbrew.ErrorCode(err)
 					if IsKeyViolation(nbrew.Dialect, errorCode) {
-						response.Error = "there is an ongoing export, please try again once it has completed"
+						response.Error = "ExportLimitReached"
 						writeResponse(w, r, response)
 						return
 					}
@@ -617,15 +637,15 @@ func (nbrew *Notebrew) doExport(exportJobID ID, sitePrefix string, parent string
 		if nbrew.DB == nil {
 			return
 		}
-		_, cleanupErr := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+		_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format:  "DELETE FROM export_job WHERE export_job_id = {exportJobID}",
 			Values: []any{
 				sq.UUIDParam("exportJobID", exportJobID),
 			},
 		})
-		if cleanupErr != nil {
-			nbrew.Logger.Error(cleanupErr.Error())
+		if err != nil {
+			nbrew.Logger.Error(err.Error())
 		}
 	}()
 	writer, err := nbrew.FS.WithContext(nbrew.ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
