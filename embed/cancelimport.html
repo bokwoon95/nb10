@@ -37,7 +37,7 @@
     <li class='mv1'>
       <input type='hidden' name='name' value='{{ $importJob.ImportJobID }}'>
       <span class='b'>{{ $importJob.FileName }}</span>
-      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $importJob.ProcessedBytes }}/{{ humanReadableFileSize $importJob.TotalBytes }}</span>
+      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $importJob.ProcessedBytes }}/&asymp;{{ humanReadableFileSize $importJob.TotalBytes }}</span>
     </li>
     {{- end }}
   </ul>

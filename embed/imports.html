@@ -173,7 +173,7 @@
   {{- range $importJob := $.ImportJobs }}
   <li>
     <span class='b'>{{ $importJob.FileName }}</span>
-    <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $importJob.ProcessedBytes }}/{{ humanReadableFileSize $importJob.TotalBytes }}</span>
+    <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $importJob.ProcessedBytes }}/&asymp;{{ humanReadableFileSize $importJob.TotalBytes }}</span>
     <a href='/{{ join "files" $.SitePrefix "cancelimport" }}/?importJobID={{ $importJob.ImportJobID }}' class='ml2 dark-red'>cancel</a>
   </li>
   {{- end }}

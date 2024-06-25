@@ -37,7 +37,7 @@
     <li class='mv1'>
       <input type='hidden' name='name' value='{{ $exportJob.ExportJobID }}'>
       <span class='b'>{{ $exportJob.FileName }}</span>
-      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $exportJob.ProcessedBytes }}/{{ humanReadableFileSize $exportJob.TotalBytes }}</span>
+      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $exportJob.ProcessedBytes }}/&asymp;{{ humanReadableFileSize $exportJob.TotalBytes }}</span>
     </li>
     {{- end }}
   </ul>
