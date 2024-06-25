@@ -469,6 +469,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		switch databaseFS.Dialect {
 		case "sqlite", "postgres":
 			_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format: "INSERT INTO pinned_file (parent_id, file_id)" +
 					" SELECT parent_id, file_id" +
@@ -523,10 +524,11 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			}
 		}
 		isPinned := false
-		if s, ok := header.PAXRecords["NOTEBREW.file.creationTime"]; ok {
+		if s, ok := header.PAXRecords["NOTEBREW.file.isPinned"]; ok {
 			b, err := strconv.ParseBool(s)
 			if err == nil {
 				isPinned = b
+				fmt.Println("isPinned: ", header.Name)
 			}
 		}
 		switch head {
