@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -460,6 +461,47 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		return nil
 	}
+	pinFile := func(filePath string) error {
+		databaseFS, ok := fsys.(*DatabaseFS)
+		if !ok {
+			return nil
+		}
+		switch databaseFS.Dialect {
+		case "sqlite", "postgres":
+			_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
+				Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+					" SELECT parent_id, file_id" +
+					" FROM files" +
+					" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
+					" ON CONFLICT DO NOTHING",
+				Values: []any{
+					sq.Param("filePath", filePath),
+				},
+			})
+			if err != nil {
+				return err
+			}
+		case "mysql":
+			_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
+				Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+					" SELECT parent_id, file_id" +
+					" FROM files" +
+					" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
+					" ON DUPLICATE KEY UPDATE parent_id = parent_id",
+				Values: []any{
+					sq.Param("filePath", filePath),
+				},
+			})
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported dialect %q", databaseFS.Dialect)
+		}
+		return nil
+	}
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -480,6 +522,13 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				creationTime = t
 			}
 		}
+		isPinned := false
+		if s, ok := header.PAXRecords["NOTEBREW.file.creationTime"]; ok {
+			b, err := strconv.ParseBool(s)
+			if err == nil {
+				isPinned = b
+			}
+		}
 		switch head {
 		case "notes":
 			switch header.Typeflag {
@@ -487,6 +536,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
 				if err != nil {
 					return err
+				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
 				}
 			case tar.TypeReg:
 				var limit int64
@@ -502,6 +557,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
+				}
 			}
 		case "pages":
 			switch header.Typeflag {
@@ -510,6 +571,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
+				}
 			case tar.TypeReg:
 				if ext != ".html" {
 					continue
@@ -517,6 +584,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
+				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
 				}
 			}
 		case "posts":
@@ -530,6 +603,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
+				}
 			case tar.TypeReg:
 				category := path.Dir(tail)
 				if strings.Contains(category, "/") {
@@ -542,6 +621,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
+				}
 			}
 		case "output":
 			switch header.Typeflag {
@@ -549,6 +634,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
 				if err != nil {
 					return err
+				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
 				}
 			case tar.TypeReg:
 				var limit int64
@@ -564,6 +655,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
+				}
 			}
 		default:
 			switch header.Typeflag {
@@ -574,6 +671,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
+				}
+				if isPinned {
+					err := pinFile(path.Join(sitePrefix, header.Name))
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}

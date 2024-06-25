@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -720,34 +721,40 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 			ModTime      time.Time
 			CreationTime time.Time
 			Bytes        []byte
+			IsPinned     bool
 		}
 		for _, name := range names {
 			root := path.Join(sitePrefix, parent, name)
 			var filter sq.Expression
 			if root == "." {
-				filter = sq.Expr("file_path = 'notes' OR file_path LIKE 'notes/%'" +
-					" OR file_path = 'pages' OR file_path LIKE 'pages/%'" +
-					" OR file_path = 'posts' OR file_path LIKE 'posts/%'" +
-					" OR file_path = 'output' OR file_path LIKE 'output/%'" +
-					" OR file_path = 'site.json'")
+				filter = sq.Expr("files.file_path = 'notes' OR files.file_path LIKE 'notes/%'" +
+					" OR files.file_path = 'pages' OR files.file_path LIKE 'pages/%'" +
+					" OR files.file_path = 'posts' OR files.file_path LIKE 'posts/%'" +
+					" OR files.file_path = 'output' OR files.file_path LIKE 'output/%'" +
+					" OR files.file_path = 'site.json'")
 			} else {
-				filter = sq.Expr("file_path = {} OR file_path LIKE {} ESCAPE '\\'", root, wildcardReplacer.Replace(root)+"/%")
+				filter = sq.Expr("files.file_path = {} OR files.file_path LIKE {} ESCAPE '\\'", root, wildcardReplacer.Replace(root)+"/%")
 			}
 			cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
-				Format:  "SELECT {*} FROM files WHERE {filter} ORDER BY file_path",
+				Format: "SELECT {*}" +
+					" FROM files" +
+					" LEFT JOIN pinned_file ON pinned_file.parent_id = files.parent_id AND pinned_file.file_id = files.file_id" +
+					" WHERE {filter}" +
+					" ORDER BY files.file_path",
 				Values: []any{
 					sq.Param("filter", filter),
 				},
 			}, func(row *sq.Row) (file File) {
-				buf = row.Bytes(buf[:0], "COALESCE(text, data)")
-				file.FileID = row.UUID("file_id")
-				file.FilePath = row.String("file_path")
-				file.IsDir = row.Bool("is_dir")
-				file.Size = row.Int64("size")
+				buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
+				file.FileID = row.UUID("files.file_id")
+				file.FilePath = row.String("files.file_path")
+				file.IsDir = row.Bool("files.is_dir")
+				file.Size = row.Int64("files.size")
 				file.Bytes = buf
-				file.ModTime = row.Time("mod_time")
-				file.CreationTime = row.Time("creation_time")
+				file.ModTime = row.Time("files.mod_time")
+				file.CreationTime = row.Time("files.creation_time")
+				file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
 				if sitePrefix != "" {
 					file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
 				}
@@ -767,6 +774,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 					Size:    file.Size,
 					PAXRecords: map[string]string{
 						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
+						"NOTEBREW.file.isPinned":     strconv.FormatBool(file.IsPinned),
 					},
 				}
 				if file.IsDir {

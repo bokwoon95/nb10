@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"sync/atomic"
-	"time"
 
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
@@ -107,7 +106,6 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	slices.Sort(names)
 	names = slices.Compact(names)
 	numPinned := atomic.Int64{}
-	creationTime := time.Now()
 	tx, err := databaseFS.DB.BeginTx(r.Context(), nil)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
@@ -126,13 +124,12 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	case "sqlite", "postgres":
 		preparedExec, err = sq.PrepareExec(r.Context(), tx, sq.Query{
 			Dialect: databaseFS.Dialect,
-			Format: "INSERT INTO pinned_file (parent_id, file_id, creation_time)" +
-				" SELECT {parentID}, file_id, {creationTime} FROM files WHERE file_path = {filePath}" +
+			Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+				" SELECT {parentID}, file_id FROM files WHERE file_path = {filePath}" +
 				" ON CONFLICT DO NOTHING",
 			Values: []any{
 				sq.UUIDParam("parentID", parentID),
-				sq.TimeParam("creationTime", creationTime),
-				sq.StringParam("filePath", ""),
+				sq.Param("filePath", nil),
 			},
 		})
 		if err != nil {
@@ -144,12 +141,11 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 		preparedExec, err = sq.PrepareExec(r.Context(), tx, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "INSERT INTO pinned_file (parent_id, file_id, creation_time)" +
-				" SELECT {parentID}, file_id, {creationTime} FROM files WHERE file_path = {filePath}" +
+				" SELECT {parentID}, file_id FROM files WHERE file_path = {filePath}" +
 				" ON DUPLICATE KEY UPDATE parent_id = parent_id",
 			Values: []any{
 				sq.UUIDParam("parentID", parentID),
-				sq.TimeParam("creationTime", creationTime),
-				sq.StringParam("filePath", ""),
+				sq.Param("filePath", nil),
 			},
 		})
 		if err != nil {
