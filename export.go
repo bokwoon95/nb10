@@ -652,7 +652,9 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 		if !success {
 			err := nbrew.FS.WithContext(context.Background()).Remove(path.Join(sitePrefix, "exports", fileName))
 			if err != nil {
-				nbrew.Logger.Error(err.Error())
+				if !errors.Is(err, fs.ErrNotExist) {
+					nbrew.Logger.Error(err.Error())
+				}
 			}
 		}
 	}()
