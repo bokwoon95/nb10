@@ -16,16 +16,16 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
-	type ExportJob struct {
-		ExportJobID    ID        `json:"exportJobID"`
+func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
+	type ImportJob struct {
+		ImportJobID    ID        `json:"importJobID"`
 		FileName       string    `json:"fileName"`
 		StartTime      time.Time `json:"startTime"`
 		TotalBytes     int64     `json:"totalBytes"`
 		ProcessedBytes int64     `json:"processedBytes"`
 	}
 	type Request struct {
-		ExportJobIDs []ID `json:"exportJobIDs"`
+		ImportJobIDs []ID `json:"importJobIDs"`
 	}
 	type Response struct {
 		ContentBaseURL string      `json:"contentBaseURL"`
@@ -34,7 +34,7 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 		SitePrefix     string      `json:"sitePrefix"`
 		UserID         ID          `json:"userID"`
 		Username       string      `json:"username"`
-		ExportJobs     []ExportJob `json:"exportJobs"`
+		ImportJobs     []ImportJob `json:"importJobs"`
 		CancelErrors   []string    `json:"cancelErrors"`
 	}
 	if nbrew.DB == nil {
@@ -71,7 +71,7 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 				"referer":               func() string { return referer },
 			}
-			tmpl, err := template.New("cancelexports.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/cancelexports.html")
+			tmpl, err := template.New("cancelimport.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/cancelimport.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
@@ -93,29 +93,29 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.SitePrefix = sitePrefix
-		var exportJobIDs []ID
-		for _, s := range r.Form["exportJobID"] {
-			exportJobID, err := ParseID(s)
+		var importJobIDs []ID
+		for _, s := range r.Form["importJobID"] {
+			importJobID, err := ParseID(s)
 			if err != nil {
 				nbrew.badRequest(w, r, err)
 				return
 			}
-			exportJobIDs = append(exportJobIDs, exportJobID)
+			importJobIDs = append(importJobIDs, importJobID)
 		}
-		response.ExportJobs = make([]ExportJob, len(exportJobIDs))
+		response.ImportJobs = make([]ImportJob, len(importJobIDs))
 		group, groupctx := errgroup.WithContext(r.Context())
-		for i, exportJobID := range exportJobIDs {
-			i, exportJobID := i, exportJobID
+		for i, importJobID := range importJobIDs {
+			i, importJobID := i, importJobID
 			group.Go(func() error {
-				exportJob, err := sq.FetchOne(groupctx, nbrew.DB, sq.Query{
+				importJob, err := sq.FetchOne(groupctx, nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
-					Format:  "SELECT {*} FROM export_job WHERE export_job_id = {exportJobID}",
+					Format:  "SELECT {*} FROM import_job WHERE import_job_id = {importJobID}",
 					Values: []any{
-						sq.UUIDParam("exportJobID", exportJobID),
+						sq.UUIDParam("importJobID", importJobID),
 					},
-				}, func(row *sq.Row) ExportJob {
-					return ExportJob{
-						ExportJobID:    row.UUID("export_job_id"),
+				}, func(row *sq.Row) ImportJob {
+					return ImportJob{
+						ImportJobID:    row.UUID("import_job_id"),
 						FileName:       row.String("file_name"),
 						StartTime:      row.Time("start_time"),
 						TotalBytes:     row.Int64("total_bytes"),
@@ -128,7 +128,7 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 					}
 					return err
 				}
-				response.ExportJobs[i] = exportJob
+				response.ImportJobs[i] = importJob
 				return nil
 			})
 		}
@@ -139,14 +139,14 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 			return
 		}
 		n := 0
-		for _, exportJob := range response.ExportJobs {
-			if exportJob.ExportJobID.IsZero() {
+		for _, importJob := range response.ImportJobs {
+			if importJob.ImportJobID.IsZero() {
 				continue
 			}
-			response.ExportJobs[n] = exportJob
+			response.ImportJobs[n] = importJob
 			n++
 		}
-		response.ExportJobs = response.ExportJobs[:n]
+		response.ImportJobs = response.ImportJobs[:n]
 		writeResponse(w, r, response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -163,8 +163,8 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":         "cancelexports",
-					"numCanceled":  len(response.ExportJobs),
+					"from":         "cancelimport",
+					"numCanceled":  len(response.ImportJobs),
 					"cancelErrors": response.CancelErrors,
 				},
 			})
@@ -173,7 +173,7 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "exports")+"/", http.StatusFound)
+			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "imports")+"/", http.StatusFound)
 		}
 
 		var request Request
@@ -200,13 +200,13 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 					return
 				}
 			}
-			for _, s := range r.Form["exportJobID"] {
-				exportJobID, err := ParseID(s)
+			for _, s := range r.Form["importJobID"] {
+				importJobID, err := ParseID(s)
 				if err != nil {
 					nbrew.badRequest(w, r, err)
 					return
 				}
-				request.ExportJobIDs = append(request.ExportJobIDs, exportJobID)
+				request.ImportJobIDs = append(request.ImportJobIDs, importJobID)
 			}
 		default:
 			nbrew.unsupportedContentType(w, r)
@@ -214,40 +214,38 @@ func (nbrew *Notebrew) cancelexports(w http.ResponseWriter, r *http.Request, use
 		}
 
 		var response Response
-		response.ExportJobs = make([]ExportJob, len(request.ExportJobIDs))
-		response.CancelErrors = make([]string, len(request.ExportJobIDs))
+		response.ImportJobs = make([]ImportJob, len(request.ImportJobIDs))
+		response.CancelErrors = make([]string, len(request.ImportJobIDs))
 		var waitGroup sync.WaitGroup
-		for i, exportJobID := range request.ExportJobIDs {
-			i, exportJobID := i, exportJobID
+		for i, importJobID := range request.ImportJobIDs {
+			i, importJobID := i, importJobID
 			waitGroup.Add(1)
 			go func() {
 				defer waitGroup.Done()
 				result, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
-					Format:  "DELETE FROM export_job WHERE export_job_id = {exportJobID}",
+					Format:  "DELETE FROM import_job WHERE import_job_id = {importJobID}",
 					Values: []any{
-						sq.UUIDParam("exportJobID", exportJobID),
+						sq.UUIDParam("importJobID", importJobID),
 					},
 				})
 				if err != nil {
 					response.CancelErrors[i] = err.Error()
 				} else if result.RowsAffected != 0 {
-					response.ExportJobs[i] = ExportJob{
-						ExportJobID: exportJobID,
-					}
+					response.ImportJobs[i] = ImportJob{ImportJobID: importJobID}
 				}
 			}()
 		}
 		waitGroup.Wait()
 		n := 0
-		for _, exportJob := range response.ExportJobs {
-			if exportJob.ExportJobID.IsZero() {
+		for _, importJob := range response.ImportJobs {
+			if importJob.ImportJobID.IsZero() {
 				continue
 			}
-			response.ExportJobs[n] = exportJob
+			response.ImportJobs[n] = importJob
 			n++
 		}
-		response.ExportJobs = response.ExportJobs[:n]
+		response.ImportJobs = response.ImportJobs[:n]
 		n = 0
 		for _, cancelError := range response.CancelErrors {
 			if cancelError == "" {

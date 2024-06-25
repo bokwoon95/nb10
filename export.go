@@ -660,9 +660,9 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
-	var tarWriter *tar.Writer
+	var dest io.Writer
 	if nbrew.DB == nil {
-		tarWriter = tar.NewWriter(gzipWriter)
+		dest = gzipWriter
 	} else {
 		var db sq.DB
 		if nbrew.Dialect == "sqlite" {
@@ -688,12 +688,14 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 			return err
 		}
 		defer preparedExec.Close()
-		tarWriter = tar.NewWriter(&progressWriter{
-			ctx:          ctx,
-			writer:       gzipWriter,
-			preparedExec: preparedExec,
-		})
+		dest = &progressWriter{
+			ctx:            ctx,
+			writer:         gzipWriter,
+			preparedExec:   preparedExec,
+			processedBytes: 0,
+		}
 	}
+	tarWriter := tar.NewWriter(dest)
 	defer tarWriter.Close()
 	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 		buf := bufPool.Get().(*bytes.Buffer).Bytes()

@@ -51,6 +51,8 @@ type DatabaseFS struct {
 	ErrorCode     func(error) string
 	ObjectStorage ObjectStorage
 	Logger        *slog.Logger
+	modTime       time.Time
+	creationTime  time.Time
 }
 
 func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
@@ -73,6 +75,34 @@ func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 		ErrorCode:     fsys.ErrorCode,
 		ObjectStorage: fsys.ObjectStorage,
 		Logger:        fsys.Logger,
+		modTime:       fsys.modTime,
+		creationTime:  fsys.creationTime,
+	}
+}
+
+func (fsys *DatabaseFS) WithModTime(modTime time.Time) *DatabaseFS {
+	return &DatabaseFS{
+		Context:       fsys.Context,
+		DB:            fsys.DB,
+		Dialect:       fsys.Dialect,
+		ErrorCode:     fsys.ErrorCode,
+		ObjectStorage: fsys.ObjectStorage,
+		Logger:        fsys.Logger,
+		modTime:       modTime,
+		creationTime:  fsys.creationTime,
+	}
+}
+
+func (fsys *DatabaseFS) WithCreationTime(creationTime time.Time) *DatabaseFS {
+	return &DatabaseFS{
+		Context:       fsys.Context,
+		DB:            fsys.DB,
+		Dialect:       fsys.Dialect,
+		ErrorCode:     fsys.ErrorCode,
+		ObjectStorage: fsys.ObjectStorage,
+		Logger:        fsys.Logger,
+		modTime:       fsys.modTime,
+		creationTime:  creationTime,
 	}
 }
 
@@ -320,6 +350,7 @@ type DatabaseFileWriter struct {
 	buf                 *bytes.Buffer
 	gzipWriter          *gzip.Writer
 	modTime             time.Time
+	creationTime        time.Time
 	objectStorageWriter *io.PipeWriter
 	objectStorageResult chan error
 	writeFailed         bool
@@ -341,6 +372,14 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	if ext := path.Ext(name); ext != "" {
 		fileType = fileTypes[ext]
 	}
+	now := time.Now().UTC()
+	modTime, creationTime := now, now
+	if !fsys.modTime.IsZero() {
+		modTime = fsys.modTime
+	}
+	if !fsys.creationTime.IsZero() {
+		creationTime = fsys.creationTime
+	}
 	file := &DatabaseFileWriter{
 		ctx:               fsys.Context,
 		fileType:          fileType,
@@ -349,7 +388,8 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		dialect:           fsys.Dialect,
 		objectStorage:     fsys.ObjectStorage,
 		filePath:          name,
-		modTime:           time.Now().UTC(),
+		modTime:           modTime,
+		creationTime:      creationTime,
 		logger:            fsys.Logger,
 	}
 	// If parentDir is the root directory, just fetch the file information.
@@ -596,13 +636,14 @@ func (file *DatabaseFileWriter) Close() error {
 		_, err := sq.Exec(file.ctx, file.db, sq.Query{
 			Dialect: file.dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, size, mod_time, creation_time, is_dir)" +
-				" VALUES ({fileID}, {parentID}, {filePath}, {size}, {modTime}, {modTime}, FALSE)",
+				" VALUES ({fileID}, {parentID}, {filePath}, {size}, {modTime}, {creationTime}, FALSE)",
 			Values: []any{
 				sq.UUIDParam("fileID", file.fileID),
 				sq.UUIDParam("parentID", file.parentID),
 				sq.StringParam("filePath", file.filePath),
 				sq.Int64Param("size", file.size),
 				sq.TimeParam("modTime", file.modTime),
+				sq.TimeParam("creationTime", file.creationTime),
 			},
 		})
 		if err != nil {
@@ -619,7 +660,7 @@ func (file *DatabaseFileWriter) Close() error {
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
 				Dialect: file.dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, size, data, mod_time, creation_time, is_dir)" +
-					" VALUES ({fileID}, {parentID}, {filePath}, {size}, {data}, {modTime}, {modTime}, FALSE)",
+					" VALUES ({fileID}, {parentID}, {filePath}, {size}, {data}, {modTime}, {creationTime}, FALSE)",
 				Values: []any{
 					sq.UUIDParam("fileID", file.fileID),
 					sq.UUIDParam("parentID", file.parentID),
@@ -627,6 +668,7 @@ func (file *DatabaseFileWriter) Close() error {
 					sq.Int64Param("size", file.size),
 					sq.BytesParam("data", file.buf.Bytes()),
 					sq.TimeParam("modTime", file.modTime),
+					sq.TimeParam("creationTime", file.creationTime),
 				},
 			})
 			if err != nil {
@@ -636,7 +678,7 @@ func (file *DatabaseFileWriter) Close() error {
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
 				Dialect: file.dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, size, text, mod_time, creation_time, is_dir)" +
-					" VALUES ({fileID}, {parentID}, {filePath}, {size}, {text}, {modTime}, {modTime}, FALSE)",
+					" VALUES ({fileID}, {parentID}, {filePath}, {size}, {text}, {modTime}, {creationTime}, FALSE)",
 				Values: []any{
 					sq.UUIDParam("fileID", file.fileID),
 					sq.UUIDParam("parentID", file.parentID),
@@ -644,6 +686,7 @@ func (file *DatabaseFileWriter) Close() error {
 					sq.Int64Param("size", file.size),
 					sq.BytesParam("text", file.buf.Bytes()),
 					sq.TimeParam("modTime", file.modTime),
+					sq.TimeParam("creationTime", file.creationTime),
 				},
 			})
 			if err != nil {
@@ -663,7 +706,9 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
 	}
 	// TODO: return syscall.ENOTDIR if name is not a dir? Or follow stdlib and
-	// return fs.ErrNotExist?
+	// return fs.ErrNotExist? Will there ever be a meaningful case where we
+	// want to catch the error of the user passing in a regular file's name to
+	// ReadDir?
 	var condition sq.Expression
 	if name == "." {
 		condition = sq.Expr("parent_id IS NULL")
@@ -703,17 +748,25 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	if name == "." {
 		return nil
 	}
-	modTime := time.Now().UTC()
+	now := time.Now().UTC()
+	modTime, creationTime := now, now
+	if !fsys.modTime.IsZero() {
+		modTime = fsys.modTime
+	}
+	if !fsys.creationTime.IsZero() {
+		creationTime = fsys.creationTime
+	}
 	parentDir := path.Dir(name)
 	if parentDir == "." {
 		_, err := sq.Exec(fsys.Context, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, file_path, mod_time, creation_time, is_dir)" +
-				" VALUES ({fileID}, {filePath}, {modTime}, {modTime}, TRUE)",
+				" VALUES ({fileID}, {filePath}, {modTime}, {creationTime}, TRUE)",
 			Values: []any{
 				sq.UUIDParam("fileID", NewID()),
 				sq.StringParam("filePath", name),
 				sq.TimeParam("modTime", modTime),
+				sq.TimeParam("creationTime", creationTime),
 			},
 		})
 		if err != nil {
@@ -727,15 +780,31 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 			return err
 		}
 	} else {
+		parentID, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format:  "SELECT {*} FROM files WHERE file_path = {parentDir}",
+			Values: []any{
+				sq.StringParam("parentDir", parentDir),
+			},
+		}, func(row *sq.Row) ID {
+			return row.UUID("file_id")
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrNotExist}
+			}
+			return err
+		}
 		_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir)" +
-				" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {modTime}, TRUE)",
+				" VALUES ({fileID}, {parentID}, {filePath}, {modTime}, {creationTime}, TRUE)",
 			Values: []any{
 				sq.UUIDParam("fileID", NewID()),
-				sq.StringParam("parentDir", parentDir),
+				sq.UUIDParam("parentID", parentID),
 				sq.StringParam("filePath", name),
 				sq.TimeParam("modTime", modTime),
+				sq.TimeParam("creationTime", creationTime),
 			},
 		})
 		if err != nil {
@@ -770,19 +839,27 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	defer tx.Rollback()
 
 	// Insert the top level directory (no parent), ignoring duplicates.
-	modTime := time.Now().UTC()
+	now := time.Now().UTC()
+	modTime, creationTime := now, now
+	if !fsys.modTime.IsZero() {
+		modTime = fsys.modTime
+	}
+	if !fsys.creationTime.IsZero() {
+		creationTime = fsys.creationTime
+	}
 	segments := strings.Split(name, "/")
 	switch fsys.Dialect {
 	case "sqlite", "postgres":
 		_, err := sq.Exec(fsys.Context, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, file_path, mod_time, creation_time, is_dir)" +
-				" VALUES ({fileID}, {filePath}, {modTime}, {modTime}, TRUE)" +
+				" VALUES ({fileID}, {filePath}, {modTime}, {creationTime}, TRUE)" +
 				" ON CONFLICT DO NOTHING",
 			Values: []any{
 				sq.UUIDParam("fileID", NewID()),
 				sq.StringParam("filePath", segments[0]),
 				sq.TimeParam("modTime", modTime),
+				sq.TimeParam("creationTime", creationTime),
 			},
 		})
 		if err != nil {
@@ -792,12 +869,13 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 		_, err := sq.Exec(fsys.Context, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, file_path, mod_time, creation_time is_dir)" +
-				" VALUES ({fileID}, {filePath}, {modTime}, {modTime}, TRUE)" +
+				" VALUES ({fileID}, {filePath}, {modTime}, {creationTime}, TRUE)" +
 				" ON DUPLICATE KEY UPDATE file_id = file_id",
 			Values: []any{
 				sq.UUIDParam("fileID", NewID()),
 				sq.StringParam("filePath", segments[0]),
 				sq.TimeParam("modTime", modTime),
+				sq.TimeParam("creationTime", creationTime),
 			},
 		})
 		if err != nil {
@@ -815,13 +893,14 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 			preparedExec, err = sq.PrepareExec(fsys.Context, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir)" +
-					" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {modTime}, TRUE)" +
+					" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {creationTime}, TRUE)" +
 					" ON CONFLICT DO NOTHING",
 				Values: []any{
 					sq.Param("fileID", nil),
 					sq.Param("parentDir", nil),
 					sq.Param("filePath", nil),
 					sq.Param("modTime", nil),
+					sq.Param("creationTime", nil),
 				},
 			})
 			if err != nil {
@@ -831,13 +910,14 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 			preparedExec, err = sq.PrepareExec(fsys.Context, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir)" +
-					" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {modTime}, TRUE)" +
+					" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {creationTime}, TRUE)" +
 					" ON DUPLICATE KEY UPDATE file_id = file_id",
 				Values: []any{
 					sq.Param("fileID", nil),
 					sq.Param("parentDir", nil),
 					sq.Param("filePath", nil),
 					sq.Param("modTime", nil),
+					sq.Param("creationTime", nil),
 				},
 			})
 			if err != nil {
@@ -855,6 +935,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 				sq.StringParam("parentDir", parentDir),
 				sq.StringParam("filePath", filePath),
 				sq.TimeParam("modTime", modTime),
+				sq.TimeParam("creationTime", creationTime),
 			)
 			if err != nil {
 				return err

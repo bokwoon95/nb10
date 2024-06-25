@@ -62,7 +62,7 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
-{{- if eq (index $.PostRedirectGet "from") "cancelimports" }}
+{{- if eq (index $.PostRedirectGet "from") "cancelimport" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{ $numCanceled := index $.PostRedirectGet "numCanceled" }}
   {{- if eq $numCanceled 0.0 }}
@@ -167,34 +167,23 @@
     </details>
   </div>
 </div>
+{{- if $.ImportJobs }}
+<h3 class='ma0 b'>Ongoing import (<a href=''>refresh page to see progress</a>)</h3>
+<ul class='list-style-disc ph3 mv3'>
+  {{- range $importJob := $.ImportJobs }}
+  <li>
+    <span class='b'>{{ $importJob.FileName }}</span>
+    <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $importJob.ProcessedBytes }}/{{ humanReadableFileSize $importJob.TotalBytes }}</span>
+    <a href='/{{ join "files" $.SitePrefix "cancelimport" }}/?importJobID={{ $importJob.ImportJobID }}' class='ml2 dark-red'>cancel</a>
+  </li>
+  {{- end }}
+</ul>
+{{- end }}
 <div class='bb pb2 flex flex-wrap'>
   <div class=''>
     {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
   </div>
 </div>
-{{- if $.ImportJobs }}
-<ul>
-  {{- range $importJob := $.ImportJobs }}
-  <li class='bb pv2 flex items-center'>
-    <div>
-      <span class='b'>(in progress) {{ $importJob.FileName }}</span>
-      <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $importJob.ProcessedBytes }}/{{ humanReadableFileSize $importJob.TotalBytes }}</span>
-      <span class='ml2 f6 mid-gray'>(<a href=''>refresh page to see progress</a>)</span>
-    </div>
-    <div class='flex-grow-1'></div>
-    <details class='relative ml1' data-autoclose-details>
-      <summary role='button' title='more actions' class='flex items-center button ba br2 b--black h2 hide-marker ph2 pointer' data-disable-click-selection>
-        {{ template "heroicons-ellipsis-horizontal" }}
-        {{ template "octicons-triangle-down" }}
-      </summary>
-      <div class='absolute bg-white br2' style='top: calc(2rem + 4px); right: 0px; z-index: 1000; border: 1px solid black;'>
-        <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "cancelimports" }}/?importJobID={{ $importJob.ImportJobID }}' class='dark-red'>cancel</a></div>
-      </div>
-    </details>
-  </li>
-  {{- end }}
-</ul>
-{{- end }}
 {{- if $.Files }}
 <form>
   <input type='hidden' name='parent' value='{{ $.FilePath }}'>

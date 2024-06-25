@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -334,14 +335,49 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		return err
 	}
 	defer file.Close()
+	var src io.Reader
+	if nbrew.DB == nil {
+		src = file
+	} else {
+		var db sq.DB
+		if nbrew.Dialect == "sqlite" {
+			db = nbrew.DB
+		} else {
+			var conn *sql.Conn
+			conn, err = nbrew.DB.Conn(ctx)
+			if err != nil {
+				return err
+			}
+			defer conn.Close()
+			db = conn
+		}
+		preparedExec, err := sq.PrepareExec(ctx, db, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "UPDATE import_job SET processed_bytes = {processedBytes} WHERE import_job_id = {importJobID}",
+			Values: []any{
+				sq.Int64Param("processedBytes", 0),
+				sq.UUIDParam("importJobID", importJobID),
+			},
+		})
+		if err != nil {
+			return err
+		}
+		defer preparedExec.Close()
+		src = &progressReader{
+			ctx:            ctx,
+			reader:         file,
+			preparedExec:   preparedExec,
+			processedBytes: 0,
+		}
+	}
 	gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
 	if gzipReader == nil {
-		gzipReader, err = gzip.NewReader(file)
+		gzipReader, err = gzip.NewReader(src)
 		if err != nil {
 			return err
 		}
 	} else {
-		err = gzipReader.Reset(file)
+		err = gzipReader.Reset(src)
 		if err != nil {
 			return err
 		}
@@ -350,11 +386,77 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		gzipReader.Reset(empty)
 		gzipReaderPool.Put(gzipReader)
 	}()
-	var prefix string
-	if root != "." {
-		prefix = root + "/"
-	}
 	tarReader := tar.NewReader(gzipReader)
+	var rootPrefix string
+	if root != "." {
+		rootPrefix = root + "/"
+	}
+	fsys := nbrew.FS.WithContext(ctx)
+	mkdir := func(filePath string, modTime, creationTime time.Time) error {
+		if !overwriteExistingFiles {
+			_, err := fs.Stat(fsys, filePath)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+			} else {
+				return nil
+			}
+		}
+		if databaseFS, ok := fsys.(*DatabaseFS); ok {
+			fsys = databaseFS.WithCreationTime(modTime).WithCreationTime(creationTime)
+		}
+		err := fsys.Mkdir(filePath, 0755)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			err := fsys.MkdirAll(filePath, 0755)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	writeFile := func(filePath string, modTime, creationTime time.Time, reader io.Reader) error {
+		if !overwriteExistingFiles {
+			_, err := fs.Stat(fsys, filePath)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+			} else {
+				return nil
+			}
+		}
+		if databaseFS, ok := fsys.(*DatabaseFS); ok {
+			fsys = databaseFS.WithCreationTime(modTime).WithCreationTime(creationTime)
+		}
+		writer, err := fsys.OpenWriter(filePath, 0644)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			err := fsys.MkdirAll(path.Dir(filePath), 0755)
+			if err != nil {
+				return err
+			}
+			writer, err = fsys.OpenWriter(filePath, 0644)
+			if err != nil {
+				return err
+			}
+		}
+		defer writer.Close()
+		_, err = io.Copy(writer, reader)
+		if err != nil {
+			return err
+		}
+		err = writer.Close()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -363,68 +465,115 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		if err != nil {
 			return err
 		}
-		if !strings.HasPrefix(header.Name, prefix) {
+		if !strings.HasPrefix(header.Name, rootPrefix) {
 			continue
 		}
-		head, _, _ := strings.Cut(header.Name, "/")
+		head, tail, _ := strings.Cut(header.Name, "/")
 		ext := path.Ext(header.Name)
+		creationTime := header.ModTime
+		if s, ok := header.PAXRecords["NOTEBREW.file.creationTime"]; ok {
+			t, err := time.Parse("2006-01-02T15:04:05Z", s)
+			if err == nil {
+				creationTime = t
+			}
+		}
 		switch head {
 		case "notes":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				break
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				if err != nil {
+					return err
+				}
 			case tar.TypeReg:
+				var limit int64
 				switch ext {
-				case ".html", ".css", ".js", ".md", ".txt", ".jpeg", ".jpg", ".png", ".gif":
-					break
+				case ".html", ".css", ".js", ".md", ".txt":
+					limit = 1 << 20 /* 1 MB */
+				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+					limit = 10 << 20 /* 10 MB */
 				default:
 					continue
 				}
-			default:
-				continue
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, limit))
+				if err != nil {
+					return err
+				}
 			}
 		case "pages":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				break
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				if err != nil {
+					return err
+				}
 			case tar.TypeReg:
-				switch ext {
-				case ".html":
-					break
-				default:
+				if ext != ".html" {
 					continue
 				}
-			default:
-				continue
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				if err != nil {
+					return err
+				}
 			}
 		case "posts":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				break
+				category := tail
+				if strings.Contains(category, "/") {
+					continue
+				}
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				if err != nil {
+					return err
+				}
 			case tar.TypeReg:
+				category := path.Dir(tail)
+				if strings.Contains(category, "/") {
+					continue
+				}
+				if ext != ".md" {
+					continue
+				}
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				if err != nil {
+					return err
+				}
+			}
+		case "output":
+			switch header.Typeflag {
+			case tar.TypeDir:
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				if err != nil {
+					return err
+				}
+			case tar.TypeReg:
+				var limit int64
 				switch ext {
-				case ".html", ".css", ".js", ".md", ".txt", ".jpeg", ".jpg", ".png", ".gif":
-					break
+				case ".html", ".css", ".js", ".md", ".txt":
+					limit = 1 << 20 /* 1 MB */
+				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+					limit = 10 << 20 /* 10 MB */
 				default:
 					continue
 				}
-			default:
-				continue
-			}
-		case "output":
-		case "":
-			switch header.Name {
-			case "site.json":
-				break
-			default:
-				continue
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, limit))
+				if err != nil {
+					return err
+				}
 			}
 		default:
-			continue
+			switch header.Typeflag {
+			case tar.TypeReg:
+				if header.Name != "site.json" {
+					continue
+				}
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				if err != nil {
+					return err
+				}
+			}
 		}
-		_, err = fs.Stat(nbrew.FS.WithContext(ctx), path.Join(sitePrefix, header.Name))
-		// TODO: make sure that the 1 MB limit is applied to text files and 10 MB limit is applied to image files.
-		// TODO: when you do encounter max bytes limit, stop writing to the file and continue to the next one. The half-written file will be corrupted, but that's on the user.
 	}
 	return nil
 }

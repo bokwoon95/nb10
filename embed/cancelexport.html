@@ -24,19 +24,19 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <div class='mv3 b tc'>No exports to cancel</div>
+  <div class='mv3 b tc'>No ongoing exports to cancel</div>
 </div>
 {{- else }}
 <form method='post'>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <h3 class='mv3 b'>Cancel export?</h3>
+  <h3 class='mv3 b'>Cancel ongoing export?</h3>
   <ul class='list-style-disc ph3'>
     {{- range $exportJob := $.ExportJobs }}
     <li class='mv1'>
       <input type='hidden' name='name' value='{{ $exportJob.ExportJobID }}'>
-      <span class='b'>(in progress) {{ $exportJob.FileName }}</span>
+      <span class='b'>{{ $exportJob.FileName }}</span>
       <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $exportJob.ProcessedBytes }}/{{ humanReadableFileSize $exportJob.TotalBytes }}</span>
     </li>
     {{- end }}
