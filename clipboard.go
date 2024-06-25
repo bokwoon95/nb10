@@ -440,6 +440,16 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							}
 						}
 					}
+				case "imports":
+					if !srcFileInfo.IsDir() {
+						if !strings.HasSuffix(srcFilePath, ".tgz") {
+							invalidCh <- name
+							return nil
+						}
+					} else {
+						invalidCh <- name
+						return nil
+					}
 				}
 				pastedCh <- name
 				isPermanentFile := false
