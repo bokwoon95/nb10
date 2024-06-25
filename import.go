@@ -434,7 +434,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			}
 		}
 		if databaseFS, ok := fsys.(*DatabaseFS); ok {
-			fsys = databaseFS.WithCreationTime(modTime).WithCreationTime(creationTime)
+			fsys = databaseFS.WithModTime(modTime).WithCreationTime(creationTime)
 		}
 		writer, err := fsys.OpenWriter(filePath, 0644)
 		if err != nil {
@@ -528,7 +528,6 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			b, err := strconv.ParseBool(s)
 			if err == nil {
 				isPinned = b
-				fmt.Println("isPinned: ", header.Name)
 			}
 		}
 		switch head {
