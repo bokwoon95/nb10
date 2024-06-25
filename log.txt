@@ -37,54 +37,8 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-storage.nbrew.net/xxxx-xxxxx-xxxx-xxxx.jpg
-
-PaxRecords["NOTEBREW.file.creationTime"] = "2006-03-04"
-
-exported files can be renamed, cut, copied and deleted
-
-status: started | completed | failed | restart
-status is needed to coordinate between multiple goroutines when multiple notebrew instances boot up. They will all attempt to spin up goroutines to acquire the job but only one can succeed, and that is the one that manages to UPDATE status = 'start' WHERE status = 'restart'.
-don't use status, use start_time. If it's not null means it's active, if it's null then it's up for grabs for whoever to acquire it and run the job. Bonus is we can use the start time
-Because of that, we also need an extra field to contain the arguments for what to import/export.
-
-goroutines will touch base with the database every 1 MB
-- when a goroutine touches base and detects that someone else has already cancelled the job, the goroutine is the one responsible for deleting the job from the database so that it will stop showing up on the user's job queue.
-- This means if a user cancels a job, the goroutine will not know it has been cancelled until it has processed up to a 1 MB chunk. This may throw users off because it means a cancelled job is not neccessarily stopped.
-- once a goroutine has started, it will run to completion until notebrew shuts down and calls the parent cancel() function (use a waitGroup to track how many running jobs there are). This means cancel() isn't actually used to cancel individual jobs, instead the job itself will be maked as cancelled in the database and the goroutine will only know when it goes to synchronize processedBytes with the database.
-
-GET /imports/xxxx.tgz (the button is called "upload tgz file(s)", i.e. POST /imports/) => shows the import options (import all files | import themes) => POST /imports/xxxx.tgz?themes vs POST /imports/xxxx.tgz
-    - give the file a standalone page because the POST will likely take very long, so we want to users to be stuck on a dedicated page with no chance of pressing any other buttons. since we are streaming from object storage and writing files as we go (likely even slower than reading from object storage and downloading to user's internet. But hey, at least we're not network constrained!))
-GET /exports/xxxx.tgz => straight up downloads the file. POST /exports/?parent=xxxx&name=xxxx&name=xxxx is responsible for exporting files into the /exports/ directory.
-
-- A server can handle a maximum of 1 import/export job per sitePrefix.
-- The presence of an active job is broadcasted to all servers via a client's "import" or "export" session token (there can be more than one).
-- If the server handling the client's request is the one handling the import/export job, it knows there there is a job present -- it is already handling it. So it can show the client the job progress.
-- If the server handling the client's request is not the one handling the import/export job, it still knows there is a job present because it receives the client's "import" and "export" session tokens and it can see which ones are currently active (the ones that are in the session table).
-    - as an aside, that means that if it cannot find the entry in the session table it means the session is gone, and it should delete that session cookie.
-
-/exports/ POST does nothing?
-/exports/my-export-file.tgz
-/exports/cancel/?fileName=abcd
-
-TODO: import.go
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
-TODO: logout | createfolder | login on mobile should always be full-width with no fat margin on top (except for login (maybe even not)).
-    TODO: delete and export should also remove the margin around the page
-TODO: export.go
-    - /exports/ is responsible for listing all the current exports. Downloading of exports happens from this page. It shows if there's any exports ongoing.
-    - /export/ is responsible for actually exporting files. It redirects to /exports/.
-    - /imports/ is responsible for listing all current imports. Uploading of tgz files happens from this page. It shows if there's any imports ongoing.
-    - /import/ is responsible for actually importing files. It redirects to /imports/.
-TODO: /files/exports/ and /files/imports/
-    - type map[string][]string <= if your file export is in this slice, it is still pending. if your file export is not in this slice, it is considered completed (you can download it).
-    - But simply a folder is not enough, it might work for notes and themes but exporting a folder of posts and pages *requires* us to also add the dependency files of those posts and pages in the output directory.
-        - pages/foo.html => output/foo (files only)
-        - pages/foo => output/foo (folders only)
-        - posts/foo.md => output/posts/foo (files only)
-        - posts/foo => output/posts/foo (folders only)
-TODO: once we have export.go and import.go working, export the current site and switch notebrew over to a cheap VPS relying on a mounted Hetzner Cloud Volume for notebrew-objects (/mnt/notebrew-objects/)
 TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
@@ -140,11 +94,6 @@ DNS testcases:
 - Fresh server, with DNS entry set to notebrew.com. Set port to 80.
     - want: the server starts on :80 (no SSL certificates configured) CMSDomain and ContentDomain set to the same thing, and everything behaves as it does on localhost (except without the subdomains).
 The main usefulness of being able to run notebrew on plain IP addresses or HTTP is that new users can run it first without worrying about any domain name configuration or SSL certificate configuration and ascertain if they can connect to their server in the first place.
-
-should createuser only create a new user?
-- exception: if the new user being created is the default user, we also need to create a new site for the default site (if not exists) and assign it site_user and site_owner permissions. That's because we can justify that the default user has natural affinity with the default site, but the relation between users and sites for everything else has to be manually specified
-- and deleteuser will not delete the default site, just the user and and site_user and site_owner entries.
-- calling deletesite on the default site will delete notes, output, pages and posts. calling any command again will regeneratethe default site so it's fine.
 
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
