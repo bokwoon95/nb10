@@ -37,6 +37,8 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz instead of files-2024-06-25-194227-647.tgz when I export it? What's the mechanism here?
+    - Content-Disposition: attachment; filename="00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz"
 TODO: why is imports always stuck after it's done? need to manually cancel to remove it.
 TODO: need to export alt text as well (stored in the text field -- maybe (*DatabaseFS).WithText(text string)? And Text only kicks in if the file.IsObject in the first place.
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
