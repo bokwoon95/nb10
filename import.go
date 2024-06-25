@@ -408,6 +408,9 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		err := fsys.Mkdir(filePath, 0755)
 		if err != nil {
+			if errors.Is(err, fs.ErrExist) {
+				return nil
+			}
 			if !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
