@@ -634,6 +634,7 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 }
 
 func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, fileName string) error {
+	success := false
 	defer func() {
 		if nbrew.DB == nil {
 			return
@@ -647,6 +648,12 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 		})
 		if err != nil {
 			nbrew.Logger.Error(err.Error())
+		}
+		if !success {
+			err := nbrew.FS.WithContext(context.Background()).Remove(path.Join(sitePrefix, "exports", fileName))
+			if err != nil {
+				nbrew.Logger.Error(err.Error())
+			}
 		}
 	}()
 	writer, err := nbrew.FS.WithContext(ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
@@ -923,5 +930,6 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 	if err != nil {
 		return err
 	}
+	success = true
 	return nil
 }
