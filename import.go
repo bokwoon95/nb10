@@ -405,7 +405,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			}
 		}
 		if databaseFS, ok := fsys.(*DatabaseFS); ok {
-			fsys = databaseFS.WithCreationTime(modTime).WithCreationTime(creationTime)
+			fsys = databaseFS.WithModTime(modTime).WithCreationTime(creationTime)
 		}
 		err := fsys.Mkdir(filePath, 0755)
 		if err != nil {
@@ -469,7 +469,6 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		switch databaseFS.Dialect {
 		case "sqlite", "postgres":
 			_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
-				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format: "INSERT INTO pinned_file (parent_id, file_id)" +
 					" SELECT parent_id, file_id" +
