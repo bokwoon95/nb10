@@ -667,6 +667,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			return
 		}
 
+		var numUploadedImages atomic.Int64
 		head, tail, _ := strings.Cut(filePath, "/")
 		if (head == "pages" || head == "posts") && contentType == "multipart/form-data" {
 			var outputDir string
@@ -842,6 +843,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						if err != nil {
 							return err
 						}
+						numUploadedImages.Add(1)
 						return nil
 					})
 				}
@@ -969,6 +971,60 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					nbrew.internalServerError(w, r, err)
 					return
 				}
+			}
+		case "output":
+			if fileType.Ext == ".md" {
+				var parentPage string
+				if tail == "" {
+					parentPage = "pages/index.html"
+				} else {
+					parentPage = path.Join("pages", path.Dir(tail)+".html")
+				}
+				file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				fileInfo, err := file.Stat()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				var b strings.Builder
+				b.Grow(int(fileInfo.Size()))
+				_, err = io.Copy(&b, file)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+					FS:                 nbrew.FS,
+					ContentDomain:      nbrew.ContentDomain,
+					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+					ImgDomain:          nbrew.ImgDomain,
+					SitePrefix:         sitePrefix,
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				startedAt := time.Now()
+				err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+				if err != nil {
+					if errors.As(err, &response.RegenerationStats.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				response.RegenerationStats.Count = 1
+				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			}
 		}
 		writeResponse(w, r, response)

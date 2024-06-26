@@ -794,11 +794,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					nbrew.internalServerError(w, r, err)
 					return
 				}
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
-					return
-				}
 				startedAt := time.Now()
 				err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
 				if err != nil {
