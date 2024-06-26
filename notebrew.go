@@ -946,11 +946,10 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	buf.WriteTo(w)
 }
 
-func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs.FileInfo, fileType FileType, cacheControl string) {
+func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, fileType FileType, file fs.File, cacheControl string) {
 	// If max-age is present in Cache-Control, don't set the ETag because that
 	// would override max-age. https://stackoverflow.com/a/51257030
 	hasMaxAge := strings.Contains(cacheControl, "max-age=")
-	fileName := fileInfo.Name()
 
 	// .jpeg .jpg .png .webp .gif .woff .woff2
 	if !fileType.IsGzippable {
@@ -959,7 +958,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
 				if fileType.IsAttachment {
-					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 				}
 				http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 				return
@@ -986,15 +985,16 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			if fileType.IsAttachment {
-				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 			}
 			http.ServeContent(w, r, "", time.Time{}, fileSeeker)
 			return
 		}
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
+		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 		if fileType.IsAttachment {
-			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 		}
 		if r.Method == "HEAD" {
 			w.WriteHeader(http.StatusOK)
@@ -1019,7 +1019,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
 				if fileType.IsAttachment {
-					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 				}
 				http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 				return
@@ -1041,7 +1041,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 			if fileType.IsAttachment {
-				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 			}
 			http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
 			return
@@ -1050,7 +1050,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 
 	// If file is small enough and we want the ETag, we can buffer the entire
 	// file into memory, calculate its ETag and serve.
-	if fileInfo.Size() <= 1<<20 /* 1 MB */ && !hasMaxAge {
+	if size <= 1<<20 /* 1 MB */ && !hasMaxAge {
 		hasher := hashPool.Get().(hash.Hash)
 		defer func() {
 			hasher.Reset()
@@ -1058,9 +1058,9 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		}()
 		var buf *bytes.Buffer
 		// gzip will at least halve the size of what needs to be buffered
-		gzippedSize := fileInfo.Size() >> 1
+		gzippedSize := size >> 1
 		if gzippedSize > maxPoolableBufferCapacity {
-			buf = bytes.NewBuffer(make([]byte, 0, fileInfo.Size()))
+			buf = bytes.NewBuffer(make([]byte, 0, size))
 		} else {
 			buf = bufPool.Get().(*bytes.Buffer)
 			defer func() {
@@ -1093,7 +1093,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 		w.Header().Set("Cache-Control", cacheControl)
 		w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
 		if fileType.IsAttachment {
-			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 		}
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 		return
@@ -1102,8 +1102,9 @@ func serveFile(w http.ResponseWriter, r *http.Request, file fs.File, fileInfo fs
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Content-Type", fileType.ContentType)
 	w.Header().Set("Cache-Control", cacheControl)
+	w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 	if fileType.IsAttachment {
-		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(fileName))
+		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 	}
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(w)

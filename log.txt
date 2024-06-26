@@ -37,7 +37,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz instead of files-2024-06-25-194227-647.tgz when I export it? What's the mechanism here?
     - Content-Disposition: attachment; filename="00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz"
 TODO: add output/posts and output/themes to the list of permanent files which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json, posts/*/postlist.html, posts/*/post.html)

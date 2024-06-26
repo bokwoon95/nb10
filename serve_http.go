@@ -140,7 +140,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			serveFile(w, r, file, fileInfo, fileType, "max-age=31536000, immutable" /* 1 year */)
+			serveFile(w, r, fileInfo.Name(), fileInfo.Size(), fileType, file, "max-age=31536000, immutable" /* 1 year */)
 			return
 		}
 
@@ -497,7 +497,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		cacheControl = "max-age=300, stale-while-revalidate=604800" /* 5 minutes, 1 week */
 	}
-	serveFile(w, r, file, fileInfo, fileType, cacheControl)
+	serveFile(w, r, fileInfo.Name(), fileInfo.Size(), fileType, file, cacheControl)
 }
 
 func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix string) {
