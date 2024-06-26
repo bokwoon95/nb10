@@ -861,13 +861,7 @@ func main() {
 					Bucket:          objectsConfig.Bucket,
 					AccessKeyID:     objectsConfig.AccessKeyID,
 					SecretAccessKey: objectsConfig.SecretAccessKey,
-					PurgeCache: func(ctx context.Context, key string) error {
-						// TODO: if we are using a CDN, this function should
-						// make a POST request to the CDN to purge the cache
-						// entry for the given key.
-						return nil
-					},
-					Logger: nbrew.Logger,
+					Logger:          nbrew.Logger,
 				})
 				if err != nil {
 					return err

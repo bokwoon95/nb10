@@ -71,7 +71,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		return uri.String()
 	}
 
-	var authenticationTokenHash []byte
+	var alreadyAuthenticated bool
 	var authenticationTokenString string
 	header := r.Header.Get("Authorization")
 	if header != "" {
@@ -87,23 +87,19 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 	if authenticationTokenString != "" {
 		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
 		if err == nil {
-			var hash [8 + blake2b.Size256]byte
+			var authenticationTokenHash [8 + blake2b.Size256]byte
 			checksum := blake2b.Sum256(authenticationToken[8:])
-			copy(hash[:8], authenticationToken[:8])
-			copy(hash[8:], checksum[:])
-			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+			copy(authenticationTokenHash[:8], authenticationToken[:8])
+			copy(authenticationTokenHash[8:], checksum[:])
+			alreadyAuthenticated, err = sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format:  "SELECT 1 FROM authentication WHERE authentication_token_hash = {authenticationTokenHash}",
 				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash),
+					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
 				},
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
-			} else {
-				if exists {
-					authenticationTokenHash = hash[:]
-				}
 			}
 		}
 	}
@@ -188,7 +184,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response.Redirect = sanitizeRedirect(r.Form.Get("redirect"))
-		if authenticationTokenHash != nil {
+		if alreadyAuthenticated {
 			response.Error = "AlreadyAuthenticated"
 			writeResponse(w, r, response)
 			return
@@ -349,7 +345,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			FormErrors: make(url.Values),
 			Redirect:   sanitizeRedirect(redirect),
 		}
-		if authenticationTokenHash != nil {
+		if alreadyAuthenticated {
 			response.Error = "AlreadyAuthenticated"
 			writeResponse(w, r, response)
 			return

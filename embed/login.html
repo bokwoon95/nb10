@@ -29,11 +29,7 @@
   {{- end }}
   {{- if eq $.Error "AlreadyAuthenticated" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
-    {{- if $.Username }}
-    <div>You are already logged in, <a href='/files/@{{ $.Username }}/'>click here to go to your dashboard</a>.</div>
-    {{- else }}
     <div>You are already logged in, <a href='/files/'>click here to go to your dashboard</a>.</div>
-    {{- end }}
   </div>
   {{- else if eq $.Error "RetryWithCaptcha" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>

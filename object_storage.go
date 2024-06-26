@@ -29,10 +29,9 @@ type ObjectStorage interface {
 }
 
 type S3ObjectStorage struct {
-	Client     *s3.Client
-	Bucket     string
-	PurgeCache func(ctx context.Context, key string) error
-	Logger     *slog.Logger
+	Client *s3.Client
+	Bucket string
+	Logger *slog.Logger
 }
 
 var _ ObjectStorage = (*S3ObjectStorage)(nil)
@@ -43,7 +42,6 @@ type S3StorageConfig struct {
 	Bucket          string
 	AccessKeyID     string
 	SecretAccessKey string
-	PurgeCache      func(ctx context.Context, key string) error
 	Logger          *slog.Logger
 }
 
@@ -54,9 +52,8 @@ func NewS3Storage(ctx context.Context, config S3StorageConfig) (*S3ObjectStorage
 			Region:       config.Region,
 			Credentials:  aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(config.AccessKeyID, config.SecretAccessKey, "")),
 		}),
-		Bucket:     config.Bucket,
-		PurgeCache: config.PurgeCache,
-		Logger:     config.Logger,
+		Bucket: config.Bucket,
+		Logger: config.Logger,
 	}
 	// Ping the bucket and see if we have access.
 	_, err := storage.Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
@@ -165,12 +162,6 @@ func (storage *S3ObjectStorage) Delete(ctx context.Context, key string) error {
 	fmt.Printf("S3ObjectStorage.Delete: %s %v\n", key, err)
 	if err != nil {
 		return err
-	}
-	if storage.PurgeCache != nil {
-		err := storage.PurgeCache(ctx, key)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
