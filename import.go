@@ -393,7 +393,8 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		rootPrefix = root + "/"
 	}
 	fsys := nbrew.FS.WithContext(ctx)
-	mkdir := func(filePath string, modTime, creationTime time.Time) error {
+	regenerateSite := false
+	mkdir := func(filePath string, modTime, creationTime time.Time, isPinned bool) error {
 		if !overwriteExistingFiles {
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
@@ -420,9 +421,51 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				return err
 			}
 		}
+		head, _, _ := strings.Cut(filePath, "/")
+		if head == "posts" {
+			regenerateSite = true
+		}
+		if databaseFS, ok := fsys.(*DatabaseFS); ok {
+			if isPinned {
+				switch databaseFS.Dialect {
+				case "sqlite", "postgres":
+					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+							" SELECT parent_id, file_id" +
+							" FROM files" +
+							" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
+							" ON CONFLICT DO NOTHING",
+						Values: []any{
+							sq.Param("filePath", filePath),
+						},
+					})
+					if err != nil {
+						return err
+					}
+				case "mysql":
+					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+							" SELECT parent_id, file_id" +
+							" FROM files" +
+							" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
+							" ON DUPLICATE KEY UPDATE parent_id = parent_id",
+						Values: []any{
+							sq.Param("filePath", filePath),
+						},
+					})
+					if err != nil {
+						return err
+					}
+				default:
+					return fmt.Errorf("unsupported dialect %q", databaseFS.Dialect)
+				}
+			}
+		}
 		return nil
 	}
-	writeFile := func(filePath string, modTime, creationTime time.Time, caption string, reader io.Reader) error {
+	writeFile := func(filePath string, modTime, creationTime time.Time, caption string, isPinned bool, reader io.Reader) error {
 		if !overwriteExistingFiles {
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
@@ -459,50 +502,50 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		if err != nil {
 			return err
 		}
+		head, _, _ := strings.Cut(filePath, "/")
+		if head == "pages" || head == "posts" {
+			regenerateSite = true
+		}
+		if databaseFS, ok := fsys.(*DatabaseFS); ok {
+			if isPinned {
+				switch databaseFS.Dialect {
+				case "sqlite", "postgres":
+					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+							" SELECT parent_id, file_id" +
+							" FROM files" +
+							" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
+							" ON CONFLICT DO NOTHING",
+						Values: []any{
+							sq.Param("filePath", filePath),
+						},
+					})
+					if err != nil {
+						return err
+					}
+				case "mysql":
+					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "INSERT INTO pinned_file (parent_id, file_id)" +
+							" SELECT parent_id, file_id" +
+							" FROM files" +
+							" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
+							" ON DUPLICATE KEY UPDATE parent_id = parent_id",
+						Values: []any{
+							sq.Param("filePath", filePath),
+						},
+					})
+					if err != nil {
+						return err
+					}
+				default:
+					return fmt.Errorf("unsupported dialect %q", databaseFS.Dialect)
+				}
+			}
+		}
 		return nil
 	}
-	pinFile := func(filePath string) error {
-		databaseFS, ok := fsys.(*DatabaseFS)
-		if !ok {
-			return nil
-		}
-		switch databaseFS.Dialect {
-		case "sqlite", "postgres":
-			_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
-				Dialect: databaseFS.Dialect,
-				Format: "INSERT INTO pinned_file (parent_id, file_id)" +
-					" SELECT parent_id, file_id" +
-					" FROM files" +
-					" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
-					" ON CONFLICT DO NOTHING",
-				Values: []any{
-					sq.Param("filePath", filePath),
-				},
-			})
-			if err != nil {
-				return err
-			}
-		case "mysql":
-			_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
-				Dialect: databaseFS.Dialect,
-				Format: "INSERT INTO pinned_file (parent_id, file_id)" +
-					" SELECT parent_id, file_id" +
-					" FROM files" +
-					" WHERE file_path = {filePath} AND parent_id IS NOT NULL" +
-					" ON DUPLICATE KEY UPDATE parent_id = parent_id",
-				Values: []any{
-					sq.Param("filePath", filePath),
-				},
-			})
-			if err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("unsupported dialect %q", databaseFS.Dialect)
-		}
-		return nil
-	}
-	regenerateSite := false
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -541,15 +584,9 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		case "notes":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 			case tar.TypeReg:
 				var limit int64
@@ -561,43 +598,25 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				default:
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 			}
 		case "pages":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 			case tar.TypeReg:
 				if ext != ".html" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 				regenerateSite = true
 			}
@@ -608,15 +627,9 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if strings.Contains(category, "/") {
 					continue
 				}
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 				regenerateSite = true
 			case tar.TypeReg:
@@ -627,30 +640,18 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if ext != ".md" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 				regenerateSite = true
 			}
 		case "output":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime)
+				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 			case tar.TypeReg:
 				var limit int64
@@ -662,15 +663,9 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				default:
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 			}
 		default:
@@ -679,15 +674,9 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if header.Name != "site.json" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
-				}
-				if isPinned {
-					err := pinFile(path.Join(sitePrefix, header.Name))
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
