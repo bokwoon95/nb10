@@ -30,36 +30,6 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 		FormErrors     url.Values `json:"formErrors"`
 	}
 
-	isValidParent := func(parent string) bool {
-		head, tail, _ := strings.Cut(parent, "/")
-		if head == "posts" && tail != "" {
-			return false
-		}
-		switch head {
-		case "notes", "pages", "posts":
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		case "output":
-			next, _, _ := strings.Cut(tail, "/")
-			if next != "themes" {
-				return false
-			}
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		}
-		return false
-	}
-
 	switch r.Method {
 	case "GET", "HEAD":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -113,7 +83,30 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			writeResponse(w, r, response)
 			return
 		}
-		if !isValidParent(response.Parent) {
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages":
+			break
+		case "posts":
+			if tail != "" {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		case "output":
+			next, _, _ := strings.Cut(tail, "/")
+			if next != "themes" {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
+			response.Error = "InvalidParent"
+			writeResponse(w, r, response)
+			return
+		}
+		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+		if err != nil || !fileInfo.IsDir() {
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
@@ -192,12 +185,34 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			Parent:     path.Clean(strings.Trim(request.Parent, "/")),
 			FormErrors: make(url.Values),
 		}
-		if !isValidParent(response.Parent) {
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages":
+			break
+		case "posts":
+			if tail != "" {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		case "output":
+			next, _, _ := strings.Cut(tail, "/")
+			if next != "themes" {
+				response.Error = "InvalidParent"
+				writeResponse(w, r, response)
+				return
+			}
+		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
 		}
-		head, tail, _ := strings.Cut(response.Parent, "/")
+		fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+		if err != nil || !fileInfo.IsDir() {
+			response.Error = "InvalidParent"
+			writeResponse(w, r, response)
+			return
+		}
 		if head == "notes" {
 			response.Name = filenameSafe(request.Name)
 		} else {
@@ -232,7 +247,7 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 				return
 			}
 		}
-		err := nbrew.FS.Mkdir(path.Join(sitePrefix, response.Parent, response.Name), 0755)
+		err = nbrew.FS.Mkdir(path.Join(sitePrefix, response.Parent, response.Name), 0755)
 		if err != nil {
 			if errors.Is(err, fs.ErrExist) {
 				if head == "posts" {
