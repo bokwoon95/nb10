@@ -194,7 +194,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		nbrew.internalServerError(w, r, err)
 		return
 	}
-	var timeCounter atomic.Int64
+	var monotonicCounter atomic.Int64
 	group, groupctx := errgroup.WithContext(r.Context())
 	startedAt := time.Now()
 	for {
@@ -224,8 +224,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		if (ext == ".jpeg" || ext == ".jpg" || ext == ".png" || ext == ".webp" || ext == ".gif") && strings.TrimSuffix(fileName, ext) == "image" {
 			var timestamp [8]byte
 			now := time.Now()
-			timeCounter.CompareAndSwap(0, now.Unix())
-			binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), timeCounter.Add(1))))
+			monotonicCounter.CompareAndSwap(0, now.Unix())
+			binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), monotonicCounter.Add(1))))
 			timestampSuffix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
 			fileName = "image-" + timestampSuffix + ext
 		}
@@ -336,8 +336,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			text := b.String()
 			now := time.Now()
-			timeCounter.CompareAndSwap(0, now.Unix())
-			creationTime := time.Unix(max(now.Unix(), timeCounter.Add(1)), 0)
+			monotonicCounter.CompareAndSwap(0, now.Unix())
+			creationTime := time.Unix(max(now.Unix(), monotonicCounter.Add(1)), 0)
 			group.Go(func() error {
 				var timestamp [8]byte
 				binary.BigEndian.PutUint64(timestamp[:], uint64(creationTime.Unix()))

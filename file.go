@@ -715,7 +715,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				uploadSize.Add(n)
 				return nil
 			}
-			var timeCounter atomic.Int64
+			var monotonicCounter atomic.Int64
 			group, groupctx := errgroup.WithContext(r.Context())
 			for {
 				part, err := reader.NextPart()
@@ -744,8 +744,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				if (ext == ".jpeg" || ext == ".jpg" || ext == ".png" || ext == ".webp" || ext == ".gif") && strings.TrimSuffix(fileName, ext) == "image" {
 					var timestamp [8]byte
 					now := time.Now()
-					timeCounter.CompareAndSwap(0, now.Unix())
-					binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), timeCounter.Add(1))))
+					monotonicCounter.CompareAndSwap(0, now.Unix())
+					binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), monotonicCounter.Add(1))))
 					timestampSuffix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
 					fileName = "image-" + timestampSuffix + ext
 				}
