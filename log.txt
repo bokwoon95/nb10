@@ -43,7 +43,7 @@ TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-
 TODO: add output/posts and output/themes to the list of permanent files which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json, posts/*/postlist.html, posts/*/post.html)
 
 BUG: rename.go: renaming posts should rightfully trigger a postlist regeneration because the link has changed.
-BUG: file.go: saving a markdown file should rightfully trigger a page regeneration for the page that depends on it.
+BUG: file.go: creating/saving a markdown file should rightfully trigger a page regeneration for the page that depends on it.
 BUG: unable to create an image post with no post body (to S3).
 BUG: deleting a post category doesn't delete the output folder (food2 on notebrew.com)
 TODO: check if a user is able to delete their own site, and if so prevent it
