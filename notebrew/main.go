@@ -1422,6 +1422,7 @@ func main() {
 				_ = r.ParseForm()
 				// https://jviide.iki.fi/http-redirects (Your API Shouldn't Redirect HTTP to HTTPS)
 				if r.Host == nbrew.CMSDomain && r.Form.Has("api") {
+					var authenticationTokenHashes [][]byte
 					header := r.Header.Get("Authorization")
 					if header != "" {
 						authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
@@ -1430,13 +1431,7 @@ func main() {
 							checksum := blake2b.Sum256(authenticationToken[8:])
 							copy(authenticationTokenHash[:8], authenticationToken[:8])
 							copy(authenticationTokenHash[8:], checksum[:])
-							_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-								Dialect: nbrew.Dialect,
-								Format:  "DELETE FROM authentication WHERE authentication_token_hash = {authenticationTokenHash}",
-								Values: []any{
-									sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
-								},
-							})
+							authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
 						}
 					}
 					cookie, _ := r.Cookie("authentication")
@@ -1447,14 +1442,17 @@ func main() {
 							checksum := blake2b.Sum256(authenticationToken[8:])
 							copy(authenticationTokenHash[:8], authenticationToken[:8])
 							copy(authenticationTokenHash[8:], checksum[:])
-							_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-								Dialect: nbrew.Dialect,
-								Format:  "DELETE FROM authentication WHERE authentication_token_hash = {authenticationTokenHash}",
-								Values: []any{
-									sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
-								},
-							})
+							authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
 						}
+					}
+					if len(authenticationTokenHashes) > 0 {
+						_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+							Dialect: nbrew.Dialect,
+							Format:  "DELETE FROM authentication WHERE authentication_token_hash IN ({authenticationTokenHashes})",
+							Values: []any{
+								sq.Param("authenticationTokenHashes", authenticationTokenHashes),
+							},
+						})
 					}
 					http.Error(w, "Use HTTPS", http.StatusBadRequest)
 					return
