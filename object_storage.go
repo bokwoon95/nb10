@@ -353,13 +353,6 @@ func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey strin
 	return nil
 }
 
-type SFTPObjectStorage struct {
-	Client     *s3.Client
-	Bucket     string
-	PurgeCache func(ctx context.Context, key string) error
-	Logger     *slog.Logger
-}
-
 type InMemoryObjectStorage struct {
 	mu      sync.RWMutex
 	entries map[string][]byte

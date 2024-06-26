@@ -836,18 +836,15 @@ type ObjectsConfig struct {
 }
 
 const objectsHelp = `# == objects keys == #
-# Choose between using a directory, an S3-compatible provider or an SFTP server to store objects. Only applicable if using the database-backed filesytem (see ` + "`notebrew config files`" + `).
+# Choose between using a directory or an S3-compatible provider to store objects. Only applicable if using the database-backed filesytem (see ` + "`notebrew config files`" + `).
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# provider        - Object storage provider (possible values: directory, s3, sftp).
+# provider        - Object storage provider (possible values: directory, s3).
 # filePath        - Object storage directory filePath (if using a directory).
-# endpoint        - Object storage provider endpoint (if using s3 or sftp).
+# endpoint        - Object storage provider endpoint (if using s3).
 # region          - S3 region.
 # bucket          - S3 bucket.
 # accessKeyID     - S3 access key ID.
 # secretAccessKey - S3 secret access key.
-# username        - SFTP username.
-# keyFile         - SFTP path to key file.
-# knownHostsFile  - SFTP path to known_hosts file.
 `
 
 type CaptchaConfig struct {

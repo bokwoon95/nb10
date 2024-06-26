@@ -37,16 +37,12 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: when importing, if we notice any pages or posts being imported (regardless of whether ot was actually written) then we should set a flag, at the end if the flag is true we have to regenerate the site.
-    - reason: we want to make the export -> import process as painless as possible for non technical users so they can trivially move their local site online without any fuss. We do not want them to have to do the esoteric step of hitting save in sitey.json after every import.
+TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz instead of files-2024-06-25-194227-647.tgz when I export it? What's the mechanism here?
     - Content-Disposition: attachment; filename="00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz"
 TODO: why is imports always stuck after it's done? need to manually cancel to remove it.
-TODO: need to export alt text as well (stored in the text field -- maybe (*DatabaseFS).WithText(text string)? And Text only kicks in if the file.IsObject in the first place.
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
-TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
-TODO: object_storage.go: purge all traces of SFTPObjectStorage from the codebase.
 TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
     - TODO: also hide the "paste" button when inside post.html or postlist.html.
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
