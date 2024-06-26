@@ -17,6 +17,12 @@ var (
 	setConsoleMode = kernel32.NewProc("SetConsoleMode")
 )
 
+// When an error happens, don't exit the program because that would cause the
+// command prompt window to immediately disappear and not give the user a
+// chance to look at the error message. Instead, present the user with a "Press
+// any key to exit..." prompt. But only if the user double clicked on the
+// binary in the first place. If run from the command line, do not present the
+// user with the prompt.
 func pressAnyKeyToExit() {
 	// Detect if windows golang executable file is running via double click or from cmd/shell terminator
 	// https://gist.github.com/yougg/213250cc04a52e2b853590b06f49d865
