@@ -330,8 +330,16 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				binary.BigEndian.PutUint64(timestamp[:], uint64(time.Now().Unix()))
 				response.Name = strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
 			}
-			if response.Ext != ".html" && response.Ext != ".css" && response.Ext != ".js" && response.Ext != ".md" && response.Ext != ".txt" {
+			switch response.Ext {
+			case "":
 				response.Ext = ".txt"
+			case ".html", ".css", ".js", ".md", ".txt":
+				break
+			default:
+				response.FormErrors.Add("name", "invalid file extension")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
 			}
 		case "pages":
 			if request.Name != "" {
@@ -342,8 +350,16 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				binary.BigEndian.PutUint64(timestamp[:], uint64(time.Now().Unix()))
 				response.Name = strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
 			}
-			if response.Ext != ".html" {
+			switch response.Ext {
+			case "":
 				response.Ext = ".html"
+			case ".html":
+				break
+			default:
+				response.FormErrors.Add("name", "invalid file extension")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
 			}
 			if response.Parent != "" && response.Name == "index" && response.Ext == ".html" {
 				response.FormErrors.Add("name", "this name is not allowed")
@@ -374,8 +390,16 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			} else {
 				response.Name = prefix
 			}
-			if response.Ext != ".md" {
+			switch response.Ext {
+			case "":
 				response.Ext = ".md"
+			case ".md":
+				break
+			default:
+				response.FormErrors.Add("name", "invalid file extension")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
 			}
 		case "output":
 			if request.Name != "" {
@@ -388,12 +412,28 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "themes" {
-				if response.Ext != ".html" && response.Ext != ".css" && response.Ext != ".js" && response.Ext != ".md" && response.Ext != ".txt" {
+				switch response.Ext {
+				case "":
 					response.Ext = ".html"
+				case ".html", ".css", ".js", ".md", ".txt":
+					break
+				default:
+					response.FormErrors.Add("name", "invalid file extension")
+					response.Error = "FormErrorsPresent"
+					writeResponse(w, r, response)
+					return
 				}
 			} else {
-				if response.Ext != ".css" && response.Ext != ".js" && response.Ext != ".md" {
-					response.Ext = ".css"
+				switch response.Ext {
+				case "":
+					response.Ext = ".js"
+				case ".css", ".js", ".md":
+					break
+				default:
+					response.FormErrors.Add("name", "invalid file extension")
+					response.Error = "FormErrorsPresent"
+					writeResponse(w, r, response)
+					return
 				}
 			}
 		default:

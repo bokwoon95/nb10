@@ -335,7 +335,14 @@
   <div data-editor='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap","scrollIntoView":true}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
   </div>
-  {{- if eq (head $.FilePath) "pages" "posts" }}
+  {{- if or
+    (and
+      (eq (head $.FilePath) "pages")
+      (eq (ext $.FilePath) ".html"))
+    (and
+      (eq (head $.FilePath) "posts")
+      (eq (ext $.FilePath) ".md"))
+  }}
   <div class='mt2'>
     {{- if eq (head $.FilePath) "pages" }}
     <div class='b'>upload assets:</div>
@@ -353,7 +360,14 @@
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
   <div role='status'></div>
 </form>
-{{- if eq (head $.FilePath) "pages" "posts" }}
+{{- if or
+  (and
+    (eq (head $.FilePath) "pages")
+    (eq (ext $.FilePath) ".html"))
+  (and
+    (eq (head $.FilePath) "posts")
+    (eq (ext $.FilePath) ".md"))
+}}
   {{- if eq (head $.FilePath) "pages" }}
   <details>
     <summary class='pointer f6'>how do I include assets in my page?</summary>
