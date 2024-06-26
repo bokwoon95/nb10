@@ -37,6 +37,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: when importing, if we notice any pages or posts being imported (regardless of whether ot was actually written) then we should set a flag, at the end if the flag is true we have to regenerate the site.
 TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz instead of files-2024-06-25-194227-647.tgz when I export it? What's the mechanism here?
     - Content-Disposition: attachment; filename="00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz"
 TODO: why is imports always stuck after it's done? need to manually cancel to remove it.
