@@ -950,8 +950,12 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	// If max-age is present in Cache-Control, don't set the ETag because that
 	// would override max-age. https://stackoverflow.com/a/51257030
 	hasMaxAge := strings.Contains(cacheControl, "max-age=")
+	// TODO: for all the cases where we fall back to io.Copy instead of using
+	// http.ServeContent, think about manually handling range requests (as
+	// http.ServeContent does) so that clients (e.g. internet download
+	// managers) have the ability to download a file in multiple parts.
 
-	// .jpeg .jpg .png .webp .gif .woff .woff2
+	// .jpeg .jpg .png .webp .gif .woff .woff2 .tgz
 	if !fileType.IsGzippable {
 		if fileSeeker, ok := file.(io.ReadSeeker); ok {
 			if hasMaxAge {
