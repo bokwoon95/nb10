@@ -754,6 +754,65 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			if templateErrPtr.Load() != nil {
 				response.RegenerationStats.TemplateError = *templateErrPtr.Load()
 			}
+		case "output":
+			if response.Ext == ".md" {
+				var parentPage string
+				if tail == "" {
+					parentPage = "pages/index.html"
+				} else {
+					parentPage = path.Join("pages", tail+".html")
+				}
+				file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				fileInfo, err := file.Stat()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				var b strings.Builder
+				b.Grow(int(fileInfo.Size()))
+				_, err = io.Copy(&b, file)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+					FS:                 nbrew.FS,
+					ContentDomain:      nbrew.ContentDomain,
+					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+					ImgDomain:          nbrew.ImgDomain,
+					SitePrefix:         sitePrefix,
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				startedAt := time.Now()
+				err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+				if err != nil {
+					if errors.As(err, &response.RegenerationStats.TemplateError) {
+						writeResponse(w, r, response)
+						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				response.RegenerationStats.Count = 1
+				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+			}
 		}
 		writeResponse(w, r, response)
 	default:
