@@ -49,27 +49,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		Matches        []Match  `json:"matches"`
 	}
 
-	isValidParent := func(parent string) bool {
-		if !fs.ValidPath(parent) || strings.Contains(parent, "\\") {
-			return false
-		}
-		if parent == "." {
-			return true
-		}
-		head, _, _ := strings.Cut(parent, "/")
-		switch head {
-		case "notes", "pages", "posts", "output":
-			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, parent))
-			if err != nil {
-				return false
-			}
-			if fileInfo.IsDir() {
-				return true
-			}
-		}
-		return false
-	}
-
 	if r.Method != "GET" {
 		nbrew.methodNotAllowed(w, r)
 		return
@@ -199,8 +178,17 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		slices.Sort(response.Exts)
 		response.Exts = slices.Compact(response.Exts)
 	}
-	if !isValidParent(response.Parent) {
+	if !fs.ValidPath(response.Parent) || strings.Contains(response.Parent, "\\") {
 		response.Parent = "."
+	} else {
+		head, _, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		case "notes", "pages", "posts", "output":
+			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
+			if err != nil || !fileInfo.IsDir() {
+				response.Parent = "."
+			}
+		}
 	}
 	if len(response.MandatoryTerms) == 0 && len(response.OptionalTerms) == 0 {
 		writeResponse(w, r, response)
