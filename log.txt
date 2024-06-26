@@ -37,12 +37,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: check if a user is able to delete their own site, and if so prevent it
-    - They can't, but it's only because of a foreign key constraint. We need to find out where this foreign key constraint is coming from, as well as put our backend own checks to make sure a user cannot delete their own site.
-    - We also need to add frontend checks to hide the delete button.
-TODO: create image post, which lets the user upload and image and its caption directly into a post without needing to specify a post body.
-    - As usual a timestamp prefix title will be randomly generated. This is great for quickly adding images to instagram-style photo galleries (but we really need to address the issue of figuring out how to efficiently fetch the header image to display in the postlist)
-    - If the post markdown leads with an image, is it still counted as text? Does it conflict with the implicit image list? Can we use both at the same time?
 TODO: invite.go and resetpassword.go
     - NOTE: I've decided, invite.go should allow users to create their username and site name separately, with the default being both of them the same. Check availability for both of them at the same time, because we want to avoid a situation where they create their username first only to find out that same username is already taken as a site name.
     - Actually the most important reason for creating a site up front for the user is so that they are onboarded quickly instead of having to fiddle around with the annoying add site button before they can do anything.
