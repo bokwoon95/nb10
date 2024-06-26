@@ -502,6 +502,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		return nil
 	}
+	regenerateSite := false
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -591,6 +592,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 						return err
 					}
 				}
+				regenerateSite = true
 			}
 		case "posts":
 			switch header.Typeflag {
@@ -609,6 +611,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 						return err
 					}
 				}
+				regenerateSite = true
 			case tar.TypeReg:
 				category := path.Dir(tail)
 				if strings.Contains(category, "/") {
@@ -627,6 +630,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 						return err
 					}
 				}
+				regenerateSite = true
 			}
 		case "output":
 			switch header.Typeflag {
@@ -679,6 +683,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 					}
 				}
 			}
+		}
+	}
+	if regenerateSite {
+		_, err = nbrew.RegenerateSite(ctx, sitePrefix)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
