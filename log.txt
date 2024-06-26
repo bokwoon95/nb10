@@ -42,14 +42,10 @@ TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-
     - Content-Disposition: attachment; filename="00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz"
 TODO: CATASTROPHIC BUG: if a user creates a page called "posts.html" (or "themes.html"), it overwrites the entire output/posts directory and potentially every image along with it. unrecoverable! fix asap!
     - Hell, I don't even know where the disappeared files go. I've been browsing the code and I can't figure out where it deletes the old files and replaces them with the new one, so it's possible the files are still inside in a detached parent state.
-TODO: *do not* allow users to create or upload files when editing post.html or postlist.html. Those don't have an output directory.
-    - TODO: also hide the "paste" button when inside post.html or postlist.html.
 TODO: add output/posts and output/themes to the list of privileged file which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json)
 
-BUG: post.html and postlist.html both show how to include images as well as support the uploading of images. It should not be allowed.
 BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
 BUG: deleting a post category's post.html and postlist.html does not regenerate them!!
-BUG: Do *NOT* show "upload images" button for post.html/postlist.html.
 BUG: rename.go: renaming posts should rightfully trigger a postlist regeneration because the link has changed.
 BUG: file.go: saving a markdown file should rightfully trigger a page regeneration for the page that depends on it.
 BUG: unable to create an image post with no post body (to S3).
@@ -68,23 +64,17 @@ TODO: users.go (what do we show about a user? allow them to change username? no)
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 TODO: remove regenerate.go entirely after the regenerate button is purged from the UI.
 TODO: initialize S3ObjectStorage.PurgeCache in main.go. Unfortunately, we will have to do this together with signup.go in out custom main() script.
-TODO: consider adding a download feature so that I can download my data, wipe the database and reload in case of breaking schema changes.
 BUG: can't add new images via file.html image upload "save".
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
 BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
 BUG: visiting /users/login/ when you're already logged in doesn't indicate that you are already logged in (nor does it prevent you from logging in again).
-BUG: can't create a note with the full lorem ipsum text in the file name
-    - {"time":"2024-03-23T01:13:56.838076+08:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).createfile","file":"github.com/bokwoon95/nb10/createfile.go","line":387},"msg":"CreateFile C:\\Users\\cbw\\notebrew-files\\notes\\Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum..txt: The filename, directory name, or volume label syntax is incorrect.","method":"POST","url":"http://localhost:6444/files/createfile/"}
 BUG: can't delete notebrew.com site
     - {"time":"2024-03-22T18:49:39.739177776+01:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).deletesite","file":"/root/nb10/deletesite.go","line":297},"msg":"constraint failed: FOREIGN KEY constraint failed (787)","method":"POST","url":"https://notebrew.com/files/deletesite/?name=notebrew.com","username":""}
 BUG: why is my html lang=''? I thought the default was "en"?
 BUG: why does creating a new site keep saying unavailable but then creates everything under the hood correctly? investigate.
 BUG: why does initially creating a site result in an invalid title and site description?
-BUG: creating a note with "60%" in the title seems to make the redirect do wonky things (it's still created, but the user is presented with some HTTP (??) error).
 BUG: pasting an image from themes into 404.html seems to lead to a broken file preview (the file is still there, and can be deleted, but it's being fetched as ".jpg" for some reason) (only if imgdomain is set).
 TODO: investigate if we can wipe out isValidParent for good if it's always just checking if the parent is under notes | pages | posts | themes and that it exists and is a directory.
-TODO: consider adding an "optimize images for web" checkbox on all image uploads. so that reaction jpegs don't get repeatedly fried if saved over and over.
-- wait but we won't do anything if the dimensions fir within 1080p, so repeatedly submitting an already-resized image to notebrew should not do anything. I think we can keep it for now.
 
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
