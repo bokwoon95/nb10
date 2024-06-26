@@ -863,7 +863,7 @@ const captchaHelp = `# == captcha keys == #
 # verificationURL - Captcha verification URL to make POST requests to.
 # siteKey         - Captcha site key.
 # secretKey       - Captcha secret key.
-# csp             - Object mapping of Content-Security-Policy directive names to values for the captcha widget to work.
+# csp             - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work.
 `
 
 type ProxyConfig struct {
@@ -873,7 +873,7 @@ type ProxyConfig struct {
 
 const proxyHelp = `# == proxy keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# realIPHeaders - Object mapping of IP addresses to HTTP Headers which contain the real client IP.
+# realIPHeaders - String-to-string mapping of IP addresses to HTTP Headers which contain the real client IP.
 # proxyIPs      - Array of proxy IP addresses.
 `
 
