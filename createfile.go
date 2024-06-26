@@ -755,7 +755,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				response.RegenerationStats.TemplateError = *templateErrPtr.Load()
 			}
 		case "output":
-			if response.Ext == ".md" {
+			next, _, _ := strings.Cut(tail, "/")
+			if next != "posts" && next != "themes" && response.Ext == ".md" {
 				var parentPage string
 				if tail == "" {
 					parentPage = "pages/index.html"

@@ -973,7 +973,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 		case "output":
-			if fileType.Ext == ".md" {
+			next, _, _ := strings.Cut(tail, "/")
+			if next != "posts" && next != "themes" && fileType.Ext == ".md" {
 				var parentPage string
 				if tail == "" {
 					parentPage = "pages/index.html"
