@@ -148,7 +148,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
-			if response.Parent == "output/themes" && (response.Name == "post.html" || response.Name == "postlist.html") {
+			if head == "posts" && (response.Name == "post.html" || response.Name == "postlist.html" || response.Name == "postlist.json") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
 				return
@@ -340,7 +340,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
-			if response.Parent == "output/themes" && (response.Name == "post.html" || response.Name == "postlist.html") {
+			if head == "posts" && (response.Name == "post.html" || response.Name == "postlist.html" || response.Name == "postlist.json") {
 				response.Error = "InvalidFile"
 				writeResponse(w, r, response)
 				return

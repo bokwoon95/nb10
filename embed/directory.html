@@ -372,12 +372,19 @@
             <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
-          {{- else if eq (join $file.Parent $file.Name) "pages/index.html" "pages/404.html" "output/themes/post.html" "output/themes/postlist.html"}}
+          {{- else if or
+            (and
+              (eq $file.Parent "pages")
+              (eq $file.Name "index.html" "404.html"))
+            (and
+              (eq (head $file.Parent) "posts")
+              (eq $file.Name "post.html" "postlist.html" "postlist.json"))
+          }}
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "export" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>export</button></div>
             {{- if $.IsDatabaseFS }}
             <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "unpin" }}/' name='name' value='{{ join $file.Parent $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>unpin</button></div>
             {{- end }}
-          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "export" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>export</button></div>
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
@@ -431,12 +438,19 @@
             <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
-          {{- else if eq (join $file.Parent $file.Name) "pages/index.html" "pages/404.html" "output/themes/post.html" "output/themes/postlist.html"}}
+          {{- else if or
+            (and
+              (eq $file.Parent "pages")
+              (eq $file.Name "index.html" "404.html"))
+            (and
+              (eq (head $file.Parent) "posts")
+              (eq $file.Name "post.html" "postlist.html" "postlist.json"))
+          }}
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
+          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "export" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>export</button></div>
             {{- if $.IsDatabaseFS }}
             <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "pin" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>pin</button></div>
             {{- end }}
-          <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "export" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>export</button></div>
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>

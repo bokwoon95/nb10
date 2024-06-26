@@ -37,15 +37,11 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-permanent files: notes, pages, posts, output, site.json, posts/*/postlist.json, posts/*/postlist.html, posts/*/post.html
-
 TODO: stop_cmd.go: get the pgid with `PGID=$(ps -o pgid= -p $PID | xargs)` and issue `kill -- -$PGID` to kill not just the process but also all its children.
 TODO: we have a problem: why is fileName getting set to 00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz instead of files-2024-06-25-194227-647.tgz when I export it? What's the mechanism here?
     - Content-Disposition: attachment; filename="00667b1d-a31c-2cfa-3f0a-285185f018bf.tgz"
 TODO: add output/posts and output/themes to the list of permanent files which cannot be renamed, cut or deleted (existing ones: notes, pages, posts, output, site.json, posts/*/postlist.json, posts/*/postlist.html, posts/*/post.html)
 
-BUG: postlist.json can be cut, copied, renamed and deleted. We only want to allow pinning.
-BUG: deleting a post category's post.html and postlist.html does not regenerate them!!
 BUG: rename.go: renaming posts should rightfully trigger a postlist regeneration because the link has changed.
 BUG: file.go: saving a markdown file should rightfully trigger a page regeneration for the page that depends on it.
 BUG: unable to create an image post with no post body (to S3).
@@ -92,5 +88,8 @@ The main usefulness of being able to run notebrew on plain IP addresses or HTTP 
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 - NOTE: need to insert an addenum: sometimes site generation may not be perfect, and miss out something. If you notice anything off, head into site.json and simply hit 'save' to regenerate your entire site from scratch.
 - NOTE: inform the user of certain opinionated styles, for example HTML using single quotes instead of double quotes (so that double quotes can be used for HTML template string literals). As well as everything using two-spaced tabs so that it's easy to indent code even on mobile, which doesn't have a tab key and the best way is to hit spacebar twice instead of tab once.
+- need to add the concept of permanent files to the guide
+    permanent files: notes, pages, posts, output, site.json, pages/index.html, pages/404.html, posts/*/postlist.html, posts/*/post.html, posts/*/postlist.json
+    affected actions: rename, cut, delete
 
 notebrew permissions -user $user -site $site -grant -revoke -setowner
