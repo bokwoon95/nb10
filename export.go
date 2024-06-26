@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -788,8 +787,10 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 					Size:    file.Size,
 					PAXRecords: map[string]string{
 						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
-						"NOTEBREW.file.isPinned":     strconv.FormatBool(file.IsPinned),
 					},
+				}
+				if file.IsPinned {
+					tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
 				}
 				if file.IsDir {
 					tarHeader.Typeflag = tar.TypeDir
