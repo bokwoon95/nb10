@@ -413,7 +413,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			oldOutputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output", tail, response.To)
 			if !counterpartExists {
-				// Fast path: if the counterpart doesn't exist, we can just rename the entire output directory.
+				// Fast path: if the counterpart doesn't exist, we can just
+				// rename the entire output directory.
 				err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
@@ -421,7 +422,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					return
 				}
 			} else {
-				// Otherwise, we have to loop over each corresponding item in the output directory one by one to rename it.
+				// Otherwise, we have to loop over each corresponding item in
+				// the output directory one by one to rename it.
 				err = nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
@@ -436,9 +438,6 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				}
 				group, groupctx := errgroup.WithContext(r.Context())
 				for _, dirEntry := range dirEntries {
-					// example:
-					// - files in output/foobar correspond to pages/foobar.html (also a file)
-					// - directories in output/foobar correspond to pages/foobar (also a directory)
 					if dirEntry.IsDir() == response.IsDir {
 						name := dirEntry.Name()
 						group.Go(func() error {
@@ -531,7 +530,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			}
 			oldOutputDir := path.Join(sitePrefix, "output/posts", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.To)
-			// Fast path: if the counterpart doesn't exist, we can just rename the entire output directory.
+			// Fast path: if the counterpart doesn't exist, we can just rename
+			// the entire output directory.
 			if !counterpartExists {
 				err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
 				if err != nil {
@@ -540,7 +540,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					return
 				}
 			} else {
-				// Otherwise, we have to loop over each corresponding item in the output directory one by one to rename it.
+				// Otherwise, we have to loop over each corresponding item in
+				// the output directory one by one to rename it.
 				err := nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
@@ -555,9 +556,6 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				}
 				group, groupctx := errgroup.WithContext(r.Context())
 				for _, dirEntry := range dirEntries {
-					// example:
-					// - files in output/posts/foobar correspond to posts/foobar.md (also a file)
-					// - directories in output/posts/foobar correspond to posts/foobar (also a directory)
 					if dirEntry.IsDir() == response.IsDir {
 						name := dirEntry.Name()
 						group.Go(func() error {

@@ -473,85 +473,129 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						return err
 					}
 				}
-				if !(srcHead == "pages" && destHead == "pages") && !(srcHead == "posts" && destHead == "posts") {
-					return nil
-				}
 				if srcHead == "posts" && destHead == "posts" {
-					// TODO: also apply the counterpart logic here.
-					if !isMove {
-						panic("unreachable: PostNoCopy")
-					}
-					var srcOutputDir, destOutputDir string
+					// example: posts/foobar.md (must be a file) and posts/foobar (must
+					// be a dir) are counterparts that share the same output directory
+					// (output/posts/foobar).
+					var counterpart, srcOutputDir, destOutputDir string
 					if !srcFileInfo.IsDir() {
+						counterpart = strings.TrimSuffix(srcFilePath, ".md")
 						srcOutputDir = path.Join(sitePrefix, "output/posts", srcTail, strings.TrimSuffix(name, ".md"))
 						destOutputDir = path.Join(sitePrefix, "output/posts", destTail, strings.TrimSuffix(name, ".md"))
 					} else {
+						counterpart = srcFilePath + ".md"
 						srcOutputDir = path.Join(sitePrefix, "output/posts", srcTail, name)
 						destOutputDir = path.Join(sitePrefix, "output/posts", destTail, name)
 					}
-					err = nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
+					var counterpartExists bool
+					counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
 					if err != nil {
-						return err
+						if !errors.Is(err, fs.ErrNotExist) {
+							return err
+						}
+					} else {
+						counterpartExists = counterpartFileInfo.IsDir() != srcFileInfo.IsDir()
 					}
-					return nil
-				}
-				var counterpart, srcOutputDir, destOutputDir string
-				if !srcFileInfo.IsDir() {
-					counterpart = strings.TrimSuffix(srcFilePath, ".html")
-					srcOutputDir = path.Join(sitePrefix, "output", srcTail, strings.TrimSuffix(name, ".html"))
-					destOutputDir = path.Join(sitePrefix, "output", destTail, strings.TrimSuffix(name, ".html"))
-				} else {
-					counterpart = srcFilePath + ".html"
-					srcOutputDir = path.Join(sitePrefix, "output", srcTail, name)
-					destOutputDir = path.Join(sitePrefix, "output", destTail, name)
-				}
-				var counterpartExists bool
-				counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
-				if err != nil {
-					if !errors.Is(err, fs.ErrNotExist) {
-						return err
-					}
-				} else {
-					counterpartExists = true
-				}
-				if !counterpartExists || counterpartFileInfo.IsDir() == srcFileInfo.IsDir() {
-					if isMove {
-						err = nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
+					if !counterpartExists {
+						// Fast path: if the counterpart doesn't exist, we can
+						// just rename the entire output directory.
+						err := nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
 						if err != nil {
 							return err
 						}
 					} else {
-						err = nbrew.FS.WithContext(groupctx).Copy(srcOutputDir, destOutputDir)
+						// Otherwise, we have to loop over each corresponding
+						// item in the output directory one by one to rename
+						// it.
+						err := nbrew.FS.WithContext(groupctx).MkdirAll(destOutputDir, 0755)
+						if err != nil {
+							return err
+						}
+						dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(srcOutputDir)
+						if err != nil {
+							return err
+						}
+						subgroup, subctx := errgroup.WithContext(groupctx)
+						for _, dirEntry := range dirEntries {
+							if dirEntry.IsDir() == srcFileInfo.IsDir() {
+								name := dirEntry.Name()
+								subgroup.Go(func() error {
+									return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
+								})
+							}
+						}
+						err = subgroup.Wait()
 						if err != nil {
 							return err
 						}
 					}
-					return nil
-				}
-				err = nbrew.FS.WithContext(groupctx).MkdirAll(destOutputDir, 0755)
-				if err != nil {
-					return err
-				}
-				dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(srcOutputDir)
-				if err != nil {
-					return err
-				}
-				subgroup, subctx := errgroup.WithContext(groupctx)
-				for _, dirEntry := range dirEntries {
-					if dirEntry.IsDir() == srcFileInfo.IsDir() {
-						name := dirEntry.Name()
-						subgroup.Go(func() error {
-							if isMove {
-								return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
-							} else {
-								return nbrew.FS.WithContext(subctx).Copy(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
-							}
-						})
+				} else if srcHead == "pages" && destHead == "pages" {
+					// example: pages/foobar.html (must be a file) and pages/foobar
+					// (must be a dir) are counterparts that share the same output
+					// directory (output/foobar).
+					var counterpart, srcOutputDir, destOutputDir string
+					if !srcFileInfo.IsDir() {
+						counterpart = strings.TrimSuffix(srcFilePath, ".html")
+						srcOutputDir = path.Join(sitePrefix, "output", srcTail, strings.TrimSuffix(name, ".html"))
+						destOutputDir = path.Join(sitePrefix, "output", destTail, strings.TrimSuffix(name, ".html"))
+					} else {
+						counterpart = srcFilePath + ".html"
+						srcOutputDir = path.Join(sitePrefix, "output", srcTail, name)
+						destOutputDir = path.Join(sitePrefix, "output", destTail, name)
 					}
-				}
-				err = subgroup.Wait()
-				if err != nil {
-					return err
+					var counterpartExists bool
+					counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
+					if err != nil {
+						if !errors.Is(err, fs.ErrNotExist) {
+							return err
+						}
+					} else {
+						counterpartExists = counterpartFileInfo.IsDir() != srcFileInfo.IsDir()
+					}
+					if !counterpartExists {
+						// Fast path: if the counterpart doesn't exist, we can
+						// just rename or copy the entire output directory.
+						if isMove {
+							err = nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
+							if err != nil {
+								return err
+							}
+						} else {
+							err = nbrew.FS.WithContext(groupctx).Copy(srcOutputDir, destOutputDir)
+							if err != nil {
+								return err
+							}
+						}
+					} else {
+						// Otherwise, we have to loop over each corresponding
+						// item in the output directory one by one to rename or
+						// copy it.
+						err := nbrew.FS.WithContext(groupctx).MkdirAll(destOutputDir, 0755)
+						if err != nil {
+							return err
+						}
+						dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(srcOutputDir)
+						if err != nil {
+							return err
+						}
+						subgroup, subctx := errgroup.WithContext(groupctx)
+						for _, dirEntry := range dirEntries {
+							if dirEntry.IsDir() == srcFileInfo.IsDir() {
+								name := dirEntry.Name()
+								subgroup.Go(func() error {
+									if isMove {
+										return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
+									} else {
+										return nbrew.FS.WithContext(subctx).Copy(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
+									}
+								})
+							}
+						}
+						err = subgroup.Wait()
+						if err != nil {
+							return err
+						}
+					}
 				}
 				return nil
 			})
