@@ -422,7 +422,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		return nil
 	}
-	writeFile := func(filePath string, modTime, creationTime time.Time, reader io.Reader) error {
+	writeFile := func(filePath string, modTime, creationTime time.Time, caption string, reader io.Reader) error {
 		if !overwriteExistingFiles {
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
@@ -434,7 +434,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			}
 		}
 		if databaseFS, ok := fsys.(*DatabaseFS); ok {
-			fsys = databaseFS.WithModTime(modTime).WithCreationTime(creationTime)
+			fsys = databaseFS.WithModTime(modTime).WithCreationTime(creationTime).WithCaption(caption)
 		}
 		writer, err := fsys.OpenWriter(filePath, 0644)
 		if err != nil {
@@ -528,6 +528,13 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			b, err := strconv.ParseBool(s)
 			if err == nil {
 				isPinned = b
+			}
+		}
+		caption := ""
+		switch ext {
+		case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+			if s, ok := header.PAXRecords["NOTEBREW.file.caption"]; ok {
+				caption = s
 			}
 		}
 		switch head {

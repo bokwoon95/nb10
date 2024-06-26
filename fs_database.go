@@ -45,64 +45,82 @@ type DatabaseFSConfig struct {
 }
 
 type DatabaseFS struct {
-	Context       context.Context
 	DB            *sql.DB
 	Dialect       string
 	ErrorCode     func(error) string
 	ObjectStorage ObjectStorage
 	Logger        *slog.Logger
+	ctx           context.Context
 	modTime       time.Time
 	creationTime  time.Time
+	caption       string
 }
 
 func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 	databaseFS := &DatabaseFS{
-		Context:       context.Background(),
 		DB:            config.DB,
 		Dialect:       config.Dialect,
 		ErrorCode:     config.ErrorCode,
 		ObjectStorage: config.ObjectStorage,
 		Logger:        config.Logger,
+		ctx:           context.Background(),
 	}
 	return databaseFS, nil
 }
 
 func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 	return &DatabaseFS{
-		Context:       ctx,
 		DB:            fsys.DB,
 		Dialect:       fsys.Dialect,
 		ErrorCode:     fsys.ErrorCode,
 		ObjectStorage: fsys.ObjectStorage,
 		Logger:        fsys.Logger,
+		ctx:           ctx,
 		modTime:       fsys.modTime,
 		creationTime:  fsys.creationTime,
+		caption:       fsys.caption,
 	}
 }
 
 func (fsys *DatabaseFS) WithModTime(modTime time.Time) *DatabaseFS {
 	return &DatabaseFS{
-		Context:       fsys.Context,
 		DB:            fsys.DB,
 		Dialect:       fsys.Dialect,
 		ErrorCode:     fsys.ErrorCode,
 		ObjectStorage: fsys.ObjectStorage,
 		Logger:        fsys.Logger,
+		ctx:           fsys.ctx,
 		modTime:       modTime,
 		creationTime:  fsys.creationTime,
+		caption:       fsys.caption,
 	}
 }
 
 func (fsys *DatabaseFS) WithCreationTime(creationTime time.Time) *DatabaseFS {
 	return &DatabaseFS{
-		Context:       fsys.Context,
 		DB:            fsys.DB,
 		Dialect:       fsys.Dialect,
 		ErrorCode:     fsys.ErrorCode,
 		ObjectStorage: fsys.ObjectStorage,
 		Logger:        fsys.Logger,
+		ctx:           fsys.ctx,
 		modTime:       fsys.modTime,
 		creationTime:  creationTime,
+		caption:       fsys.caption,
+	}
+}
+
+func (fsys *DatabaseFS) WithCaption(caption string) *DatabaseFS {
+	return &DatabaseFS{
+		DB:            fsys.DB,
+		Dialect:       fsys.Dialect,
+		ErrorCode:     fsys.ErrorCode,
+		ObjectStorage: fsys.ObjectStorage,
+		Logger:        fsys.Logger,
+		ctx:           fsys.ctx,
+		modTime:       fsys.modTime,
+		creationTime:  fsys.creationTime,
+		caption:       caption,
 	}
 }
 
@@ -127,7 +145,7 @@ type DatabaseFile struct {
 }
 
 func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +154,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	}
 	if name == "." {
 		file := &DatabaseFile{
-			ctx:           fsys.Context,
+			ctx:           fsys.ctx,
 			objectStorage: fsys.ObjectStorage,
 			info:          &DatabaseFileInfo{FilePath: ".", isDir: true},
 		}
@@ -146,7 +164,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	if ext := path.Ext(name); ext != "" {
 		fileType = fileTypes[ext]
 	}
-	file, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
+	file, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {name}",
 		Values: []any{
@@ -154,7 +172,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		},
 	}, func(row *sq.Row) *DatabaseFile {
 		file := &DatabaseFile{
-			ctx:           fsys.Context,
+			ctx:           fsys.ctx,
 			fileType:      fileType,
 			objectStorage: fsys.ObjectStorage,
 			info:          &DatabaseFileInfo{},
@@ -210,7 +228,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 }
 
 func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +238,7 @@ func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 	if name == "." {
 		return &DatabaseFileInfo{FilePath: ".", isDir: true}, nil
 	}
-	fileInfo, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
+	fileInfo, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {name}",
 		Values: []any{
@@ -351,6 +369,7 @@ type DatabaseFileWriter struct {
 	gzipWriter          *gzip.Writer
 	modTime             time.Time
 	creationTime        time.Time
+	caption             string
 	objectStorageWriter *io.PipeWriter
 	objectStorageResult chan error
 	writeFailed         bool
@@ -358,7 +377,7 @@ type DatabaseFileWriter struct {
 }
 
 func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +400,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		creationTime = fsys.creationTime
 	}
 	file := &DatabaseFileWriter{
-		ctx:               fsys.Context,
+		ctx:               fsys.ctx,
 		fileType:          fileType,
 		isFulltextIndexed: IsFulltextIndexed(name),
 		db:                fsys.DB,
@@ -390,13 +409,14 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		filePath:          name,
 		modTime:           modTime,
 		creationTime:      creationTime,
+		caption:           fsys.caption,
 		logger:            fsys.Logger,
 	}
 	// If parentDir is the root directory, just fetch the file information.
 	// Otherwise fetch both the parent and file information.
 	parentDir := path.Dir(file.filePath)
 	if parentDir == "." {
-		result, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
+		result, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 			Values: []any{
@@ -421,7 +441,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 			file.fileID = result.fileID
 		}
 	} else {
-		results, err := sq.FetchAll(fsys.Context, fsys.DB, sq.Query{
+		results, err := sq.FetchAll(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path IN ({parentDir}, {filePath})",
 			Values: []any{
@@ -584,10 +604,18 @@ func (file *DatabaseFileWriter) Close() error {
 	// If file exists, just have to update the file entry in the database.
 	if file.exists {
 		if file.fileType.IsObject {
+			var text sql.NullString
+			switch file.fileType.Ext {
+			case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+				if file.caption != "" {
+					text = sql.NullString{String: file.caption, Valid: true}
+				}
+			}
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
 				Dialect: file.dialect,
-				Format:  "UPDATE files SET text = NULL, data = NULL, size = {size}, mod_time = {modTime} WHERE file_id = {fileID}",
+				Format:  "UPDATE files SET text = {text}, data = NULL, size = {size}, mod_time = {modTime} WHERE file_id = {fileID}",
 				Values: []any{
+					sq.Param("text", text),
 					sq.Int64Param("size", file.size),
 					sq.TimeParam("modTime", file.modTime),
 					sq.UUIDParam("fileID", file.fileID),
@@ -633,15 +661,23 @@ func (file *DatabaseFileWriter) Close() error {
 	// If we reach here it means file doesn't exist. Insert a new file entry
 	// into the database.
 	if file.fileType.IsObject {
+		var text sql.NullString
+		switch file.fileType.Ext {
+		case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+			if file.caption != "" {
+				text = sql.NullString{String: file.caption, Valid: true}
+			}
+		}
 		_, err := sq.Exec(file.ctx, file.db, sq.Query{
 			Dialect: file.dialect,
-			Format: "INSERT INTO files (file_id, parent_id, file_path, size, mod_time, creation_time, is_dir)" +
-				" VALUES ({fileID}, {parentID}, {filePath}, {size}, {modTime}, {creationTime}, FALSE)",
+			Format: "INSERT INTO files (file_id, parent_id, file_path, size, text, mod_time, creation_time, is_dir)" +
+				" VALUES ({fileID}, {parentID}, {filePath}, {size}, {text}, {modTime}, {creationTime}, FALSE)",
 			Values: []any{
 				sq.UUIDParam("fileID", file.fileID),
 				sq.UUIDParam("parentID", file.parentID),
 				sq.StringParam("filePath", file.filePath),
 				sq.Int64Param("size", file.size),
+				sq.Param("text", text),
 				sq.TimeParam("modTime", file.modTime),
 				sq.TimeParam("creationTime", file.creationTime),
 			},
@@ -698,7 +734,7 @@ func (file *DatabaseFileWriter) Close() error {
 }
 
 func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -715,7 +751,7 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	} else {
 		condition = sq.Expr("parent_id = (SELECT file_id FROM files WHERE file_path = {})", name)
 	}
-	dirEntries, err := sq.FetchAll(fsys.Context, fsys.DB, sq.Query{
+	dirEntries, err := sq.FetchAll(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE {condition}",
 		Values: []any{
@@ -738,7 +774,7 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 }
 
 func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -758,7 +794,7 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	}
 	parentDir := path.Dir(name)
 	if parentDir == "." {
-		_, err := sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, file_path, mod_time, creation_time, is_dir)" +
 				" VALUES ({fileID}, {filePath}, {modTime}, {creationTime}, TRUE)",
@@ -780,7 +816,7 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 			return err
 		}
 	} else {
-		parentID, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
+		parentID, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {parentDir}",
 			Values: []any{
@@ -795,7 +831,7 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 			}
 			return err
 		}
-		_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir)" +
 				" VALUES ({fileID}, {parentID}, {filePath}, {modTime}, {creationTime}, TRUE)",
@@ -822,7 +858,7 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 }
 
 func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -832,7 +868,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	if name == "." {
 		return nil
 	}
-	tx, err := fsys.DB.BeginTx(fsys.Context, nil)
+	tx, err := fsys.DB.BeginTx(fsys.ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -850,7 +886,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	segments := strings.Split(name, "/")
 	switch fsys.Dialect {
 	case "sqlite", "postgres":
-		_, err := sq.Exec(fsys.Context, tx, sq.Query{
+		_, err := sq.Exec(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, file_path, mod_time, creation_time, is_dir)" +
 				" VALUES ({fileID}, {filePath}, {modTime}, {creationTime}, TRUE)" +
@@ -866,7 +902,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 			return err
 		}
 	case "mysql":
-		_, err := sq.Exec(fsys.Context, tx, sq.Query{
+		_, err := sq.Exec(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, file_path, mod_time, creation_time is_dir)" +
 				" VALUES ({fileID}, {filePath}, {modTime}, {creationTime}, TRUE)" +
@@ -890,7 +926,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 		var preparedExec *sq.PreparedExec
 		switch fsys.Dialect {
 		case "sqlite", "postgres":
-			preparedExec, err = sq.PrepareExec(fsys.Context, tx, sq.Query{
+			preparedExec, err = sq.PrepareExec(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir)" +
 					" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {creationTime}, TRUE)" +
@@ -907,7 +943,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 				return err
 			}
 		case "mysql":
-			preparedExec, err = sq.PrepareExec(fsys.Context, tx, sq.Query{
+			preparedExec, err = sq.PrepareExec(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir)" +
 					" VALUES ({fileID}, (select file_id FROM files WHERE file_path = {parentDir}), {filePath}, {modTime}, {creationTime}, TRUE)" +
@@ -930,7 +966,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 		for i := 1; i < len(segments); i++ {
 			parentDir := path.Join(segments[:i]...)
 			filePath := path.Join(segments[:i+1]...)
-			_, err := preparedExec.Exec(fsys.Context,
+			_, err := preparedExec.Exec(fsys.ctx,
 				sq.UUIDParam("fileID", NewID()),
 				sq.StringParam("parentDir", parentDir),
 				sq.StringParam("filePath", filePath),
@@ -954,14 +990,14 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 }
 
 func (fsys *DatabaseFS) Remove(name string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") || name == "." {
 		return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrInvalid}
 	}
-	file, err := sq.FetchOne(fsys.Context, fsys.DB, sq.Query{
+	file, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {name}",
 		Values: []any{
@@ -990,12 +1026,12 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	}
 	fileType := fileTypes[path.Ext(name)]
 	if fileType.IsObject {
-		err = fsys.ObjectStorage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
+		err = fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
 			return err
 		}
 	}
-	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM pinned_file WHERE (SELECT file_id FROM files WHERE file_path = {name}) IN (parent_id, file_id)",
 		Values: []any{
@@ -1005,7 +1041,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return err
 	}
-	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name}",
 		Values: []any{
@@ -1019,7 +1055,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 }
 
 func (fsys *DatabaseFS) RemoveAll(name string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -1027,7 +1063,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
 	}
 	pattern := wildcardReplacer.Replace(name) + "/%"
-	cursor, err := sq.FetchCursor(fsys.Context, fsys.DB, sq.Query{
+	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
@@ -1066,7 +1102,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		waitGroup.Add(1)
 		go func() {
 			defer waitGroup.Done()
-			err := fsys.ObjectStorage.Delete(fsys.Context, file.fileID.String()+path.Ext(file.filePath))
+			err := fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
 				fsys.Logger.Error(err.Error())
 			}
@@ -1077,7 +1113,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return err
 	}
 	waitGroup.Wait()
-	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format: "DELETE FROM pinned_file WHERE EXISTS (" +
 			"SELECT 1" +
@@ -1090,7 +1126,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			sq.StringParam("pattern", pattern),
 		},
 	})
-	_, err = sq.Exec(fsys.Context, fsys.DB, sq.Query{
+	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
 		Values: []any{
@@ -1105,7 +1141,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 }
 
 func (fsys *DatabaseFS) Rename(oldName, newName string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -1115,7 +1151,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	if !fs.ValidPath(newName) || strings.Contains(newName, "\\") {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrInvalid}
 	}
-	exists, err := sq.FetchExists(fsys.Context, fsys.DB, sq.Query{
+	exists, err := sq.FetchExists(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT 1 FROM files WHERE file_path = {newName}",
 		Values: []any{
@@ -1125,7 +1161,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	if exists {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
 	}
-	tx, err := fsys.DB.BeginTx(fsys.Context, nil)
+	tx, err := fsys.DB.BeginTx(fsys.ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -1137,7 +1173,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			// If the parent changes, also update the parent_id.
 			updateParent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
 		}
-		oldNameIsDir, err := sq.FetchOne(fsys.Context, tx, sq.Query{
+		oldNameIsDir, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{updateParent} WHERE file_path = {oldName} RETURNING {*}",
 			Values: []any{
@@ -1156,7 +1192,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			return err
 		}
 		if oldNameIsDir {
-			_, err := sq.Exec(fsys.Context, tx, sq.Query{
+			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
 				Values: []any{
@@ -1180,7 +1216,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}
 		}
 	case "mysql":
-		oldNameIsDir, err := sq.FetchOne(fsys.Context, tx, sq.Query{
+		oldNameIsDir, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {oldName}",
 			Values: []any{
@@ -1203,7 +1239,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			// If the parent changes, also update the parent_id.
 			updateParent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
 		}
-		_, err = sq.Exec(fsys.Context, tx, sq.Query{
+		_, err = sq.Exec(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{updateParent} WHERE file_path = {oldName}",
 			Values: []any{
@@ -1216,7 +1252,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 		if err != nil {
 			return err
 		}
-		_, err = sq.Exec(fsys.Context, tx, sq.Query{
+		_, err = sq.Exec(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
 			Values: []any{
@@ -1245,7 +1281,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 }
 
 func (fsys *DatabaseFS) Copy(srcName, destName string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -1258,7 +1294,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	var srcFileID ID
 	var srcIsDir bool
 	var destExists bool
-	fileInfos, err := sq.FetchAll(fsys.Context, fsys.DB, sq.Query{
+	fileInfos, err := sq.FetchAll(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path IN ({srcName}, {destName})",
 		Values: []any{
@@ -1297,7 +1333,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		srcFilePath := srcName
 		destFilePath := destName
 		destFileID := NewID()
-		_, err := sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir, size, text, data)" +
 				" SELECT" +
@@ -1326,14 +1362,14 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		ext := path.Ext(srcFilePath)
 		fileType := fileTypes[ext]
 		if fileType.IsObject {
-			err := fsys.ObjectStorage.Copy(fsys.Context, srcFileID.String()+ext, destFileID.String()+ext)
+			err := fsys.ObjectStorage.Copy(fsys.ctx, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
 			}
 		}
 		return nil
 	}
-	cursor, err := sq.FetchCursor(fsys.Context, fsys.DB, sq.Query{
+	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {srcName} OR file_path LIKE {pattern} ORDER BY file_path",
 		Values: []any{
@@ -1384,7 +1420,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := fsys.ObjectStorage.Copy(fsys.Context, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
+				err := fsys.ObjectStorage.Copy(fsys.ctx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
 				if err != nil {
 					fsys.Logger.Error(err.Error())
 				}
@@ -1402,7 +1438,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	}
 	switch fsys.Dialect {
 	case "sqlite":
-		_, err := sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir, size, text, data)" +
 				" SELECT" +
@@ -1428,7 +1464,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			return err
 		}
 	case "postgres":
-		_, err := sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir, size, text, data)" +
 				" SELECT" +
@@ -1454,7 +1490,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			return err
 		}
 	case "mysql":
-		_, err := sq.Exec(fsys.Context, fsys.DB, sq.Query{
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir, size, text, data)" +
 				" SELECT" +

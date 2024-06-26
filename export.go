@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
@@ -777,6 +778,10 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
+				head, _, _ := strings.Cut(file.FilePath, "/")
+				if head != "notes" && head != "pages" && head != "posts" && head != "output" && file.FilePath != "site.json" {
+					continue
+				}
 				tarHeader := &tar.Header{
 					Name:    file.FilePath,
 					ModTime: file.ModTime,
@@ -798,6 +803,12 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 				fileType, ok := fileTypes[path.Ext(file.FilePath)]
 				if !ok {
 					continue
+				}
+				switch fileType.Ext {
+				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+					if len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
+						tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
+					}
 				}
 				tarHeader.Typeflag = tar.TypeReg
 				tarHeader.Mode = 0644
