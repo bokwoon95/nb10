@@ -614,6 +614,9 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if ext != ".html" {
 					continue
 				}
+				if tail == "" && (fileName == "posts.html" || fileName == "themes.html") {
+					continue
+				}
 				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
@@ -638,7 +641,12 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 					continue
 				}
 				if ext != ".md" {
-					continue
+					switch path.Base(header.Name) {
+					case "postlist.json", "postlist.html", "post.html":
+						break
+					default:
+						continue
+					}
 				}
 				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {

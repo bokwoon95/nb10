@@ -278,6 +278,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			if ext != ".html" {
 				continue
 			}
+			if tail == "" && (fileName == "posts.html" || fileName == "themes.html") {
+				continue
+			}
 			var b strings.Builder
 			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
 			if err != nil {
@@ -312,7 +315,12 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 
 		if head == "posts" {
 			if ext != ".md" {
-				continue
+				switch fileName {
+				case "postlist.json", "postlist.html", "post.html":
+					break
+				default:
+					continue
+				}
 			}
 			var b strings.Builder
 			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))

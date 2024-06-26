@@ -361,7 +361,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				writeResponse(w, r, response)
 				return
 			}
-			if response.Parent != "" && response.Name == "index" && response.Ext == ".html" {
+			if (tail == "" && response.Name == "posts" && response.Ext == ".html") ||
+				(tail == "" && response.Name == "themes" && response.Ext == ".html") ||
+				(tail != "" && response.Name == "index" && response.Ext == ".html") {
 				response.FormErrors.Add("name", "this name is not allowed")
 				response.Error = "FormErrorsPresent"
 				writeResponse(w, r, response)
@@ -382,14 +384,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					break
 				}
 			}
-			var timestamp [8]byte
-			binary.BigEndian.PutUint64(timestamp[:], uint64(time.Now().Unix()))
-			prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
-			if response.Name != "" {
-				response.Name = prefix + "-" + response.Name
-			} else {
-				response.Name = prefix
-			}
 			switch response.Ext {
 			case "":
 				response.Ext = ".md"
@@ -400,6 +394,14 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				response.Error = "FormErrorsPresent"
 				writeResponse(w, r, response)
 				return
+			}
+			var timestamp [8]byte
+			binary.BigEndian.PutUint64(timestamp[:], uint64(time.Now().Unix()))
+			prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
+			if response.Name != "" {
+				response.Name = prefix + "-" + response.Name
+			} else {
+				response.Name = prefix
 			}
 		case "output":
 			if request.Name != "" {

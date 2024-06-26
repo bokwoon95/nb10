@@ -378,10 +378,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						if !strings.HasSuffix(srcFilePath, ".md") {
 							invalidCh <- name
 							return nil
-						} else {
-							switch path.Base(srcFilePath) {
-							case "post.html":
-							}
 						}
 					} else {
 						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
@@ -458,7 +454,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				pastedCh <- name
 				isPermanentFile := false
 				if !srcFileInfo.IsDir() {
-					// TODO: but shouldn't we take the path.Base(name) instead of the name?
 					switch response.SrcParent {
 					case "pages":
 						isPermanentFile = name == "index.html" || name == "404.html"
