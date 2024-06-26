@@ -561,7 +561,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				default:
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, limit))
 				if err != nil {
 					return err
 				}
@@ -589,7 +589,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if ext != ".html" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
 				}
@@ -627,7 +627,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if ext != ".md" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
 				}
@@ -662,7 +662,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				default:
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, limit))
 				if err != nil {
 					return err
 				}
@@ -679,7 +679,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if header.Name != "site.json" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
 				}
