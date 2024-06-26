@@ -321,7 +321,6 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			return
 		}
 		_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
-			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format:  "DELETE FROM import_job WHERE import_job_id = {importJobID}",
 			Values: []any{
