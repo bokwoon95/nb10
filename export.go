@@ -630,7 +630,7 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 		}
 	}
 	w.processedBytes = processedBytes
-	return n, nil
+	return n, err
 }
 
 func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, fileName string) error {

@@ -312,7 +312,7 @@ func (r *progressReader) Read(p []byte) (n int, err error) {
 		}
 	}
 	r.processedBytes = processedBytes
-	return n, nil
+	return n, err
 }
 
 func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix string, fileName string, root string, overwriteExistingFiles bool) error {
@@ -321,6 +321,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			return
 		}
 		_, err := sq.Exec(context.Background(), nbrew.DB, sq.Query{
+			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format:  "DELETE FROM import_job WHERE import_job_id = {importJobID}",
 			Values: []any{
