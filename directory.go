@@ -153,7 +153,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			},
 			"sortBy": func(sort string) template.URL {
 				queryParams := "?persist&sort=" + url.QueryEscape(sort) + "&order=" + url.QueryEscape(response.Order)
-				if response.IsDatabaseFS && len(response.Files) > 0 {
+				if (response.NextURL != "" || response.PreviousURL != "") && response.IsDatabaseFS && len(response.Files) > 0 {
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
@@ -164,7 +164,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			},
 			"orderBy": func(order string) template.URL {
 				queryParams := "?persist&sort=" + url.QueryEscape(response.Sort) + "&order=" + url.QueryEscape(order)
-				if response.IsDatabaseFS && len(response.Files) > 0 {
+				if (response.NextURL != "" || response.PreviousURL != "") && response.IsDatabaseFS && len(response.Files) > 0 {
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +

@@ -59,8 +59,6 @@ BUG: can't add new images via file.html image upload "save".
 BUG: Edit notebrew.com's index.html doesn't seem to change its output.
 BUG: pasted images into index.html's input seems to work, but saving doesn't seem to upload properly.
 BUG: visiting /users/login/ when you're already logged in doesn't indicate that you are already logged in (nor does it prevent you from logging in again).
-BUG: can't delete notebrew.com site
-    - {"time":"2024-03-22T18:49:39.739177776+01:00","level":"ERROR","source":{"function":"github.com/bokwoon95/nb10.(*Notebrew).deletesite","file":"/root/nb10/deletesite.go","line":297},"msg":"constraint failed: FOREIGN KEY constraint failed (787)","method":"POST","url":"https://notebrew.com/files/deletesite/?name=notebrew.com","username":""}
 BUG: why is my html lang=''? I thought the default was "en"?
 BUG: why does creating a new site keep saying unavailable but then creates everything under the hood correctly? investigate.
 BUG: why does initially creating a site result in an invalid title and site description?

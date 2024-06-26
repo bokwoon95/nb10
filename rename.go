@@ -390,6 +390,9 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 		}
 		switch head {
 		case "pages":
+			// example: pages/foobar.html (must be a file) and pages/foobar
+			// (must be a dir) are counterparts that share the same output
+			// directory (output/foobar).
 			var counterpart string
 			if !response.IsDir {
 				counterpart = strings.TrimPrefix(oldName, ".html")
@@ -405,46 +408,50 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					return
 				}
 			} else {
-				counterpartExists = true
+				counterpartExists = counterpartFileInfo.IsDir() != response.IsDir
 			}
 			oldOutputDir := path.Join(sitePrefix, "output", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output", tail, response.To)
-			if !counterpartExists || counterpartFileInfo.IsDir() == response.IsDir {
+			if !counterpartExists {
+				// Fast path: if the counterpart doesn't exist, we can just rename the entire output directory.
 				err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.internalServerError(w, r, err)
 					return
 				}
-				writeResponse(w, r, response)
-				return
-			}
-			err = nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(oldOutputDir)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			group, groupctx := errgroup.WithContext(r.Context())
-			for _, dirEntry := range dirEntries {
-				if dirEntry.IsDir() == response.IsDir {
-					name := dirEntry.Name()
-					group.Go(func() error {
-						return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
-					})
+			} else {
+				// Otherwise, we have to loop over each corresponding item in the output directory one by one to rename it.
+				err = nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
 				}
-			}
-			err = group.Wait()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
+				dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(oldOutputDir)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				group, groupctx := errgroup.WithContext(r.Context())
+				for _, dirEntry := range dirEntries {
+					// example:
+					// - files in output/foobar correspond to pages/foobar.html (also a file)
+					// - directories in output/foobar correspond to pages/foobar (also a directory)
+					if dirEntry.IsDir() == response.IsDir {
+						name := dirEntry.Name()
+						group.Go(func() error {
+							return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
+						})
+					}
+				}
+				err = group.Wait()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
 			}
 			var parentPage string
 			if response.Parent == "pages" {
@@ -502,15 +509,101 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			response.RegenerationStats.Count = 1
 			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		case "posts":
-			// TODO: copy the counterpart logic here.
+			// example: posts/foobar.md (must be a file) and posts/foobar (must
+			// be a dir) are counterparts that share the same output directory
+			// (output/posts/foobar).
+			var counterpart string
+			if !response.IsDir {
+				counterpart = strings.TrimPrefix(oldName, ".md")
+			} else {
+				counterpart = oldName + ".md"
+			}
+			var counterpartExists bool
+			counterpartFileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), counterpart)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+			} else {
+				counterpartExists = counterpartFileInfo.IsDir() != response.IsDir
+			}
 			oldOutputDir := path.Join(sitePrefix, "output/posts", tail, strings.TrimSuffix(response.Name, path.Ext(response.Name)))
 			newOutputDir := path.Join(sitePrefix, "output/posts", tail, response.Prefix+response.To)
-			err = nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
+			// Fast path: if the counterpart doesn't exist, we can just rename the entire output directory.
+			if !counterpartExists {
+				err := nbrew.FS.WithContext(r.Context()).Rename(oldOutputDir, newOutputDir)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+			} else {
+				// Otherwise, we have to loop over each corresponding item in the output directory one by one to rename it.
+				err := nbrew.FS.WithContext(r.Context()).MkdirAll(newOutputDir, 0755)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(oldOutputDir)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				group, groupctx := errgroup.WithContext(r.Context())
+				for _, dirEntry := range dirEntries {
+					// example:
+					// - files in output/posts/foobar correspond to posts/foobar.md (also a file)
+					// - directories in output/posts/foobar correspond to posts/foobar (also a directory)
+					if dirEntry.IsDir() == response.IsDir {
+						name := dirEntry.Name()
+						group.Go(func() error {
+							return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
+						})
+					}
+				}
+				err = group.Wait()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+			}
+			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+				FS:                 nbrew.FS,
+				ContentDomain:      nbrew.ContentDomain,
+				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+				ImgDomain:          nbrew.ImgDomain,
+				SitePrefix:         sitePrefix,
+			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
 				return
 			}
+			category := tail
+			tmpl, err := siteGen.PostListTemplate(r.Context(), category)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			startedAt := time.Now()
+			count, err := siteGen.GeneratePostList(r.Context(), category, tmpl)
+			if err != nil {
+				if errors.As(err, &response.RegenerationStats.TemplateError) {
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			response.RegenerationStats.Count = count
+			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		case "output":
 			if fileInfo.IsDir() {
 				writeResponse(w, r, response)
