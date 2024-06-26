@@ -191,6 +191,9 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if alreadyAuthenticated {
+			http.Redirect(w, r, "/"+path.Join("files")+"/", http.StatusFound)
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if response.Error == "IncorrectLoginCredentials" || response.Error == "ErrUserNotFound" {
 				ip := realClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
@@ -300,11 +303,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, response.Redirect, http.StatusFound)
 				return
 			}
-			var sitePrefix string
-			if response.Username != "" {
-				sitePrefix = "@" + response.Username
-			}
-			http.Redirect(w, r, "/"+path.Join("files", sitePrefix)+"/", http.StatusFound)
+			http.Redirect(w, r, "/"+path.Join("files")+"/", http.StatusFound)
 		}
 
 		var request Request
@@ -344,11 +343,6 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			Username:   strings.TrimPrefix(request.Username, "@"),
 			FormErrors: make(url.Values),
 			Redirect:   sanitizeRedirect(redirect),
-		}
-		if alreadyAuthenticated {
-			response.Error = "AlreadyAuthenticated"
-			writeResponse(w, r, response)
-			return
 		}
 
 		if response.Username == "" {
