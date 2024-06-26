@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -59,9 +61,30 @@ func (cmd *StopCmd) Run() error {
 			return err
 		}
 	} else {
-		killCmd := exec.Command("kill", strconv.Itoa(pid))
-		err := killCmd.Run()
+		var pgid int
+		cmd := exec.Command("ps", "-o", "pgid=", "-p", strconv.Itoa(pid))
+		b, err := cmd.Output()
 		if err != nil {
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+				// ps returning 1 is not necessarily an error, because it
+				// also returns 1 if no result was found. Return an error only if
+				// ps also printed something to stderr.
+				return err
+			}
+			pgid = -pid
+		} else {
+			ppid, err := strconv.Atoi(string(bytes.TrimSpace(b)))
+			if err != nil {
+				pgid = -pid
+			} else {
+				pgid = -ppid
+			}
+		}
+		killCmd := exec.Command("kill", "--", strconv.Itoa(pgid))
+		err = killCmd.Run()
+		if err != nil {
+			fmt.Println("d")
 			return err
 		}
 	}

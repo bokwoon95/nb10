@@ -294,11 +294,11 @@ func portPID(port int) (pid int, name string, err error) {
 		if err != nil {
 			var exitErr *exec.ExitError
 			if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+				// lsof also returning 1 is not necessarily an error, because it
+				// also returns 1 if no result was found. Return an error only if
+				// lsof also printed something to stderr.
 				return 0, "", fmt.Errorf(string(exitErr.Stderr))
 			}
-			// lsof also returning 1 is not necessarily an error, because it
-			// also returns 1 if no result was found. Return an error only if
-			// lsof also printed something to stderr.
 		}
 		var line []byte
 		remainder := b
