@@ -376,6 +376,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.cancelexport(w, r, user, sitePrefix)
 			return
 		case "invite":
+			nbrew.invite(w, r, user, sitePrefix)
+			return
 		default:
 			nbrew.notFound(w, r)
 			return
