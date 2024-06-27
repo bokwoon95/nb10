@@ -12,10 +12,6 @@ import (
 )
 
 func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
-	if nbrew.DB == nil {
-		nbrew.notFound(w, r)
-		return
-	}
 	var authenticationTokenString string
 	header := r.Header.Get("Authorization")
 	if header != "" {

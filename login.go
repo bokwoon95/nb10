@@ -42,11 +42,6 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 		PostRedirectGet        map[string]any `json:"postRedirectGet"`
 	}
 
-	if nbrew.DB == nil {
-		nbrew.notFound(w, r)
-		return
-	}
-
 	sanitizeRedirect := func(redirect string) string {
 		if r.Host != nbrew.CMSDomain {
 			return ""

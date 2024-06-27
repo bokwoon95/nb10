@@ -90,7 +90,58 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Handle the /users/* route on the CMS domain.
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {
-		// TODO. fetch the active user, unconditionally.
+		if nbrew.DB == nil {
+			nbrew.notFound(w, r)
+			return
+		}
+		var user User
+		var authenticationTokenString string
+		header := r.Header.Get("Authorization")
+		if header != "" {
+			if strings.HasPrefix(header, "Notebrew ") {
+				authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
+			}
+		} else {
+			cookie, _ := r.Cookie("authentication")
+			if cookie != nil {
+				authenticationTokenString = cookie.Value
+			}
+		}
+		if authenticationTokenString != "" {
+			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
+			if err == nil {
+				var authenticationTokenHash [8 + blake2b.Size256]byte
+				checksum := blake2b.Sum256(authenticationToken[8:])
+				copy(authenticationTokenHash[:8], authenticationToken[:8])
+				copy(authenticationTokenHash[8:], checksum[:])
+				user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+					Dialect: nbrew.Dialect,
+					Format: "SELECT {*}" +
+						" FROM authentication" +
+						" JOIN users ON users.user_id = authentication.user_id" +
+						" WHERE authentication.authentication_token_hash = {authenticationTokenHash}",
+					Values: []any{
+						sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+					},
+				}, func(row *sq.Row) User {
+					return User{
+						UserID:        row.UUID("users.user_id"),
+						Username:      row.String("users.username"),
+						Email:         row.String("users.email"),
+						DisableReason: row.String("users.disable_reason"),
+						SiteLimit:     row.Int64("coalesce(users.site_limit, -1)"),
+						StorageLimit:  row.Int64("coalesce(users.storage_limit, -1)"),
+					}
+				})
+				if err != nil {
+					if !errors.Is(err, sql.ErrNoRows) {
+						logger.Error(err.Error())
+						nbrew.internalServerError(w, r, err)
+						return
+					}
+				}
+			}
+		}
 		switch tail {
 		case "invite":
 			nbrew.invite(w, r)
@@ -112,7 +163,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// Per-site storage usage as well as overall total storage usage
 			// out of the total available storage that the user has. Then we
 			// can move storage used out of site.json.
+			_ = user
 		case "editprofile":
+			_ = user
 		default:
 			nbrew.notFound(w, r)
 			return
@@ -241,12 +294,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					nbrew.internalServerError(w, r, err)
 					return
 				}
-				http.SetCookie(w, &http.Cookie{
-					Path:   "/",
-					Name:   "authentication",
-					Value:  "0",
-					MaxAge: -1,
-				})
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return

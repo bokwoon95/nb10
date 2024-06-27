@@ -173,6 +173,7 @@ func (nbrew *Notebrew) Close() error {
 type User struct {
 	UserID   ID
 	Username string
+	Email    string
 	// func accountDisabled(): "you may not perform that action as your account has been disabled for the following reason: {{ $disableReason }}"
 	DisableReason string
 	SiteLimit     int64
