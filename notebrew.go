@@ -946,7 +946,7 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	buf.WriteTo(w)
 }
 
-func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, fileType FileType, file fs.File, cacheControl string) {
+func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, fileType FileType, reader io.Reader, cacheControl string) {
 	// If max-age is present in Cache-Control, don't set the ETag because that
 	// would override max-age. https://stackoverflow.com/a/51257030
 	hasMaxAge := strings.Contains(cacheControl, "max-age=")
@@ -957,14 +957,14 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 
 	// .jpeg .jpg .png .webp .gif .woff .woff2 .tgz
 	if !fileType.IsGzippable {
-		if fileSeeker, ok := file.(io.ReadSeeker); ok {
+		if readSeeker, ok := reader.(io.ReadSeeker); ok {
 			if hasMaxAge {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
 				if fileType.IsAttachment {
 					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 				}
-				http.ServeContent(w, r, "", time.Time{}, fileSeeker)
+				http.ServeContent(w, r, "", time.Time{}, readSeeker)
 				return
 			}
 			hasher := hashPool.Get().(hash.Hash)
@@ -972,13 +972,13 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 				hasher.Reset()
 				hashPool.Put(hasher)
 			}()
-			_, err := io.Copy(hasher, file)
+			_, err := io.Copy(hasher, reader)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
-			_, err = fileSeeker.Seek(0, io.SeekStart)
+			_, err = readSeeker.Seek(0, io.SeekStart)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
@@ -991,7 +991,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			if fileType.IsAttachment {
 				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 			}
-			http.ServeContent(w, r, "", time.Time{}, fileSeeker)
+			http.ServeContent(w, r, "", time.Time{}, readSeeker)
 			return
 		}
 		w.Header().Set("Content-Type", fileType.ContentType)
@@ -1004,7 +1004,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		_, err := io.Copy(w, file)
+		_, err := io.Copy(w, reader)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -1013,7 +1013,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 
 	// .html .css .js .md .txt .svg .ico .eot .otf .ttf .atom .json
 
-	if databaseFile, ok := file.(*DatabaseFile); ok {
+	if databaseFile, ok := reader.(*DatabaseFile); ok {
 		// If file is a DatabaseFile that is gzippable and is not fulltext
 		// indexed, its contents are already gzipped. We can reach directly
 		// into its buffer and skip the gzipping step.
@@ -1079,7 +1079,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			gzipWriter.Reset(io.Discard)
 			gzipWriterPool.Put(gzipWriter)
 		}()
-		_, err := io.Copy(gzipWriter, file)
+		_, err := io.Copy(gzipWriter, reader)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
@@ -1120,7 +1120,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	_, err := io.Copy(gzipWriter, file)
+	_, err := io.Copy(gzipWriter, reader)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 	} else {
