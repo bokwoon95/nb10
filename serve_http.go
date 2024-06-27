@@ -90,6 +90,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Handle the /users/* route on the CMS domain.
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {
+		// TODO. fetch the active user, unconditionally.
 		switch tail {
 		case "invite":
 			nbrew.invite(w, r)
@@ -101,13 +102,17 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.logout(w, r)
 			return
 		case "resetpassword":
+			// TODO: resetpassword should invalidate all existing sessions of the user.
 			nbrew.resetpassword(w, r)
 			return
+		case "changepassword":
+			// TODO: changepassword should invalidate all existing sessions of the user.
+		case "profile":
+		case "editprofile":
 		default:
 			nbrew.notFound(w, r)
 			return
 		}
-		// TODO: fetch the active user. Then route to /users/profile/ or /users/editprofile/ or /users/changepassword/
 	}
 
 	// Handle the /files/* route on the CMS domain.
