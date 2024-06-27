@@ -92,7 +92,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Host == nbrew.CMSDomain && head == "users" {
 		switch tail {
 		case "invite":
-			// nbrew.invite(w, r)
+			nbrew.invite(w, r)
 			return
 		case "login":
 			nbrew.login(w, r)
@@ -101,7 +101,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.logout(w, r)
 			return
 		case "resetpassword":
-			// nbrew.resetpassword(w, r)
+			nbrew.resetpassword(w, r)
 			return
 		default:
 			nbrew.notFound(w, r)
@@ -374,9 +374,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "cancelexport":
 			nbrew.cancelexport(w, r, user, sitePrefix)
-			return
-		case "invite":
-			nbrew.invite(w, r, user, sitePrefix)
 			return
 		default:
 			nbrew.notFound(w, r)
