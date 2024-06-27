@@ -107,6 +107,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.notFound(w, r)
 			return
 		}
+		// TODO: fetch the active user. Then route to /users/profile/ or /users/editprofile/ or /users/changepassword/
 	}
 
 	// Handle the /files/* route on the CMS domain.
