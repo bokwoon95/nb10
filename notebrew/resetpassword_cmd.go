@@ -34,7 +34,7 @@ type ResetpasswordCmd struct {
 
 func ResetpasswordCommand(nbrew *nb10.Notebrew, args ...string) (*ResetpasswordCmd, error) {
 	if nbrew.DB == nil {
-		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite` and try again")
 	}
 	var cmd ResetpasswordCmd
 	cmd.Notebrew = nbrew

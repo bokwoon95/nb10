@@ -23,7 +23,7 @@ type DeletesiteCmd struct {
 
 func DeletesiteCommand(nbrew *nb10.Notebrew, args ...string) (*DeletesiteCmd, error) {
 	if nbrew.DB == nil {
-		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite` and try again")
 	}
 	var cmd DeletesiteCmd
 	cmd.Notebrew = nbrew

@@ -27,7 +27,7 @@ type DeleteinviteCmd struct {
 
 func DeleteinviteCommand(nbrew *nb10.Notebrew, args ...string) (*DeleteinviteCmd, error) {
 	if nbrew.DB == nil {
-		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite`")
+		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite` and try again")
 	}
 	var cmd DeleteinviteCmd
 	cmd.Notebrew = nbrew
