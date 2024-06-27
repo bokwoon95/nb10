@@ -63,6 +63,7 @@ The main usefulness of being able to run notebrew on plain IP addresses or HTTP 
 - Then "likewise, if you want to reference images and assets globally, put them in /themes/ and you can reference these assets globally with src='/themes/.../xxx.jpeg' or src='/themes/.../xxx.js'"
 - NOTE: need to insert an addenum: sometimes site generation may not be perfect, and miss out something. If you notice anything off, head into site.json and simply hit 'save' to regenerate your entire site from scratch.
 - NOTE: inform the user of certain opinionated styles, for example HTML using single quotes instead of double quotes (so that double quotes can be used for HTML template string literals). As well as everything using two-spaced tabs so that it's easy to indent code even on mobile, which doesn't have a tab key and the best way is to hit spacebar twice instead of tab once.
+    - Actually if we keep quiet on the opinionated style and only use backticks for string literals in the templates it could also work.
 - need to add the concept of permanent files to the guide
     permanent files: notes, pages, posts, output, site.json, pages/index.html, pages/404.html, posts/*/postlist.html, posts/*/post.html, posts/*/postlist.json
     affected actions: rename, cut, delete
