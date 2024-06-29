@@ -26,12 +26,14 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		SiteName string `json:"siteName"`
 	}
 	type Response struct {
-		UserID        ID         `json:"userID"`
-		Username      string     `json:"username"`
-		SiteName      string     `json:"siteName"`
-		UserSiteNames []string   `json:"userSiteNames"`
-		Error         string     `json:"error"`
-		FormErrors    url.Values `json:"formErrors"`
+		ContentDomain        string     `json:"contentDomain"`
+		ValidateCustomDomain bool       `json:"validateCustomDomain"`
+		UserID               ID         `json:"userID"`
+		Username             string     `json:"username"`
+		SiteName             string     `json:"siteName"`
+		UserSiteNames        []string   `json:"userSiteNames"`
+		Error                string     `json:"error"`
+		FormErrors           url.Values `json:"formErrors"`
 	}
 
 	getUserSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {
@@ -113,6 +115,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
+		response.ValidateCustomDomain = nbrew.Port == 443
 		response.UserID = user.UserID
 		response.Username = user.Username
 		if response.Error != "" {

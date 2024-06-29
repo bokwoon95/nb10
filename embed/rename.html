@@ -50,6 +50,10 @@
   </div>
   <div class='mv3'>
     <div><label for='to' class='b'>New Name:</label></div>
+    {{- if eq (head $.Parent) "pages" "posts" "output" "imports" "exports" }}
+    <div class='f6 mid-gray'>• no space allowed</div>
+    <div class='f6 mid-gray'>• characters are not allowed: <code>!"#$%&amp;'()*+,/:;&lt;&gt;=?[]\^`{}|~</code></div>
+    {{- end }}
     <div class='flex items-center'>
       {{ if $.Prefix }}<span class='mr2'>{{ $.Prefix }}</span>{{ end }}
       <input id='to' name='to' value='{{ $.To }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "to" }} b--invalid-red{{ end }}' required{{ if not (index $.FormErrors "to") }} autofocus{{ end }} data-dest>

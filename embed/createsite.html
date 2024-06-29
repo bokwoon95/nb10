@@ -39,8 +39,11 @@
   <h1 class='f3 mv3 b'>Create a new site</h1>
   <div class='mv3'>
     <div><label for='siteName' class='b'>Site name:</label></div>
-    <div class='f6 mid-gray'>- only lowercase letters, numbers and hyphen</div>
-    <div class='f6 mid-gray'>- dot is allowed for custom domain names e.g. example.com</div>
+    <div class='f6 mid-gray'>• only lowercase letters, numbers and hyphen (e.g. mycoolblog)</div>
+    <div class='f6 mid-gray'>• dot is allowed for custom domain names e.g. example.com</div>
+    {{- if $.ValidateCustomDomain }}
+    <div class='f6 mid-gray'>• if a custom domain name is used, make sure a CNAME DNS record is added for this domain to point at www.{{ $.ContentDomain }}</div>
+    {{- end }}
     <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}' required{{ if not (index $.FormErrors "siteName") }} autofocus{{ end }}>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "siteName" }}
