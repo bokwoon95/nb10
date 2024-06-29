@@ -133,6 +133,7 @@ func parseTime(s string) (sql.NullTime, error) {
 	if s == "now" {
 		return sql.NullTime{Time: time.Now(), Valid: true}, nil
 	}
+	s = strings.TrimSuffix(s, "Z")
 	for _, format := range []string{
 		"2006-01-02 15:04:05.999999999-07:00",
 		"2006-01-02T15:04:05.999999999-07:00",
