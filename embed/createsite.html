@@ -40,10 +40,10 @@
   <div class='mv3'>
     <div><label for='siteName' class='b'>Site name:</label></div>
     <ul class='list-style-disc ph3 f6 mid-gray'>
-      <li>only lowercase letters, numbers and hyphen (e.g. mycoolblog)</li>
-      <li>dot is allowed for custom domain names e.g. example.com</li>
+      <li>only lowercase letters, numbers and hyphen (e.g. mycoolblog95)</li>
+      <li>dot is allowed if using custom domain name (e.g. example.com)</li>
       {{- if $.ValidateCustomDomain }}
-      <li>if a custom domain name is used, make sure a CNAME DNS record is added for this domain to point at www.{{ $.ContentDomain }}</li>
+      <li>if using custom domain name, make sure a CNAME DNS record is added for that domain to point at www.{{ $.ContentDomain }}</li>
       {{- end }}
     </ul>
     <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}' required{{ if not (index $.FormErrors "siteName") }} autofocus{{ end }}>
