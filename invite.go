@@ -1,15 +1,21 @@
 package nb10
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"mime"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"path"
 	"strings"
+	"sync"
+	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/crypto/blake2b"
@@ -25,15 +31,13 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		SiteName        string `json:"siteName"`
 	}
 	type Response struct {
-		Token           string     `json:"token"`
-		UserID          ID         `json:"userID"`
-		Username        string     `json:"username"`
-		Email           string     `json:"email"`
-		Password        string     `json:"password"`
-		ConfirmPassword string     `json:"confirmPassword"`
-		SiteName        string     `json:"siteName"`
-		Error           string     `json:"error"`
-		FormErrors      url.Values `json:"formErrors"`
+		Token      string     `json:"token"`
+		UserID     ID         `json:"userID"`
+		Username   string     `json:"username"`
+		Email      string     `json:"email"`
+		SiteName   string     `json:"siteName"`
+		Error      string     `json:"error"`
+		FormErrors url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -80,6 +84,11 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		nbrew.clearSession(w, r, "flash")
 		response.UserID = user.UserID
 		if response.Error != "" {
+			writeResponse(w, r, response)
+			return
+		}
+		if !user.UserID.IsZero() {
+			response.Error = "AlreadyAuthenticated"
 			writeResponse(w, r, response)
 			return
 		}
@@ -203,11 +212,164 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		}
 
 		response := Response{
+			Token:      request.Token,
+			Username:   request.Username,
+			Email:      request.Email,
 			SiteName:   request.SiteName,
 			FormErrors: url.Values{},
+		}
+		// username
+		if response.Username == "" {
+			response.FormErrors.Add("username", "required")
+		} else {
+			for _, char := range response.Username {
+				if char == ' ' {
+					response.FormErrors.Add("username", "cannot include space")
+					break
+				}
+				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+					response.FormErrors.Add("username", fmt.Sprintf("cannot include character %q", string(char)))
+					break
+				}
+			}
+		}
+		if !response.FormErrors.Has("username") {
+			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT 1 FROM users WHERE username = {username}",
+				Values: []any{
+					sq.StringParam("username", response.Username),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if exists {
+				response.FormErrors.Add("username", "username already used by an existing user account")
+			}
+		}
+		// email
+		if response.Email == "" {
+			response.FormErrors.Add("email", "required")
+		} else {
+			_, err := mail.ParseAddress(response.Email)
+			if err != nil {
+				response.FormErrors.Add("email", "invalid email address")
+			}
+		}
+		if !response.FormErrors.Has("email") {
+			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT 1 FROM users WHERE email = {email}",
+				Values: []any{
+					sq.StringParam("email", response.Email),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if exists {
+				response.FormErrors.Add("email", "email already used by an existing user account")
+			}
+		}
+		// password
+		if request.Password == "" {
+			response.FormErrors.Add("password", "required")
+		} else {
+			if utf8.RuneCountInString(request.Password) < 8 {
+				response.FormErrors.Add("password", "password must be at least 8 characters")
+			}
+			commonPasswords, err := getCommonPasswords()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if _, ok := commonPasswords[request.Password]; ok {
+				response.FormErrors.Add("password", "password is too common")
+			}
+		}
+		// confirmPassword
+		if !response.FormErrors.Has("password") {
+			if request.ConfirmPassword == "" {
+				response.FormErrors.Add("confirmPassword", "required")
+			} else {
+				if request.Password != request.ConfirmPassword {
+					response.FormErrors.Add("confirmPassword", "password does not match")
+				}
+			}
+		}
+		if response.SiteName != "" {
+			switch response.SiteName {
+			case "www", "img", "video", "cdn", "storage":
+				response.FormErrors.Add("siteName", "unavailable")
+			default:
+				for _, char := range response.SiteName {
+					if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+						response.FormErrors.Add("siteName", fmt.Sprintf("cannot include character %q", string(char)))
+						break
+					}
+				}
+				if len(response.SiteName) > 30 {
+					response.FormErrors.Add("siteName", "cannot exceed 30 characters")
+				}
+			}
+		}
+		if !response.FormErrors.Has("siteName") {
+			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+				Values: []any{
+					sq.StringParam("siteName", response.SiteName),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			if exists {
+				response.FormErrors.Add("siteName", "site name already in use")
+			}
+		}
+		if len(response.FormErrors) > 0 {
+			response.Error = "FormErrorsPresent"
+			writeResponse(w, r, response)
+			return
 		}
 		writeResponse(w, r, response)
 	default:
 		nbrew.methodNotAllowed(w, r)
 	}
 }
+
+var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
+	commonPasswords := make(map[string]struct{}, 10000)
+	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	done := false
+	for {
+		if done {
+			break
+		}
+		line, err := reader.ReadBytes('\n')
+		done = err == io.EOF
+		if err != nil && !done {
+			panic(err)
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		commonPasswords[string(line)] = struct{}{}
+	}
+	return commonPasswords, nil
+})

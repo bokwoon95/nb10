@@ -13,7 +13,7 @@
 </nav>
 {{- if eq $.Error "AlreadyAuthenticated" }}
 <div>
-  <div class='mv3 b'>You are already logged in, <a href='/files/'>click here to go to your dashboard</a>.</div>
+  <div class='mv3 b tc'>You are already logged in, <a href='/files/'>click here to go to your dashboard</a>.</div>
 </div>
 {{- else if eq $.Error "InvalidInviteToken" "MissingInviteToken" }}
 <div>
