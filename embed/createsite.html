@@ -43,7 +43,7 @@
       <li>only lowercase letters, numbers and hyphen (e.g. mycoolblog95)</li>
       <li>dot is allowed if using custom domain name (e.g. example.com)</li>
       {{- if $.ValidateCustomDomain }}
-      <li>if using custom domain name, make sure a CNAME DNS record is added for that domain to point at www.{{ $.ContentDomain }}</li>
+      <li>if using custom domain name, make sure a CNAME DNS record for that domain is pointing at www.{{ $.ContentDomain }}</li>
       {{- end }}
     </ul>
     <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}' required{{ if not (index $.FormErrors "siteName") }} autofocus{{ end }}>
