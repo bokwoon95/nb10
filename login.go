@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"mime"
 	"net"
@@ -23,7 +22,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		Username        string `json:"username"`
 		Password        string `json:"password"`
@@ -64,39 +63,6 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			uri.Path = "/" + uri.Path
 		}
 		return uri.String()
-	}
-
-	var alreadyAuthenticated bool
-	var authenticationTokenString string
-	header := r.Header.Get("Authorization")
-	if header != "" {
-		if strings.HasPrefix(header, "Notebrew ") {
-			authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
-		}
-	} else {
-		cookie, _ := r.Cookie("authentication")
-		if cookie != nil {
-			authenticationTokenString = cookie.Value
-		}
-	}
-	if authenticationTokenString != "" {
-		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
-		if err == nil {
-			var authenticationTokenHash [8 + blake2b.Size256]byte
-			checksum := blake2b.Sum256(authenticationToken[8:])
-			copy(authenticationTokenHash[:8], authenticationToken[:8])
-			copy(authenticationTokenHash[8:], checksum[:])
-			alreadyAuthenticated, err = sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "SELECT 1 FROM authentication WHERE authentication_token_hash = {authenticationTokenHash}",
-				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-			}
-		}
 	}
 
 	switch r.Method {
@@ -179,14 +145,14 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response.Redirect = sanitizeRedirect(r.Form.Get("redirect"))
-		if alreadyAuthenticated {
+		if !user.UserID.IsZero() {
 			response.Error = "AlreadyAuthenticated"
 			writeResponse(w, r, response)
 			return
 		}
 		writeResponse(w, r, response)
 	case "POST":
-		if alreadyAuthenticated {
+		if !user.UserID.IsZero() {
 			http.Redirect(w, r, "/"+path.Join("files")+"/", http.StatusFound)
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
