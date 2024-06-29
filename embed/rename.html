@@ -52,7 +52,7 @@
     <div><label for='to' class='b'>New Name:</label></div>
     {{- if eq (head $.Parent) "pages" "posts" "output" "imports" "exports" }}
     <div class='f6 mid-gray'>• no space allowed</div>
-    <div class='f6 mid-gray'>• characters are not allowed: <code>!"#$%&amp;'()*+,/:;&lt;&gt;=?[]\^`{}|~</code></div>
+    <div class='f6 mid-gray'>• characters not allowed: <code>!"#$%&amp;'()*+,/:;&lt;&gt;=?[]\^`{}|~</code></div>
     {{- end }}
     <div class='flex items-center'>
       {{ if $.Prefix }}<span class='mr2'>{{ $.Prefix }}</span>{{ end }}
