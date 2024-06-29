@@ -409,6 +409,18 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		defer tx.Rollback()
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
+			Format:  "DELETE FROM invite WHERE invite_token_hash = {inviteTokenHash}",
+			Values: []any{
+				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		_, err = sq.Exec(r.Context(), tx, sq.Query{
+			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO site (site_id, site_name)" +
 				" VALUES ({siteID}, {siteName})",
 			Values: []any{

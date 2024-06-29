@@ -367,9 +367,9 @@
     (eq (ext $.FilePath) ".md"))
 }}
   {{- if eq (head $.FilePath) "pages" }}
-  <details>
+  <details class='mv2'>
     <summary class='pointer f6'>how do I include assets in my page?</summary>
-    <p>Assets can be directly included in the page by their file name.</p>
+    <p>You can <strong>upload assets</strong> using the form above or with the <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}'>create file</a> link below. Assets can then be directly included in the page by their file name.</p>
     <ul class='list-style-disc ph3'>
       <li>
         <p>Include images with the <code>&lt;img&gt;</code> tag.</p>
@@ -401,8 +401,8 @@
   <details class='mv2'>
     <summary class='pointer f6'>how do I include images in my post?</summary>
     <div>
-      <p>Uploaded images are <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
-      <p>You can also <strong>explicitly include</strong> images with the <code>&lt;img&gt;</code> tag. Example:</p>
+      <p>First, <strong>upload images</strong> using the form above. Uploaded images are then <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
+      <p>You can also <strong>explicitly include</strong> uploaded images with the <code>&lt;img&gt;</code> tag. Example:</p>
       <pre class='pre-wrap break-word'># Here is a picture I took today:
 
 &lt;img src='my-file-name.jpg' alt='a cat' width='500' height='500'&gt;
