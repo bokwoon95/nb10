@@ -144,7 +144,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		switch tail {
 		case "invite":
-			nbrew.invite(w, r)
+			nbrew.invite(w, r, user)
 			return
 		case "login":
 			nbrew.login(w, r, user)
