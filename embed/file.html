@@ -18,7 +18,7 @@
   &bull;<a href='{{ $.ContentBaseURL }}' class='ma2 white'>view site</a>
   <span class='flex-grow-1'></span>
   {{- if not $.UserID.IsZero }}
-  <a href='' class='ma2 white'>{{ if $.Username }}{{ $.Username }}{{ else }}user{{ end }}</a>
+  <a href='' class='ma2 white'>{{ if $.Username }}profile ({{ $.Username }}){{ else }}user{{ end }}</a>
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
@@ -246,7 +246,7 @@
     {{- end }}
   {{- end }}
   {{- if eq (head $.FilePath) "notes" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
+  <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
   <span>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "notes" }}/'>notes</a>
     {{- if ne (dir $.FilePath) "notes" }}
@@ -256,7 +256,7 @@
   <span>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create note</a>
   {{- else if eq (head $.FilePath) "pages" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
+  <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
   <span>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "pages" }}/'>pages</a>
     {{- if ne (dir $.FilePath) "pages" }}
@@ -268,7 +268,7 @@
   <span>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create page</a>
   {{- else if eq (head $.FilePath) "posts" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
+  <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
   <span>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "posts" }}/'>posts</a>
     {{- if ne (dir $.FilePath) "posts" }}
@@ -283,11 +283,11 @@
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create post</a>
   {{- else if eq (head $.FilePath) "output" }}
     {{- if $.BelongsTo }}
-    <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
+    <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
     <span>&boxv;</span>
     belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}/'>{{ base $.BelongsTo }}</a>
     {{- else }}
-      <a href='/{{ join "files" $.SitePrefix }}/'>files</a>
+      <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
       {{- if eq (head (tail $.FilePath)) "themes" }}
       <span>&boxv;</span>
       <a href='/{{ join "files" $.SitePrefix "output/themes" }}/'>themes</a>
