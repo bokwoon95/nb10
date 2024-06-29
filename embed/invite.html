@@ -15,19 +15,24 @@
 <div>
   <div class='mv3 b'>You are already logged in, <a href='/files/'>click here to go to your dashboard</a>.</div>
 </div>
+{{- else if eq $.Error "InvalidInviteToken" "MissingInviteToken" }}
+<div>
+  <div class='mv3 b tc'>Invalid invite token.</div>
+</div>
 {{- else }}
 <form method='post'>
   <h1 class='f3 mv3 b'>Create an account:</h1>
-
-  {{- if eq $.Error "PasswordsNotMatch" }}
+  {{- if eq $.Error "FormErrorsPresent" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
-    <div>passwords do not match</div>
+    <div>form errors present</div>
   </div>
   {{- end }}
-
+  <input type='hidden' name='token' value='{{ $.Token }}'>
   <div class='mv3'>
     <div><label for='username' class='b'>Username (you can change this later):</label></div>
-    <div class='f6 mid-gray'>only lowercase letters, numbers and hyphen</div>
+    <ul class='list-style-disc ph3 f6 mid-gray'>
+      <li>only lowercase letters, numbers and hyphen</li>
+    </ul>
     <input id='username' name='username' value='{{ $.Username }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "username" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "username" }}
@@ -46,7 +51,9 @@
   </div>
   <div class='mv3'>
     <div><label for='password' class='b'>Password:</label></div>
-    <div class='f6 mid-gray'>at least 8 characters</div>
+    <ul class='list-style-disc ph3 f6 mid-gray'>
+      <li>at least 8 characters</li>
+    </ul>
     <input type='password' id='password' name='password' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "password" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "password" }}
@@ -65,7 +72,10 @@
   </div>
   <div class='mv3'>
     <div><label for='siteName' class='b'>Site name (optional, you can create a site later):</label></div>
-    <div class='f6 mid-gray'>only lowercase letters, numbers and hyphen</div>
+    <ul class='list-style-disc ph3 f6 mid-gray'>
+      <li>only lowercase letters, numbers and hyphen</li>
+      <li>max 30 characters</li>
+    </ul>
     <div class=''>
       <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}'>
       <span>.nbrew.net</span>

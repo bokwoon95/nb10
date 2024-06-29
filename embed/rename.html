@@ -51,8 +51,10 @@
   <div class='mv3'>
     <div><label for='to' class='b'>New Name:</label></div>
     {{- if eq (head $.Parent) "pages" "posts" "output" "imports" "exports" }}
-    <div class='f6 mid-gray'>• no space allowed</div>
-    <div class='f6 mid-gray'>• characters not allowed: <code>!"#$%&amp;'()*+,/:;&lt;&gt;=?[]\^`{}|~</code></div>
+    <ul class='list-style-disc ph3 f6 mid-gray'>
+      <li>no space allowed</li>
+      <li>characters not allowed: <code>!"#$%&amp;'()*+,/:;&lt;&gt;=?[]\^`{}|~</code></li>
+    </ul>
     {{- end }}
     <div class='flex items-center'>
       {{ if $.Prefix }}<span class='mr2'>{{ $.Prefix }}</span>{{ end }}
