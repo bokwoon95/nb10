@@ -24,7 +24,7 @@
   {{- end }}
   <span class='flex-grow-1'></span>
   {{- if not $.UserID.IsZero }}
-  <a href='' class='ma2 white'>{{ if $.Username }}profile ({{ $.Username }}){{ else }}user{{ end }}</a>
+  <a href='' class='ma2 white'>{{ if $.Username }}profile ({{ $.Username }}){{ else }}profile{{ end }}</a>
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
