@@ -132,10 +132,6 @@ details[open] summary.button { background-color: white; }
 
 /* alerts */
 .alert { color: #004085; background-color: #cce5ff; border-color: #b8daff; }
-.alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
-.alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
-.alert-warning { color: #856404; background-color: #fff3cd; border-color: #ffeeba; }
-.color-success { color: #155724; }
 
 /* fonts */
 .b { font-weight: bold; }

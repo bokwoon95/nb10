@@ -18,12 +18,12 @@
   <h1 class='f3 mv3 b tc'>Login</h1>
 
   {{- if eq (index $.PostRedirectGet "from") "invite" }}
-  <div role='alert' class='w-100 br2 ph3 pv2 ba alert-success'>
+  <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
     <div>Account created, please log in using your new credentials.</div>
   </div>
   {{- end }}
   {{- if eq (index $.PostRedirectGet "from") "resetpassword" }}
-  <div role='alert' class='w-100 br2 ph3 pv2 ba alert-success'>
+  <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
     <div>Password reset successfully, please log in using your new credentials.</div>
   </div>
   {{- end }}

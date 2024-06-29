@@ -24,7 +24,7 @@
   <h1 class='f3 mv3 b'>Create an account</h1>
   {{- if eq $.Error "FormErrorsPresent" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
-    <div>form errors present</div>
+    <div>please fix the errors</div>
   </div>
   {{- end }}
   <input type='hidden' name='token' value='{{ $.Token }}'>

@@ -3,11 +3,15 @@ package nb10
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"mime"
 	"net/http"
 	"net/mail"
@@ -15,10 +19,14 @@ import (
 	"path"
 	"strings"
 	"sync"
+	texttemplate "text/template"
 	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/caddyserver/certmagic"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/blake2b"
+	"golang.org/x/sync/errgroup"
 )
 
 func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User) {
@@ -92,18 +100,18 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			writeResponse(w, r, response)
 			return
 		}
-		s := r.Form.Get("token")
-		if s == "" {
+		response.Token = r.Form.Get("token")
+		if response.Token == "" {
 			response.Error = "MissingInviteToken"
 			writeResponse(w, r, response)
 			return
 		}
-		if len(s) > 48 {
+		if len(response.Token) > 48 {
 			response.Error = "InvalidInviteToken"
 			writeResponse(w, r, response)
 			return
 		}
-		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", s))
+		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
 			response.Error = "InvalidInviteToken"
 			writeResponse(w, r, response)
@@ -164,9 +172,9 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":     "invite",
-					"username": response.Username,
+					"from": "invite",
 				},
+				"username": response.Username,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -217,6 +225,51 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			Email:      request.Email,
 			SiteName:   request.SiteName,
 			FormErrors: url.Values{},
+		}
+		// token
+		if response.Token == "" {
+			response.Error = "MissingInviteToken"
+			writeResponse(w, r, response)
+			return
+		}
+		if len(response.Token) > 48 {
+			response.Error = "InvalidInviteToken"
+			writeResponse(w, r, response)
+			return
+		}
+		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		if err != nil {
+			response.Error = "InvalidInviteToken"
+			writeResponse(w, r, response)
+			return
+		}
+		checksum := blake2b.Sum256(inviteToken[8:])
+		var inviteTokenHash [8 + blake2b.Size256]byte
+		copy(inviteTokenHash[:8], inviteToken[:8])
+		copy(inviteTokenHash[8:], checksum[:])
+		result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "SELECT {*} FROM invite WHERE invite_token_hash = {inviteTokenHash}",
+			Values: []any{
+				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
+			},
+		}, func(row *sq.Row) (result struct {
+			SiteLimit    sql.NullInt64
+			StorageLimit sql.NullInt64
+		}) {
+			result.SiteLimit = row.NullInt64("site_limit")
+			result.StorageLimit = row.NullInt64("storage_limit")
+			return result
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				response.Error = "InvalidInviteToken"
+				writeResponse(w, r, response)
+				return
+			}
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
 		}
 		// username
 		if response.Username == "" {
@@ -303,6 +356,12 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				}
 			}
 		}
+		passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
 		if response.SiteName != "" {
 			switch response.SiteName {
 			case "www", "img", "video", "cdn", "storage":
@@ -340,6 +399,306 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			response.Error = "FormErrorsPresent"
 			writeResponse(w, r, response)
 			return
+		}
+		tx, err := nbrew.DB.Begin()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		defer tx.Rollback()
+		_, err = sq.Exec(r.Context(), tx, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "INSERT INTO site (site_id, site_name)" +
+				" VALUES ({siteID}, {siteName})",
+			Values: []any{
+				sq.UUIDParam("siteID", NewID()),
+				sq.StringParam("siteName", response.SiteName),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		_, err = sq.Exec(r.Context(), tx, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "INSERT INTO users (user_id, username, email, password_hash, site_limit, storage_limit)" +
+				" VALUES ({userID}, {username}, {email}, {passwordHash}, {siteLimit}, {storageLimit})",
+			Values: []any{
+				sq.UUIDParam("userID", NewID()),
+				sq.StringParam("username", response.Username),
+				sq.StringParam("email", response.Email),
+				sq.StringParam("passwordHash", string(passwordHash)),
+				sq.Param("siteLimit", result.SiteLimit),
+				sq.Param("storageLimit", result.StorageLimit),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		_, err = sq.Exec(r.Context(), tx, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "INSERT INTO site_user (site_id, user_id)" +
+				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
+			Values: []any{
+				sq.StringParam("siteName", response.SiteName),
+				sq.StringParam("username", response.Username),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		_, err = sq.Exec(r.Context(), tx, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "INSERT INTO site_owner (site_id, user_id)" +
+				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
+			Values: []any{
+				sq.StringParam("siteName", response.SiteName),
+				sq.StringParam("username", response.Username),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		sitePrefix := "@" + response.SiteName
+		err = nbrew.FS.Mkdir(sitePrefix, 0755)
+		if err != nil && !errors.Is(err, fs.ErrExist) {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		dirs := []string{
+			"notes",
+			"pages",
+			"posts",
+			"output",
+			"output/posts",
+			"output/themes",
+			"imports",
+			"exports",
+		}
+		for _, dir := range dirs {
+			err = nbrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
+			if err != nil && !errors.Is(err, fs.ErrExist) {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+		}
+		var home string
+		if response.SiteName == "" {
+			home = "home"
+		} else if strings.Contains(response.SiteName, ".") {
+			home = response.SiteName
+		} else {
+			home = response.SiteName + "." + nbrew.ContentDomain
+		}
+		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		defer writer.Close()
+		err = tmpl.Execute(writer, home)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		err = writer.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+			FS:                 nbrew.FS,
+			ContentDomain:      nbrew.ContentDomain,
+			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+			ImgDomain:          nbrew.ImgDomain,
+			SitePrefix:         sitePrefix,
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		group, groupctx := errgroup.WithContext(r.Context())
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.json"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/post.html"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
+		group.Go(func() error {
+			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			defer writer.Close()
+			_, err = writer.Write(b)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			err = writer.Close()
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			tmpl, err := siteGen.PostListTemplate(context.Background(), "")
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
+			if err != nil {
+				getLogger(groupctx).Error(err.Error())
+				return nil
+			}
+			return nil
+		})
+		err = group.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		if strings.Contains(response.SiteName, ".") && nbrew.Port == 443 {
+			certConfig := certmagic.NewDefault()
+			certConfig.Storage = nbrew.CertStorage
+			err := certConfig.ObtainCertAsync(r.Context(), response.SiteName)
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
 		}
 		writeResponse(w, r, response)
 	default:
