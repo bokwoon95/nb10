@@ -188,7 +188,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						" OR files.file_path LIKE 'pages/%'" +
 						" OR files.file_path LIKE 'posts/%'" +
 						" OR files.file_path LIKE 'output/%'" +
-						" OR files.parent_id IS NULL)")
+						" OR files.file_path = 'site.json')")
 				} else {
 					filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
 				}
@@ -276,7 +276,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							" OR files.file_path LIKE 'pages/%'" +
 							" OR files.file_path LIKE 'posts/%'" +
 							" OR files.file_path LIKE 'output/%'" +
-							" OR files.parent_id IS NULL)")
+							" OR files.file_path = 'site.json')")
 					} else {
 						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
 					}
@@ -495,7 +495,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							" OR files.file_path LIKE 'pages/%'" +
 							" OR files.file_path LIKE 'posts/%'" +
 							" OR files.file_path LIKE 'output/%'" +
-							" OR files.parent_id IS NULL)")
+							" OR files.file_path = 'site.json')")
 					} else {
 						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
 					}

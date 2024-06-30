@@ -172,13 +172,20 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.Description = request.Description
 		response.NavigationLinks = request.NavigationLinks
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			// notes pages posts output
 			if sitePrefix == "" {
 				response.StorageUsed, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
-						" WHERE file_path LIKE 'notes/%' OR file_path LIKE 'pages/%' OR file_path LIKE 'posts/%' OR file_path LIKE 'output/%'",
+						" WHERE (" +
+						"file_path LIKE 'notes/%'" +
+						" OR file_path LIKE 'pages/%'" +
+						" OR file_path LIKE 'posts/%'" +
+						" OR file_path LIKE 'output/%'" +
+						" OR file_path LIKE 'imports/%'" +
+						" OR file_path LIKE 'exports/%'" +
+						" OR file_path = 'site.json'" +
+						")",
 				}, func(row *sq.Row) int64 {
 					return row.Int64("sum(coalesce(size, 0))")
 				})

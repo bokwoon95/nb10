@@ -195,18 +195,19 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		return
 	}
 	var err error
-	var parentCondition sq.Expression
+	var parentFilter sq.Expression
 	parent := path.Join(sitePrefix, response.Parent)
 	if parent == "." {
-		parentCondition = sq.Expr("(files.file_path LIKE 'notes/%'" +
+		parentFilter = sq.Expr("(" +
+			"files.file_path LIKE 'notes/%'" +
 			" OR files.file_path LIKE 'pages/%'" +
 			" OR files.file_path LIKE 'posts/%'" +
 			" OR files.file_path LIKE 'output/%'" +
-			" OR files.parent_id IS NULL)")
+			")")
 	} else {
-		parentCondition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
+		parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
 	}
-	extensionCondition := sq.Expr("1 = 1")
+	extensionFilter := sq.Expr("1 = 1")
 	if len(response.Exts) > 0 {
 		var b strings.Builder
 		var args []any
@@ -219,7 +220,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			args = append(args, "%"+ext)
 		}
 		b.WriteString(")")
-		extensionCondition = sq.Expr(b.String(), args...)
+		extensionFilter = sq.Expr(b.String(), args...)
 	}
 	switch databaseFS.Dialect {
 	case "sqlite":
@@ -256,14 +257,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			Format: "SELECT {*}" +
 				" FROM files" +
 				" JOIN files_fts5 ON files_fts5.rowid = files.rowid" +
-				" WHERE {parentCondition}" +
+				" WHERE {parentFilter}" +
 				" AND files_fts5 MATCH {ftsQuery}" +
-				" AND {extensionCondition}" +
+				" AND {extensionFilter}" +
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
-				sq.Param("parentCondition", parentCondition),
+				sq.Param("parentFilter", parentFilter),
 				sq.StringParam("ftsQuery", ftsQuery),
-				sq.Param("extensionCondition", extensionCondition),
+				sq.Param("extensionFilter", extensionFilter),
 			},
 		}, func(row *sq.Row) Match {
 			match := Match{
