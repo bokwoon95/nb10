@@ -38,6 +38,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: profile.html: show *default user* for the empty username, and *default site* for the empty site name.
+    TODO: change "site name" header to "site", change all site names to links to the site. You will need the toSitePrefix function to convert site names to site prefixes.
 TODO: uh - why is chroma style gallery broken?
 TODO: consider using /files/calculatestorage?siteName={siteName} instead of /files/{sitePrefix}/calculatestorage
 TODO: users.go (what do we show about a user? allow them to change username? no)
