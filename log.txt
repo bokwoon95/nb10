@@ -37,16 +37,14 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: invite.go and resetpassword.go
-    - NOTE: I've decided, invite.go should allow users to create their username and site name separately, with the default being both of them the same. Check availability for both of them at the same time, because we want to avoid a situation where they create their username first only to find out that same username is already taken as a site name.
-    - Actually the most important reason for creating a site up front for the user is so that they are onboarded quickly instead of having to fiddle around with the annoying add site button before they can do anything.
-    - But really, both invite.go and signup.go will allow specifying a username as well as a site name, both of which can be changed later. Well, the username can be changed anytime. The site name they can delete and recreate anytime. Yes, this is the way.
+TODO: uh - why is chroma style gallery broken?
 TODO: consider using /files/calculatestorage?siteName={siteName} instead of /files/{sitePrefix}/calculatestorage
 TODO: users.go (what do we show about a user? allow them to change username? no)
     - /users/resetpassword?token=abcde
     - /users/profile
     - /users/editprofile
     - /users/changepassword
+TODO: signup.go
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 
 DNS testcases:
