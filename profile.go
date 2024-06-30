@@ -28,6 +28,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		DisableReason string `json:"disableReason"`
 		SiteLimit     int64  `json:"siteLimit"`
 		StorageLimit  int64  `json:"storageLimit"`
+		StorageUsed   int64  `json:"storageUsed"`
 		Sites         []Site `json:"sites"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
@@ -70,6 +71,12 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
+			"toSitePrefix": func(siteName string) string {
+				if strings.Contains(siteName, ".") {
+					return siteName
+				}
+				return "@" + siteName
+			},
 		}
 		tmpl, err := template.New("profile.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/profile.html")
 		if err != nil {
@@ -111,5 +118,10 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 	}
 	response.Sites = sites
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+	if response.IsDatabaseFS {
+		for _, site := range response.Sites {
+			response.StorageUsed += site.StorageUsed
+		}
+	}
 	writeResponse(w, r, response)
 }

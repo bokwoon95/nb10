@@ -17,3 +17,48 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
+<h2 class='f3 mv3 b'>Profile</h2>
+<div class=''>
+  <a href='/users/editprofile/'>edit profile</a>
+</div>
+<div class='mv3'>
+  <div class='b'>Username:</div>
+  <div>{{ $.Username }}</div>
+</div>
+<div class='mv3'>
+  <div class='b'>Email:</div>
+  <div>{{ $.Email }}</div>
+</div>
+<div class='mv3'>
+  <div class='b'>Password:</div>
+  <div><a href='/users/changepassword/'>change password</a></div>
+</div>
+<h2 class='f3 mv3 b'>Sites</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Site name</th>
+      <th>Size</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{- range $site := $.Sites }}
+    <tr>
+      <td>{{ $site.SiteName }}</td>
+      <td>{{ humanReadableFileSize $site.StorageUsed }}</td>
+    </tr>
+    {{- end }}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td class='b tr'>Total:</td>
+      <td>{{ humanReadableFileSize $.StorageUsed }}</td>
+    </tr>
+  </tfoot>
+</table>
+<form method='post' action='/files/calculatestorage/'>
+  {{- range $site := $.Sites }}
+  <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
+  {{- end }}
+  <button type='submit'>recalculate</button>
+</form>
