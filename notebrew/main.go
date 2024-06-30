@@ -880,7 +880,6 @@ func main() {
 						return nil
 					}
 					_, err = sq.Exec(ctx, nbrew.DB, sq.Query{
-						Debug:   true,
 						Dialect: nbrew.Dialect,
 						Format: "UPDATE site" +
 							" SET storage_used = CASE WHEN coalesce(storage_used, 0) + {delta} >= 0 THEN coalesce(storage_used, 0) + {delta} ELSE 0 END" +
