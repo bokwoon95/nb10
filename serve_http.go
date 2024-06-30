@@ -316,6 +316,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			case "deletesite":
 				nbrew.deletesite(w, r, user)
 				return
+			case "calculatestorage":
+				nbrew.calculatestorage(w, r, user)
+				return
 			}
 		}
 
@@ -429,9 +432,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "cancelexport":
 			nbrew.cancelexport(w, r, user, sitePrefix)
-			return
-		case "calculatestorage":
-			nbrew.calculatestorage(w, r, user, sitePrefix)
 			return
 		default:
 			nbrew.notFound(w, r)
