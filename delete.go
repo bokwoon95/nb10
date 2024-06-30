@@ -357,7 +357,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				isDir := fileInfo.IsDir()
 				err = nbrew.FS.WithContext(groupctxA).RemoveAll(path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error()) // TODO: remove this line
 					response.DeleteErrors[i] = err.Error()
 					return nil
 				}

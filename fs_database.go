@@ -1180,7 +1180,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	})
 	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
-		Format:  "SELECT {*} files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
+		Format:  "SELECT {*} FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
 		Values: []any{
 			sq.StringParam("name", name),
 			sq.StringParam("pattern", pattern),
