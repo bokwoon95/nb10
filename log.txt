@@ -37,6 +37,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: rename the ugly af __notebrewtempxxxx__ to something else without the underscores
 TODO: users.go (what do we show about a user? allow them to change username? no)
     - /users/editprofile
     - /users/changepassword
