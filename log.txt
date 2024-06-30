@@ -42,6 +42,7 @@ TODO: invite.go and resetpassword.go
     - Actually the most important reason for creating a site up front for the user is so that they are onboarded quickly instead of having to fiddle around with the annoying add site button before they can do anything.
     - But really, both invite.go and signup.go will allow specifying a username as well as a site name, both of which can be changed later. Well, the username can be changed anytime. The site name they can delete and recreate anytime. Yes, this is the way.
 TODO: users.go (what do we show about a user? allow them to change username? no)
+    - /users/resetpassword?token=bokwoon
     - /users/profile?username=bokwoon
     - /users/editprofile?username=bokwoon
     - /users/changepassword?username=bokwoon

@@ -40,7 +40,6 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 	}
 	type Response struct {
 		Token      string     `json:"token"`
-		UserID     ID         `json:"userID"`
 		Username   string     `json:"username"`
 		Email      string     `json:"email"`
 		SiteName   string     `json:"siteName"`
@@ -90,7 +89,6 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.clearSession(w, r, "flash")
-		response.UserID = user.UserID
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
