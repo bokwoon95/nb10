@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		Token           string `json:"token"`
 		Password        string `json:"password"`

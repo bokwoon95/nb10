@@ -150,11 +150,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.login(w, r, user)
 			return
 		case "logout":
-			nbrew.logout(w, r)
+			nbrew.logout(w, r, user)
 			return
 		case "resetpassword":
-			// TODO: resetpassword should invalidate all existing sessions of the user.
-			nbrew.resetpassword(w, r)
+			nbrew.resetpassword(w, r, user)
 			return
 		case "changepassword":
 			// TODO: changepassword should invalidate all existing sessions of the user.

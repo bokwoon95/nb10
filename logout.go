@@ -11,7 +11,11 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User) {
+	if user.UserID.IsZero() {
+		http.Redirect(w, r, "/users/login/", http.StatusFound)
+		return
+	}
 	var authenticationTokenString string
 	header := r.Header.Get("Authorization")
 	if header != "" {
