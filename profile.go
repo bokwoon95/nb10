@@ -10,10 +10,6 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 )
 
-// TODO: in profile we can show the site memory usage as well!
-// Per-site storage usage as well as overall total storage usage
-// out of the total available storage that the user has. Then we
-// can move storage used out of site.json.
 func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User) {
 	type Site struct {
 		SiteID      ID     `json:"siteID"`
@@ -21,15 +17,16 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		StorageUsed int64  `json:"storageUsed"`
 	}
 	type Response struct {
-		IsDatabaseFS  bool   `json:"isDatabaseFS"`
-		UserID        ID     `json:"userID"`
-		Username      string `json:"username"`
-		Email         string `json:"email"`
-		DisableReason string `json:"disableReason"`
-		SiteLimit     int64  `json:"siteLimit"`
-		StorageLimit  int64  `json:"storageLimit"`
-		StorageUsed   int64  `json:"storageUsed"`
-		Sites         []Site `json:"sites"`
+		IsDatabaseFS    bool           `json:"isDatabaseFS"`
+		UserID          ID             `json:"userID"`
+		Username        string         `json:"username"`
+		Email           string         `json:"email"`
+		DisableReason   string         `json:"disableReason"`
+		SiteLimit       int64          `json:"siteLimit"`
+		StorageLimit    int64          `json:"storageLimit"`
+		StorageUsed     int64          `json:"storageUsed"`
+		Sites           []Site         `json:"sites"`
+		PostRedirectGet map[string]any `json:"postRedirectGet"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.methodNotAllowed(w, r)
@@ -90,14 +87,18 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		nbrew.executeTemplate(w, r, tmpl, &response)
 	}
-	response := Response{
-		UserID:        user.UserID,
-		Username:      user.Username,
-		Email:         user.Email,
-		DisableReason: user.DisableReason,
-		SiteLimit:     user.SiteLimit,
-		StorageLimit:  user.StorageLimit,
+	var response Response
+	_, err := nbrew.getSession(r, "flash", &response)
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
 	}
+	nbrew.clearSession(w, r, "flash")
+	response.UserID = user.UserID
+	response.Username = user.Username
+	response.Email = user.Email
+	response.DisableReason = user.DisableReason
+	response.SiteLimit = user.SiteLimit
+	response.StorageLimit = user.StorageLimit
 	sites, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
 		Dialect: nbrew.Dialect,
 		Format: "SELECT {*}" +
