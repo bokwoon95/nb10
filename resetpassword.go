@@ -69,7 +69,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
 				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 			}
-			tmpl, err := template.New("invite.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/invite.html")
+			tmpl, err := template.New("resetpassword.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/resetpassword.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
@@ -91,30 +91,30 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 		}
 		response.Token = r.Form.Get("token")
 		if response.Token == "" {
-			response.Error = "MissingInviteToken"
+			response.Error = "MissingResetToken"
 			writeResponse(w, r, response)
 			return
 		}
 		if len(response.Token) > 48 {
-			response.Error = "InvalidInviteToken"
+			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
-		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		resetToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
-			response.Error = "InvalidInviteToken"
+			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
-		checksum := blake2b.Sum256(inviteToken[8:])
-		var inviteTokenHash [8 + blake2b.Size256]byte
-		copy(inviteTokenHash[:8], inviteToken[:8])
-		copy(inviteTokenHash[8:], checksum[:])
+		checksum := blake2b.Sum256(resetToken[8:])
+		var resetTokenHash [8 + blake2b.Size256]byte
+		copy(resetTokenHash[:8], resetToken[:8])
+		copy(resetTokenHash[8:], checksum[:])
 		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "SELECT 1 FROM invite WHERE invite_token_hash = {inviteTokenHash}",
+			Format:  "SELECT 1 FROM users WHERE reset_token_hash = {resetTokenHash}",
 			Values: []any{
-				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
+				sq.BytesParam("inviteTokenHash", resetTokenHash[:]),
 			},
 		})
 		if err != nil {
@@ -123,7 +123,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !exists {
-			response.Error = "InvalidInviteToken"
+			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
@@ -217,18 +217,18 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 		}
 		// token
 		if response.Token == "" {
-			response.Error = "MissingInviteToken"
+			response.Error = "MissingResetToken"
 			writeResponse(w, r, response)
 			return
 		}
 		if len(response.Token) > 48 {
-			response.Error = "InvalidInviteToken"
+			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
 		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
-			response.Error = "InvalidInviteToken"
+			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
@@ -252,7 +252,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				response.Error = "InvalidInviteToken"
+				response.Error = "InvalidResetToken"
 				writeResponse(w, r, response)
 				return
 			}

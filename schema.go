@@ -30,10 +30,12 @@ type rawTable struct {
 		}
 	}
 	Indexes []struct {
-		Dialect string
-		Type    string
-		Unique  bool
-		Columns []string
+		Dialect        string
+		Type           string
+		Unique         bool
+		Columns        []string
+		IncludeColumns []string
+		Predicate      string
 	}
 	Constraints []struct {
 		Dialect           string
@@ -137,10 +139,12 @@ func unmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
 				continue
 			}
 			cache.AddOrUpdateIndex(table, ddl.Index{
-				IndexName: ddl.GenerateName(ddl.INDEX, rawTable.Table, rawIndex.Columns),
-				IndexType: rawIndex.Type,
-				IsUnique:  rawIndex.Unique,
-				Columns:   rawIndex.Columns,
+				IndexName:      ddl.GenerateName(ddl.INDEX, rawTable.Table, rawIndex.Columns),
+				IndexType:      rawIndex.Type,
+				IsUnique:       rawIndex.Unique,
+				Columns:        rawIndex.Columns,
+				IncludeColumns: rawIndex.IncludeColumns,
+				Predicate:      rawIndex.Predicate,
 			})
 		}
 		for _, rawConstraint := range rawTable.Constraints {

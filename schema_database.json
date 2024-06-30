@@ -17,11 +17,25 @@
         },
         "unique": true,
         "notnull": true
+      },
+      {
+        "column": "storage_used",
+        "type": {
+          "default": "BIGINT"
+        }
       }
     ]
   },
   {
     "table": "users",
+    "indexes": [
+      {
+        "columns": [
+          "reset_token_hash"
+        ],
+        "predicate": "reset_token_hash IS NOT NULL"
+      }
+    ],
     "columns": [
       {
         "column": "user_id",

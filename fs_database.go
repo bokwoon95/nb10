@@ -37,90 +37,97 @@ var gzipWriterPool = sync.Pool{
 }
 
 type DatabaseFSConfig struct {
-	DB            *sql.DB
-	Dialect       string
-	ErrorCode     func(error) string
-	ObjectStorage ObjectStorage
-	Logger        *slog.Logger
+	DB                *sql.DB
+	Dialect           string
+	ErrorCode         func(error) string
+	ObjectStorage     ObjectStorage
+	Logger            *slog.Logger
+	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
 }
 
 type DatabaseFS struct {
-	DB            *sql.DB
-	Dialect       string
-	ErrorCode     func(error) string
-	ObjectStorage ObjectStorage
-	Logger        *slog.Logger
-	ctx           context.Context
-	modTime       time.Time
-	creationTime  time.Time
-	caption       string
+	DB                *sql.DB
+	Dialect           string
+	ErrorCode         func(error) string
+	ObjectStorage     ObjectStorage
+	Logger            *slog.Logger
+	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	ctx               context.Context
+	modTime           time.Time
+	creationTime      time.Time
+	caption           string
 }
 
 func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 	databaseFS := &DatabaseFS{
-		DB:            config.DB,
-		Dialect:       config.Dialect,
-		ErrorCode:     config.ErrorCode,
-		ObjectStorage: config.ObjectStorage,
-		Logger:        config.Logger,
-		ctx:           context.Background(),
+		DB:                config.DB,
+		Dialect:           config.Dialect,
+		ErrorCode:         config.ErrorCode,
+		ObjectStorage:     config.ObjectStorage,
+		Logger:            config.Logger,
+		UpdateStorageUsed: config.UpdateStorageUsed,
+		ctx:               context.Background(),
 	}
 	return databaseFS, nil
 }
 
 func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 	return &DatabaseFS{
-		DB:            fsys.DB,
-		Dialect:       fsys.Dialect,
-		ErrorCode:     fsys.ErrorCode,
-		ObjectStorage: fsys.ObjectStorage,
-		Logger:        fsys.Logger,
-		ctx:           ctx,
-		modTime:       fsys.modTime,
-		creationTime:  fsys.creationTime,
-		caption:       fsys.caption,
+		DB:                fsys.DB,
+		Dialect:           fsys.Dialect,
+		ErrorCode:         fsys.ErrorCode,
+		ObjectStorage:     fsys.ObjectStorage,
+		Logger:            fsys.Logger,
+		UpdateStorageUsed: fsys.UpdateStorageUsed,
+		ctx:               ctx,
+		modTime:           fsys.modTime,
+		creationTime:      fsys.creationTime,
+		caption:           fsys.caption,
 	}
 }
 
 func (fsys *DatabaseFS) WithModTime(modTime time.Time) *DatabaseFS {
 	return &DatabaseFS{
-		DB:            fsys.DB,
-		Dialect:       fsys.Dialect,
-		ErrorCode:     fsys.ErrorCode,
-		ObjectStorage: fsys.ObjectStorage,
-		Logger:        fsys.Logger,
-		ctx:           fsys.ctx,
-		modTime:       modTime,
-		creationTime:  fsys.creationTime,
-		caption:       fsys.caption,
+		DB:                fsys.DB,
+		Dialect:           fsys.Dialect,
+		ErrorCode:         fsys.ErrorCode,
+		ObjectStorage:     fsys.ObjectStorage,
+		Logger:            fsys.Logger,
+		UpdateStorageUsed: fsys.UpdateStorageUsed,
+		ctx:               fsys.ctx,
+		modTime:           modTime,
+		creationTime:      fsys.creationTime,
+		caption:           fsys.caption,
 	}
 }
 
 func (fsys *DatabaseFS) WithCreationTime(creationTime time.Time) *DatabaseFS {
 	return &DatabaseFS{
-		DB:            fsys.DB,
-		Dialect:       fsys.Dialect,
-		ErrorCode:     fsys.ErrorCode,
-		ObjectStorage: fsys.ObjectStorage,
-		Logger:        fsys.Logger,
-		ctx:           fsys.ctx,
-		modTime:       fsys.modTime,
-		creationTime:  creationTime,
-		caption:       fsys.caption,
+		DB:                fsys.DB,
+		Dialect:           fsys.Dialect,
+		ErrorCode:         fsys.ErrorCode,
+		ObjectStorage:     fsys.ObjectStorage,
+		Logger:            fsys.Logger,
+		UpdateStorageUsed: fsys.UpdateStorageUsed,
+		ctx:               fsys.ctx,
+		modTime:           fsys.modTime,
+		creationTime:      creationTime,
+		caption:           fsys.caption,
 	}
 }
 
 func (fsys *DatabaseFS) WithCaption(caption string) *DatabaseFS {
 	return &DatabaseFS{
-		DB:            fsys.DB,
-		Dialect:       fsys.Dialect,
-		ErrorCode:     fsys.ErrorCode,
-		ObjectStorage: fsys.ObjectStorage,
-		Logger:        fsys.Logger,
-		ctx:           fsys.ctx,
-		modTime:       fsys.modTime,
-		creationTime:  fsys.creationTime,
-		caption:       caption,
+		DB:                fsys.DB,
+		Dialect:           fsys.Dialect,
+		ErrorCode:         fsys.ErrorCode,
+		ObjectStorage:     fsys.ObjectStorage,
+		Logger:            fsys.Logger,
+		UpdateStorageUsed: fsys.UpdateStorageUsed,
+		ctx:               fsys.ctx,
+		modTime:           fsys.modTime,
+		creationTime:      fsys.creationTime,
+		caption:           caption,
 	}
 }
 
@@ -354,16 +361,20 @@ func (file *DatabaseFile) Close() error {
 }
 
 type DatabaseFileWriter struct {
+	db                *sql.DB
+	dialect           string
+	objectStorage     ObjectStorage
+	logger            *slog.Logger
+	updateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+
 	ctx                 context.Context
 	fileType            FileType
 	isFulltextIndexed   bool
-	db                  *sql.DB
-	dialect             string
-	objectStorage       ObjectStorage
 	exists              bool
 	fileID              ID
 	parentID            ID
 	filePath            string
+	initialSize         int64
 	size                int64
 	buf                 *bytes.Buffer
 	gzipWriter          *gzip.Writer
@@ -373,7 +384,6 @@ type DatabaseFileWriter struct {
 	objectStorageWriter *io.PipeWriter
 	objectStorageResult chan error
 	writeFailed         bool
-	logger              *slog.Logger
 }
 
 func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
@@ -400,17 +410,18 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		creationTime = fsys.creationTime
 	}
 	file := &DatabaseFileWriter{
-		ctx:               fsys.ctx,
-		fileType:          fileType,
-		isFulltextIndexed: IsFulltextIndexed(name),
 		db:                fsys.DB,
 		dialect:           fsys.Dialect,
 		objectStorage:     fsys.ObjectStorage,
+		logger:            fsys.Logger,
+		updateStorageUsed: fsys.UpdateStorageUsed,
+		ctx:               fsys.ctx,
+		fileType:          fileType,
+		isFulltextIndexed: IsFulltextIndexed(name),
 		filePath:          name,
 		modTime:           modTime,
 		creationTime:      creationTime,
 		caption:           fsys.caption,
-		logger:            fsys.Logger,
 	}
 	// If parentDir is the root directory, just fetch the file information.
 	// Otherwise fetch both the parent and file information.
@@ -425,20 +436,25 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		}, func(row *sq.Row) (result struct {
 			fileID ID
 			isDir  bool
+			size   int64
 		}) {
 			result.fileID = row.UUID("file_id")
 			result.isDir = row.Bool("is_dir")
+			result.size = row.Int64("size")
 			return result
 		})
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return nil, err
 			}
+			file.fileID = NewID()
 		} else {
 			if result.isDir {
 				return nil, &fs.PathError{Op: "openwriter", Path: name, Err: syscall.EISDIR}
 			}
+			file.exists = true
 			file.fileID = result.fileID
+			file.initialSize = result.size
 		}
 	} else {
 		results, err := sq.FetchAll(fsys.ctx, fsys.DB, sq.Query{
@@ -452,10 +468,12 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 			fileID   ID
 			filePath string
 			isDir    bool
+			size     int64
 		}) {
 			result.fileID = row.UUID("file_id")
 			result.filePath = row.String("file_path")
 			result.isDir = row.Bool("is_dir")
+			result.size = row.Int64("size")
 			return result
 		})
 		if err != nil {
@@ -467,7 +485,9 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 				if result.isDir {
 					return nil, &fs.PathError{Op: "openwriter", Path: name, Err: syscall.EISDIR}
 				}
+				file.exists = true
 				file.fileID = result.fileID
+				file.initialSize = result.size
 			case parentDir:
 				if !result.isDir {
 					return nil, &fs.PathError{Op: "openwriter", Path: name, Err: syscall.ENOTDIR}
@@ -478,11 +498,9 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		if file.parentID.IsZero() {
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
 		}
-	}
-	if file.fileID.IsZero() {
-		file.fileID = NewID()
-	} else {
-		file.exists = true
+		if file.fileID.IsZero() {
+			file.fileID = NewID()
+		}
 	}
 	if fileType.IsObject {
 		pipeReader, pipeWriter := io.Pipe()
@@ -601,8 +619,8 @@ func (file *DatabaseFileWriter) Close() error {
 		return nil
 	}
 
-	// If file exists, just have to update the file entry in the database.
 	if file.exists {
+		// If file exists, just have to update the file entry in the database.
 		if file.fileType.IsObject {
 			var text sql.NullString
 			switch file.fileType.Ext {
@@ -655,62 +673,17 @@ func (file *DatabaseFileWriter) Close() error {
 				}
 			}
 		}
-		return nil
-	}
-
-	// If we reach here it means file doesn't exist. Insert a new file entry
-	// into the database.
-	if file.fileType.IsObject {
-		var text sql.NullString
-		switch file.fileType.Ext {
-		case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-			if file.caption != "" {
-				text = sql.NullString{String: file.caption, Valid: true}
-			}
-		}
-		_, err := sq.Exec(file.ctx, file.db, sq.Query{
-			Dialect: file.dialect,
-			Format: "INSERT INTO files (file_id, parent_id, file_path, size, text, mod_time, creation_time, is_dir)" +
-				" VALUES ({fileID}, {parentID}, {filePath}, {size}, {text}, {modTime}, {creationTime}, FALSE)",
-			Values: []any{
-				sq.UUIDParam("fileID", file.fileID),
-				sq.UUIDParam("parentID", file.parentID),
-				sq.StringParam("filePath", file.filePath),
-				sq.Int64Param("size", file.size),
-				sq.Param("text", text),
-				sq.TimeParam("modTime", file.modTime),
-				sq.TimeParam("creationTime", file.creationTime),
-			},
-		})
-		if err != nil {
-			go func() {
-				err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
-				if err != nil {
-					file.logger.Error(err.Error())
-				}
-			}()
-			return err
-		}
 	} else {
-		if file.fileType.IsGzippable && !file.isFulltextIndexed {
-			_, err := sq.Exec(file.ctx, file.db, sq.Query{
-				Dialect: file.dialect,
-				Format: "INSERT INTO files (file_id, parent_id, file_path, size, data, mod_time, creation_time, is_dir)" +
-					" VALUES ({fileID}, {parentID}, {filePath}, {size}, {data}, {modTime}, {creationTime}, FALSE)",
-				Values: []any{
-					sq.UUIDParam("fileID", file.fileID),
-					sq.UUIDParam("parentID", file.parentID),
-					sq.StringParam("filePath", file.filePath),
-					sq.Int64Param("size", file.size),
-					sq.BytesParam("data", file.buf.Bytes()),
-					sq.TimeParam("modTime", file.modTime),
-					sq.TimeParam("creationTime", file.creationTime),
-				},
-			})
-			if err != nil {
-				return err
+		// If we reach here it means file doesn't exist. Insert a new file entry
+		// into the database.
+		if file.fileType.IsObject {
+			var text sql.NullString
+			switch file.fileType.Ext {
+			case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+				if file.caption != "" {
+					text = sql.NullString{String: file.caption, Valid: true}
+				}
 			}
-		} else {
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
 				Dialect: file.dialect,
 				Format: "INSERT INTO files (file_id, parent_id, file_path, size, text, mod_time, creation_time, is_dir)" +
@@ -720,14 +693,70 @@ func (file *DatabaseFileWriter) Close() error {
 					sq.UUIDParam("parentID", file.parentID),
 					sq.StringParam("filePath", file.filePath),
 					sq.Int64Param("size", file.size),
-					sq.BytesParam("text", file.buf.Bytes()),
+					sq.Param("text", text),
 					sq.TimeParam("modTime", file.modTime),
 					sq.TimeParam("creationTime", file.creationTime),
 				},
 			})
 			if err != nil {
+				go func() {
+					err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
+					if err != nil {
+						file.logger.Error(err.Error())
+					}
+				}()
 				return err
 			}
+		} else {
+			if file.fileType.IsGzippable && !file.isFulltextIndexed {
+				_, err := sq.Exec(file.ctx, file.db, sq.Query{
+					Dialect: file.dialect,
+					Format: "INSERT INTO files (file_id, parent_id, file_path, size, data, mod_time, creation_time, is_dir)" +
+						" VALUES ({fileID}, {parentID}, {filePath}, {size}, {data}, {modTime}, {creationTime}, FALSE)",
+					Values: []any{
+						sq.UUIDParam("fileID", file.fileID),
+						sq.UUIDParam("parentID", file.parentID),
+						sq.StringParam("filePath", file.filePath),
+						sq.Int64Param("size", file.size),
+						sq.BytesParam("data", file.buf.Bytes()),
+						sq.TimeParam("modTime", file.modTime),
+						sq.TimeParam("creationTime", file.creationTime),
+					},
+				})
+				if err != nil {
+					return err
+				}
+			} else {
+				_, err := sq.Exec(file.ctx, file.db, sq.Query{
+					Dialect: file.dialect,
+					Format: "INSERT INTO files (file_id, parent_id, file_path, size, text, mod_time, creation_time, is_dir)" +
+						" VALUES ({fileID}, {parentID}, {filePath}, {size}, {text}, {modTime}, {creationTime}, FALSE)",
+					Values: []any{
+						sq.UUIDParam("fileID", file.fileID),
+						sq.UUIDParam("parentID", file.parentID),
+						sq.StringParam("filePath", file.filePath),
+						sq.Int64Param("size", file.size),
+						sq.BytesParam("text", file.buf.Bytes()),
+						sq.TimeParam("modTime", file.modTime),
+						sq.TimeParam("creationTime", file.creationTime),
+					},
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if file.updateStorageUsed != nil {
+		var sitePrefix string
+		head, _, _ := strings.Cut(file.filePath, "/")
+		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
+			sitePrefix = head
+		}
+		delta := file.size - file.initialSize
+		err := file.updateStorageUsed(file.ctx, sitePrefix, delta)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -1041,6 +1070,18 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return err
 	}
+	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
+		Dialect: fsys.Dialect,
+		Format:  "SELECT {*} files WHERE file_path = {name}",
+		Values: []any{
+			sq.StringParam("name", name),
+		},
+	}, func(row *sq.Row) int64 {
+		return row.Int64("sum(coalesce(size, 0))")
+	})
+	if err != nil {
+		return err
+	}
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name}",
@@ -1050,6 +1091,17 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	})
 	if err != nil {
 		return err
+	}
+	if fsys.UpdateStorageUsed != nil {
+		var sitePrefix string
+		head, _, _ := strings.Cut(name, "/")
+		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
+			sitePrefix = head
+		}
+		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -1126,6 +1178,19 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			sq.StringParam("pattern", pattern),
 		},
 	})
+	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
+		Dialect: fsys.Dialect,
+		Format:  "SELECT {*} files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
+		Values: []any{
+			sq.StringParam("name", name),
+			sq.StringParam("pattern", pattern),
+		},
+	}, func(row *sq.Row) int64 {
+		return row.Int64("sum(coalesce(size, 0))")
+	})
+	if err != nil {
+		return err
+	}
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
@@ -1136,6 +1201,17 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	})
 	if err != nil {
 		return err
+	}
+	if fsys.UpdateStorageUsed != nil {
+		var sitePrefix string
+		head, _, _ := strings.Cut(name, "/")
+		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
+			sitePrefix = head
+		}
+		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -1330,16 +1406,26 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
 	}
 	if !srcIsDir {
-		srcFilePath := srcName
-		destFilePath := destName
 		destFileID := NewID()
-		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+		size, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format:  "SELECT {*} FROM files WHERE file_path = {srcName}",
+			Values: []any{
+				sq.StringParam("srcName", srcName),
+			},
+		}, func(row *sq.Row) int64 {
+			return row.Int64("size")
+		})
+		if err != nil {
+			return err
+		}
+		_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format: "INSERT INTO files (file_id, parent_id, file_path, mod_time, creation_time, is_dir, size, text, data)" +
 				" SELECT" +
 				" {destFileID}" +
 				", (SELECT file_id FROM files WHERE file_path = {destParent})" +
-				", {destFilePath}" +
+				", {destName}" +
 				", {modTime}" +
 				", {modTime}" +
 				", is_dir" +
@@ -1347,24 +1433,35 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 				", text" +
 				", data" +
 				" FROM files" +
-				" WHERE file_path = {srcFilePath}",
+				" WHERE file_path = {srcName}",
 			Values: []any{
 				sq.UUIDParam("destFileID", destFileID),
-				sq.StringParam("destParent", path.Dir(destFilePath)),
-				sq.StringParam("destFilePath", destFilePath),
+				sq.StringParam("destParent", path.Dir(destName)),
+				sq.StringParam("destName", destName),
 				sq.TimeParam("modTime", time.Now().UTC()),
-				sq.StringParam("srcFilePath", srcFilePath),
+				sq.StringParam("srcName", srcName),
 			},
 		})
 		if err != nil {
 			return err
 		}
-		ext := path.Ext(srcFilePath)
+		ext := path.Ext(srcName)
 		fileType := fileTypes[ext]
 		if fileType.IsObject {
 			err := fsys.ObjectStorage.Copy(fsys.ctx, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
+			}
+		}
+		if fsys.UpdateStorageUsed != nil {
+			var sitePrefix string
+			head, _, _ := strings.Cut(srcName, "/")
+			if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
+				sitePrefix = head
+			}
+			err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, size)
+			if err != nil {
+				return err
 			}
 		}
 		return nil
@@ -1380,10 +1477,12 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		FileID   ID
 		FilePath string
 		IsDir    bool
+		Size     int64
 	}) {
 		srcFile.FileID = row.UUID("file_id")
 		srcFile.FilePath = row.String("file_path")
 		srcFile.IsDir = row.Bool("is_dir")
+		srcFile.Size = row.Int64("size")
 		return srcFile
 	})
 	if err != nil {
@@ -1391,8 +1490,11 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	}
 	defer cursor.Close()
 	var wg sync.WaitGroup
+	var totalSize int64
 	var items [][4]string // destFileID, destParentID, destParent, srcFilePath
 	fileIDs := make(map[string]ID)
+	objectCtx, cancelObjectCtx := context.WithCancel(fsys.ctx)
+	defer cancelObjectCtx()
 	for cursor.Next() {
 		srcFile, err := cursor.Result()
 		if err != nil {
@@ -1414,13 +1516,14 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		if srcFile.IsDir {
 			continue
 		}
+		totalSize += srcFile.Size
 		ext := path.Ext(srcFile.FilePath)
 		fileType := fileTypes[ext]
 		if fileType.IsObject {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err := fsys.ObjectStorage.Copy(fsys.ctx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
+				err := fsys.ObjectStorage.Copy(objectCtx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
 				if err != nil {
 					fsys.Logger.Error(err.Error())
 				}
@@ -1522,6 +1625,17 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		}
 	default:
 		return fmt.Errorf("unsupported dialect %q", fsys.Dialect)
+	}
+	if fsys.UpdateStorageUsed != nil {
+		var sitePrefix string
+		head, _, _ := strings.Cut(destName, "/")
+		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
+			sitePrefix = head
+		}
+		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, totalSize)
+		if err != nil {
+			return err
+		}
 	}
 	wg.Wait()
 	return nil

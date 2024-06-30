@@ -875,6 +875,26 @@ func main() {
 				ErrorCode:     errorCode,
 				ObjectStorage: objectStorage,
 				Logger:        nbrew.Logger,
+				UpdateStorageUsed: func(ctx context.Context, sitePrefix string, delta int64) error {
+					if delta == 0 {
+						return nil
+					}
+					_, err = sq.Exec(ctx, nbrew.DB, sq.Query{
+						Debug:   true,
+						Dialect: nbrew.Dialect,
+						Format: "UPDATE site" +
+							" SET storage_used = CASE WHEN coalesce(storage_used, 0) + {delta} >= 0 THEN coalesce(storage_used, 0) + {delta} ELSE 0 END" +
+							" WHERE site_name = {siteName}",
+						Values: []any{
+							sq.Int64Param("delta", delta),
+							sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+						},
+					})
+					if err != nil {
+						return err
+					}
+					return nil
+				},
 			})
 			if err != nil {
 				return err
