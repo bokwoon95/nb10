@@ -140,6 +140,7 @@ details[open] summary.button { background-color: white; }
 .f6 { font-size: 0.875rem; }
 
 /* border */
+.collapse { border-collapse: collapse; border-spacing: 0; }
 .dashed-border { border: 1px dashed #0c0c0c; }
 .ba { border-style: solid; border-width: 1px; }
 .bt { border-top-style: solid; border-top-width: 1px; }

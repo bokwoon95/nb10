@@ -62,7 +62,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		CodeStyle         string            `json:"codeStyle"`
 		Description       string            `json:"description"`
 		NavigationLinks   []NavigationLink  `json:"navigationLinks"`
-		StorageUsed       int64             `json:"storageUsed"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
@@ -171,48 +170,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.CodeStyle = request.CodeStyle
 		response.Description = request.Description
 		response.NavigationLinks = request.NavigationLinks
-		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			if sitePrefix == "" {
-				response.StorageUsed, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-					Dialect: databaseFS.Dialect,
-					Format: "SELECT {*}" +
-						" FROM files" +
-						" WHERE (" +
-						"file_path LIKE 'notes/%'" +
-						" OR file_path LIKE 'pages/%'" +
-						" OR file_path LIKE 'posts/%'" +
-						" OR file_path LIKE 'output/%'" +
-						" OR file_path LIKE 'imports/%'" +
-						" OR file_path LIKE 'exports/%'" +
-						" OR file_path = 'site.json'" +
-						")",
-				}, func(row *sq.Row) int64 {
-					return row.Int64("sum(coalesce(size, 0))")
-				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
-					return
-				}
-			} else {
-				response.StorageUsed, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-					Dialect: databaseFS.Dialect,
-					Format: "SELECT {*}" +
-						" FROM files" +
-						" WHERE file_path LIKE {pattern} ESCAPE '\\'",
-					Values: []any{
-						sq.StringParam("pattern", wildcardReplacer.Replace(sitePrefix)+"/%"),
-					},
-				}, func(row *sq.Row) int64 {
-					return row.Int64("sum(coalesce(size, 0))")
-				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
-					return
-				}
-			}
-		}
 		writeResponse(w, r, response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
