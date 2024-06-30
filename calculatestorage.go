@@ -104,6 +104,12 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 			return nil
 		})
 	}
+	err := group.Wait()
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		nbrew.internalServerError(w, r, err)
+		return
+	}
 	referer := r.Referer()
 	if referer == "" {
 		http.Redirect(w, r, "/files/", http.StatusFound)
