@@ -44,7 +44,7 @@
   <tbody>
     {{- range $site := $.Sites }}
     <tr>
-      <td>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}&lt;default&gt;{{ end }}</td>
+      <td>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}<em>default</em>{{ end }}</td>
       <td>{{ humanReadableFileSize $site.StorageUsed }}</td>
     </tr>
     {{- end }}
