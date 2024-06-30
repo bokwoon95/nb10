@@ -43,7 +43,6 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 		siteName := siteName
 		group.Go(func() error {
 			exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
-				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format: "SELECT 1" +
 					" FROM site_owner" +
@@ -77,7 +76,6 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 				parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace("@"+siteName)+"/%")
 			}
 			storageUsed, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format:  "SELECT {*} FROM files WHERE {parentFilter}",
 				Values: []any{
@@ -90,7 +88,6 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 				return err
 			}
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format:  "UPDATE site SET storage_used = {storageUsed} WHERE site_name = {siteName}",
 				Values: []any{
