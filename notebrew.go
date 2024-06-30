@@ -997,7 +997,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		}
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
-		// w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 		if fileType.IsAttachment {
 			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 		}
