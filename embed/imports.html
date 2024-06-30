@@ -65,11 +65,21 @@
 {{- if eq (index $.PostRedirectGet "from") "cancelimport" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{ $numCanceled := index $.PostRedirectGet "numCanceled" }}
-  {{- if eq $numCanceled 0.0 }}
-  <div class='pv1'>no imports to cancel</div>
-  {{- else }}
-  <div class='pv1'>canceled import</div>
-  {{- end }}
+  {{ $cancelErrors := index $.PostRedirectGet "cancelErrors" }}
+  <div class='pv1'>
+    {{- if eq $numCanceled 0.0 }}
+    <div>no imports to cancel</div>
+    {{- else }}
+    <div>canceled import</div>
+    {{- end }}
+    {{- if $cancelErrors }}
+    <ul class='list-style-disc ph3'>
+      {{- range $error := $cancelErrors }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+    {{- end }}
+  </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
@@ -79,8 +89,17 @@
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
   {{- $deleteErrors := len (index $.PostRedirectGet "deleteErrors") }}
   <div class='pv1'>
-    🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
-    {{ if $deleteErrors }} ({{ $deleteErrors }} error{{ if ne $deleteErrors 1 }}s{{ end }}){{ end }}
+    <div>
+      🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
+      {{ if $deleteErrors }} ({{ $deleteErrors }} error{{ if ne $deleteErrors 1 }}s{{ end }}){{ end }}
+    </div>
+    {{- if $deleteErrors }}
+    <ul class='list-style-disc ph3'>
+      {{- range $error := $deleteErrors }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+    {{- end }}
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>

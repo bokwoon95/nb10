@@ -58,9 +58,18 @@
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
   {{- $deleteErrors := len (index $.PostRedirectGet "deleteErrors") }}
   <div class='pv1'>
-    🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
-    {{ if $deleteErrors }} ({{ $deleteErrors }} error{{ if ne $deleteErrors 1 }}s{{ end }}){{ end }}
-    {{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
+    <div>
+      🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
+      {{ if $deleteErrors }} ({{ $deleteErrors }} error{{ if ne $deleteErrors 1 }}s{{ end }}){{ end }}
+      {{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
+    </div>
+    {{- if $deleteErrors }}
+    <ul class='list-style-disc ph3'>
+      {{- range $error := $deleteErrors }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+    {{- end }}
   </div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
