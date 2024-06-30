@@ -37,7 +37,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: consider using /files/calculatestorage?siteName={siteName} instead of /files/{sitePrefix}/calculatestorage
 TODO: users.go (what do we show about a user? allow them to change username? no)
     - /users/resetpassword?token=abcde
     - /users/profile
