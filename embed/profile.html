@@ -44,14 +44,14 @@
   <legend><h2 class='mh2 mv0'>Sites</h2></legend>
   <table class='mv2 collapse'>
     <thead>
-      <tr class='bb'>
+      <tr class='bb h2'>
         <th>Site name</th>
         <th>Size</th>
       </tr>
     </thead>
     <tbody>
       {{- range $site := $.Sites }}
-      <tr class='bb'>
+      <tr class='bb h2'>
         <td><a href='/{{ join "files" (sitePrefix $site.SiteName) }}/'>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}<em>default site</em>{{ end }}</a></td>
         <td>{{ humanReadableFileSize $site.StorageUsed }}</td>
       </tr>
@@ -59,7 +59,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td class='b tr'>Storage Used:</td>
+        <td class='b tr h2'>Storage Used:</td>
         <td>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} &frasl; {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
       </tr>
     </tfoot>
