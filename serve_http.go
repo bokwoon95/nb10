@@ -162,7 +162,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.profile(w, r, user)
 			return
 		case "editprofile":
-			_ = user
+			nbrew.editprofile(w, r, user)
 			return
 		default:
 			nbrew.notFound(w, r)

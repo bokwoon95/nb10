@@ -38,8 +38,6 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: users.go (what do we show about a user? allow them to change username? no)
-    - /users/resetpassword?token=abcde
-    - /users/profile
     - /users/editprofile
     - /users/changepassword
 TODO: signup.go
