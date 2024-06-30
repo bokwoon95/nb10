@@ -157,14 +157,13 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "changepassword":
 			// TODO: changepassword should invalidate all existing sessions of the user.
+			return
 		case "profile":
-			// TODO: in profile we can show the site memory usage as well!
-			// Per-site storage usage as well as overall total storage usage
-			// out of the total available storage that the user has. Then we
-			// can move storage used out of site.json.
-			_ = user
+			nbrew.profile(w, r, user)
+			return
 		case "editprofile":
 			_ = user
+			return
 		default:
 			nbrew.notFound(w, r)
 			return
