@@ -36,7 +36,7 @@
   <span>&boxv;</span>
   {{- end }}
   {{- if eq (head $.FilePath) "notes" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
+  <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
   <span>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "notes" }}/'>notes</a>
     {{- if ne (dir $.FilePath) "notes" }}
@@ -45,11 +45,11 @@
     {{- end }}
   {{- else if eq (head $.FilePath) "output" }}
     {{- if $.BelongsTo }}
-    <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
+    <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
     <span>&boxv;</span>
     belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}'>{{ base $.BelongsTo }}</a>
     {{- else }}
-      <a href='/{{ join "files" $.SitePrefix }}/'>{{ $.SitePrefix }}</a>
+      <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
       {{- if eq (head (tail $.FilePath)) "themes" }}
       <span>&boxv;</span>
       <a href='/{{ join "files" $.SitePrefix "output/themes" }}/'>themes</a>
