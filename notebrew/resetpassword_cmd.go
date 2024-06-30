@@ -178,7 +178,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 			email := cmd.User
 			_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 				Dialect: cmd.Notebrew.Dialect,
-				Format:  "UPDATE users SET password_hash = NULL, reset_token_hash = {resetTokenHash} WHERE email = {email}",
+				Format:  "UPDATE users SET reset_token_hash = {resetTokenHash} WHERE email = {email}",
 				Values: []any{
 					sq.BytesParam("resetTokenHash", resetTokenHash[:]),
 					sq.StringParam("email", email),
@@ -190,7 +190,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 		} else {
 			_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 				Dialect: cmd.Notebrew.Dialect,
-				Format:  "UPDATE users SET password_hash = NULL, reset_token_hash = {resetTokenHash} WHERE username = {username}",
+				Format:  "UPDATE users SET reset_token_hash = {resetTokenHash} WHERE username = {username}",
 				Values: []any{
 					sq.BytesParam("resetTokenHash", resetTokenHash[:]),
 					sq.StringParam("username", strings.TrimPrefix(cmd.User, "@")),
@@ -228,7 +228,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 		}
 		_, err = sq.Exec(context.Background(), tx, sq.Query{
 			Dialect: cmd.Notebrew.Dialect,
-			Format:  "UPDATE users SET password_hash = {passwordHash} WHERE email = {email}",
+			Format:  "UPDATE users SET password_hash = {passwordHash}, reset_token_hash = NULL WHERE email = {email}",
 			Values: []any{
 				sq.StringParam("passwordHash", cmd.PasswordHash),
 				sq.StringParam("email", email),
@@ -253,7 +253,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 		}
 		_, err = sq.Exec(context.Background(), tx, sq.Query{
 			Dialect: cmd.Notebrew.Dialect,
-			Format:  "UPDATE users SET password_hash = {passwordHash} WHERE username = {username}",
+			Format:  "UPDATE users SET password_hash = {passwordHash}, reset_token_hash = NULL WHERE username = {username}",
 			Values: []any{
 				sq.StringParam("passwordHash", cmd.PasswordHash),
 				sq.StringParam("username", username),

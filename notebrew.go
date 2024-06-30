@@ -262,14 +262,14 @@ func (nbrew *Notebrew) getSession(r *http.Request, name string, valuePtr any) (o
 		if err != nil {
 			return false, nil
 		}
+		creationTime := time.Unix(int64(binary.BigEndian.Uint64(sessionToken[:8])), 0)
+		if time.Now().Sub(creationTime) > 5*time.Minute {
+			return false, nil
+		}
 		var sessionTokenHash [8 + blake2b.Size256]byte
 		checksum := blake2b.Sum256(sessionToken[8:])
 		copy(sessionTokenHash[:8], sessionToken[:8])
 		copy(sessionTokenHash[8:], checksum[:])
-		creationTime := time.Unix(int64(binary.BigEndian.Uint64(sessionTokenHash[:8])), 0)
-		if time.Now().Sub(creationTime) > 5*time.Minute {
-			return false, nil
-		}
 		data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format:  "SELECT {*} FROM session WHERE session_token_hash = {sessionTokenHash}",
@@ -1131,3 +1131,32 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		}
 	}
 }
+
+// TODO: consider making this a map populated at init() time. Then we don't
+// have this weirdass sync.Values construct.
+var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
+	commonPasswords := make(map[string]struct{}, 10000)
+	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	done := false
+	for {
+		if done {
+			break
+		}
+		line, err := reader.ReadBytes('\n')
+		done = err == io.EOF
+		if err != nil && !done {
+			panic(err)
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		commonPasswords[string(line)] = struct{}{}
+	}
+	return commonPasswords, nil
+})

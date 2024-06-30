@@ -1,8 +1,6 @@
 package nb10
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/hex"
@@ -10,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -18,7 +15,6 @@ import (
 	"net/url"
 	"path"
 	"strings"
-	"sync"
 	texttemplate "text/template"
 	"unicode/utf8"
 
@@ -715,30 +711,3 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		nbrew.methodNotAllowed(w, r)
 	}
 }
-
-var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
-	commonPasswords := make(map[string]struct{}, 10000)
-	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	done := false
-	for {
-		if done {
-			break
-		}
-		line, err := reader.ReadBytes('\n')
-		done = err == io.EOF
-		if err != nil && !done {
-			panic(err)
-		}
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
-			continue
-		}
-		commonPasswords[string(line)] = struct{}{}
-	}
-	return commonPasswords, nil
-})

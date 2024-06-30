@@ -1,44 +1,32 @@
 package nb10
 
 import (
-	"context"
-	"database/sql"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
-	"io/fs"
 	"mime"
 	"net/http"
-	"net/mail"
 	"net/url"
 	"path"
 	"strings"
-	texttemplate "text/template"
+	"time"
 	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
-	"github.com/caddyserver/certmagic"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/blake2b"
-	"golang.org/x/sync/errgroup"
 )
 
 func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 	type Request struct {
 		Token           string `json:"token"`
-		Username        string `json:"username"`
-		Email           string `json:"email"`
 		Password        string `json:"password"`
 		ConfirmPassword string `json:"confirmPassword"`
-		SiteName        string `json:"siteName"`
 	}
 	type Response struct {
 		Token      string     `json:"token"`
-		Username   string     `json:"username"`
-		Email      string     `json:"email"`
-		SiteName   string     `json:"siteName"`
 		Error      string     `json:"error"`
 		FormErrors url.Values `json:"formErrors"`
 	}
@@ -114,7 +102,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 			Dialect: nbrew.Dialect,
 			Format:  "SELECT 1 FROM users WHERE reset_token_hash = {resetTokenHash}",
 			Values: []any{
-				sq.BytesParam("inviteTokenHash", resetTokenHash[:]),
+				sq.BytesParam("resetTokenHash", resetTokenHash[:]),
 			},
 		})
 		if err != nil {
@@ -156,14 +144,13 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 				if response.Token != "" {
 					query = "?token=" + url.QueryEscape(response.Token)
 				}
-				http.Redirect(w, r, "/users/invite/"+query, http.StatusFound)
+				http.Redirect(w, r, "/users/resetpassword/"+query, http.StatusFound)
 				return
 			}
 			err := nbrew.setSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
-					"from": "invite",
+					"from": "resetpassword",
 				},
-				"username": response.Username,
 			})
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
@@ -198,11 +185,8 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			request.Token = r.Form.Get("token")
-			request.Username = r.Form.Get("username")
-			request.Email = r.Form.Get("email")
 			request.Password = r.Form.Get("password")
 			request.ConfirmPassword = r.Form.Get("confirmPassword")
-			request.SiteName = r.Form.Get("siteName")
 		default:
 			nbrew.unsupportedContentType(w, r)
 			return
@@ -210,12 +194,8 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 
 		response := Response{
 			Token:      request.Token,
-			Username:   request.Username,
-			Email:      request.Email,
-			SiteName:   request.SiteName,
 			FormErrors: url.Values{},
 		}
-		// token
 		if response.Token == "" {
 			response.Error = "MissingResetToken"
 			writeResponse(w, r, response)
@@ -226,97 +206,38 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, r, response)
 			return
 		}
-		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		resetToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
 			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
-		checksum := blake2b.Sum256(inviteToken[8:])
-		var inviteTokenHash [8 + blake2b.Size256]byte
-		copy(inviteTokenHash[:8], inviteToken[:8])
-		copy(inviteTokenHash[8:], checksum[:])
-		result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+		creationTime := time.Unix(int64(binary.BigEndian.Uint64(resetToken[:8])), 0)
+		if time.Now().Sub(creationTime) > 24*time.Hour {
+			response.Error = "InvalidResetToken"
+			writeResponse(w, r, response)
+			return
+		}
+		checksum := blake2b.Sum256(resetToken[8:])
+		var resetTokenHash [8 + blake2b.Size256]byte
+		copy(resetTokenHash[:8], resetToken[:8])
+		copy(resetTokenHash[8:], checksum[:])
+		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "SELECT {*} FROM invite WHERE invite_token_hash = {inviteTokenHash}",
+			Format:  "SELECT 1 FROM users WHERE reset_token_hash = {resetTokenHash}",
 			Values: []any{
-				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
+				sq.BytesParam("resetTokenHash", resetTokenHash[:]),
 			},
-		}, func(row *sq.Row) (result struct {
-			SiteLimit    sql.NullInt64
-			StorageLimit sql.NullInt64
-		}) {
-			result.SiteLimit = row.NullInt64("site_limit")
-			result.StorageLimit = row.NullInt64("storage_limit")
-			return result
 		})
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				response.Error = "InvalidResetToken"
-				writeResponse(w, r, response)
-				return
-			}
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
 			return
 		}
-		// username
-		if response.Username == "" {
-			response.FormErrors.Add("username", "required")
-		} else {
-			for _, char := range response.Username {
-				if char == ' ' {
-					response.FormErrors.Add("username", "cannot include space")
-					break
-				}
-				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
-					response.FormErrors.Add("username", fmt.Sprintf("cannot include character %q", string(char)))
-					break
-				}
-			}
-		}
-		if !response.FormErrors.Has("username") {
-			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "SELECT 1 FROM users WHERE username = {username}",
-				Values: []any{
-					sq.StringParam("username", response.Username),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			if exists {
-				response.FormErrors.Add("username", "username already used by an existing user account")
-			}
-		}
-		// email
-		if response.Email == "" {
-			response.FormErrors.Add("email", "required")
-		} else {
-			_, err := mail.ParseAddress(response.Email)
-			if err != nil {
-				response.FormErrors.Add("email", "invalid email address")
-			}
-		}
-		if !response.FormErrors.Has("email") {
-			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "SELECT 1 FROM users WHERE email = {email}",
-				Values: []any{
-					sq.StringParam("email", response.Email),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			if exists {
-				response.FormErrors.Add("email", "email already used by an existing user account")
-			}
+		if !exists {
+			response.Error = "InvalidResetToken"
+			writeResponse(w, r, response)
+			return
 		}
 		// password
 		if request.Password == "" {
@@ -345,48 +266,15 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		if len(response.FormErrors) > 0 {
+			response.Error = "FormErrorsPresent"
+			writeResponse(w, r, response)
+			return
+		}
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
-			return
-		}
-		if response.SiteName != "" {
-			switch response.SiteName {
-			case "www", "img", "video", "cdn", "storage":
-				response.FormErrors.Add("siteName", "unavailable")
-			default:
-				for _, char := range response.SiteName {
-					if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
-						response.FormErrors.Add("siteName", fmt.Sprintf("cannot include character %q", string(char)))
-						break
-					}
-				}
-				if len(response.SiteName) > 30 {
-					response.FormErrors.Add("siteName", "cannot exceed 30 characters")
-				}
-			}
-		}
-		if !response.FormErrors.Has("siteName") {
-			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-				Values: []any{
-					sq.StringParam("siteName", response.SiteName),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-			if exists {
-				response.FormErrors.Add("siteName", "site name already in use")
-			}
-		}
-		if len(response.FormErrors) > 0 {
-			response.Error = "FormErrorsPresent"
-			writeResponse(w, r, response)
 			return
 		}
 		tx, err := nbrew.DB.Begin()
@@ -398,9 +286,11 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 		defer tx.Rollback()
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "DELETE FROM invite WHERE invite_token_hash = {inviteTokenHash}",
+			Format: "DELETE FROM authentication WHERE EXISTS (" +
+				"SELECT 1 FROM users WHERE users.user_id = authentication.user_id AND users.reset_token_hash = {resetTokenHash}" +
+				")",
 			Values: []any{
-				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
+				sq.BytesParam("resetTokenHash", resetTokenHash[:]),
 			},
 		})
 		if err != nil {
@@ -410,57 +300,10 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO site (site_id, site_name)" +
-				" VALUES ({siteID}, {siteName})",
+			Format:  "UPDATE users SET password_hash = {passwordHash}, reset_token_hash = NULL WHERE reset_token_hash = {resetTokenHash}",
 			Values: []any{
-				sq.UUIDParam("siteID", NewID()),
-				sq.StringParam("siteName", response.SiteName),
-			},
-		})
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		_, err = sq.Exec(r.Context(), tx, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO users (user_id, username, email, password_hash, site_limit, storage_limit)" +
-				" VALUES ({userID}, {username}, {email}, {passwordHash}, {siteLimit}, {storageLimit})",
-			Values: []any{
-				sq.UUIDParam("userID", NewID()),
-				sq.StringParam("username", response.Username),
-				sq.StringParam("email", response.Email),
 				sq.StringParam("passwordHash", string(passwordHash)),
-				sq.Param("siteLimit", result.SiteLimit),
-				sq.Param("storageLimit", result.StorageLimit),
-			},
-		})
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		_, err = sq.Exec(r.Context(), tx, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO site_user (site_id, user_id)" +
-				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
-			Values: []any{
-				sq.StringParam("siteName", response.SiteName),
-				sq.StringParam("username", response.Username),
-			},
-		})
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		_, err = sq.Exec(r.Context(), tx, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO site_owner (site_id, user_id)" +
-				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
-			Values: []any{
-				sq.StringParam("siteName", response.SiteName),
-				sq.StringParam("username", response.Username),
+				sq.BytesParam("resetTokenHash", resetTokenHash[:]),
 			},
 		})
 		if err != nil {
@@ -473,233 +316,6 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request) {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
 			return
-		}
-		sitePrefix := "@" + response.SiteName
-		err = nbrew.FS.Mkdir(sitePrefix, 0755)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		dirs := []string{
-			"notes",
-			"pages",
-			"posts",
-			"output",
-			"output/posts",
-			"output/themes",
-			"imports",
-			"exports",
-		}
-		for _, dir := range dirs {
-			err = nbrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
-			if err != nil && !errors.Is(err, fs.ErrExist) {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
-		}
-		var home string
-		if response.SiteName == "" {
-			home = "home"
-		} else if strings.Contains(response.SiteName, ".") {
-			home = response.SiteName
-		} else {
-			home = response.SiteName + "." + nbrew.ContentDomain
-		}
-		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		defer writer.Close()
-		err = tmpl.Execute(writer, home)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		err = writer.Close()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
-			FS:                 nbrew.FS,
-			ContentDomain:      nbrew.ContentDomain,
-			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-			ImgDomain:          nbrew.ImgDomain,
-			SitePrefix:         sitePrefix,
-		})
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		group, groupctx := errgroup.WithContext(r.Context())
-		group.Go(func() error {
-			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.json"), 0644)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			defer writer.Close()
-			_, err = writer.Write(b)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = writer.Close()
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			return nil
-		})
-		group.Go(func() error {
-			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			defer writer.Close()
-			_, err = writer.Write(b)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = writer.Close()
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			return nil
-		})
-		group.Go(func() error {
-			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			defer writer.Close()
-			_, err = writer.Write(b)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = writer.Close()
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			return nil
-		})
-		group.Go(func() error {
-			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/post.html"), 0644)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			defer writer.Close()
-			_, err = writer.Write(b)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = writer.Close()
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			return nil
-		})
-		group.Go(func() error {
-			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			defer writer.Close()
-			_, err = writer.Write(b)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			err = writer.Close()
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			tmpl, err := siteGen.PostListTemplate(context.Background(), "")
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
-			if err != nil {
-				getLogger(groupctx).Error(err.Error())
-				return nil
-			}
-			return nil
-		})
-		err = group.Wait()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
-			return
-		}
-		if strings.Contains(response.SiteName, ".") && nbrew.Port == 443 {
-			certConfig := certmagic.NewDefault()
-			certConfig.Storage = nbrew.CertStorage
-			err := certConfig.ObtainCertAsync(r.Context(), response.SiteName)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
 		}
 		writeResponse(w, r, response)
 	default:
