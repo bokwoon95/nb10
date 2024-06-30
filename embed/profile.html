@@ -42,25 +42,25 @@
 </fieldset>
 <fieldset>
   <legend><h2 class='mh2 mv0'>Sites</h2></legend>
-  <table class='mv2 collapse'>
+  <table class='collapse'>
     <thead>
       <tr class='bb h2'>
-        <th>Site name</th>
-        <th>Size</th>
+        <th class='pv2'>Site name</th>
+        <th class='pv2'>Size</th>
       </tr>
     </thead>
     <tbody>
       {{- range $site := $.Sites }}
-      <tr class='bb h2'>
-        <td><a href='/{{ join "files" (sitePrefix $site.SiteName) }}/'>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}<em>default site</em>{{ end }}</a></td>
-        <td>{{ humanReadableFileSize $site.StorageUsed }}</td>
+      <tr class='bb'>
+        <td class='pv2'><a href='/{{ join "files" (sitePrefix $site.SiteName) }}/'>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}<em>default site</em>{{ end }}</a></td>
+        <td class='pv2'>{{ humanReadableFileSize $site.StorageUsed }}</td>
       </tr>
       {{- end }}
     </tbody>
     <tfoot>
       <tr>
-        <td class='b tr h2'>Storage Used:</td>
-        <td>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} &frasl; {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
+        <td class='pv2 b tr'>Storage Used:</td>
+        <td class='pv2'>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} &frasl; {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
       </tr>
     </tfoot>
   </table>
