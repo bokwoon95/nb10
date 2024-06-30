@@ -72,6 +72,9 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 				return tail
 			},
 			"sitePrefix": func(siteName string) string {
+				if siteName == "" {
+					return ""
+				}
 				if strings.Contains(siteName, ".") {
 					return siteName
 				}
