@@ -22,52 +22,47 @@
 {{- else }}
 <div><a href='/files/'>&larr; back</a></div>
 {{- end }}
-<fieldset>
-  <legend><h2 class='mh2 mv0'>Profile</h2></legend>
-  <div>
-    <a href='/users/editprofile/'>edit profile</a>
-  </div>
-  <div class='mv3'>
-    <div class='b'>Username:</div>
-    <div>{{ if $.Username }}{{ $.Username }}{{ else }}<em>default user</em>{{ end }}</div>
-  </div>
-  <div class='mv3'>
-    <div class='b'>Email:</div>
-    <div>{{ $.Email }}</div>
-  </div>
-  <div class='mv3'>
-    <div class='b'>Password:</div>
-    <div><a href='/users/changepassword/'>change password</a></div>
-  </div>
-</fieldset>
-<fieldset>
-  <legend><h2 class='mh2 mv0'>Sites</h2></legend>
-  <table class='collapse'>
-    <thead>
-      <tr class='bb h2'>
-        <th class='pv2'>Site name</th>
-        <th class='pv2'>Size</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{- range $site := $.Sites }}
-      <tr class='bb'>
-        <td class='pv2'><a href='/{{ join "files" (sitePrefix $site.SiteName) }}/'>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}<em>default site</em>{{ end }}</a></td>
-        <td class='pv2'>{{ humanReadableFileSize $site.StorageUsed }}</td>
-      </tr>
-      {{- end }}
-    </tbody>
-    <tfoot>
-      <tr>
-        <td class='pv2 b tr'>Storage Used:</td>
-        <td class='pv2'>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} &frasl; {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
-      </tr>
-    </tfoot>
-  </table>
-  <form method='post' action='/files/calculatestorage/' class='mv3'>
+<div class='mv2'>
+  <a href='/users/editprofile/'>edit profile</a>
+</div>
+<div class='mv2'>
+  <div class='b'>Username:</div>
+  <div>{{ if $.Username }}{{ $.Username }}{{ else }}<em>default user</em>{{ end }}</div>
+</div>
+<div class='mv2'>
+  <div class='b'>Email:</div>
+  <div>{{ $.Email }}</div>
+</div>
+<div class='mv2'>
+  <div class='b'>Password:</div>
+  <div><a href='/users/changepassword/'>change password</a></div>
+</div>
+<table class='mv2 collapse'>
+  <thead>
+    <tr class='bb h2'>
+      <th class='pv2'>Site name</th>
+      <th class='pv2'>Size</th>
+    </tr>
+  </thead>
+  <tbody>
     {{- range $site := $.Sites }}
-    <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
+    <tr class='bb'>
+      <td class='pv2'><a href='/{{ join "files" (sitePrefix $site.SiteName) }}/'>{{ if $site.SiteName }}{{ $site.SiteName }}{{ else }}<em>default site</em>{{ end }}</a></td>
+      <td class='pv2'>{{ humanReadableFileSize $site.StorageUsed }}</td>
+    </tr>
     {{- end }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
-  </form>
-</fieldset>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td class='pv2 b tr'>Storage Used:</td>
+      <td class='pv2'>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} &frasl; {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
+    </tr>
+  </tfoot>
+</table>
+<form method='post' action='/files/calculatestorage/' class='mv2'>
+  {{- range $site := $.Sites }}
+  <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
+  {{- end }}
+  <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
+</form>
+
