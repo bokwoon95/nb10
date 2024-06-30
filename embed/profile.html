@@ -51,9 +51,15 @@
   </tbody>
   <tfoot>
     <tr>
-      <td class='b tr'>Total:</td>
+      <td class='b tr'>Storage Used:</td>
       <td>{{ humanReadableFileSize $.StorageUsed }}</td>
     </tr>
+    {{- if gt $.StorageLimit 0 }}
+    <tr>
+      <td class='b tr'>Storage Limit:</td>
+      <td>{{ humanReadableFileSize $.StorageLimit }}</td>
+    </tr>
+    {{- end }}
   </tfoot>
 </table>
 <form method='post' action='/files/calculatestorage/'>
