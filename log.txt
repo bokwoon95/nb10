@@ -41,6 +41,8 @@ TODO: users.go (what do we show about a user? allow them to change username? no)
     - /users/editprofile
     - /users/changepassword
 TODO: signup.go
+TODO: insert a recoverPanic() for every goroutine spun off in an errgroup or a waitgroup. We can't afford to have the server taken down by malicious panics.
+TODO: why is notebrew so hopelessly broken on macOS? Especially
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 
 DNS testcases:

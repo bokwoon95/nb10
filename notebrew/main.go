@@ -876,7 +876,7 @@ func main() {
 				ObjectStorage: objectStorage,
 				Logger:        nbrew.Logger,
 				UpdateStorageUsed: func(ctx context.Context, sitePrefix string, delta int64) error {
-					if delta == 0 {
+					if nbrew.DB == nil || delta == 0 {
 						return nil
 					}
 					_, err = sq.Exec(ctx, nbrew.DB, sq.Query{
