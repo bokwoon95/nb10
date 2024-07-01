@@ -390,7 +390,8 @@ func main() {
 					}
 					ips, err := net.DefaultResolver.LookupIPAddr(groupctx, domain)
 					if err != nil {
-						return err
+						fmt.Println(err)
+						return nil
 					}
 					for _, ip := range ips {
 						ip, ok := netip.AddrFromSlice(ip.IP)
