@@ -226,7 +226,7 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "proxy         = %s\n", strings.Join(proxies, ", "))
 	}
 
-	if cmd.Notebrew.Port == 443 {
+	if cmd.Notebrew.Port == 443 || cmd.Notebrew.Port == 80 {
 		// DNS.
 		b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -266,20 +266,18 @@ func (cmd *StatusCmd) Run() error {
 			fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", filePath)
 		}
 
-		if cmd.Notebrew.Port == 443 || cmd.Notebrew.Port == 80 {
-			// IP4.
-			if cmd.Notebrew.IP4.IsValid() {
-				fmt.Fprintf(cmd.Stdout, "IPv4          = %s\n", cmd.Notebrew.IP4.String())
-			} else {
-				fmt.Fprintf(cmd.Stdout, "IPv4          = <none>\n")
-			}
+		// IP4.
+		if cmd.Notebrew.IP4.IsValid() {
+			fmt.Fprintf(cmd.Stdout, "IPv4          = %s\n", cmd.Notebrew.IP4.String())
+		} else {
+			fmt.Fprintf(cmd.Stdout, "IPv4          = <none>\n")
+		}
 
-			// IP6.
-			if cmd.Notebrew.IP6.IsValid() {
-				fmt.Fprintf(cmd.Stdout, "IPv6          = %s\n", cmd.Notebrew.IP6.String())
-			} else {
-				fmt.Fprintf(cmd.Stdout, "IPv6          = <none>\n")
-			}
+		// IP6.
+		if cmd.Notebrew.IP6.IsValid() {
+			fmt.Fprintf(cmd.Stdout, "IPv6          = %s\n", cmd.Notebrew.IP6.String())
+		} else {
+			fmt.Fprintf(cmd.Stdout, "IPv6          = <none>\n")
 		}
 
 		// Domains.
