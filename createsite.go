@@ -566,7 +566,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			nbrew.internalServerError(w, r, err)
 			return
 		}
-		if strings.Contains(response.SiteName, ".") && nbrew.Port == 443 {
+		if nbrew.Port == 443 {
 			certConfig := certmagic.NewDefault()
 			certConfig.Storage = nbrew.CertStorage
 			err := certConfig.ObtainCertSync(r.Context(), response.SiteName)
