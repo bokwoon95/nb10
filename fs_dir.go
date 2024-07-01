@@ -3,6 +3,7 @@ package nb10
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -112,6 +113,7 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		}
 		return file, nil
 	}
+	fmt.Printf("stat v2 %s\n", path.Dir(name))
 	_, err = os.Stat(path.Dir(name))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
