@@ -261,12 +261,6 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, objectsConfig.AccessKeyID+"\n")
 			case "secretAccessKey":
 				io.WriteString(cmd.Stdout, objectsConfig.SecretAccessKey+"\n")
-			case "username":
-				io.WriteString(cmd.Stdout, objectsConfig.Username+"\n")
-			case "keyFile":
-				io.WriteString(cmd.Stdout, objectsConfig.KeyFile+"\n")
-			case "knownHostsFile":
-				io.WriteString(cmd.Stdout, objectsConfig.KnownHostsFile+"\n")
 			default:
 				io.WriteString(cmd.Stderr, objectsHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -609,12 +603,6 @@ func (cmd *ConfigCmd) Run() error {
 			objectsConfig.AccessKeyID = cmd.Value.String
 		case "secretAccessKey":
 			objectsConfig.SecretAccessKey = cmd.Value.String
-		case "username":
-			objectsConfig.Username = cmd.Value.String
-		case "keyFile":
-			objectsConfig.KeyFile = cmd.Value.String
-		case "knownHostsFile":
-			objectsConfig.KnownHostsFile = cmd.Value.String
 		default:
 			io.WriteString(cmd.Stderr, objectsHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -830,9 +818,6 @@ type ObjectsConfig struct {
 	Bucket          string `json:"bucket"`
 	AccessKeyID     string `json:"accessKeyID"`
 	SecretAccessKey string `json:"secretAccessKey"`
-	Username        string `json:"username"`
-	KeyFile         string `json:"keyFile"`
-	KnownHostsFile  string `json:"knownHostsFile"`
 }
 
 const objectsHelp = `# == objects keys == #
