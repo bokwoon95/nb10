@@ -699,7 +699,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		if strings.Contains(response.SiteName, ".") && nbrew.Port == 443 {
 			certConfig := certmagic.NewDefault()
 			certConfig.Storage = nbrew.CertStorage
-			err := certConfig.ObtainCertAsync(r.Context(), response.SiteName)
+			err := certConfig.ObtainCertSync(r.Context(), response.SiteName)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
