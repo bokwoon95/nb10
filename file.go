@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -440,7 +441,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.Assets = []Asset{}
 		}
 		if r.Form.Has("api") {
-			w.Header().Set("Content-Type", "application/json")
+			fmt.Println("got here!!!")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			if r.Method == "HEAD" {
 				w.WriteHeader(http.StatusOK)
 				return

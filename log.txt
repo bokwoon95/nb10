@@ -64,6 +64,12 @@ DNS testcases:
     - you are also no longer able to reach the site using the IP address, must use the domain name.
 The main usefulness of being able to run notebrew on plain IP addresses or HTTP is that new users can run it first without worrying about any domain name configuration or SSL certificate configuration and ascertain if they can connect to their server in the first place.
 
+step 1: can it start?
+step 2: can you talk to it over the internet using an ip address?
+step 3: can you enable user accounts, create the default user and log in using the credentials?
+step 4: can you talk to it over the internet using a domain name?
+step 5: can you talk to it over the internet using a domain name + SSL?
+
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
 - Then "if you want to use templates globally, put them in /themes/ and you can reference these templates everywhere with {{ template "/themes/.../xxx.html" }}
