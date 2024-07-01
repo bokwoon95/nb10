@@ -423,12 +423,12 @@ func main() {
 				contentDomainWildcardAdded := false
 				for i, domain := range nbrew.Domains {
 					if matched[i] {
-						if certmagic.MatchWildcard(domain, cmsDomainWildcard) {
+						if certmagic.MatchWildcard(domain, cmsDomainWildcard) && nbrew.DNSProvider != nil {
 							if !cmsDomainWildcardAdded {
 								cmsDomainWildcardAdded = true
 								nbrew.ManagingDomains = append(nbrew.ManagingDomains, cmsDomainWildcard)
 							}
-						} else if certmagic.MatchWildcard(domain, contentDomainWildcard) {
+						} else if certmagic.MatchWildcard(domain, contentDomainWildcard) && nbrew.DNSProvider != nil {
 							if !contentDomainWildcardAdded {
 								contentDomainWildcardAdded = true
 								nbrew.ManagingDomains = append(nbrew.ManagingDomains, contentDomainWildcard)
