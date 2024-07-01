@@ -75,6 +75,8 @@ The main usefulness of being able to run notebrew on plain IP addresses or HTTP 
     permanent files: notes, pages, posts, output, site.json, pages/index.html, pages/404.html, posts/*/postlist.html, posts/*/post.html, posts/*/postlist.json
     affected actions: rename, cut, delete
 
+# Using notebrew locally (as a static site generator, then push the output to SSG host) #
+
 # Ops tutorial #
 
 self hosting guide, starting from scratch/zero, does not assume any prior server knowledge (just good at following instructions)
