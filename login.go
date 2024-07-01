@@ -90,7 +90,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				}
 			}
 			if r.Form.Has("api") {
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				if r.Method == "HEAD" {
 					w.WriteHeader(http.StatusOK)
 					return
@@ -227,7 +227,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				}
 			}
 			if r.Form.Has("api") {
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				encoder := json.NewEncoder(w)
 				encoder.SetIndent("", "  ")
 				encoder.SetEscapeHTML(false)

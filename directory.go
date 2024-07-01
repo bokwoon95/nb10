@@ -67,7 +67,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			response.Files = []File{}
 		}
 		if r.Form.Has("api") {
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			encoder := json.NewEncoder(w)
 			encoder.SetIndent("", "  ")
 			encoder.SetEscapeHTML(false)

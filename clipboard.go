@@ -127,7 +127,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				}
 			}
 			if r.Form.Has("api") {
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				encoder := json.NewEncoder(w)
 				encoder.SetIndent("", "  ")
 				encoder.SetEscapeHTML(false)

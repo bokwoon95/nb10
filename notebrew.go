@@ -601,7 +601,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 		}
 	}
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
 		if r.Method == "HEAD" {
 			return
@@ -645,7 +645,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 
 func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusUnauthorized)
 		if r.Method == "HEAD" {
 			return
@@ -696,7 +696,7 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 
 func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)
 		if r.Method == "HEAD" {
 			return
@@ -746,7 +746,7 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 
 func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
 		if r.Method == "HEAD" {
 			return
@@ -790,7 +790,7 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 
 func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		if r.Method == "HEAD" {
 			return
@@ -841,7 +841,7 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 		message = "unsupported Content-Type: " + contentType
 	}
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		if r.Method == "HEAD" {
 			return
@@ -893,7 +893,7 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if r.Form.Has("api") {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
 		if r.Method == "HEAD" {
 			return

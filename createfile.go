@@ -52,7 +52,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 	case "GET", "HEAD":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				if r.Method == "HEAD" {
 					w.WriteHeader(http.StatusOK)
 					return
@@ -156,7 +156,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
-				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				encoder := json.NewEncoder(w)
 				encoder.SetIndent("", "  ")
 				encoder.SetEscapeHTML(false)

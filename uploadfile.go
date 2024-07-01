@@ -37,7 +37,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 		if r.Form.Has("api") {
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			encoder := json.NewEncoder(w)
 			encoder.SetIndent("", "  ")
 			encoder.SetEscapeHTML(false)
