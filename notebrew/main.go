@@ -1325,7 +1325,7 @@ func main() {
 				}
 			}
 			if len(nbrew.ManagingDomains) == 0 {
-				fmt.Printf("WARNING: notebrew is listening on port 443 but no domains are pointing at this current machine's IP address (%s/%s). It means no traffic can reach this current machine.\n", nbrew.IP4.String(), nbrew.IP6.String())
+				fmt.Printf("WARNING: notebrew is listening on port 443 but no domains are pointing at this current machine's IP address (%s/%s). It means no traffic can reach this current machine. Please configure your DNS correctly.\n", nbrew.IP4.String(), nbrew.IP6.String())
 			}
 			err = staticCertConfig.ManageSync(context.Background(), nbrew.ManagingDomains)
 			if err != nil {

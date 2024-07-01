@@ -53,8 +53,10 @@ TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style ga
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.
     - want: the server starts and listens on :443, but no servers should be provisioned since DNS resolution should have failed for the domains.
+    - DONE
 - Fresh server, no DNS entries. Set port to 80.
     - want: the server starts on :80 (no SSL certificates configured) using CMSDomain and ContentDomain set to the server's IP address, and everything behaves as it does on localhost (except without the subdomains).
+    - DONE
 - Fresh server, with DNS entry set to notebrew.com. Set port to 80.
     - want: the server starts on :80 (no SSL certificates configured) CMSDomain and ContentDomain set to the same thing, and everything behaves as it does on localhost (except without the subdomains).
 The main usefulness of being able to run notebrew on plain IP addresses or HTTP is that new users can run it first without worrying about any domain name configuration or SSL certificate configuration and ascertain if they can connect to their server in the first place.
