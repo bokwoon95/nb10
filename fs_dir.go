@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -114,6 +115,7 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 	_, err = os.Stat(path.Dir(name))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
+			debug.PrintStack()
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
 		}
 		return nil, err
