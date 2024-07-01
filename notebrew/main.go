@@ -215,6 +215,7 @@ func main() {
 				if s == "" {
 					return nil
 				}
+				fmt.Printf("ipv4: %s\n", s)
 				ip, err := netip.ParseAddr(s)
 				if err != nil {
 					return fmt.Errorf("ipv4.icanhazip.com: did not get a valid IP address (%s)", s)
@@ -247,6 +248,7 @@ func main() {
 				if s == "" {
 					return nil
 				}
+				fmt.Printf("ipv6: %s\n", s)
 				ip, err := netip.ParseAddr(s)
 				if err != nil {
 					return fmt.Errorf("ipv6.icanhazip.com: did not get a valid IP address (%s)", s)
