@@ -1339,7 +1339,7 @@ func main() {
 					// TODO: might be able to reduce allocations here since
 					// decision func is called *very* often.
 					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
-						name = strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+						name = "@" + strings.TrimSuffix(name, "."+nbrew.ContentDomain)
 					}
 					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
 					if err != nil {
