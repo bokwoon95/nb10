@@ -37,17 +37,13 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: okay we might be able to replicate the problem if we keep wiping the output folders and restarting notebrew. Now the most important thing is the replicabilty of the issue.
-    TODO: write down print statements on all system file creation methods.
-    TODO: figure out how to reformat the droplet so that we can replicate the error
-TODO: the DNS test cases i guess. lucky I wrote them down.
-TODO: rename the ugly af __notebrewtempxxxx__ to something else without the underscores
 TODO: users.go (what do we show about a user? allow them to change username? no)
     - /users/editprofile
     - /users/changepassword
 TODO: signup.go
 TODO: insert a recoverPanic() for every goroutine spun off in an errgroup or a waitgroup. We can't afford to have the server taken down by malicious panics.
-TODO: why is notebrew so hopelessly broken on macOS? Especially
+TODO: tests
+TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 
 DNS testcases:
@@ -64,11 +60,7 @@ DNS testcases:
     - you are also no longer able to reach the site using the IP address, must use the domain name.
 The main usefulness of being able to run notebrew on plain IP addresses or HTTP is that new users can run it first without worrying about any domain name configuration or SSL certificate configuration and ascertain if they can connect to their server in the first place.
 
-step 1: can it start?
-step 2: can you talk to it over the internet using an ip address?
-step 3: can you enable user accounts, create the default user and log in using the credentials?
-step 4: can you talk to it over the internet using a domain name?
-step 5: can you talk to it over the internet using a domain name + SSL?
+# User tutorials #
 
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
 - The next guide will be "if you want to include CSS and JS and images, create/upload them via the input[type=file] and you can mention it by the name you created/uploaded it with"
@@ -82,5 +74,38 @@ step 5: can you talk to it over the internet using a domain name + SSL?
 - need to add the concept of permanent files to the guide
     permanent files: notes, pages, posts, output, site.json, pages/index.html, pages/404.html, posts/*/postlist.html, posts/*/post.html, posts/*/postlist.json
     affected actions: rename, cut, delete
+
+# Ops tutorial #
+
+self hosting guide, starting from scratch/zero, does not assume any prior server knowledge (just good at following instructions)
+step 0: can you purchase a VPS? Can you ssh into it and run commands?
+step 1: can it start?
+step 2: can you talk to it over the internet using an ip address?
+step 3: can you enable user accounts, create the default user and log in using the credentials?
+step 4: can you talk to it over the internet using a domain name?
+step 5: can you talk to it over the internet using a domain name + SSL?
+last step: can you make it run in the background? using start/stop or systemd. other methods like nohup or tmux are possible but if you know those things you probably don't need a tutorial for how to do it.
+
+# Extra ops tutorials #
+
+(for each step, also document how to undo it)
+- switch from DirFS to DatabaseFS
+    - switch database dialect from SQLite to Postgres or MySQL
+    - switch from DirObjectStorage to S3ObjectStorage
+- add a separate content domain
+- add a CDN and img domain
+- add an img cmd
+- enable captcha for logins
+- enable wildcard certificates using a DNS provider
+
+# Admin tutorials #
+
+admin steps:
+- create a new invite (optionally with a site limit and storage limit) and let someone join
+- delete existing invites
+- generate a password reset link for somebody who has forgotten their password
+- create sites
+- create users
+- assign sites to users (and optionally set the site owner) using the permissions command
 
 notebrew permissions -user $user -site $site -grant -revoke -setowner
