@@ -37,10 +37,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: profile.html: put profile fields in a fieldset so that it doesn't tend to the left so much.
-    TODO: first fieldset legend is called "profile", the second fieldset legend is called "sites".
-    TODO: change the header "sites" to "site names", since we are already using "sites" for the second legend.
-    TODO: always calculate the storage used per site, even for DirFS (use fs.WalkDir). But only show the user's storage limit as well as the recalculate button if IsDatabaseFS.
 TODO: users.go (what do we show about a user? allow them to change username? no)
     - /users/editprofile
     - /users/changepassword
