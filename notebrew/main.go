@@ -1173,11 +1173,6 @@ func main() {
 		}
 		nbrew.ContentSecurityPolicy = buf.String()
 
-		// TODO:
-		// go install github.com/bokwoon95/notebrew/notebrew
-		// irm github.com/bokwoon95/notebrew/install.cmd | iex
-		// curl github.com/bokwoon95/notebrew/install.sh | sh
-
 		if len(args) > 0 {
 			command, commandArgs := args[0], args[1:]
 			switch command {
@@ -1328,6 +1323,9 @@ func main() {
 						HTTPProxy: certmagic.DefaultACME.HTTPProxy,
 					}),
 				}
+			}
+			if len(nbrew.ManagingDomains) == 0 {
+				fmt.Printf("WARNING: notebrew is listening on port 443 but no domains are pointing at this current machine's IP address (%s/%s). It means no traffic can reach this current machine. Please create A records.\n", nbrew.IP4.String(), nbrew.IP6.String())
 			}
 			err = staticCertConfig.ManageSync(context.Background(), nbrew.ManagingDomains)
 			if err != nil {
