@@ -281,6 +281,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
 						}
 						response.Assets = append(response.Assets, Asset{
+							Parent:       response.AssetDir,
 							Name:         name,
 							Size:         fileInfo.Size(),
 							ModTime:      fileInfo.ModTime(),
@@ -412,6 +413,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 						response.Assets = append(response.Assets, Asset{
 							Name:         name,
+							Parent:       response.AssetDir,
 							Size:         fileInfo.Size(),
 							ModTime:      fileInfo.ModTime(),
 							CreationTime: CreationTime(absolutePath, fileInfo),
