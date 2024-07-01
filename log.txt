@@ -38,6 +38,7 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: okay we might be able to replicate the problem if we keep wiping the output folders and restarting notebrew. Now the most important thing is the replicabilty of the issue.
+    TODO: write down print statements on all system file creation methods.
 TODO: the DNS test cases i guess. lucky I wrote them down.
 TODO: rename the ugly af __notebrewtempxxxx__ to something else without the underscores
 TODO: users.go (what do we show about a user? allow them to change username? no)
