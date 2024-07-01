@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -232,64 +231,23 @@ func (storage *DirObjectStorage) Put(ctx context.Context, key string, reader io.
 	if len(key) < 4 {
 		return &fs.PathError{Op: "put", Path: key, Err: fs.ErrInvalid}
 	}
-	if runtime.GOOS == "windows" {
-		file, err := os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				return err
-			}
-			err = os.Mkdir(filepath.Join(storage.RootDir, key[:4]), 0755)
-			if err != nil && !errors.Is(err, fs.ErrExist) {
-				return err
-			}
-			file, err = os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-			if err != nil {
-				return err
-			}
-		}
-		_, err = io.Copy(file, reader)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	tempDir := storage.TempDir
-	if tempDir == "" {
-		tempDir = os.TempDir()
-	}
-	tempFile, err := os.CreateTemp(tempDir, "notebrew-temp-*"+path.Ext(key))
-	if err != nil {
-		return err
-	}
-	fileInfo, err := tempFile.Stat()
-	if err != nil {
-		return err
-	}
-	tempFilePath := filepath.Join(tempDir, fileInfo.Name())
-	destFilePath := filepath.Join(storage.RootDir, key[:4], key)
-	defer os.Remove(tempFilePath)
-	defer tempFile.Close()
-	_, err = io.Copy(tempFile, reader)
-	if err != nil {
-		return err
-	}
-	err = tempFile.Close()
-	if err != nil {
-		return err
-	}
-	err = os.Rename(tempFilePath, destFilePath)
+	file, err := os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
-		err := os.Mkdir(filepath.Join(storage.RootDir, key[:4]), 0755)
+		err = os.Mkdir(filepath.Join(storage.RootDir, key[:4]), 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			return err
 		}
-		err = os.Rename(tempFilePath, destFilePath)
+		file, err = os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return err
 		}
+	}
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		return err
 	}
 	return nil
 }
