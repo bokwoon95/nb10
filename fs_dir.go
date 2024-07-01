@@ -122,7 +122,7 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		file.tempDir = os.TempDir()
 	}
 	fmt.Printf("openwriter %s\n", name)
-	file.tempFile, err = os.CreateTemp(file.tempDir, "notebrew_temp_*"+path.Ext(name))
+	file.tempFile, err = os.CreateTemp(file.tempDir, "notebrew-temp-*"+path.Ext(name))
 	if err != nil {
 		return nil, err
 	}

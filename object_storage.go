@@ -257,7 +257,7 @@ func (storage *DirObjectStorage) Put(ctx context.Context, key string, reader io.
 	if tempDir == "" {
 		tempDir = os.TempDir()
 	}
-	tempFile, err := os.CreateTemp(tempDir, "__notebrewtemp*__")
+	tempFile, err := os.CreateTemp(tempDir, "notebrew-temp-*"+path.Ext(key))
 	if err != nil {
 		return err
 	}
