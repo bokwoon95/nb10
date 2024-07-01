@@ -3,14 +3,12 @@ package nb10
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -113,11 +111,9 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		}
 		return file, nil
 	}
-	_, err = os.Stat(path.Dir(name))
-	fmt.Printf("stat v2 %s: %v\n", path.Dir(name), err)
+	_, err = os.Stat(filepath.Join(fsys.RootDir, filepath.Dir(name)))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			debug.PrintStack()
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
 		}
 		return nil, err
