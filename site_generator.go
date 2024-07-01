@@ -731,35 +731,15 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	writer, err := siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 	if err != nil {
-		fmt.Printf("got here: openwriter v1 error: %#v: %v\n", err, errors.Is(err, fs.ErrNotExist))
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
-		}
-		if _, err := fs.Stat(siteGen.fsys.WithContext(ctx), outputDir); err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				fmt.Printf("outputDir %q doesn't exist\n", outputDir)
-			} else {
-				fmt.Printf("outputDir error %#v\n", err)
-			}
-		} else {
-			fmt.Printf("outputDir %q exists\n", outputDir)
 		}
 		err := siteGen.fsys.WithContext(ctx).MkdirAll(outputDir, 0755)
 		if err != nil {
 			return err
 		}
-		if _, err := fs.Stat(siteGen.fsys.WithContext(ctx), outputDir); err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				fmt.Printf("outputDir %q doesn't exist\n", outputDir)
-			} else {
-				fmt.Printf("outputDir error %#v\n", err)
-			}
-		} else {
-			fmt.Printf("outputDir %q exists\n", outputDir)
-		}
 		writer, err = siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 		if err != nil {
-			fmt.Printf("got here: openwriter v2 error: %#v: %v\n", err, errors.Is(err, fs.ErrNotExist))
 			return err
 		}
 	}
@@ -797,7 +777,6 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	err = writer.Close()
 	if err != nil {
-		fmt.Printf("got here: writer.close error: %#v: %v\n", err, errors.Is(err, fs.ErrNotExist))
 		return err
 	}
 	return nil

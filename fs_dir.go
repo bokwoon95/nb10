@@ -3,14 +3,12 @@ package nb10
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -113,6 +111,13 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		}
 		return file, nil
 	}
+	_, err = os.Stat(path.Dir(name))
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
+		}
+		return nil, err
+	}
 	file := &DirFileWriter{
 		ctx:     fsys.Context,
 		rootDir: fsys.RootDir,
@@ -122,7 +127,6 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 	if file.tempDir == "" {
 		file.tempDir = os.TempDir()
 	}
-	fmt.Printf("openwriter %s\n", name)
 	file.tempFile, err = os.CreateTemp(file.tempDir, "notebrew-temp-*"+path.Ext(name))
 	if err != nil {
 		return nil, err
@@ -204,7 +208,6 @@ func (file *DirFileWriter) Close() error {
 	}
 	err = os.Rename(tempFilePath, destFilePath)
 	if err != nil {
-		debug.PrintStack()
 		return err
 	}
 	return nil
