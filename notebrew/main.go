@@ -946,8 +946,8 @@ func main() {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("stat v1 %s\n", "posts")
 			_, err = fs.Stat(nbrew.FS, "posts")
+			fmt.Printf("stat v1 %s: %v\n", "posts", err)
 			if err != nil {
 				fmt.Printf("%#v\n", err)
 			}
