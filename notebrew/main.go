@@ -186,7 +186,6 @@ func main() {
 			}
 		}
 
-		fmt.Println("port:", nbrew.Port)
 		if nbrew.Port == 443 || nbrew.Port == 80 {
 			// IP4 and IP6.
 			client := &http.Client{
@@ -303,7 +302,7 @@ func main() {
 			if dnsConfig.APIKey == "" {
 				return fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
 			}
-			if !nbrew.IP4.IsValid() {
+			if !nbrew.IP4.IsValid() && (nbrew.Port == 443 || nbrew.Port == 80) {
 				return fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
 			}
 			nbrew.DNSProvider = &namecheap.Provider{
