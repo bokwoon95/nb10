@@ -946,6 +946,10 @@ func main() {
 			if err != nil {
 				return err
 			}
+			_, err = fs.Stat(nbrew.FS, "posts")
+			if err != nil {
+				fmt.Printf("%#v\n", err)
+			}
 			writer, err := nbrew.FS.OpenWriter("posts/postlist.json", 0644)
 			if err != nil {
 				return err
