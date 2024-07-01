@@ -117,10 +117,10 @@ func (cmd *CreatesiteCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	if cmd.SiteName == "" {
+	switch cmd.SiteName {
+	case "":
 		return fmt.Errorf("site name cannot be empty")
-	}
-	if cmd.SiteName == "www" || cmd.SiteName == "img" || cmd.SiteName == "video" || cmd.SiteName == "cdn" {
+	case "www", "img", "video", "cdn", "storage":
 		return fmt.Errorf("site name not allowed")
 	}
 	for _, char := range cmd.SiteName {
