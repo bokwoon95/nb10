@@ -186,6 +186,7 @@ func main() {
 			}
 		}
 
+		fmt.Println("port:", nbrew.Port)
 		if nbrew.Port == 443 || nbrew.Port == 80 {
 			// IP4 and IP6.
 			client := &http.Client{
