@@ -797,6 +797,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	err = writer.Close()
 	if err != nil {
+		fmt.Printf("got here: writer.close error: %#v: %v\n", err, errors.Is(err, fs.ErrNotExist))
 		return err
 	}
 	return nil
