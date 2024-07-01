@@ -1354,9 +1354,11 @@ func main() {
 					}
 					for _, domain := range nbrew.ManagingDomains {
 						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+							fmt.Printf("static cert: %s (%s)\n", clientHello.ServerName, domain)
 							return staticCertConfig.GetCertificate(clientHello)
 						}
 					}
+					fmt.Printf("dynamic cert: %s\n", clientHello.ServerName)
 					return dynamicCertConfig.GetCertificate(clientHello)
 				},
 				MinVersion: tls.VersionTLS12,
