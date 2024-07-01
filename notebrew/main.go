@@ -1355,11 +1355,21 @@ func main() {
 					for _, domain := range nbrew.ManagingDomains {
 						if certmagic.MatchWildcard(clientHello.ServerName, domain) {
 							fmt.Printf("static cert: %s (%s)\n", clientHello.ServerName, domain)
-							return staticCertConfig.GetCertificate(clientHello)
+							certificate, err := staticCertConfig.GetCertificate(clientHello)
+							if err != nil {
+								fmt.Printf("static cert error: %s (%v)\n", clientHello.ServerName, err)
+								return nil, err
+							}
+							return certificate, nil
 						}
 					}
 					fmt.Printf("dynamic cert: %s\n", clientHello.ServerName)
-					return dynamicCertConfig.GetCertificate(clientHello)
+					certificate, err := dynamicCertConfig.GetCertificate(clientHello)
+					if err != nil {
+						fmt.Printf("dynamic cert error: %s (%v)\n", clientHello.ServerName, err)
+						return nil, err
+					}
+					return certificate, nil
 				},
 				MinVersion: tls.VersionTLS12,
 				CurvePreferences: []tls.CurveID{
