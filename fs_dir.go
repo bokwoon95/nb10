@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -203,6 +204,7 @@ func (file *DirFileWriter) Close() error {
 	}
 	err = os.Rename(tempFilePath, destFilePath)
 	if err != nil {
+		debug.PrintStack()
 		return err
 	}
 	return nil
