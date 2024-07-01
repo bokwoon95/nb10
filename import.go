@@ -559,6 +559,13 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		head, tail, _ := strings.Cut(header.Name, "/")
 		ext := path.Ext(header.Name)
+		modTime := header.ModTime
+		if s, ok := header.PAXRecords["NOTEBREW.file.modTime"]; ok {
+			t, err := time.Parse("2006-01-02T15:04:05Z", s)
+			if err == nil {
+				modTime = t
+			}
+		}
 		creationTime := header.ModTime
 		if s, ok := header.PAXRecords["NOTEBREW.file.creationTime"]; ok {
 			t, err := time.Parse("2006-01-02T15:04:05Z", s)
@@ -584,7 +591,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		case "notes":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
+				err := mkdir(path.Join(sitePrefix, header.Name), modTime, creationTime, isPinned)
 				if err != nil {
 					return err
 				}
@@ -598,7 +605,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				default:
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
 				if err != nil {
 					return err
 				}
@@ -606,7 +613,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		case "pages":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
+				err := mkdir(path.Join(sitePrefix, header.Name), modTime, creationTime, isPinned)
 				if err != nil {
 					return err
 				}
@@ -617,7 +624,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if tail == "" && (fileName == "posts.html" || fileName == "themes.html") {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
 				}
@@ -630,7 +637,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if strings.Contains(category, "/") {
 					continue
 				}
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
+				err := mkdir(path.Join(sitePrefix, header.Name), modTime, creationTime, isPinned)
 				if err != nil {
 					return err
 				}
@@ -648,7 +655,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 						continue
 					}
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
 				}
@@ -657,7 +664,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		case "output":
 			switch header.Typeflag {
 			case tar.TypeDir:
-				err := mkdir(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, isPinned)
+				err := mkdir(path.Join(sitePrefix, header.Name), modTime, creationTime, isPinned)
 				if err != nil {
 					return err
 				}
@@ -671,7 +678,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				default:
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
 				if err != nil {
 					return err
 				}
@@ -682,7 +689,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if header.Name != "site.json" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), header.ModTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
 				if err != nil {
 					return err
 				}

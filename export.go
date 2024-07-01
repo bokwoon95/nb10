@@ -786,6 +786,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 					ModTime: file.ModTime,
 					Size:    file.Size,
 					PAXRecords: map[string]string{
+						"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
 						"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
 					},
 				}
@@ -876,12 +877,14 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 			if dirFS, ok := nbrew.FS.(*DirFS); ok {
 				absolutePath = path.Join(dirFS.RootDir, filePath)
 			}
+			modTime := fileInfo.ModTime()
 			creationTime := CreationTime(absolutePath, fileInfo)
 			tarHeader := &tar.Header{
 				Name:    filePath,
-				ModTime: fileInfo.ModTime(),
+				ModTime: modTime,
 				Size:    fileInfo.Size(),
 				PAXRecords: map[string]string{
+					"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
 					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
 				},
 			}
