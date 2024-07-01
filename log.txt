@@ -82,8 +82,11 @@ step 0: can you purchase a VPS? Can you ssh into it and run commands?
 step 1: can it start?
 step 2: can you talk to it over the internet using an ip address?
 step 3: can you enable user accounts, create the default user and log in using the credentials?
-step 4: can you talk to it over the internet using a domain name?
+step 4: can you talk to it over the internet using a domain name? (adding DNS records)
+    step 4.5a: can you add a wildcard DNS record and connect to the site using www.{contentdomain}? Can you create a new site and connect to it using {siteName}.{contentdomain}? Can you then add a subdomain site?
+    step 4.5b: can you add a new DNS record for a completely separate domain and connect to the site using {customDomain}? Can you then add a custom domain site?
 step 5: can you talk to it over the internet using a domain name + SSL?
+    - Note that it will prompt you to enter your email and stuff.
 last step: can you make it run in the background? using start/stop or systemd. other methods like nohup or tmux are possible but if you know those things you probably don't need a tutorial for how to do it.
 
 # Extra ops tutorials #
