@@ -266,14 +266,20 @@ func (cmd *StatusCmd) Run() error {
 			fmt.Fprintf(cmd.Stdout, "certmagic     = %s\n", filePath)
 		}
 
-		// IP4.
-		if cmd.Notebrew.IP4.IsValid() {
-			fmt.Fprintf(cmd.Stdout, "IPv4          = %s\n", cmd.Notebrew.IP4.String())
-		}
+		if cmd.Notebrew.Port == 443 || cmd.Notebrew.Port == 80 {
+			// IP4.
+			if cmd.Notebrew.IP4.IsValid() {
+				fmt.Fprintf(cmd.Stdout, "IPv4          = %s\n", cmd.Notebrew.IP4.String())
+			} else {
+				fmt.Fprintf(cmd.Stdout, "IPv4          = <none>\n")
+			}
 
-		// IP6.
-		if cmd.Notebrew.IP6.IsValid() {
-			fmt.Fprintf(cmd.Stdout, "IPv6          = %s\n", cmd.Notebrew.IP6.String())
+			// IP6.
+			if cmd.Notebrew.IP6.IsValid() {
+				fmt.Fprintf(cmd.Stdout, "IPv6          = %s\n", cmd.Notebrew.IP6.String())
+			} else {
+				fmt.Fprintf(cmd.Stdout, "IPv6          = <none>\n")
+			}
 		}
 
 		// Domains.
