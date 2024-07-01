@@ -61,6 +61,7 @@ DNS testcases:
 - Fresh server, with DNS entry set to notebrew.com. Set port to 80, cmsdomain to notebrew.com.
     - (if the user wants to test if their DNS is configured correctly. only one record is required, either an @/A record or an @/AAAA record)
     - want: the server starts on :80 (no SSL certificates configured) CMSDomain and ContentDomain set to the same thing, and everything behaves as it does on localhost (except without the subdomains).
+    - you are also no longer able to reach the site using the IP address, must use the domain name.
 The main usefulness of being able to run notebrew on plain IP addresses or HTTP is that new users can run it first without worrying about any domain name configuration or SSL certificate configuration and ascertain if they can connect to their server in the first place.
 
 - The main guide will be "if you know how to write HTML, just put HTML in these pages and they'll be included"
