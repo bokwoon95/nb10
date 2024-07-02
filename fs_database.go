@@ -781,10 +781,12 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrInvalid}
 	}
-	// TODO: return syscall.ENOTDIR if name is not a dir? Or follow stdlib and
-	// return fs.ErrNotExist? Will there ever be a meaningful case where we
-	// want to catch the error of the user passing in a regular file's name to
-	// ReadDir?
+	// NOTE: strictly speaking we should return some kind of error
+	// (syscall.ENOTDIR/fs.ErrNotExist) if name is not a dir, but that requires
+	// an additional database call and I'm not comfortable with that. For now
+	// we will just return zero entries and no error if the user calls
+	// ReadDir() on a file. This may change in the future if notebrew needs to
+	// differentiate calling ReadDir on a file vs on a directory.
 	var condition sq.Expression
 	if name == "." {
 		condition = sq.Expr("parent_id IS NULL")
