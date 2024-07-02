@@ -319,6 +319,8 @@ func (r *progressReader) Read(p []byte) (n int, err error) {
 		if err != nil {
 			return n, err
 		}
+		// We weren't able to update the database row, which means it has been
+		// deleted (i.e. job canceled).
 		if result.RowsAffected == 0 {
 			return n, fmt.Errorf("import canceled")
 		}
