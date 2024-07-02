@@ -1164,6 +1164,43 @@ func init() {
 
 var ErrStorageLimitExceeded = fmt.Errorf("storage limit exceeded")
 
+func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Request) {
+	if r.Form.Has("api") {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusInsufficientStorage)
+		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
+		err := encoder.Encode(map[string]any{
+			"error": "StorageLimitExceeded",
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+		}
+		return
+	}
+	buf := bufPool.Get().(*bytes.Buffer)
+	defer func() {
+		if buf.Cap() <= maxPoolableBufferCapacity {
+			buf.Reset()
+			bufPool.Put(buf)
+		}
+	}()
+	err := errorTemplate.Execute(buf, map[string]any{
+		"Title":    "507 insufficient storage",
+		"Headline": "507 insufficient storage",
+		"Byline":   "You have exceeded your storage limit.",
+	})
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		http.Error(w, "StorageLimitExceeded", http.StatusInsufficientStorage)
+		return
+	}
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+	w.WriteHeader(http.StatusInsufficientStorage)
+	buf.WriteTo(w)
+}
+
 // https://github.com/golang/go/issues/54111#issuecomment-1220793565
 type LimitedWriter struct {
 	W   io.Writer // underlying writer
