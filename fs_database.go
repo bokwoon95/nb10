@@ -213,6 +213,10 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		// because it uses the low-level sendfile(2) system call. If the
 		// underlying readCloser is an *os.File, return it directly so that
 		// static files can be served much faster.
+		// https://www.reddit.com/r/golang/comments/b9ewko/rob_pike_discovers_sendfile2_old_but_informative/hphp294/
+		// https://github.com/golang/go/blob/master/src/internal/poll/sendfile_linux.go
+		// https://github.com/golang/go/blob/f229e7031a6efb2f23241b5da000c3b3203081d6/src/io/io.go#L404
+		// https://github.com/golang/go/blob/f229e7031a6efb2f23241b5da000c3b3203081d6/src/net/tcpsock_posix.go#L47
 		if file, ok := file.readCloser.(*os.File); ok {
 			return file, nil
 		}

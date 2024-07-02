@@ -1161,3 +1161,9 @@ func init() {
 		commonPasswords[string(line)] = struct{}{}
 	}
 }
+
+type MaxBytesReader struct {
+}
+
+type MaxBytesWriter struct {
+}
