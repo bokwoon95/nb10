@@ -152,8 +152,8 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 
 		response := Response{
 			UserID:     user.UserID,
-			Username:   request.Username,
-			Email:      request.Email,
+			Username:   strings.TrimSpace(request.Username),
+			Email:      strings.TrimSpace(request.Email),
 			FormErrors: url.Values{},
 		}
 		// username
