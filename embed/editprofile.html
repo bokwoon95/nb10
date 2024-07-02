@@ -32,10 +32,14 @@
   <input type='hidden' name='token' value='{{ $.Token }}'>
   <div class='mv3'>
     <div><label for='username' class='b'>Username:</label></div>
+    {{- if $.Username }}
     <ul class='list-style-disc ph3 f6 mid-gray'>
       <li>only lowercase letters, numbers and hyphen</li>
     </ul>
     <input id='username' name='username' value='{{ $.Username }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "username" }} b--invalid-red{{ end }}' required>
+    {{- else }}
+    <div><em>default user</em></div>
+    {{- end }}
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "username" }}
       <li>{{ $error }}</li>
