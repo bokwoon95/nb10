@@ -108,7 +108,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 	}
 	var parts []types.CompletedPart
 	var partNumber int32
-	var buf [5 << 20]byte // TODO: Is this stack allocated? Would be expensive if not.
+	var buf [5 << 20]byte
 	done := false
 	for !done {
 		n, err := io.ReadFull(reader, buf[:])
