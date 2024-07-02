@@ -78,13 +78,11 @@
       </tr>
     </tfoot>
   </table>
-  {{- if $.IsDatabaseFS }}
   <form method='post' action='/files/calculatestorage/' class='mv2'>
     {{- range $site := $.Sites }}
     <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
     {{- end }}
     <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
   </form>
-  {{- end }}
 </fieldset>
 

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strings"
+	"sync/atomic"
 
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
@@ -144,7 +145,7 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		}
 		return storageUsed, nil
 	}
-	var storageUsed int64
+	var storageUsed atomic.Int64
 	walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -159,15 +160,29 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		if err != nil {
 			return err
 		}
-		storageUsed += fileInfo.Size()
+		storageUsed.Add(fileInfo.Size())
 		return nil
 	}
 	if root == "." {
+		group, groupctx := errgroup.WithContext(ctx)
 		for _, root := range []string{"notes", "pages", "posts", "output", "imports", "exports", "site.json"} {
-			err := fs.WalkDir(fsys.WithContext(ctx), root, walkDirFunc)
-			if err != nil {
-				return 0, err
-			}
+			root := root
+			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + root + ":\n" + string(debug.Stack()))
+					}
+				}()
+				err := fs.WalkDir(fsys.WithContext(groupctx), root, walkDirFunc)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		err := group.Wait()
+		if err != nil {
+			return 0, err
 		}
 	} else {
 		err := fs.WalkDir(fsys.WithContext(ctx), root, walkDirFunc)
@@ -175,5 +190,5 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 			return 0, err
 		}
 	}
-	return storageUsed, nil
+	return storageUsed.Load(), nil
 }

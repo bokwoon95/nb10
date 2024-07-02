@@ -37,6 +37,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: for all group.Go, convert all panics into errors otherwise we will see baheviour where it seems to succeed from the front end but silently in the back end it's printing tons of stack traces. Maybe convert every instance of go func() into group.Go as well so that panics are propagated into errors.
 TODO: respect storage_limit for all operations that write to the filesystem
 TODO: respect disable_reason for most operations
 TODO: signup.go
