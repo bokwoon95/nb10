@@ -476,7 +476,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		var storageRemaining *atomic.Int64
 		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
-		if nbrew.DB != nil && isDatabaseFS {
+		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
 			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
