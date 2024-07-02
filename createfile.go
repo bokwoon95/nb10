@@ -39,6 +39,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		Parent            string            `json:"parent"`
 		Name              string            `json:"name"`
 		Ext               string            `json:"ext"`
@@ -107,6 +108,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		response.SitePrefix = sitePrefix
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		if response.Error != "" {
 			writeResponse(w, r, response)
@@ -157,6 +159,10 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

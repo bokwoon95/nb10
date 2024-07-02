@@ -49,6 +49,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		SitePrefix     string     `json:"sitePrefix"`
 		UserID         ID         `json:"userID"`
 		Username       string     `json:"username"`
+		DisableReason  string     `json:"disableReason"`
 		Parent         string     `json:"parent"`
 		Names          []string   `json:"names"`
 		OutputName     string     `json:"outputName"`
@@ -110,6 +111,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		names := r.Form["name"]
@@ -347,6 +349,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.Files = response.Files[:n]
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

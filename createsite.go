@@ -31,6 +31,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		ValidateCustomDomain bool       `json:"validateCustomDomain"`
 		UserID               ID         `json:"userID"`
 		Username             string     `json:"username"`
+		DisableReason        string     `json:"disableReason"`
 		SiteName             string     `json:"siteName"`
 		UserSiteNames        []string   `json:"userSiteNames"`
 		Error                string     `json:"error"`
@@ -120,6 +121,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		response.ValidateCustomDomain = nbrew.Port == 443
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
@@ -138,6 +140,10 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

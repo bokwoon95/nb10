@@ -1168,6 +1168,9 @@ func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Reque
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusInsufficientStorage)
+		if r.Method == "HEAD" {
+			return
+		}
 		encoder := json.NewEncoder(w)
 		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
@@ -1199,6 +1202,49 @@ func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Reque
 	}
 	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 	w.WriteHeader(http.StatusInsufficientStorage)
+	if r.Method == "HEAD" {
+		return
+	}
+	buf.WriteTo(w)
+}
+
+func (nbrew *Notebrew) accountDisabled(w http.ResponseWriter, r *http.Request, disableReason string) {
+	if r.Form.Has("api") {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
+		err := encoder.Encode(map[string]any{
+			"error":         "AccountDisabled",
+			"disableReason": disableReason,
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+		}
+		return
+	}
+	buf := bufPool.Get().(*bytes.Buffer)
+	defer func() {
+		if buf.Cap() <= maxPoolableBufferCapacity {
+			buf.Reset()
+			bufPool.Put(buf)
+		}
+	}()
+	err := errorTemplate.Execute(buf, map[string]any{
+		"Referer":  r.Referer(),
+		"Title":    "403 Forbidden",
+		"Headline": "403 Forbidden",
+		"Byline":   "Your account has been disabled.",
+		"Details":  "disable reason: " + disableReason,
+	})
+	if err != nil {
+		getLogger(r.Context()).Error(err.Error())
+		http.Error(w, "AccountDisabled", http.StatusForbidden)
+		return
+	}
+	w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+	w.WriteHeader(http.StatusForbidden)
 	buf.WriteTo(w)
 }
 

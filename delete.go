@@ -42,6 +42,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		Parent            string            `json:"parent"`
 		Files             []File            `json:"files"`
 		Error             string            `json:"error"`
@@ -99,6 +100,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		head, _, _ := strings.Cut(response.Parent, "/")
@@ -188,6 +190,10 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 		response.Files = response.Files[:n]
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

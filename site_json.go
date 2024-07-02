@@ -58,6 +58,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		Title             string            `json:"title"`
 		Emoji             string            `json:"emoji"`
 		Favicon           string            `json:"favicon"`
@@ -149,6 +150,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "site.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -174,6 +176,10 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.NavigationLinks = request.NavigationLinks
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

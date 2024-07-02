@@ -37,6 +37,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		SitePrefix             string `json:"sitePrefix"`
 		UserID                 ID     `json:"userID"`
 		Username               string `json:"username"`
+		DisableReason          string `json:"disableReason"`
 		FileName               string `json:"fileName"`
 		Root                   string `json:"root"`
 		OverwriteExistingFiles bool   `json:"overwriteExistingFiles"`
@@ -94,6 +95,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		response.FileName = r.Form.Get("fileName")
 		if !strings.HasSuffix(response.FileName, ".tgz") {
@@ -139,6 +141,10 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

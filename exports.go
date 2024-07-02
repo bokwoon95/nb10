@@ -41,6 +41,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		SitePrefix      string         `json:"sitePrefix"`
 		UserID          ID             `json:"userID"`
 		Username        string         `json:"username"`
+		DisableReason   string         `json:"disableReason"`
 		FileID          ID             `json:"fileID"`
 		FilePath        string         `json:"filePath"`
 		IsDir           bool           `json:"isDir"`
@@ -192,6 +193,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
+	response.DisableReason = user.DisableReason
 	if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 		response.FileID = fileInfo.FileID
 		response.ModTime = fileInfo.ModTime()

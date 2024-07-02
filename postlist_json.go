@@ -24,6 +24,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		Category          string            `json:"category"`
 		PostsPerPage      int               `json:"postsPerPage"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
@@ -83,6 +84,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		response.Category = category
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", category, "postlist.json"))
@@ -104,6 +106,10 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		response.PostsPerPage = request.PostsPerPage
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

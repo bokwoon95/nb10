@@ -27,6 +27,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		IsDatabaseFS      bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
@@ -77,6 +78,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.ImgDomain = nbrew.ImgDomain
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.FileID = fileInfo.FileID
 			response.ModTime = fileInfo.ModTime()
@@ -270,6 +272,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		nbrew.executeTemplate(w, r, tmpl, &response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

@@ -20,11 +20,12 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		Email    string `json:"email"`
 	}
 	type Response struct {
-		UserID     ID         `json:"userID"`
-		Username   string     `json:"username"`
-		Email      string     `json:"email"`
-		Error      string     `json:"error"`
-		FormErrors url.Values `json:"formErrors"`
+		UserID        ID         `json:"userID"`
+		Username      string     `json:"username"`
+		DisableReason string     `json:"disableReason"`
+		Email         string     `json:"email"`
+		Error         string     `json:"error"`
+		FormErrors    url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -73,6 +74,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		nbrew.clearSession(w, r, "flash")
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.Email = user.Email
 		if response.Error != "" {
 			writeResponse(w, r, response)
@@ -80,6 +82,10 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

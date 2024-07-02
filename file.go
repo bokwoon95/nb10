@@ -47,6 +47,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
@@ -119,6 +120,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 			response.FileID = fileInfo.FileID
@@ -547,6 +549,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 		nbrew.executeTemplate(w, r, tmpl, &response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

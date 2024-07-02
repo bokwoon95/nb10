@@ -13,7 +13,7 @@
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
   <span class='flex-grow-1'></span>
   {{- if not $.UserID.IsZero }}
-  <a href='/users/profile/' class='ma2 white'>{{ if $.Username }}profile ({{ $.Username }}){{ else }}profile{{ end }}</a>
+  <a href='/users/profile/' class='ma2 white'>{{ if $.Username }}profile ({{ $.Username }}){{ else }}profile{{ end }}{{ if $.DisableReason }} (account disabled){{ end }}</a>
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
@@ -35,6 +35,12 @@
 <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
 {{- else }}
 <div><a href='/files/'>&larr; back</a></div>
+{{- end }}
+{{- if $.DisableReason }}
+
+<h2 class='mv0 mh2 invalid-red'>ACCOUNT DISABLED</h2>
+<div><span class='b invalid-red'>Disable reason:</span> {{ $.DisableReason }}</div>
+
 {{- end }}
 <fieldset>
   <legend><h2 class='mv0 mh2'>profile</h2></legend>

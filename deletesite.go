@@ -22,6 +22,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 	type Response struct {
 		UserID          ID         `json:"userID"`
 		Username        string     `json:"username"`
+		DisableReason   string     `json:"disableReason"`
 		SiteName        string     `json:"siteName"`
 		ConfirmSiteName string     `json:"confirmSiteName"`
 		Error           string     `json:"error"`
@@ -113,6 +114,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		nbrew.clearSession(w, r, "flash")
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
@@ -148,6 +150,10 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

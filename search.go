@@ -41,6 +41,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		IsDatabaseFS   bool     `json:"isDatabaseFS"`
 		UserID         ID       `json:"userID"`
 		Username       string   `json:"username"`
+		DisableReason  string   `json:"disableReason"`
 		Parent         string   `json:"parent"`
 		MandatoryTerms []string `json:"mandatoryTerms"`
 		OptionalTerms  []string `json:"optionalTerms"`
@@ -145,6 +146,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
+	response.DisableReason = user.DisableReason
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
 	// Mandatory terms.
 	for _, mandatoryTerm := range request.MandatoryTerms {

@@ -20,10 +20,11 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 		ConfirmPassword string `json:"confirmPassword"`
 	}
 	type Response struct {
-		UserID     ID         `json:"userID"`
-		Username   string     `json:"username"`
-		Error      string     `json:"error"`
-		FormErrors url.Values `json:"formErrors"`
+		UserID        ID         `json:"userID"`
+		Username      string     `json:"username"`
+		DisableReason string     `json:"disableReason"`
+		Error         string     `json:"error"`
+		FormErrors    url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -72,12 +73,17 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 		nbrew.clearSession(w, r, "flash")
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
 		}
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")

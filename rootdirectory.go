@@ -38,6 +38,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		IsDatabaseFS      bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
 		Files             []File            `json:"files"`
@@ -131,6 +132,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.UserID = user.UserID
 	response.Username = user.Username
+	response.DisableReason = user.DisableReason
 	response.IsDir = true
 	if sitePrefix == "" && nbrew.DB != nil {
 		sites, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{

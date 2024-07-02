@@ -36,6 +36,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 		SitePrefix     string      `json:"sitePrefix"`
 		UserID         ID          `json:"userID"`
 		Username       string      `json:"username"`
+		DisableReason  string      `json:"disableReason"`
 		ExportJobs     []ExportJob `json:"exportJobs"`
 		CancelErrors   []string    `json:"cancelErrors"`
 	}
@@ -94,6 +95,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
+		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
 		var exportJobIDs []ID
 		for _, s := range r.Form["exportJobID"] {
@@ -156,6 +158,10 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 		response.ExportJobs = response.ExportJobs[:n]
 		writeResponse(w, r, response)
 	case "POST":
+		if user.DisableReason != "" {
+			nbrew.accountDisabled(w, r, user.DisableReason)
+			return
+		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if r.Form.Has("api") {
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
