@@ -191,7 +191,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 
 	var regenerationCount, uploadCount, uploadSize atomic.Int64
 	writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
-		writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+		writerCtx, cancelWriter := context.WithCancel(ctx)
+		defer cancelWriter()
+		writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
 		if err != nil {
 			return err
 		}
@@ -209,6 +211,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			n, err = io.Copy(writer, reader)
 		}
 		if err != nil {
+			cancelWriter()
 			return err
 		}
 		err = writer.Close()

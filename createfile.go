@@ -497,7 +497,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			storageRemaining = &atomic.Int64{}
 			storageRemaining.Store(user.StorageLimit - storageUsed)
 		}
-		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, response.Parent, response.Name+response.Ext), 0644)
+		writerCtx, cancelWriter := context.WithCancel(r.Context())
+		defer cancelWriter()
+		writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(path.Join(sitePrefix, response.Parent, response.Name+response.Ext), 0644)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
@@ -517,6 +519,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			n, err = io.Copy(writer, strings.NewReader(response.Content))
 		}
 		if err != nil {
+			cancelWriter()
 			if errors.Is(err, ErrStorageLimitExceeded) {
 				nbrew.storageLimitExceeded(w, r)
 				return
@@ -550,16 +553,18 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			var uploadCount, uploadSize atomic.Int64
 			writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
-				writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+				writerCtx, cancelWriter := context.WithCancel(ctx)
+				defer cancelWriter()
+				writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
 				if err != nil {
 					if !errors.Is(err, fs.ErrNotExist) {
 						return err
 					}
-					err := nbrew.FS.WithContext(ctx).MkdirAll(path.Dir(filePath), 0755)
+					err := nbrew.FS.WithContext(writerCtx).MkdirAll(path.Dir(filePath), 0755)
 					if err != nil {
 						return err
 					}
-					writer, err = nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
+					writer, err = nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
 					if err != nil {
 						return err
 					}
@@ -578,6 +583,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					n, err = io.Copy(writer, reader)
 				}
 				if err != nil {
+					cancelWriter()
 					return err
 				}
 				err = writer.Close()
