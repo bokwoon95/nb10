@@ -210,7 +210,7 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 		}
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "UPDATE users SET password_hash = {passwordHash} WHERE user_id = {userID}",
+			Format:  "UPDATE users SET password_hash = {passwordHash}, reset_token_hash = NULL WHERE user_id = {userID}",
 			Values: []any{
 				sq.StringParam("passwordHash", string(passwordHash)),
 				sq.UUIDParam("userID", user.UserID),
