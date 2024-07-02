@@ -588,7 +588,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 	var message string
 	var maxBytesErr *http.MaxBytesError
 	if errors.As(serverErr, &maxBytesErr) {
-		message = "the data you are sending is too big (max " + humanReadableFileSize(maxBytesErr.Limit) + ")"
+		message = "payload is too big (max " + humanReadableFileSize(maxBytesErr.Limit) + ")"
 	} else {
 		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if contentType == "application/json" {

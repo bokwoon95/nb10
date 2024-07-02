@@ -72,6 +72,10 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 
 	reader, err := r.MultipartReader()
 	if err != nil {
+		if errors.Is(err, http.ErrNotMultipart) {
+			nbrew.badRequest(w, r, err)
+			return
+		}
 		getLogger(r.Context()).Error(err.Error())
 		nbrew.internalServerError(w, r, err)
 		return
