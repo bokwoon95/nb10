@@ -155,6 +155,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "resetpassword":
 			nbrew.resetpassword(w, r, user)
 			return
+		}
+		if user.UserID.IsZero() {
+			nbrew.notAuthenticated(w, r)
+			return
+		}
+		switch tail {
 		case "changepassword":
 			// TODO: changepassword should invalidate all existing sessions of the user.
 			return

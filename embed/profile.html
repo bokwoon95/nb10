@@ -17,11 +17,16 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
+{{- if eq (index $.PostRedirectGet "from") "editprofile" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  <div class='pv1'>updated profile</div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if eq (index $.PostRedirectGet "from") "calculatestorage" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div class='pv1'>
-    recalculated storage
-  </div>
+  <div class='pv1'>recalculated storage</div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
