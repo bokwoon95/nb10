@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/sq"
 	"github.com/yuin/goldmark"
 	"golang.org/x/sync/errgroup"
 )
@@ -473,6 +474,29 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
+		var storageRemaining *atomic.Int64
+		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
+		if nbrew.DB != nil && isDatabaseFS {
+			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "SELECT {*}" +
+					" FROM site" +
+					" JOIN site_owner ON site_owner.site_id = site.site_id" +
+					" WHERE site_owner.user_id = {userID}",
+				Values: []any{
+					sq.UUIDParam("userID", user.UserID),
+				},
+			}, func(row *sq.Row) int64 {
+				return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			storageRemaining = &atomic.Int64{}
+			storageRemaining.Store(user.StorageLimit - storageUsed)
+		}
 		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, response.Parent, response.Name+response.Ext), 0644)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -480,8 +504,23 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		defer writer.Close()
-		_, err = io.WriteString(writer, response.Content)
+		var n int64
+		if storageRemaining != nil {
+			limitedWriter := &LimitedWriter{
+				W:   writer,
+				N:   storageRemaining.Load(),
+				Err: ErrStorageLimitExceeded,
+			}
+			n, err = io.Copy(limitedWriter, strings.NewReader(response.Content))
+			storageRemaining.Add(-n)
+		} else {
+			n, err = io.Copy(writer, strings.NewReader(response.Content))
+		}
 		if err != nil {
+			if errors.Is(err, ErrStorageLimitExceeded) {
+				nbrew.storageLimitExceeded(w, r)
+				return
+			}
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
 			return
@@ -526,7 +565,18 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					}
 				}
 				defer writer.Close()
-				n, err := io.Copy(writer, reader)
+				var n int64
+				if storageRemaining != nil {
+					limitedWriter := &LimitedWriter{
+						W:   writer,
+						N:   storageRemaining.Load(),
+						Err: ErrStorageLimitExceeded,
+					}
+					n, err = io.Copy(limitedWriter, reader)
+					storageRemaining.Add(-n)
+				} else {
+					n, err = io.Copy(writer, reader)
+				}
 				if err != nil {
 					return err
 				}

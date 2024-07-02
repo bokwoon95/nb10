@@ -1,7 +1,10 @@
 package nb10
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"mime"
 	"net/http"
 	"runtime/debug"
@@ -13,11 +16,6 @@ import (
 
 func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, user User) {
 	if nbrew.DB == nil {
-		nbrew.notFound(w, r)
-		return
-	}
-	databaseFS, ok := nbrew.FS.(*DatabaseFS)
-	if !ok {
 		nbrew.notFound(w, r)
 		return
 	}
@@ -66,31 +64,15 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 			if !exists {
 				return nil
 			}
-			var parentFilter sq.Expression
+			var root string
 			if siteName == "" {
-				parentFilter = sq.Expr("(" +
-					"files.file_path LIKE 'notes/%'" +
-					" OR files.file_path LIKE 'pages/%'" +
-					" OR files.file_path LIKE 'posts/%'" +
-					" OR files.file_path LIKE 'output/%'" +
-					" OR files.file_path LIKE 'imports/%'" +
-					" OR files.file_path LIKE 'exports/%'" +
-					" OR files.file_path = 'site.json'" +
-					")")
+				root = "."
 			} else if strings.Contains(siteName, ".") {
-				parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(siteName)+"/%")
+				root = siteName
 			} else {
-				parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace("@"+siteName)+"/%")
+				root = "@" + siteName
 			}
-			storageUsed, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-				Dialect: databaseFS.Dialect,
-				Format:  "SELECT {*} FROM files WHERE {parentFilter}",
-				Values: []any{
-					sq.Param("parentFilter", parentFilter),
-				},
-			}, func(row *sq.Row) int64 {
-				return row.Int64("sum(coalesce(size, 0))")
-			})
+			storageUsed, err := calculateStorageUsed(r.Context(), nbrew.FS, root)
 			if err != nil {
 				return err
 			}
@@ -130,4 +112,68 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	http.Redirect(w, r, referer, http.StatusFound)
+}
+
+func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, error) {
+	if databaseFS, ok := fsys.(*DatabaseFS); ok {
+		var filter sq.Expression
+		if root == "." {
+			filter = sq.Expr("(" +
+				"files.file_path LIKE 'notes/%'" +
+				" OR files.file_path LIKE 'pages/%'" +
+				" OR files.file_path LIKE 'posts/%'" +
+				" OR files.file_path LIKE 'output/%'" +
+				" OR files.file_path LIKE 'imports/%'" +
+				" OR files.file_path LIKE 'exports/%'" +
+				" OR files.file_path = 'site.json'" +
+				")")
+		} else {
+			filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
+		}
+		storageUsed, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format:  "SELECT {*} FROM files WHERE {filter}",
+			Values: []any{
+				sq.Param("filter", filter),
+			},
+		}, func(row *sq.Row) int64 {
+			return row.Int64("sum(coalesce(size, 0))")
+		})
+		if err != nil {
+			return 0, err
+		}
+		return storageUsed, nil
+	}
+	var storageUsed int64
+	walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if dirEntry.IsDir() {
+			return nil
+		}
+		fileInfo, err := dirEntry.Info()
+		if err != nil {
+			return err
+		}
+		storageUsed += fileInfo.Size()
+		return nil
+	}
+	if root == "." {
+		for _, root := range []string{"notes", "pages", "posts", "output", "imports", "exports", "site.json"} {
+			err := fs.WalkDir(fsys.WithContext(ctx), root, walkDirFunc)
+			if err != nil {
+				return 0, err
+			}
+		}
+	} else {
+		err := fs.WalkDir(fsys.WithContext(ctx), root, walkDirFunc)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return storageUsed, nil
 }

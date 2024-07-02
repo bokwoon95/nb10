@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -200,6 +201,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		names := clipboard["name"]
 		slices.Sort(names)
 		names = slices.Compact(names)
+		var storageRemaining *atomic.Int64
 		if nbrew.DB != nil {
 			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -222,6 +224,28 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			if !exists {
 				nbrew.notAuthorized(w, r)
 				return
+			}
+			_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
+			if isDatabaseFS {
+				storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+					Dialect: nbrew.Dialect,
+					Format: "SELECT {*}" +
+						" FROM site" +
+						" JOIN site_owner ON site_owner.site_id = site.site_id" +
+						" WHERE site_owner.user_id = {userID}",
+					Values: []any{
+						sq.UUIDParam("userID", user.UserID),
+					},
+				}, func(row *sq.Row) int64 {
+					return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.internalServerError(w, r, err)
+					return
+				}
+				storageRemaining = &atomic.Int64{}
+				storageRemaining.Store(user.StorageLimit - storageUsed)
 			}
 		}
 		response.SrcParent = path.Clean(strings.Trim(clipboard.Get("parent"), "/"))
@@ -494,6 +518,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						return err
 					}
 				} else {
+					if storageRemaining != nil {
+						storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, srcFilePath)
+						if err != nil {
+							return err
+						}
+						if storageRemaining.Add(-storageUsed) <= 0 {
+							return ErrStorageLimitExceeded
+						}
+					}
 					err := nbrew.FS.WithContext(groupctx).Copy(srcFilePath, destFilePath)
 					if err != nil {
 						return err
@@ -592,6 +625,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 								return err
 							}
 						} else {
+							if storageRemaining != nil {
+								storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, srcFilePath)
+								if err != nil {
+									return err
+								}
+								if storageRemaining.Add(-storageUsed) <= 0 {
+									return ErrStorageLimitExceeded
+								}
+							}
 							err = nbrew.FS.WithContext(groupctx).Copy(srcOutputDir, destOutputDir)
 							if err != nil {
 								return err
@@ -622,6 +664,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 									if isMove {
 										return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
 									} else {
+										if storageRemaining != nil {
+											storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(srcOutputDir, name))
+											if err != nil {
+												return err
+											}
+											if storageRemaining.Add(-storageUsed) <= 0 {
+												return ErrStorageLimitExceeded
+											}
+										}
 										return nbrew.FS.WithContext(subctx).Copy(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
 									}
 								})
@@ -638,6 +689,10 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		}
 		err = group.Wait()
 		if err != nil {
+			if errors.Is(err, ErrStorageLimitExceeded) {
+				nbrew.storageLimitExceeded(w, r)
+				return
+			}
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
 			return

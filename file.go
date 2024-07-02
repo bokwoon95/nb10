@@ -576,16 +576,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 			http.Redirect(w, r, urlReplacer.Replace("/"+path.Join("files", sitePrefix, filePath)), http.StatusFound)
 		}
-		if nbrew.DB != nil {
-			// TODO: calculate the available storage space of the owner and add
-			// it as a MaxBytesReader to the request body.
-			//
-			// TODO: but then: how do we differentiate between a MaxBytesError
-			// returned by a file exceeding 10 MB vs a MaxBytesError returned
-			// by the request body exceeding available storage space? Maybe if
-			// maxBytesErr is 10 MB we assume it's a file going over the limit,
-			// otherwise we assume it's the owner exceeding his storage space?
-		}
 
 		if !isEditable {
 			nbrew.methodNotAllowed(w, r)
@@ -671,6 +661,30 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
 
+		var storageRemaining *atomic.Int64
+		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
+		if nbrew.DB != nil && isDatabaseFS {
+			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "SELECT {*}" +
+					" FROM site" +
+					" JOIN site_owner ON site_owner.site_id = site.site_id" +
+					" WHERE site_owner.user_id = {userID}",
+				Values: []any{
+					sq.UUIDParam("userID", user.UserID),
+				},
+			}, func(row *sq.Row) int64 {
+				return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			storageRemaining = &atomic.Int64{}
+			storageRemaining.Store(user.StorageLimit - storageUsed)
+		}
+
 		writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, filePath), 0644)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -678,8 +692,23 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			return
 		}
 		defer writer.Close()
-		_, err = io.Copy(writer, strings.NewReader(response.Content))
+		var n int64
+		if storageRemaining != nil {
+			limitedWriter := &LimitedWriter{
+				W:   writer,
+				N:   storageRemaining.Load(),
+				Err: ErrStorageLimitExceeded,
+			}
+			n, err = io.Copy(limitedWriter, strings.NewReader(response.Content))
+			storageRemaining.Add(-n)
+		} else {
+			n, err = io.Copy(writer, strings.NewReader(response.Content))
+		}
 		if err != nil {
+			if errors.Is(err, ErrStorageLimitExceeded) {
+				nbrew.storageLimitExceeded(w, r)
+				return
+			}
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.internalServerError(w, r, err)
 			return
@@ -727,7 +756,18 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					}
 				}
 				defer writer.Close()
-				n, err := io.Copy(writer, reader)
+				var n int64
+				if storageRemaining != nil {
+					limitedWriter := &LimitedWriter{
+						W:   writer,
+						N:   storageRemaining.Load(),
+						Err: ErrStorageLimitExceeded,
+					}
+					n, err = io.Copy(limitedWriter, reader)
+					storageRemaining.Add(-n)
+				} else {
+					n, err = io.Copy(writer, reader)
+				}
 				if err != nil {
 					return err
 				}
@@ -794,6 +834,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							if errors.As(err, &maxBytesErr) {
 								response.FilesTooBig = append(response.FilesTooBig, fileName)
 								continue
+							}
+							if errors.Is(err, ErrStorageLimitExceeded) {
+								nbrew.storageLimitExceeded(w, r)
+								return
 							}
 							getLogger(r.Context()).Error(err.Error())
 							nbrew.internalServerError(w, r, err)

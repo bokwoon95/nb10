@@ -1187,6 +1187,7 @@ func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
+		"Referer":  nbrew.getReferer(r),
 		"Title":    "507 insufficient storage",
 		"Headline": "507 insufficient storage",
 		"Byline":   "You have exceeded your storage limit.",

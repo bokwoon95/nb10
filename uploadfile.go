@@ -2,7 +2,6 @@ package nb10
 
 import (
 	"context"
-	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -73,7 +72,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 	reader, err := r.MultipartReader()
 	if err != nil {
 		if errors.Is(err, http.ErrNotMultipart) {
-			nbrew.badRequest(w, r, err)
+			nbrew.unsupportedContentType(w, r)
 			return
 		}
 		getLogger(r.Context()).Error(err.Error())
@@ -166,7 +165,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		return
 	}
 
-	var storageRemaining sql.NullInt64
+	var storageRemaining *atomic.Int64
 	_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
 	if nbrew.DB != nil && isDatabaseFS {
 		storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
@@ -186,10 +185,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			nbrew.internalServerError(w, r, err)
 			return
 		}
-		storageRemaining = sql.NullInt64{
-			Int64: user.StorageLimit - storageUsed,
-			Valid: true,
-		}
+		storageRemaining = &atomic.Int64{}
+		storageRemaining.Store(user.StorageLimit - storageUsed)
 	}
 
 	var regenerationCount, uploadCount, uploadSize atomic.Int64
@@ -200,13 +197,14 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		defer writer.Close()
 		var n int64
-		if storageRemaining.Valid {
+		if storageRemaining != nil {
 			limitedWriter := &LimitedWriter{
 				W:   writer,
-				N:   storageRemaining.Int64,
+				N:   storageRemaining.Load(),
 				Err: ErrStorageLimitExceeded,
 			}
 			n, err = io.Copy(limitedWriter, reader)
+			storageRemaining.Add(-n)
 		} else {
 			n, err = io.Copy(writer, reader)
 		}
@@ -219,9 +217,6 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		uploadCount.Add(1)
 		uploadSize.Add(n)
-		if storageRemaining.Valid {
-			storageRemaining.Int64 -= n
-		}
 		return nil
 	}
 
@@ -324,34 +319,17 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			if tail == "" && (fileName == "posts.html" || fileName == "themes.html") {
 				continue
 			}
-			var n int64
 			var b strings.Builder
-			if storageRemaining.Valid {
-				limitedWriter := &LimitedWriter{
-					W:   &b,
-					N:   storageRemaining.Int64,
-					Err: ErrStorageLimitExceeded,
-				}
-				n, err = io.Copy(limitedWriter, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
-			} else {
-				n, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
-			}
+			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
 			if err != nil {
 				var maxBytesErr *http.MaxBytesError
 				if errors.As(err, &maxBytesErr) {
 					response.FilesTooBig = append(response.FilesTooBig, fileName)
 					continue
 				}
-				if errors.Is(err, ErrStorageLimitExceeded) {
-					nbrew.storageLimitExceeded(w, r)
-					return
-				}
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
 				return
-			}
-			if storageRemaining.Valid {
-				storageRemaining.Int64 -= n
 			}
 			text := b.String()
 			group.Go(func() error {
@@ -384,34 +362,17 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					continue
 				}
 			}
-			var n int64
 			var b strings.Builder
-			if storageRemaining.Valid {
-				limitedWriter := &LimitedWriter{
-					W:   &b,
-					N:   storageRemaining.Int64,
-					Err: ErrStorageLimitExceeded,
-				}
-				n, err = io.Copy(limitedWriter, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
-			} else {
-				n, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
-			}
+			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
 			if err != nil {
 				var maxBytesErr *http.MaxBytesError
 				if errors.As(err, &maxBytesErr) {
 					response.FilesTooBig = append(response.FilesTooBig, fileName)
 					continue
 				}
-				if errors.Is(err, ErrStorageLimitExceeded) {
-					nbrew.storageLimitExceeded(w, r)
-					return
-				}
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.internalServerError(w, r, err)
 				return
-			}
-			if storageRemaining.Valid {
-				storageRemaining.Int64 -= n
 			}
 			text := b.String()
 			now := time.Now()
@@ -504,10 +465,6 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					if errors.As(err, &maxBytesErr) {
 						response.FilesTooBig = append(response.FilesTooBig, fileName)
 						continue
-					}
-					if errors.Is(err, ErrStorageLimitExceeded) {
-						nbrew.storageLimitExceeded(w, r)
-						return
 					}
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.internalServerError(w, r, err)
