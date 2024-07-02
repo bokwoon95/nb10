@@ -1135,7 +1135,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	}
 }
 
-var commonPasswords map[string]struct{}
+var commonPasswords = make(map[string]struct{})
 
 func init() {
 	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
