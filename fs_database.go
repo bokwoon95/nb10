@@ -438,6 +438,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	parentDir := path.Dir(file.filePath)
 	if parentDir == "." {
 		result, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
+			Debug:   true,
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 			Values: []any{
@@ -468,6 +469,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		}
 	} else {
 		results, err := sq.FetchAll(fsys.ctx, fsys.DB, sq.Query{
+			Debug:   true,
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path IN ({parentDir}, {filePath})",
 			Values: []any{
@@ -625,8 +627,10 @@ func (file *DatabaseFileWriter) Close() error {
 		}
 	}
 	if file.writeFailed {
-		if file.fileType.IsObject {
-			err := file.objectStorage.Delete(file.ctx, file.fileID.String()+path.Ext(file.filePath))
+		if file.fileType.IsObject && !file.exists {
+			// This is a cleanup operation - don't pass in the file.ctx because
+			// file.ctx may be canceled and prevent the cleanup.
+			err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
 				file.logger.Error(err.Error())
 			}
@@ -645,6 +649,7 @@ func (file *DatabaseFileWriter) Close() error {
 				}
 			}
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
+				Debug:   true,
 				Dialect: file.dialect,
 				Format:  "UPDATE files SET text = {text}, data = NULL, size = {size}, mod_time = {modTime} WHERE file_id = {fileID}",
 				Values: []any{
@@ -660,6 +665,7 @@ func (file *DatabaseFileWriter) Close() error {
 		} else {
 			if file.fileType.IsGzippable && !file.isFulltextIndexed {
 				_, err := sq.Exec(file.ctx, file.db, sq.Query{
+					Debug:   true,
 					Dialect: file.dialect,
 					Format:  "UPDATE files SET text = NULL, data = {data}, size = {size}, mod_time = {modTime} WHERE file_id = {fileID}",
 					Values: []any{
@@ -674,6 +680,7 @@ func (file *DatabaseFileWriter) Close() error {
 				}
 			} else {
 				_, err := sq.Exec(file.ctx, file.db, sq.Query{
+					Debug:   true,
 					Dialect: file.dialect,
 					Format:  "UPDATE files SET text = {text}, data = NULL, size = {size}, mod_time = {modTime} WHERE file_id = {fileID}",
 					Values: []any{

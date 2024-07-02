@@ -334,7 +334,7 @@ func (cmd *CreatesiteCmd) Run() error {
 			if err != nil {
 				return err
 			}
-			writer, err := cmd.Notebrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
+			writer, err := cmd.Notebrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
 			if err != nil {
 				return err
 			}

@@ -558,7 +558,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			writer, err := nbrew.FS.OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
+			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil
