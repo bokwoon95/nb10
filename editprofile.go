@@ -45,6 +45,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				}
 				return
 			}
+			referer := nbrew.getReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
 				"hasPrefix":  strings.HasPrefix,
@@ -52,6 +53,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				"contains":   strings.Contains,
 				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
 				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
+				"referer":    func() string { return referer },
 			}
 			tmpl, err := template.New("editprofile.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/editprofile.html")
 			if err != nil {
@@ -230,7 +232,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		if user.Username == response.Username || user.Username == "" {
 			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format:  "UPDATE users SET username = {username}, email = {email} WHERE user_id = {userID}",
+				Format:  "UPDATE users SET email = {email} WHERE user_id = {userID}",
 				Values: []any{
 					sq.StringParam("email", response.Email),
 					sq.UUIDParam("userID", user.UserID),
