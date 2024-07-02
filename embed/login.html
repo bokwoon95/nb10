@@ -16,7 +16,6 @@
 </nav>
 <form method='post' class='w-80 w-70-m w-60-l center' data-login-validation data-prevent-double-submit>
   <h1 class='f3 mv3 b tc'>Login</h1>
-
   {{- if eq (index $.PostRedirectGet "from") "invite" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
     <div>Account created, please log in using your new credentials.</div>
@@ -25,6 +24,11 @@
   {{- if eq (index $.PostRedirectGet "from") "resetpassword" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
     <div>Password reset successfully, please log in using your new credentials.</div>
+  </div>
+  {{- end }}
+  {{- if eq (index $.PostRedirectGet "from") "changepassword" }}
+  <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
+    <div>Password changed successfully, please log in using your new credentials.</div>
   </div>
   {{- end }}
   {{- if eq $.Error "AlreadyAuthenticated" }}

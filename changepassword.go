@@ -114,7 +114,7 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 				nbrew.internalServerError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, "/users/profile/", http.StatusFound)
+			http.Redirect(w, r, "/users/login/", http.StatusFound)
 		}
 
 		var request Request
