@@ -162,7 +162,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		switch tail {
 		case "changepassword":
-			// TODO: changepassword should invalidate all existing sessions of the user.
+			nbrew.changepassword(w, r, user)
 			return
 		case "profile":
 			nbrew.profile(w, r, user)
