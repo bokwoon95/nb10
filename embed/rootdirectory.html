@@ -280,7 +280,11 @@
 {{- if eq $.SitePrefix "" }}
   <div class='mt2 pb2 bb'>
     <div class='flex flex-wrap items-center'>
+      {{- if $.Files }}
       <div class='b'>sites</div>
+      {{- else }}
+      <div class='b'><a href=''>sites</a></div>
+      {{- end }}
       <div class='flex items-center'>
         <details class='relative ml2' data-autoclose-details>
           <summary role='button' title='Create' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
