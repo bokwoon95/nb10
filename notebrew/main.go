@@ -343,10 +343,10 @@ func main() {
 		// TODO: there seems to be a logic bug here? Why am I appending
 		// ContentDomain after I check that CMSDomain is not an IP address?
 		if err1 != nil {
-			nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "img."+nbrew.ContentDomain, "www."+nbrew.ContentDomain)
+			nbrew.Domains = append(nbrew.Domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
 		}
 		if err2 != nil && nbrew.CMSDomain != nbrew.ContentDomain {
-			nbrew.Domains = append(nbrew.Domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
+			nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "img."+nbrew.ContentDomain, "www."+nbrew.ContentDomain)
 		}
 		nbrew.CMSDomainHTTPS = true
 		if strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 || err1 == nil {
