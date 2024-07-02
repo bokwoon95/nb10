@@ -1162,8 +1162,23 @@ func init() {
 	}
 }
 
-type MaxBytesReader struct {
+var ErrStorageLimitExceeded = fmt.Errorf("storage limit exceeded")
+
+// https://github.com/golang/go/issues/54111#issuecomment-1220793565
+type LimitedWriter struct {
+	W   io.Writer // underlying writer
+	N   int64     // max bytes remaining
+	Err error     // error to be returned once limit is reached
 }
 
-type MaxBytesWriter struct {
+func (lw *LimitedWriter) Write(p []byte) (int, error) {
+	if lw.N < 1 {
+		return 0, lw.Err
+	}
+	if lw.N < int64(len(p)) {
+		p = p[:lw.N]
+	}
+	n, err := lw.W.Write(p)
+	lw.N -= int64(n)
+	return n, err
 }

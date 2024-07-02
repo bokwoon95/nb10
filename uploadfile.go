@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"context"
+	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -66,16 +68,6 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		http.Redirect(w, r, "/"+path.Join("files", sitePrefix, response.Parent)+"/", http.StatusFound)
-	}
-	if nbrew.DB != nil {
-		// TODO: calculate the available storage space of the owner and add
-		// it as a MaxBytesReader to the request body.
-		//
-		// TODO: but then: how do we differentiate between a MaxBytesError
-		// returned by a file exceeding 10 MB vs a MaxBytesError returned
-		// by the request body exceeding available storage space? Maybe if
-		// maxBytesErr is 10 MB we assume it's a file going over the limit,
-		// otherwise we assume it's the owner exceeding his storage space?
 	}
 
 	reader, err := r.MultipartReader()
@@ -170,6 +162,32 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		return
 	}
 
+	var storageRemaining sql.NullInt64
+	_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
+	if nbrew.DB != nil && isDatabaseFS {
+		storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "SELECT {*}" +
+				" FROM site" +
+				" JOIN site_owner ON site_owner.site_id = site.site_id" +
+				" WHERE site_owner.user_id = {userID}",
+			Values: []any{
+				sq.UUIDParam("userID", user.UserID),
+			},
+		}, func(row *sq.Row) int64 {
+			return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
+		}
+		storageRemaining = sql.NullInt64{
+			Int64: user.StorageLimit - storageUsed,
+			Valid: true,
+		}
+	}
+
 	var regenerationCount, uploadCount, uploadSize atomic.Int64
 	writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
 		writer, err := nbrew.FS.WithContext(ctx).OpenWriter(filePath, 0644)
@@ -177,7 +195,17 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			return err
 		}
 		defer writer.Close()
-		n, err := io.Copy(writer, reader)
+		var n int64
+		if storageRemaining.Valid {
+			limitedWriter := &LimitedWriter{
+				W:   writer,
+				N:   storageRemaining.Int64,
+				Err: ErrStorageLimitExceeded,
+			}
+			n, err = io.Copy(limitedWriter, reader)
+		} else {
+			n, err = io.Copy(writer, reader)
+		}
 		if err != nil {
 			return err
 		}
@@ -187,6 +215,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		}
 		uploadCount.Add(1)
 		uploadSize.Add(n)
+		if storageRemaining.Valid {
+			storageRemaining.Int64 -= n
+		}
 		return nil
 	}
 
