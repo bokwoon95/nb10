@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"os"
 	"path"
 	"runtime/debug"
 	"strings"
@@ -208,7 +209,11 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		if file, ok := file.readCloser.(fs.File); ok {
+		// Writing an *os.File to net/http's ResponseWriter is fast on Linux
+		// because it uses the low-level sendfile(2) system call. If the
+		// underlying readCloser is an *os.File, return it directly so that
+		// static files can be served much faster.
+		if file, ok := file.readCloser.(*os.File); ok {
 			return file, nil
 		}
 	} else {
