@@ -155,21 +155,27 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			FormErrors: url.Values{},
 		}
 		// username
-		if response.Username == "" {
-			response.FormErrors.Add("username", "required")
+		if user.Username == "" {
+			if response.Username != "" {
+				response.FormErrors.Add("username", "cannot change default user's username")
+			}
 		} else {
-			for _, char := range response.Username {
-				if char == ' ' {
-					response.FormErrors.Add("username", "cannot include space")
-					break
-				}
-				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
-					response.FormErrors.Add("username", fmt.Sprintf("cannot include character %q", string(char)))
-					break
+			if response.Username == "" {
+				response.FormErrors.Add("username", "required")
+			} else {
+				for _, char := range response.Username {
+					if char == ' ' {
+						response.FormErrors.Add("username", "cannot include space")
+						break
+					}
+					if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
+						response.FormErrors.Add("username", fmt.Sprintf("cannot include character %q", string(char)))
+						break
+					}
 				}
 			}
 		}
-		if !response.FormErrors.Has("username") && response.Username != user.Username {
+		if !response.FormErrors.Has("username") && user.Username != response.Username {
 			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format:  "SELECT 1 FROM users WHERE username = {username}",
@@ -195,7 +201,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				response.FormErrors.Add("email", "invalid email address")
 			}
 		}
-		if !response.FormErrors.Has("email") && response.Email != user.Email {
+		if !response.FormErrors.Has("email") && user.Email != response.Email {
 			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format:  "SELECT 1 FROM users WHERE email = {email}",
@@ -217,12 +223,15 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			writeResponse(w, r, response)
 			return
 		}
-		if response.Username != user.Username || response.Email != user.Email {
+		if response.Username == user.Username && response.Email == user.Email {
+			writeResponse(w, r, response)
+			return
+		}
+		if user.Username == response.Username || user.Username == "" {
 			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format:  "UPDATE users SET username = {username}, email = {email} WHERE user_id = {userID}",
 				Values: []any{
-					sq.StringParam("username", response.Username),
 					sq.StringParam("email", response.Email),
 					sq.UUIDParam("userID", user.UserID),
 				},
@@ -232,6 +241,39 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				nbrew.internalServerError(w, r, err)
 				return
 			}
+			writeResponse(w, r, response)
+			return
+		}
+		if user.Email == response.Email {
+			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "UPDATE users SET username = {username} WHERE user_id = {userID}",
+				Values: []any{
+					sq.StringParam("username", response.Username),
+					sq.UUIDParam("userID", user.UserID),
+				},
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.internalServerError(w, r, err)
+				return
+			}
+			writeResponse(w, r, response)
+			return
+		}
+		_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "UPDATE users SET username = {username}, email = {email} WHERE user_id = {userID}",
+			Values: []any{
+				sq.StringParam("username", response.Username),
+				sq.StringParam("email", response.Email),
+				sq.UUIDParam("userID", user.UserID),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.internalServerError(w, r, err)
+			return
 		}
 		writeResponse(w, r, response)
 	default:
