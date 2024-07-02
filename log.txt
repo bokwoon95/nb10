@@ -37,7 +37,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: respect disable_reason for most operations
 TODO: signup.go
 TODO: tests
 TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
