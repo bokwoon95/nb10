@@ -1337,11 +1337,14 @@ func main() {
 			dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
 				DecisionFunc: func(ctx context.Context, name string) error {
 					// TODO: might be able to reduce allocations here since
-					// decision func is called *very* often.
+					// decision func is called for *every* request.
+					var sitePrefix string
 					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
-						name = "@" + strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+						sitePrefix = "@" + strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+					} else {
+						sitePrefix = name
 					}
-					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), name)
+					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), sitePrefix)
 					if err != nil {
 						return err
 					}
