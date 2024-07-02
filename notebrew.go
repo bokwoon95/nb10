@@ -150,6 +150,8 @@ type Notebrew struct {
 
 	Logger *slog.Logger
 
+	// ctx is associated with this struct. When Close() is called, the ctx is
+	// canceled.
 	ctx       context.Context
 	cancel    func()
 	waitGroup sync.WaitGroup
