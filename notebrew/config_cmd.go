@@ -87,6 +87,9 @@ func (cmd *ConfigCmd) Run() error {
 		io.WriteString(cmd.Stderr, configHelp)
 		return nil
 	}
+	if cmd.Value.String == "nil" {
+		cmd.Value.String = ""
+	}
 	head, tail, _ := strings.Cut(cmd.Key.String, ".")
 	if !cmd.Value.Valid {
 		switch head {
