@@ -38,7 +38,6 @@ notebrew/main.go
 notebrew/open_browser.go
 
 TODO: signup.go
-TODO: insert a recoverPanic() for every goroutine spun off in an errgroup or a waitgroup. We can't afford to have the server taken down by malicious panics.
 TODO: tests
 TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
