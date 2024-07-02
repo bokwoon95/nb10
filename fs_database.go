@@ -625,14 +625,6 @@ func (file *DatabaseFileWriter) Close() error {
 		}
 	}
 	if file.writeFailed {
-		if file.fileType.IsObject && !file.exists {
-			// This is a cleanup operation - don't pass in the file.ctx because
-			// file.ctx may be canceled and prevent the cleanup.
-			err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
-			if err != nil {
-				file.logger.Error(err.Error())
-			}
-		}
 		return nil
 	}
 
@@ -722,6 +714,9 @@ func (file *DatabaseFileWriter) Close() error {
 							fmt.Println("panic:\n" + string(debug.Stack()))
 						}
 					}()
+					// This is a cleanup operation - don't pass in the file.ctx
+					// because file.ctx may be canceled and prevent the
+					// cleanup.
 					err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
 					if err != nil {
 						file.logger.Error(err.Error())
