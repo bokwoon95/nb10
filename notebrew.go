@@ -1135,13 +1135,12 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	}
 }
 
-// TODO: consider making this a map populated at init() time. Then we don't
-// have this weirdass sync.Values construct.
-var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
-	commonPasswords := make(map[string]struct{}, 10000)
+var commonPasswords map[string]struct{}
+
+func init() {
 	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	defer file.Close()
 	reader := bufio.NewReader(file)
@@ -1161,5 +1160,4 @@ var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
 		}
 		commonPasswords[string(line)] = struct{}{}
 	}
-	return commonPasswords, nil
-})
+}

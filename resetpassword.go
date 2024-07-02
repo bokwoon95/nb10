@@ -246,12 +246,6 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			if utf8.RuneCountInString(request.Password) < 8 {
 				response.FormErrors.Add("password", "password must be at least 8 characters")
 			}
-			commonPasswords, err := getCommonPasswords()
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
-				return
-			}
 			if _, ok := commonPasswords[request.Password]; ok {
 				response.FormErrors.Add("password", "password is too common")
 			}
