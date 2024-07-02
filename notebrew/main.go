@@ -340,21 +340,20 @@ func main() {
 
 		_, err1 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.CMSDomain, "["), "]"))
 		_, err2 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.ContentDomain, "["), "]"))
-		// TODO: there seems to be a logic bug here? Why am I appending
-		// ContentDomain after I check that CMSDomain is not an IP address?
-		if err1 != nil {
+		cmsDomainIsIP := err1 == nil
+		contentDomainIsIP := err2 == nil
+		if !cmsDomainIsIP {
 			nbrew.Domains = append(nbrew.Domains, nbrew.CMSDomain, "www."+nbrew.CMSDomain)
+			nbrew.CMSDomainHTTPS = !strings.HasPrefix(nbrew.CMSDomain, "localhost:") && nbrew.Port != 80
 		}
-		if err2 != nil && nbrew.CMSDomain != nbrew.ContentDomain {
-			nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "img."+nbrew.ContentDomain, "www."+nbrew.ContentDomain)
-		}
-		nbrew.CMSDomainHTTPS = true
-		if strings.HasPrefix(nbrew.CMSDomain, "localhost:") || nbrew.Port == 80 || err1 == nil {
-			nbrew.CMSDomainHTTPS = false
-		}
-		nbrew.ContentDomainHTTPS = true
-		if strings.HasPrefix(nbrew.ContentDomain, "localhost:") || (nbrew.ContentDomain == nbrew.CMSDomain && nbrew.Port == 80) || err2 == nil {
-			nbrew.ContentDomainHTTPS = false
+		if !contentDomainIsIP {
+			if nbrew.ContentDomain == nbrew.CMSDomain {
+				nbrew.Domains = append(nbrew.Domains, "img."+nbrew.ContentDomain)
+				nbrew.ContentDomainHTTPS = nbrew.CMSDomainHTTPS
+			} else {
+				nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "www."+nbrew.ContentDomain, "img."+nbrew.ContentDomain)
+				nbrew.ContentDomainHTTPS = !strings.HasPrefix(nbrew.ContentDomain, "localhost:")
+			}
 		}
 
 		// Certmagic.
