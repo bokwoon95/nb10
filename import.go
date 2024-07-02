@@ -266,11 +266,10 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 			}
 			nbrew.waitGroup.Add(1)
 			logger := getLogger(r.Context())
-			requestURL := r.Method + " " + r.Host + r.URL.RequestURI()
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + requestURL + ":\n" + string(debug.Stack()))
+						fmt.Println("panic:\n" + string(debug.Stack()))
 					}
 				}()
 				defer nbrew.waitGroup.Done()

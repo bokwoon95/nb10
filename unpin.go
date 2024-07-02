@@ -137,10 +137,10 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				continue
 			}
 			seen[name] = true
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, name))
@@ -312,10 +312,10 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 			if !strings.Contains(name, "/") {
 				continue
 			}
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				result, err := preparedExec.Exec(groupctx, sq.StringParam("filePath", path.Join(sitePrefix, name)))

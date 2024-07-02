@@ -335,13 +335,13 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			text := b.String()
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				err := writeFile(groupctx, filePath, strings.NewReader(text))
+				err = writeFile(groupctx, filePath, strings.NewReader(text))
 				if err != nil {
 					return err
 				}
@@ -381,10 +381,10 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			now := time.Now()
 			monotonicCounter.CompareAndSwap(0, now.Unix())
 			creationTime := time.Unix(max(now.Unix(), monotonicCounter.Add(1)), 0)
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var timestamp [8]byte
@@ -396,7 +396,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					fileName = prefix + fileName
 				}
 				filePath := path.Join(sitePrefix, response.Parent, fileName)
-				err := writeFile(groupctx, filePath, strings.NewReader(text))
+				err = writeFile(groupctx, filePath, strings.NewReader(text))
 				if err != nil {
 					return err
 				}
@@ -479,10 +479,10 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					nbrew.internalServerError(w, r, err)
 					return
 				}
-				group.Go(func() error {
+				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
-							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
 					defer os.Remove(inputPath)
@@ -490,7 +490,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr
-					err := cmd.Run()
+					err = cmd.Run()
 					if err != nil {
 						return err
 					}

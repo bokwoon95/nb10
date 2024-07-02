@@ -138,10 +138,10 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				continue
 			}
 			seen[name] = true
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
@@ -518,10 +518,10 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 							continue
 						}
 						name := dirEntry.Name()
-						subgroup.Go(func() error {
+						subgroup.Go(func() (err error) {
 							defer func() {
 								if v := recover(); v != nil {
-									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+									err = fmt.Errorf("panic: " + string(debug.Stack()))
 								}
 							}()
 							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
@@ -560,10 +560,10 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 							continue
 						}
 						name := dirEntry.Name()
-						subgroup.Go(func() error {
+						subgroup.Go(func() (err error) {
 							defer func() {
 								if v := recover(); v != nil {
-									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+									err = fmt.Errorf("panic: " + string(debug.Stack()))
 								}
 							}()
 							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))

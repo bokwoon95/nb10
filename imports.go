@@ -197,10 +197,10 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 
 		group, groupctx := errgroup.WithContext(r.Context())
 		if nbrew.DB != nil {
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				importJobs, err := sq.FetchAll(groupctx, nbrew.DB, sq.Query{
@@ -229,10 +229,10 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 			})
 		}
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -263,10 +263,10 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				response.PinnedFiles = pinnedFiles
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
@@ -297,10 +297,10 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				return nil
 			})
 		} else {
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(path.Join(sitePrefix, "imports"))

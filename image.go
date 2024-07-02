@@ -95,10 +95,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 			response.IsDatabaseFS = true
 			group, groupctx := errgroup.WithContext(r.Context())
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
@@ -138,10 +138,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				response.PreviousImageName = path.Base(result.FilePath)
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				content, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
@@ -163,10 +163,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{

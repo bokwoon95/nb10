@@ -108,10 +108,10 @@ func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user
 		group, groupctx := errgroup.WithContext(r.Context())
 		for i, importJobID := range importJobIDs {
 			i, importJobID := i, importJobID
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				importJob, err := sq.FetchOne(groupctx, nbrew.DB, sq.Query{
@@ -230,7 +230,7 @@ func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						fmt.Println("panic:\n" + string(debug.Stack()))
 					}
 				}()
 				defer waitGroup.Done()

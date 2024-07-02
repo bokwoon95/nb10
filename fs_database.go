@@ -519,7 +519,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic:\n" + string(debug.Stack()))
+					file.objectStorageResult <- fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			file.objectStorageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)

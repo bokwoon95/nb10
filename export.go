@@ -241,10 +241,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.Files = make([]File, len(names))
 		for i, name := range names {
 			i, name := i, name
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
@@ -273,10 +273,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				response.Files[i] = file
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				root := path.Join(sitePrefix, response.Parent, name)
@@ -497,10 +497,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		group, groupctx := errgroup.WithContext(r.Context())
 		for _, name := range names {
 			name := name
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				root := path.Join(sitePrefix, parent, name)

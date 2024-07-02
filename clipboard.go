@@ -308,7 +308,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					fmt.Println("panic:\n" + string(debug.Stack()))
 				}
 			}()
 			defer waitGroup.Done()
@@ -320,7 +320,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					fmt.Println("panic:\n" + string(debug.Stack()))
 				}
 			}()
 			defer waitGroup.Done()
@@ -332,7 +332,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					fmt.Println("panic:\n" + string(debug.Stack()))
 				}
 			}()
 			defer waitGroup.Done()
@@ -344,7 +344,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					fmt.Println("panic:\n" + string(debug.Stack()))
 				}
 			}()
 			defer waitGroup.Done()
@@ -356,10 +356,10 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		group, groupctx := errgroup.WithContext(r.Context())
 		for _, name := range names {
 			name := name
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				srcFilePath := path.Join(sitePrefix, response.SrcParent, name)
@@ -578,10 +578,10 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						for _, dirEntry := range dirEntries {
 							if dirEntry.IsDir() == srcFileInfo.IsDir() {
 								name := dirEntry.Name()
-								subgroup.Go(func() error {
+								subgroup.Go(func() (err error) {
 									defer func() {
 										if v := recover(); v != nil {
-											fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+											err = fmt.Errorf("panic: " + string(debug.Stack()))
 										}
 									}()
 									return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
@@ -655,10 +655,10 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						for _, dirEntry := range dirEntries {
 							if dirEntry.IsDir() == srcFileInfo.IsDir() {
 								name := dirEntry.Name()
-								subgroup.Go(func() error {
+								subgroup.Go(func() (err error) {
 									defer func() {
 										if v := recover(); v != nil {
-											fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+											err = fmt.Errorf("panic: " + string(debug.Stack()))
 										}
 									}()
 									if isMove {

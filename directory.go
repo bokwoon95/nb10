@@ -500,10 +500,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	// goroutines have completed, it is always safe to read from response.Files.
 	waitFiles := make(chan struct{})
 	group, groupctx := errgroup.WithContext(r.Context())
-	group.Go(func() error {
+	group.Go(func() (err error) {
 		defer func() {
 			if v := recover(); v != nil {
-				fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				err = fmt.Errorf("panic: " + string(debug.Stack()))
 			}
 		}()
 		pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -540,10 +540,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//-------------------------------//
 			// Read everything between names //
 			//-------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -591,10 +591,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				response.Files = files
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -641,10 +641,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -699,10 +699,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//----------------------------//
 			// Read everything after name //
 			//----------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -762,10 +762,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -816,10 +816,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//-----------------------------//
 			// Read everything before name //
 			//-----------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -882,10 +882,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -940,10 +940,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//-----------------------------//
 			// Read from the start by name //
 			//-----------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1005,10 +1005,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//--------------------------------------------//
 			// Read everything between modification times //
 			//--------------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1060,10 +1060,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				response.Files = files
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1116,10 +1116,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1180,10 +1180,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//-----------------------------------------//
 			// Read everything after modification time //
 			//-----------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1249,10 +1249,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1309,10 +1309,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//------------------------------------------//
 			// Read everything before modification time //
 			//------------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1381,10 +1381,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1445,10 +1445,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//------------------------------------------//
 			// Read from the start by modification time //
 			//------------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var order sq.Expression
@@ -1509,10 +1509,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//----------------------------------------//
 			// Read everything between creation times //
 			//----------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1564,10 +1564,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				response.Files = files
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1620,10 +1620,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1684,10 +1684,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//-------------------------------------//
 			// Read everything after creation time //
 			//-------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1753,10 +1753,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1813,10 +1813,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//--------------------------------------//
 			// Read everything before creation time //
 			//--------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				defer close(waitFiles)
@@ -1885,10 +1885,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				return nil
 			})
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var condition, order sq.Expression
@@ -1949,10 +1949,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			//--------------------------------------//
 			// Read from the start by creation time //
 			//--------------------------------------//
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				var order sq.Expression

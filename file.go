@@ -160,10 +160,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			}
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				group, groupctx := errgroup.WithContext(r.Context())
-				group.Go(func() error {
+				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
-							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
 					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -212,10 +212,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					}
 					return nil
 				})
-				group.Go(func() error {
+				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
-							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
 					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
@@ -307,10 +307,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				group, groupctx := errgroup.WithContext(r.Context())
-				group.Go(func() error {
+				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
-							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
 					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -356,10 +356,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					}
 					return nil
 				})
-				group.Go(func() error {
+				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
-							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
 					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
@@ -898,10 +898,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						nbrew.internalServerError(w, r, err)
 						return
 					}
-					group.Go(func() error {
+					group.Go(func() (err error) {
 						defer func() {
 							if v := recover(); v != nil {
-								fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
 							}
 						}()
 						defer os.Remove(inputPath)
@@ -909,7 +909,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
 						cmd.Stdout = os.Stdout
 						cmd.Stderr = os.Stderr
-						err := cmd.Run()
+						err = cmd.Run()
 						if err != nil {
 							return err
 						}

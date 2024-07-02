@@ -284,10 +284,10 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	response.From = r.Form.Get("from")
 	if response.From != "" {
 		group, groupctx := errgroup.WithContext(r.Context())
-		group.Go(func() error {
+		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			sites, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -325,10 +325,10 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			}
 			return nil
 		})
-		group.Go(func() error {
+		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			hasPreviousSite, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
@@ -370,10 +370,10 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	response.Before = r.Form.Get("before")
 	if response.Before != "" {
 		group, groupctx := errgroup.WithContext(r.Context())
-		group.Go(func() error {
+		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			response.Sites, err = sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -410,10 +410,10 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			}
 			return nil
 		})
-		group.Go(func() error {
+		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			nextSite, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{

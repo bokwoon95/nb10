@@ -42,10 +42,10 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 	siteNames := r.Form["siteName"]
 	for _, siteName := range siteNames {
 		siteName := siteName
-		group.Go(func() error {
+		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
@@ -167,13 +167,13 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		group, groupctx := errgroup.WithContext(ctx)
 		for _, root := range []string{"notes", "pages", "posts", "output", "imports", "exports", "site.json"} {
 			root := root
-			group.Go(func() error {
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + root + ":\n" + string(debug.Stack()))
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				err := fs.WalkDir(fsys.WithContext(groupctx), root, walkDirFunc)
+				err = fs.WalkDir(fsys.WithContext(groupctx), root, walkDirFunc)
 				if err != nil {
 					return err
 				}

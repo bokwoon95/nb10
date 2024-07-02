@@ -368,10 +368,10 @@ func (fsys *DirFS) Copy(srcName, destName string) error {
 			}
 			return nil
 		}
-		group.Go(func() error {
+		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic:\n" + string(debug.Stack()))
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
 			srcFile, err := fsys.WithContext(groupctx).Open(filePath)
