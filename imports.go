@@ -3,11 +3,13 @@ package nb10
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -196,6 +198,11 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 		group, groupctx := errgroup.WithContext(r.Context())
 		if nbrew.DB != nil {
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				importJobs, err := sq.FetchAll(groupctx, nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format: "SELECT {*}" +
@@ -223,6 +230,11 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 		}
 		if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
@@ -252,6 +264,11 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
@@ -281,6 +298,11 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 			})
 		} else {
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(path.Join(sitePrefix, "imports"))
 				if err != nil {
 					return err

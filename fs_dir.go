@@ -3,12 +3,14 @@ package nb10
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -367,6 +369,11 @@ func (fsys *DirFS) Copy(srcName, destName string) error {
 			return nil
 		}
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			srcFile, err := fsys.WithContext(groupctx).Open(filePath)
 			if err != nil {
 				return err

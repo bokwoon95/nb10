@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -499,6 +501,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	waitFiles := make(chan struct{})
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() error {
+		defer func() {
+			if v := recover(); v != nil {
+				fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+			}
+		}()
 		pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
@@ -534,6 +541,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything between names //
 			//-------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -580,6 +592,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
@@ -625,6 +642,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
@@ -678,6 +700,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything after name //
 			//----------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -736,6 +763,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("file_path < {from}", sq.StringParam("from", path.Join(sitePrefix, filePath, response.From)))
@@ -785,6 +817,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything before name //
 			//-----------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -846,6 +883,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("file_path >= {before}", sq.StringParam("before", path.Join(sitePrefix, filePath, response.Before)))
@@ -899,6 +941,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read from the start by name //
 			//-----------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var order sq.Expression
 				if response.Order == "asc" {
@@ -959,6 +1006,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything between modification times //
 			//--------------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -1009,6 +1061,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(mod_time, file_path) < ({fromEdited}, {from})",
@@ -1060,6 +1117,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(mod_time, file_path) >= ({beforeEdited}, {before})",
@@ -1119,6 +1181,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything after modification time //
 			//-----------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -1183,6 +1250,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(mod_time, file_path) < ({fromEdited}, {from})",
@@ -1238,6 +1310,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything before modification time //
 			//------------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -1305,6 +1382,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(mod_time, file_path) >= ({beforeEdited}, {before})",
@@ -1364,6 +1446,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read from the start by modification time //
 			//------------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var order sq.Expression
 				if response.Order == "asc" {
 					order = sq.Expr("mod_time ASC, file_path ASC")
@@ -1423,6 +1510,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything between creation times //
 			//----------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -1473,6 +1565,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(creation_time, file_path) < ({fromCreated}, {from})",
@@ -1524,6 +1621,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(creation_time, file_path) >= ({beforeCreated}, {before})",
@@ -1583,6 +1685,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything after creation time //
 			//-------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -1647,6 +1754,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(creation_time, file_path) < ({fromCreated}, {from})",
@@ -1702,6 +1814,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read everything before creation time //
 			//--------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer close(waitFiles)
 				var condition, order sq.Expression
 				if response.Order == "asc" {
@@ -1769,6 +1886,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var condition, order sq.Expression
 				if response.Order == "asc" {
 					condition = sq.Expr("(creation_time, file_path) >= ({beforeCreated}, {before})",
@@ -1828,6 +1950,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			// Read from the start by creation time //
 			//--------------------------------------//
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var order sq.Expression
 				if response.Order == "asc" {
 					order = sq.Expr("creation_time ASC, file_path ASC")

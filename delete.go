@@ -3,6 +3,7 @@ package nb10
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"sync"
@@ -137,6 +139,11 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			seen[name] = true
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
@@ -512,6 +519,11 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 						}
 						name := dirEntry.Name()
 						subgroup.Go(func() error {
+							defer func() {
+								if v := recover(); v != nil {
+									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+								}
+							}()
 							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
 						})
 					}
@@ -549,6 +561,11 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 						}
 						name := dirEntry.Name()
 						subgroup.Go(func() error {
+							defer func() {
+								if v := recover(); v != nil {
+									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+								}
+							}()
 							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
 						})
 					}

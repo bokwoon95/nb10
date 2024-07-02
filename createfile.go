@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -16,6 +17,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -635,6 +637,11 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 						return
 					}
 					group.Go(func() error {
+						defer func() {
+							if v := recover(); v != nil {
+								fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							}
+						}()
 						defer os.Remove(inputPath)
 						defer os.Remove(outputPath)
 						cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
@@ -708,6 +715,11 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var templateErr TemplateError
 				category := tail
 				tmpl, err := siteGen.PostTemplate(groupctx, category)
@@ -731,6 +743,11 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				var templateErr TemplateError
 				category := tail
 				tmpl, err := siteGen.PostListTemplate(groupctx, category)

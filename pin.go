@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -163,6 +164,11 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			continue
 		}
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			result, err := preparedExec.Exec(groupctx, sq.StringParam("filePath", path.Join(sitePrefix, response.Parent, name)))
 			if err != nil {
 				return err

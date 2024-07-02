@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -241,6 +242,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		for i, name := range names {
 			i, name := i, name
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
@@ -268,6 +274,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				root := path.Join(sitePrefix, response.Parent, name)
 				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 					var filter sq.Expression
@@ -487,6 +498,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		for _, name := range names {
 			name := name
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				root := path.Join(sitePrefix, parent, name)
 				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 					var filter sq.Expression
@@ -583,7 +599,13 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			}
 			nbrew.waitGroup.Add(1)
 			logger := getLogger(r.Context())
+			requestURL := r.Method + " " + r.Host + r.URL.RequestURI()
 			go func() {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + requestURL + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer nbrew.waitGroup.Done()
 				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, fileName)
 				if err != nil {

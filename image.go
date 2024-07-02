@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -94,6 +96,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.IsDatabaseFS = true
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
@@ -132,6 +139,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				content, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -152,6 +164,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +

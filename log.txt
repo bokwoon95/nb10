@@ -37,9 +37,6 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-TODO: users.go (what do we show about a user? allow them to change username? no)
-    - /users/editprofile
-    - /users/changepassword
 TODO: signup.go
 TODO: insert a recoverPanic() for every goroutine spun off in an errgroup or a waitgroup. We can't afford to have the server taken down by malicious panics.
 TODO: tests

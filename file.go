@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -17,6 +18,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -159,6 +161,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						}
+					}()
 					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -206,6 +213,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return nil
 				})
 				group.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						}
+					}()
 					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -296,6 +308,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						}
+					}()
 					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -340,6 +357,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return nil
 				})
 				group.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+						}
+					}()
 					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -827,6 +849,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						return
 					}
 					group.Go(func() error {
+						defer func() {
+							if v := recover(); v != nil {
+								fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+							}
+						}()
 						defer os.Remove(inputPath)
 						defer os.Remove(outputPath)
 						cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)

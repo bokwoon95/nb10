@@ -13,6 +13,7 @@ import (
 	"net/netip"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"strings"
 	texttemplate "text/template"
 
@@ -421,6 +422,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -445,6 +451,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -474,6 +485,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -503,6 +519,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -527,6 +548,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())

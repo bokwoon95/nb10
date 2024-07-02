@@ -16,6 +16,7 @@ import (
 	"math"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -265,6 +266,11 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 	for i, externalName := range externalNames {
 		i, externalName := i, externalName
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			n := slices.Index(callers, externalName)
 			if n > 0 {
 				return TemplateError{
@@ -443,6 +449,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	var tmpl *template.Template
 	group, groupctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
+		defer func() {
+			if v := recover(); v != nil {
+				fmt.Println("panic:\n" + string(debug.Stack()))
+			}
+		}()
 		tmpl, err = siteGen.ParseTemplate(groupctx, "/"+filePath, text)
 		if err != nil {
 			return err
@@ -450,6 +461,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		return nil
 	})
 	group.Go(func() error {
+		defer func() {
+			if v := recover(); v != nil {
+				fmt.Println("panic:\n" + string(debug.Stack()))
+			}
+		}()
 		markdownMu := sync.Mutex{}
 		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 			cursor, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
@@ -498,6 +514,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					i := len(pageData.Images) - 1
 					subgroup.Go(func() error {
 						defer func() {
+							if v := recover(); v != nil {
+								fmt.Println("panic:\n" + string(debug.Stack()))
+							}
 							result.Text = result.Text[:0]
 							bufPool.Put(bytes.NewBuffer(result.Text))
 						}()
@@ -524,6 +543,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				case ".md":
 					subgroup.Go(func() error {
 						defer func() {
+							if v := recover(); v != nil {
+								fmt.Println("panic:\n" + string(debug.Stack()))
+							}
 							result.Text = result.Text[:0]
 							bufPool.Put(bytes.NewBuffer(result.Text))
 						}()
@@ -568,6 +590,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					pageData.Images = append(pageData.Images, Image{Parent: urlPath, Name: name})
 				case ".md":
 					subgroup.Go(func() error {
+						defer func() {
+							if v := recover(); v != nil {
+								fmt.Println("panic:\n" + string(debug.Stack()))
+							}
+						}()
 						file, err := siteGen.fsys.WithContext(subctx).Open(path.Join(outputDir, name))
 						if err != nil {
 							return err
@@ -604,6 +631,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		return nil
 	})
 	group.Go(func() error {
+		defer func() {
+			if v := recover(); v != nil {
+				fmt.Println("panic:\n" + string(debug.Stack()))
+			}
+		}()
 		pageDir := path.Join(siteGen.sitePrefix, "pages", urlPath)
 		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 			pageData.ChildPages, err = sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
@@ -666,6 +698,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			for i, dirEntry := range dirEntries {
 				i, dirEntry := i, dirEntry
 				subgroup.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic:\n" + string(debug.Stack()))
+						}
+					}()
 					name := dirEntry.Name()
 					if dirEntry.IsDir() || !strings.HasSuffix(name, ".html") {
 						return nil
@@ -758,6 +795,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
 		go func() {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			result <- siteGen.rewriteURLs(writer, pipeReader, urlPath)
 		}()
 		err = tmpl.Execute(pipeWriter, &pageData)
@@ -925,6 +967,9 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			i := len(postData.Images) - 1
 			group.Go(func() error {
 				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
 					result.Text = result.Text[:0]
 					bufPool.Put(bytes.NewBuffer(result.Text))
 				}()
@@ -1005,6 +1050,11 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
 		go func() {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			result <- siteGen.rewriteURLs(writer, pipeReader, urlPath)
 		}()
 		err = tmpl.Execute(pipeWriter, &postData)
@@ -1065,6 +1115,11 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 				return 0, err
 			}
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
+				}()
 				if siteGen.sitePrefix != "" {
 					_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 				}
@@ -1101,6 +1156,11 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 			continue
 		}
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			file, err := siteGen.fsys.WithContext(groupctx).Open(path.Join(siteGen.sitePrefix, "posts", category, name))
 			if err != nil {
 				return err
@@ -1197,6 +1257,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		lastPage := int(math.Ceil(float64(count) / float64(config.PostsPerPage)))
 		group, groupctx := errgroup.WithContext(ctx)
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			filePaths, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -1223,6 +1288,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 					continue
 				}
 				subgroup.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic:\n" + string(debug.Stack()))
+						}
+					}()
 					err := databaseFS.WithContext(subctx).RemoveAll(filePath)
 					if err != nil {
 						return err
@@ -1284,6 +1354,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				posts := slices.Clone(batch)
 				batch = batch[:0]
 				group.Go(func() error {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic:\n" + string(debug.Stack()))
+						}
+					}()
 					return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, currentPage, posts)
 				})
 			}
@@ -1294,6 +1369,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		}
 		if len(batch) > 0 {
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
+				}()
 				return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, page, batch)
 			})
 		}
@@ -1329,6 +1409,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	lastPage := int(math.Ceil(float64(len(dirEntries)) / float64(config.PostsPerPage)))
 	group, groupctx := errgroup.WithContext(ctx)
 	group.Go(func() error {
+		defer func() {
+			if v := recover(); v != nil {
+				fmt.Println("panic:\n" + string(debug.Stack()))
+			}
+		}()
 		dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(path.Join(siteGen.sitePrefix, "output/posts", category))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
@@ -1350,6 +1435,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				continue
 			}
 			subgroup.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
+				}()
 				return siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.FormatInt(n, 10)))
 			})
 		}
@@ -1393,12 +1483,22 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			posts := slices.Clone(batch)
 			batch = batch[:0]
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
+				}()
 				return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, currentPage, posts)
 			})
 		}
 	}
 	if len(batch) > 0 {
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, page, batch)
 		})
 	}
@@ -1529,6 +1629,11 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			pipeReader, pipeWriter := io.Pipe()
 			result := make(chan error, 1)
 			go func() {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
+				}()
 				result <- siteGen.rewriteURLs(writer, pipeReader, "")
 			}()
 			err = tmpl.Execute(pipeWriter, &postListData)

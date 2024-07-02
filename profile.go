@@ -3,10 +3,12 @@ package nb10
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"path"
+	"runtime/debug"
 	"strings"
 	"sync/atomic"
 
@@ -135,12 +137,22 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		for i, site := range response.Sites {
 			i, site := i, site
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				if site.SiteName == "" {
 					var storageUsed atomic.Int64
 					subgroup, subctx := errgroup.WithContext(groupctx)
 					for _, root := range []string{"notes", "pages", "posts", "output", "import", "export"} {
 						root := root
 						subgroup.Go(func() error {
+							defer func() {
+								if v := recover(); v != nil {
+									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+								}
+							}()
 							return fs.WalkDir(nbrew.FS.WithContext(subctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
 								if err != nil {
 									if filePath == root && errors.Is(err, fs.ErrNotExist) {

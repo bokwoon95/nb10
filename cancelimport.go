@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"mime"
 	"net/http"
 	"path"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -107,6 +109,11 @@ func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user
 		for i, importJobID := range importJobIDs {
 			i, importJobID := i, importJobID
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				importJob, err := sq.FetchOne(groupctx, nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format:  "SELECT {*} FROM import_job WHERE import_job_id = {importJobID}",
@@ -221,6 +228,11 @@ func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user
 			i, importJobID := i, importJobID
 			waitGroup.Add(1)
 			go func() {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				defer waitGroup.Done()
 				result, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,

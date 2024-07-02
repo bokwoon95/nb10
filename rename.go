@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -445,6 +446,11 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					if dirEntry.IsDir() == response.IsDir {
 						name := dirEntry.Name()
 						group.Go(func() error {
+							defer func() {
+								if v := recover(); v != nil {
+									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+								}
+							}()
 							return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
 						})
 					}
@@ -563,6 +569,11 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					if dirEntry.IsDir() == response.IsDir {
 						name := dirEntry.Name()
 						group.Go(func() error {
+							defer func() {
+								if v := recover(); v != nil {
+									fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+								}
+							}()
 							return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
 						})
 					}

@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"path"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"syscall"
@@ -507,6 +508,11 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		file.objectStorageWriter = pipeWriter
 		file.objectStorageResult = make(chan error, 1)
 		go func() {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			file.objectStorageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
 			close(file.objectStorageResult)
 		}()
@@ -700,6 +706,11 @@ func (file *DatabaseFileWriter) Close() error {
 			})
 			if err != nil {
 				go func() {
+					defer func() {
+						if v := recover(); v != nil {
+							fmt.Println("panic:\n" + string(debug.Stack()))
+						}
+					}()
 					err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
 					if err != nil {
 						file.logger.Error(err.Error())
@@ -1153,6 +1164,11 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		}
 		waitGroup.Add(1)
 		go func() {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic:\n" + string(debug.Stack()))
+				}
+			}()
 			defer waitGroup.Done()
 			err := fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
@@ -1522,6 +1538,11 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		if fileType.IsObject {
 			wg.Add(1)
 			go func() {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic:\n" + string(debug.Stack()))
+					}
+				}()
 				defer wg.Done()
 				err := fsys.ObjectStorage.Copy(objectCtx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
 				if err != nil {

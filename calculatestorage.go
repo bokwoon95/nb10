@@ -1,8 +1,10 @@
 package nb10
 
 import (
+	"fmt"
 	"mime"
 	"net/http"
+	"runtime/debug"
 	"strings"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -42,6 +44,11 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 	for _, siteName := range siteNames {
 		siteName := siteName
 		group.Go(func() error {
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+				}
+			}()
 			exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "SELECT 1" +

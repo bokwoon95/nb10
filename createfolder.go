@@ -3,12 +3,14 @@ package nb10
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"mime"
 	"net/http"
 	"net/url"
 	"path"
+	"runtime/debug"
 	"strings"
 
 	"golang.org/x/sync/errgroup"
@@ -279,6 +281,11 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			}
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 				if err != nil {
 					return err
@@ -299,6 +306,11 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 				if err != nil {
 					return err
@@ -327,6 +339,11 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 				return nil
 			})
 			group.Go(func() error {
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
+					}
+				}()
 				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 				if err != nil {
 					return err
