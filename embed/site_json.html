@@ -30,7 +30,7 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
-<form method='post' action='/{{ join "files" $.SitePrefix "site.json" }}' class='mv2'>
+<form method='post' action='/{{ join "files" $.SitePrefix "site.json" }}' class='mv2' data-prevent-double-submit>
   {{- if $.RegenerationStats.TemplateError.ErrorMessage }}
   <div class='mv2 invalid-red'>
     <span class='b'>template error: </span>

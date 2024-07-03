@@ -10,10 +10,10 @@
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
 </nav>
-<form method='post' class='w-80 w-70-m w-60-l center'>
+<form method='post' class='w-80 w-70-m w-60-l center' data-prevent-double-submit>
   {{- if referer }}
   <div><a href="{{ referer }}" class="linktext" data-go-back>&larr; back</a></div>
   {{- end }}
   <h3 class='f4 mv2 b tc'>Are you sure you wish to log out?</h3>
-  <button type='submit' class='button ba br2 b--black pa2 w-100'>Log Out</button>
+  <button type='submit' class='button ba br2 b--black pa2 w-100'>log out</button>
 </form>

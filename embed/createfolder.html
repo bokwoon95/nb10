@@ -27,7 +27,7 @@
   <div class='mv3 b tc'>Can't create a folder here.</div>
 </div>
 {{- else }}
-<form method='post' action='/{{ join "files" $.SitePrefix "createfolder" }}/'>
+<form method='post' action='/{{ join "files" $.SitePrefix "createfolder" }}/' data-prevent-double-submit>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}

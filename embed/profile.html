@@ -84,7 +84,7 @@
       </tr>
     </tfoot>
   </table>
-  <form method='post' action='/files/calculatestorage/' class='mv2'>
+  <form method='post' action='/files/calculatestorage/' class='mv2' data-prevent-double-submit>
     {{- range $site := $.Sites }}
     <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
     {{- end }}
