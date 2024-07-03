@@ -36,15 +36,13 @@
   {{- else }}
   <div><a href='/files/'>&larr; back</a></div>
   {{- end }}
-  <h1 class='f3 mv3 b'>Create a new site</h1>
+  <h2 class='ma0 b'>Create a new site</h2>
+  <div><span class='dark-red'>*&nbsp;</span><em>required</em></div>
   <div class='mv3'>
-    <div><label for='siteName' class='b'>Site name:</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='siteName' class='b'>Site name:</label></div>
     <ul class='list-style-disc ph3 f6 mid-gray'>
       <li>only lowercase letters, numbers and hyphen (e.g. mycoolblog95)</li>
-      <li>dot is allowed for custom domain names (e.g. example.com)</li>
-      {{- if $.ValidateCustomDomain }}
-      <li>for custom domain names, make sure a CNAME DNS record for that domain is pointing at www.{{ $.ContentDomain }}</li>
-      {{- end }}
+      <li>if you are using a custom domain name, dots are allowed (e.g. example.com)</li>
     </ul>
     <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}' required{{ if not (index $.FormErrors "siteName") }} autofocus{{ end }}>
     <ul class='list-style-disc ph3 f6 invalid-red'>
@@ -53,7 +51,46 @@
       {{- end }}
     </ul>
   </div>
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>Create site</button>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>create site</button>
   <div role='status'></div>
+  {{- if or $.ValidateCustomDomain true }}
+  <details class='mv2'>
+    <summary class='pointer f6'>If you are adding a custom domain, read this!!! <strong class='dark-red'>(important)</strong></summary>
+    <p>Create a CNAME record in the user settings of the domain registrar you have purchased your domain from.</p>
+    <table class='collapse w-100'>
+      <tr class='bb h2 tc'>
+        <th class='pv2'>Type</th>
+        <th class='pv2'>Name / Host</th>
+        <th class='pv2'>Value / Content</th>
+        <th class='pv2'>TTL</th>
+      </tr>
+      <tr class='bb tc'>
+        <td class='pv2'>CNAME</td>
+        <td class='pv2'>@</td>
+        <td class='pv2'>www.{{ $.ContentDomain }}</td>
+        <td class='pv2'>auto (or 3600 seconds/1 hour)</td>
+      </tr>
+    </table>
+    <p>Validate that the CNAME record has been added successfully by visiting <a href='https://dnschecker.org/#CNAME'>https://dnschecker.org/#CNAME</a> and entering your domain. The results should show <code>www.{{ $.ContentDomain }}.</code></p>
+    <p>If you have only just created it, please wait for a few minutes for it to take effect.</p>
+      {{- if eq $.CMSDomain $.ContentDomain }}
+      <p class='b'>If your DNS provider forbids you from setting CNAME records, you can set the following A record instead.</p>
+      <table class='collapse w-100'>
+        <tr class='bb h2 tc'>
+          <th class='pv2'>Type</th>
+          <th class='pv2'>Name / Host</th>
+          <th class='pv2'>Value / Content</th>
+          <th class='pv2'>TTL</th>
+        </tr>
+        <tr class='bb tc'>
+          <td class='pv2'>A</td>
+          <td class='pv2'>@</td>
+          <td class='pv2'>{{ $.IP4.String }}</td>
+          <td class='pv2'>auto (or 3600 seconds/1 hour)</td>
+        </tr>
+      </table>
+      {{- end }}
+  </details>
+  {{- end }}
 </form>
 {{- end }}

@@ -27,7 +27,9 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		SiteName string `json:"siteName"`
 	}
 	type Response struct {
+		CMSDomain            string     `json:"cmsDomain"`
 		ContentDomain        string     `json:"contentDomain"`
+		IP4                  netip.Addr `json:"ip4"`
 		ValidateCustomDomain bool       `json:"validateCustomDomain"`
 		UserID               ID         `json:"userID"`
 		Username             string     `json:"username"`
