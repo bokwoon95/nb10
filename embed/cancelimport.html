@@ -27,7 +27,7 @@
   <div class='mv3 b tc'>No ongoing imports to cancel</div>
 </div>
 {{- else }}
-<form method='post'>
+<form method='post' data-prevent-double-submit>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
