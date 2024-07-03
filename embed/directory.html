@@ -396,6 +396,17 @@
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
+            {{- if $file.IsDir }}
+              {{- if eq (head $.FilePath) "notes" }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create note</a></div>
+              {{- else if eq (head $.FilePath) "pages" }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create page</a></div>
+              {{- else if eq (head $.FilePath) "posts" }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create post</a></div>
+              {{- else }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create file</a></div>
+              {{- end }}
+            {{- end }}
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
@@ -462,6 +473,17 @@
             {{- end }}
           <div class='ma2'><button type='submit' formmethod='get' formaction='/{{ join "files" $.SitePrefix "delete" }}/' name='name' value='{{ $file.Name }}' class='button-danger ba br2 b--dark-red pa2 w-100'>delete</button></div>
           {{- else }}
+            {{- if $file.IsDir }}
+              {{- if eq (head $.FilePath) "notes" }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create note</a></div>
+              {{- else if eq (head $.FilePath) "pages" }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create page</a></div>
+              {{- else if eq (head $.FilePath) "posts" }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create post</a></div>
+              {{- else }}
+              <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join $.FilePath $file.Name }}' class='nowrap'>create file</a></div>
+              {{- end }}
+            {{- end }}
           <div class='ma2 tc'><a href='/{{ join "files" $.SitePrefix "rename" }}/?parent={{ $.FilePath }}&name={{ $file.Name }}'>rename</a></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/cut" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>cut</button></div>
           <div class='ma2'><button type='submit' formmethod='post' formaction='/{{ join "files" $.SitePrefix "clipboard/copy" }}/' name='name' value='{{ $file.Name }}' class='button ba br2 b--black pa2 w-100'>copy</button></div>
