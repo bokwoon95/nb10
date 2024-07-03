@@ -104,6 +104,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 			}
 		}
+		isSeeking := response.From != "" || response.FromEdited != "" || response.FromCreated != "" ||
+			response.Before != "" || response.BeforeEdited != "" || response.BeforeCreated != ""
 		funcMap := map[string]any{
 			"join":                  path.Join,
 			"dir":                   path.Dir,
@@ -156,7 +158,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			},
 			"sortBy": func(sort string) template.URL {
 				queryParams := "?persist&sort=" + url.QueryEscape(sort) + "&order=" + url.QueryEscape(response.Order)
-				if (response.NextURL != "" || response.PreviousURL != "") && response.IsDatabaseFS && len(response.Files) > 0 {
+				if isSeeking && response.IsDatabaseFS && len(response.Files) > 0 {
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
@@ -167,7 +169,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			},
 			"orderBy": func(order string) template.URL {
 				queryParams := "?persist&sort=" + url.QueryEscape(response.Sort) + "&order=" + url.QueryEscape(order)
-				if (response.NextURL != "" || response.PreviousURL != "") && response.IsDatabaseFS && len(response.Files) > 0 {
+				if isSeeking && response.IsDatabaseFS && len(response.Files) > 0 {
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
