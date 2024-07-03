@@ -37,6 +37,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+TODO: protect all forms from double submit
 TODO: debug why exporting files seems to create an export with all mod_time-s set to the current timestamp *and* somehow also affect all files in the filesystem, *but* only for files in the notes/* directory (wtf??)
 TODO: signup.go
 TODO: tests
