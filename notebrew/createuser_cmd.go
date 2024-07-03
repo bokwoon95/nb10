@@ -105,6 +105,10 @@ Flags:`)
 					continue
 				}
 			}
+			if len(cmd.Username) > 30 {
+				fmt.Println("username cannot exceed 30 characters")
+				continue
+			}
 			exists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
 				Dialect: cmd.Notebrew.Dialect,
 				Format:  "SELECT 1 FROM users WHERE username = {username}",
@@ -205,6 +209,9 @@ func (cmd *CreateuserCmd) Run() error {
 		if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
 			return fmt.Errorf("username can only contain lowercase letters, numbers and hyphen")
 		}
+	}
+	if len(cmd.Username) > 30 {
+		return fmt.Errorf("username cannot exceed 30 characters")
 	}
 	usernameExists, err := sq.FetchExists(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,

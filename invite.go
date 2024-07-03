@@ -280,6 +280,9 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 					break
 				}
 			}
+			if len(response.Username) > 30 {
+				response.FormErrors.Add("username", "cannot exceed 30 characters")
+			}
 		}
 		if !response.FormErrors.Has("username") {
 			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{

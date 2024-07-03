@@ -34,6 +34,7 @@
     {{- if $.Username }}
     <ul class='list-style-disc ph3 f6 mid-gray'>
       <li>only lowercase letters, numbers and hyphen</li>
+      <li>max 30 characters</li>
     </ul>
     <input id='username' name='username' value='{{ $.Username }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "username" }} b--invalid-red{{ end }}' required>
     {{- else }}

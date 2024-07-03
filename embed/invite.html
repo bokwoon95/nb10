@@ -20,8 +20,9 @@
   <div class='mv3 b tc'>Invalid invite token.</div>
 </div>
 {{- else }}
-<form method='post'>
-  <h1 class='f3 mv3 b'>Create an account</h1>
+<form method='post' data-prevent-double-submit>
+  <h2 class='ma0 b'>Create an account</h2>
+  <div><span class='dark-red'>*&nbsp;</span><em>required</em></div>
   {{- if eq $.Error "FormErrorsPresent" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
     <div>please fix the errors</div>
@@ -29,9 +30,10 @@
   {{- end }}
   <input type='hidden' name='token' value='{{ $.Token }}'>
   <div class='mv3'>
-    <div><label for='username' class='b'>Username (you can change this later):</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='username' class='b'>Username (you can change this later):</label></div>
     <ul class='list-style-disc ph3 f6 mid-gray'>
       <li>only lowercase letters, numbers and hyphen</li>
+      <li>max 30 characters</li>
     </ul>
     <input id='username' name='username' value='{{ $.Username }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "username" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
@@ -41,7 +43,7 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='email' class='b'>Email:</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='email' class='b'>Email:</label></div>
     <input type='email' id='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "email" }}
@@ -50,7 +52,7 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='password' class='b'>Password:</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='password' class='b'>Password:</label></div>
     <ul class='list-style-disc ph3 f6 mid-gray'>
       <li>at least 8 characters</li>
     </ul>
@@ -62,7 +64,7 @@
     </ul>
   </div>
   <div class='mv3'>
-    <div><label for='confirmPassword' class='b'>Confirm password:</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='confirmPassword' class='b'>Confirm password:</label></div>
     <input type='password' id='confirmPassword' name='confirmPassword' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "confirmPassword" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "confirmPassword" }}
@@ -87,5 +89,6 @@
     </ul>
   </div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>create account</button>
+  <div role='status'></div>
 </form>
 {{- end }}

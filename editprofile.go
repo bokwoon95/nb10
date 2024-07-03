@@ -181,6 +181,9 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 						break
 					}
 				}
+				if len(response.Username) > 30 {
+					response.FormErrors.Add("username", "cannot exceed 30 characters")
+				}
 			}
 		}
 		if !response.FormErrors.Has("username") && user.Username != response.Username {
