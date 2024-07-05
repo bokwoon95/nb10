@@ -36,6 +36,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// TODO: in main.
+type SMTPConfig struct {
+	Username string
+	Password string
+	Host     string
+	Port     string
+}
+
 func Notebrew(configDir, dataDir string, args []string) (*nb10.Notebrew, error) {
 	nbrew := nb10.New()
 	nbrew.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
