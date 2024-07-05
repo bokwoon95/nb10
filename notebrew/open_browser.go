@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	open = func(address string) {
+	openBrowser = func(address string) {
 		switch runtime.GOOS {
 		case "windows":
 			exec.Command("explorer.exe", address).Run()

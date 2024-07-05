@@ -54,7 +54,7 @@ type SMTPConfig struct {
 }
 
 var (
-	open         = func(address string) {}
+	openBrowser  = func(address string) {}
 	startMessage = "Running on %s\n"
 )
 
@@ -417,7 +417,7 @@ func main() {
 		if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
 			if !nbrew.CMSDomainHTTPS {
 				fmt.Println("notebrew is already running on http://" + nbrew.CMSDomain + "/files/")
-				open("http://" + server.Addr + "/files/")
+				openBrowser("http://" + server.Addr + "/files/")
 			} else {
 				fmt.Println("notebrew is already running (run `notebrew stop` to stop the process)")
 			}
@@ -499,7 +499,7 @@ func main() {
 		}()
 		if !nbrew.CMSDomainHTTPS {
 			fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
-			open("http://" + server.Addr + "/files/")
+			openBrowser("http://" + server.Addr + "/files/")
 		} else {
 			fmt.Printf(startMessage, server.Addr)
 		}
@@ -510,6 +510,7 @@ func main() {
 	server.Shutdown(ctx)
 }
 
+// TODO: move this into exit.go and exit_windows.go instead.
 func exit(err error) {
 	fmt.Println(err)
 	pressAnyKeyToExit()
@@ -1880,7 +1881,7 @@ func main2() {
 			if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
 				if !nbrew.CMSDomainHTTPS {
 					fmt.Println("notebrew is already running on http://" + nbrew.CMSDomain + "/files/")
-					open("http://" + server.Addr + "/files/")
+					openBrowser("http://" + server.Addr + "/files/")
 					return nil
 				}
 				fmt.Println("notebrew is already running (run `notebrew stop` to stop the process)")
@@ -1962,7 +1963,7 @@ func main2() {
 			}()
 			if !nbrew.CMSDomainHTTPS {
 				fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
-				open("http://" + server.Addr + "/files/")
+				openBrowser("http://" + server.Addr + "/files/")
 			} else {
 				fmt.Printf(startMessage, server.Addr)
 			}

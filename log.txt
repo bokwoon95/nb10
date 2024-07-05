@@ -47,6 +47,11 @@ cli/start_cmd.go
 cli/status_cmd.go
 cli/stop_cmd.go
 
+exit.go
+exit_windows.go
+open_browser.go
+main.go
+
 notebrew/exit.go
 notebrew/exit_windows.go
 notebrew/sqlite_cgo.go
