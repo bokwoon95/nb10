@@ -36,35 +36,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
-	// homeDir is the user's home directory.
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	// configHomeDir is the user's config directory.
-	configHomeDir := os.Getenv("XDG_CONFIG_HOME")
-	if configHomeDir == "" {
-		configHomeDir = homeDir
-	}
-	// dataHomeDir is the user's data directory.
-	dataHomeDir := os.Getenv("XDG_DATA_HOME")
-	if dataHomeDir == "" {
-		dataHomeDir = homeDir
-	}
-	if configDir == "" {
-		configDir = filepath.Join(configHomeDir, "notebrew-config")
-	} else {
-		configDir = filepath.Clean(configDir)
-	}
-	err = os.MkdirAll(configDir, 0755)
-	if err != nil {
-		return nil, err
-	}
-	configDir, err = filepath.Abs(filepath.FromSlash(configDir))
-	if err != nil {
-		return nil, err
-	}
+func Notebrew(configDir, dataDir string, args []string) (*nb10.Notebrew, error) {
 	nbrew := nb10.New()
 	nbrew.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
@@ -410,7 +382,7 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 		switch databaseConfig.Dialect {
 		case "sqlite":
 			if databaseConfig.FilePath == "" {
-				databaseConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-database.db")
+				databaseConfig.FilePath = filepath.Join(dataDir, "notebrew-database.db")
 			}
 			databaseConfig.FilePath, err = filepath.Abs(databaseConfig.FilePath)
 			if err != nil {
@@ -549,7 +521,7 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 	}
 	if filesConfig.Dialect == "" {
 		if filesConfig.FilePath == "" {
-			filesConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-files")
+			filesConfig.FilePath = filepath.Join(dataDir, "notebrew-files")
 		} else {
 			filesConfig.FilePath = filepath.Clean(filesConfig.FilePath)
 		}
@@ -572,7 +544,7 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 		switch filesConfig.Dialect {
 		case "sqlite":
 			if filesConfig.FilePath == "" {
-				filesConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-files.db")
+				filesConfig.FilePath = filepath.Join(dataDir, "notebrew-files.db")
 			}
 			filesConfig.FilePath, err = filepath.Abs(filesConfig.FilePath)
 			if err != nil {
@@ -749,7 +721,7 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 		switch objectsConfig.Provider {
 		case "", "directory":
 			if objectsConfig.FilePath == "" {
-				objectsConfig.FilePath = filepath.Join(dataHomeDir, "notebrew-objects")
+				objectsConfig.FilePath = filepath.Join(dataDir, "notebrew-objects")
 			} else {
 				objectsConfig.FilePath = filepath.Clean(objectsConfig.FilePath)
 			}

@@ -3,7 +3,6 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
 	"net/url"
 	"strconv"
@@ -16,15 +15,15 @@ var sqliteDriverName = "sqlite3_8192_page_size"
 func init() {
 	// 8192 is the optimal page size for blobs up to 100 KB.
 	// https://www.sqlite.org/intern-v-extern-blob.html
-	sql.Register("sqlite3_8192_page_size", &sqlite3.SQLiteDriver{
-		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-			_, err := conn.Exec("PRAGMA page_size = 8192", nil)
-			if err != nil {
-				return err
-			}
-			return nil
-		},
-	})
+	// sql.Register("sqlite3_8192_page_size", &sqlite3.SQLiteDriver{
+	// 	ConnectHook: func(conn *sqlite3.SQLiteConn) error {
+	// 		_, err := conn.Exec("PRAGMA page_size = 8192", nil)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		return nil
+	// 	},
+	// })
 }
 
 func sqliteErrorCode(err error) string {

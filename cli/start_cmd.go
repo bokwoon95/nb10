@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -20,23 +21,24 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
+	"github.com/bokwoon95/nb10/sq"
 	"github.com/caddyserver/certmagic"
 	"github.com/klauspost/cpuid/v2"
+	"golang.org/x/crypto/blake2b"
 )
 
 type StartCmd struct {
 	Notebrew     *nb10.Notebrew
 	Stdout       io.Writer
 	ConfigDir    string
-	Handler      http.Handler
 	StartMessage string
+	Handler      http.Handler
 }
 
-func StartCommand(nbrew *nb10.Notebrew, configDir string, handler http.Handler, startMessage string, args ...string) (*StartCmd, error) {
+func StartCommand(nbrew *nb10.Notebrew, configDir string, startMessage string, args ...string) (*StartCmd, error) {
 	var cmd StartCmd
 	cmd.Notebrew = nbrew
 	cmd.ConfigDir = configDir
-	cmd.Handler = handler
 	cmd.StartMessage = startMessage
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
@@ -98,6 +100,9 @@ func (cmd *StartCmd) Run() error {
 				}),
 			}
 		}
+		if len(cmd.Notebrew.ManagingDomains) == 0 {
+			fmt.Fprintf(cmd.Stdout, "WARNING: notebrew is listening on port 443 but no domains are pointing at this current machine's IP address (%s/%s). It means no traffic can reach this current machine. Please configure your DNS correctly.\n", cmd.Notebrew.IP4.String(), cmd.Notebrew.IP6.String())
+		}
 		err := staticCertConfig.ManageSync(context.Background(), cmd.Notebrew.ManagingDomains)
 		if err != nil {
 			return err
@@ -106,7 +111,13 @@ func (cmd *StartCmd) Run() error {
 		dynamicCertConfig.Storage = cmd.Notebrew.CertStorage
 		dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
 			DecisionFunc: func(ctx context.Context, name string) error {
-				fileInfo, err := fs.Stat(cmd.Notebrew.FS.WithContext(ctx), name)
+				var sitePrefix string
+				if certmagic.MatchWildcard(name, "*."+cmd.Notebrew.ContentDomain) {
+					sitePrefix = "@" + strings.TrimSuffix(name, "."+cmd.Notebrew.ContentDomain)
+				} else {
+					sitePrefix = name
+				}
+				fileInfo, err := fs.Stat(cmd.Notebrew.FS.WithContext(ctx), sitePrefix)
 				if err != nil {
 					return err
 				}
@@ -124,10 +135,18 @@ func (cmd *StartCmd) Run() error {
 				}
 				for _, domain := range cmd.Notebrew.ManagingDomains {
 					if certmagic.MatchWildcard(clientHello.ServerName, domain) {
-						return staticCertConfig.GetCertificate(clientHello)
+						certificate, err := staticCertConfig.GetCertificate(clientHello)
+						if err != nil {
+							return nil, err
+						}
+						return certificate, nil
 					}
 				}
-				return dynamicCertConfig.GetCertificate(clientHello)
+				certificate, err := dynamicCertConfig.GetCertificate(clientHello)
+				if err != nil {
+					return nil, err
+				}
+				return certificate, nil
 			},
 			MinVersion: tls.VersionTLS12,
 			CurvePreferences: []tls.CurveID{
@@ -163,9 +182,11 @@ func (cmd *StartCmd) Run() error {
 		} else {
 			server.Addr = ":" + strconv.Itoa(cmd.Notebrew.Port)
 		}
-		server.Handler = cmd.Handler
+		server.Handler = cmd.Notebrew
 	}
 
+	// Manually acquire a listener instead of using ListenAndServe() so that we
+	// can report back to the user if the port is already in use.
 	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		var errno syscall.Errno
@@ -174,17 +195,19 @@ func (cmd *StartCmd) Run() error {
 		}
 		// WSAEADDRINUSE copied from
 		// https://cs.opensource.google/go/x/sys/+/refs/tags/v0.6.0:windows/zerrors_windows.go;l=2680
+		// to avoid importing an entire 3rd party library just to use a constant.
 		const WSAEADDRINUSE = syscall.Errno(10048)
 		if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
 			if !cmd.Notebrew.CMSDomainHTTPS {
 				fmt.Fprintln(cmd.Stdout, "notebrew is already running on http://"+cmd.Notebrew.CMSDomain+"/files/")
-				return nil
+			} else {
+				fmt.Fprintln(cmd.Stdout, "notebrew is already running (run `notebrew stop` to stop the process)")
 			}
-			fmt.Fprintln(cmd.Stdout, "notebrew is already running (run `notebrew stop` to stop the process)")
 			return nil
 		}
 		return err
 	}
+
 	// Swallow SIGHUP so that we can keep running even when the (SSH)
 	// session ends (the user should use `notebrew stop` to stop the
 	// process).
@@ -195,18 +218,58 @@ func (cmd *StartCmd) Run() error {
 			<-ch
 		}
 	}()
+
 	wait := make(chan os.Signal, 1)
-	signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	if server.Addr == ":443" {
 		go func() {
 			err := server.ServeTLS(listener, "", "")
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				fmt.Fprintln(cmd.Stdout, err)
+				fmt.Println(err)
 				close(wait)
 			}
 		}()
 		go http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != "GET" && r.Method != "HEAD" {
+				http.Error(w, "Use HTTPS", http.StatusBadRequest)
+				return
+			}
+			_ = r.ParseForm()
+			// Don't redirect API calls from HTTP to HTTPS.
+			// https://jviide.iki.fi/http-redirects
+			if r.Host == cmd.Notebrew.CMSDomain && r.Form.Has("api") {
+				var authenticationTokenHashes [][]byte
+				header := r.Header.Get("Authorization")
+				if header != "" {
+					authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
+					if err == nil {
+						var authenticationTokenHash [8 + blake2b.Size256]byte
+						checksum := blake2b.Sum256(authenticationToken[8:])
+						copy(authenticationTokenHash[:8], authenticationToken[:8])
+						copy(authenticationTokenHash[8:], checksum[:])
+						authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
+					}
+				}
+				cookie, _ := r.Cookie("authentication")
+				if cookie != nil && cookie.Value != "" {
+					authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+					if err == nil {
+						var authenticationTokenHash [8 + blake2b.Size256]byte
+						checksum := blake2b.Sum256(authenticationToken[8:])
+						copy(authenticationTokenHash[:8], authenticationToken[:8])
+						copy(authenticationTokenHash[8:], checksum[:])
+						authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
+					}
+				}
+				if len(authenticationTokenHashes) > 0 {
+					_, _ = sq.Exec(r.Context(), cmd.Notebrew.DB, sq.Query{
+						Dialect: cmd.Notebrew.Dialect,
+						Format:  "DELETE FROM authentication WHERE authentication_token_hash IN ({authenticationTokenHashes})",
+						Values: []any{
+							sq.Param("authenticationTokenHashes", authenticationTokenHashes),
+						},
+					})
+				}
 				http.Error(w, "Use HTTPS", http.StatusBadRequest)
 				return
 			}
@@ -218,19 +281,19 @@ func (cmd *StartCmd) Run() error {
 			}
 			http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusFound)
 		}))
-		fmt.Fprintf(cmd.Stdout, cmd.StartMessage, server.Addr)
+		fmt.Printf(cmd.StartMessage, server.Addr)
 	} else {
 		go func() {
 			err := server.Serve(listener)
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				fmt.Fprintln(cmd.Stdout, err)
+				fmt.Println(err)
 				close(wait)
 			}
 		}()
 		if !cmd.Notebrew.CMSDomainHTTPS {
-			fmt.Fprintf(cmd.Stdout, cmd.StartMessage, "http://"+cmd.Notebrew.CMSDomain+"/files/")
+			fmt.Printf(cmd.StartMessage, "http://"+cmd.Notebrew.CMSDomain+"/files/")
 		} else {
-			fmt.Fprintf(cmd.Stdout, cmd.StartMessage, server.Addr)
+			fmt.Printf(cmd.StartMessage, server.Addr)
 		}
 	}
 	<-wait
