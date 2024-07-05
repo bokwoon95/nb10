@@ -9,6 +9,5 @@ import (
 
 func exit(exitErr error) {
 	fmt.Println(exitErr)
-	pressAnyKeyToExit()
 	os.Exit(1)
 }
