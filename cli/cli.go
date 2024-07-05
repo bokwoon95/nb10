@@ -28,6 +28,7 @@ import (
 	"github.com/caddyserver/certmagic"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/libdns/cloudflare"
 	"github.com/libdns/godaddy"
 	"github.com/libdns/namecheap"
