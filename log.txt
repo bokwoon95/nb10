@@ -29,6 +29,12 @@ rename.go
 uploadfile.go
 clipboard.go
 serve_http.go
+
+cli/config_cmd.go
+cli/sqlite_cgo.go
+cli/sqlite_nocgo.go
+cli/cli.go
+
 notebrew/exit.go
 notebrew/exit_windows.go
 notebrew/sqlite_cgo.go
@@ -41,6 +47,12 @@ notebrew => package main
 cmd => package cmd
 cmd.New(configDir)
 cmd, err := cli.CreateInviteCommand()
+if len(args) > 0 && args[0] == "config" {
+}
+nbrew, err := cli.Notebrew(configDir)
+if err != nil {
+    return err
+}
 
 CREATE TABLE payments ();
 

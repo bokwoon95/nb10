@@ -1533,3 +1533,14 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+type LogFilter struct {
+	Stderr io.Writer
+}
+
+func (logFilter *LogFilter) Write(p []byte) (n int, err error) {
+	if bytes.Contains(p, []byte("http: TLS handshake error from ")) {
+		return 0, nil
+	}
+	return logFilter.Stderr.Write(p)
+}
