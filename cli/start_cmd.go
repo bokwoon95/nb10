@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"context"
@@ -25,15 +25,19 @@ import (
 )
 
 type StartCmd struct {
-	Notebrew  *nb10.Notebrew
-	Stdout    io.Writer
-	ConfigDir string
+	Notebrew     *nb10.Notebrew
+	Stdout       io.Writer
+	ConfigDir    string
+	Handler      http.Handler
+	StartMessage string
 }
 
-func StartCommand(nbrew *nb10.Notebrew, configDir string, args ...string) (*StartCmd, error) {
+func StartCommand(nbrew *nb10.Notebrew, configDir string, handler http.Handler, startMessage string, args ...string) (*StartCmd, error) {
 	var cmd StartCmd
 	cmd.Notebrew = nbrew
 	cmd.ConfigDir = configDir
+	cmd.Handler = handler
+	cmd.StartMessage = startMessage
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
 		fmt.Fprintln(flagset.Output(), `Usage:
@@ -57,13 +61,16 @@ func (cmd *StartCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
+	if cmd.Handler == nil {
+		cmd.Handler = cmd.Notebrew
+	}
 	server := http.Server{
 		ErrorLog: log.New(&LogFilter{Stderr: os.Stderr}, "", log.LstdFlags),
 	}
 	switch cmd.Notebrew.Port {
 	case 443:
 		server.Addr = ":443"
-		server.Handler = cmd.Notebrew
+		server.Handler = cmd.Handler
 		server.ReadHeaderTimeout = 5 * time.Minute
 		server.WriteTimeout = 60 * time.Minute
 		server.IdleTimeout = 5 * time.Minute
@@ -149,14 +156,14 @@ func (cmd *StartCmd) Run() error {
 		}
 	case 80:
 		server.Addr = ":80"
-		server.Handler = cmd.Notebrew
+		server.Handler = cmd.Handler
 	default:
 		if len(cmd.Notebrew.ProxyConfig.RealIPHeaders) == 0 && len(cmd.Notebrew.ProxyConfig.ProxyIPs) == 0 {
 			server.Addr = "localhost:" + strconv.Itoa(cmd.Notebrew.Port)
 		} else {
 			server.Addr = ":" + strconv.Itoa(cmd.Notebrew.Port)
 		}
-		server.Handler = cmd.Notebrew
+		server.Handler = cmd.Handler
 	}
 
 	listener, err := net.Listen("tcp", server.Addr)
@@ -211,7 +218,7 @@ func (cmd *StartCmd) Run() error {
 			}
 			http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusFound)
 		}))
-		fmt.Fprintf(cmd.Stdout, startMessage, server.Addr)
+		fmt.Fprintf(cmd.Stdout, cmd.StartMessage, server.Addr)
 	} else {
 		go func() {
 			err := server.Serve(listener)
@@ -221,9 +228,9 @@ func (cmd *StartCmd) Run() error {
 			}
 		}()
 		if !cmd.Notebrew.CMSDomainHTTPS {
-			fmt.Fprintf(cmd.Stdout, startMessage, "http://"+cmd.Notebrew.CMSDomain+"/files/")
+			fmt.Fprintf(cmd.Stdout, cmd.StartMessage, "http://"+cmd.Notebrew.CMSDomain+"/files/")
 		} else {
-			fmt.Fprintf(cmd.Stdout, startMessage, server.Addr)
+			fmt.Fprintf(cmd.Stdout, cmd.StartMessage, server.Addr)
 		}
 	}
 	<-wait

@@ -34,6 +34,18 @@ cli/config_cmd.go
 cli/sqlite_cgo.go
 cli/sqlite_nocgo.go
 cli/cli.go
+cli/createinvite_cmd.go
+cli/createsite_cmd.go
+cli/createuser_cmd.go
+cli/deleteinvite_cmd.go
+cli/deletesite_cmd.go
+cli/deleteuser_cmd.go
+cli/hashpassword_cmd.go
+cli/permissions_cmd.go
+cli/resetpassword_cmd.go
+cli/start_cmd.go
+cli/status_cmd.go
+cli/stop_cmd.go
 
 notebrew/exit.go
 notebrew/exit_windows.go

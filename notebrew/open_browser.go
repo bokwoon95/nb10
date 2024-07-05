@@ -19,7 +19,7 @@ func init() {
 			exec.Command("xdg-open", address).Run()
 		}
 	}
-	startmsg = `
+	startMessage = `
                      _       _
          _ __   ___ | |_ ___| |__  _ __ _____      __
         | '_ \ / _ \| __/ _ \ '_ \| '__/ _ \ \ /\ / /

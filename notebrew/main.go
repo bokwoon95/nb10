@@ -53,8 +53,8 @@ type SMTPConfig struct {
 }
 
 var (
-	open     = func(address string) {}
-	startmsg = "Running on %s\n"
+	open         = func(address string) {}
+	startMessage = "Running on %s\n"
 )
 
 // static/dynamic private/public config:
@@ -1498,7 +1498,7 @@ func main() {
 				}
 				http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusFound)
 			}))
-			fmt.Printf(startmsg, server.Addr)
+			fmt.Printf(startMessage, server.Addr)
 		} else {
 			go func() {
 				err := server.Serve(listener)
@@ -1508,10 +1508,10 @@ func main() {
 				}
 			}()
 			if !nbrew.CMSDomainHTTPS {
-				fmt.Printf(startmsg, "http://"+nbrew.CMSDomain+"/files/")
+				fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
 				open("http://" + server.Addr + "/files/")
 			} else {
-				fmt.Printf(startmsg, server.Addr)
+				fmt.Printf(startMessage, server.Addr)
 			}
 		}
 		<-wait

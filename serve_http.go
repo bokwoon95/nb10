@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -23,12 +22,6 @@ import (
 )
 
 func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if v := recover(); v != nil {
-			fmt.Println("panic: " + r.Method + " " + r.Host + r.URL.RequestURI() + ":\n" + string(debug.Stack()))
-		}
-	}()
-
 	scheme := "https://"
 	if r.TLS == nil {
 		scheme = "http://"
@@ -90,6 +83,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// /users/signup
 	// /users/signup/checkout
 	// /users/signup/return
+	// if urlPath === "users/signup"
+	// else if strings.HasPrefix(urlPath, "users/signup/")
 
 	// Handle the /users/* route on the CMS domain.
 	head, tail, _ := strings.Cut(urlPath, "/")
