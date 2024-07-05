@@ -37,6 +37,11 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+notebrew => package main
+cmd => package cmd
+cmd.New(configDir)
+cmd, err := cli.CreateInviteCommand()
+
 CREATE TABLE payments ();
 
 TODO: changepassword needs to validate against the existing password otherwise password can't be changed.
@@ -44,6 +49,8 @@ TODO: signup.go
 TODO: tests
 TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
+TODO: include handwritten API documentation, involving POST-ing to /login/.
+    TODO: make sure to warn them if they get the password request wrong three times it will activate the captcha after which bots will likely break, this can be cleared by the user grabbing the
 
 DNS testcases:
 - Newly created server, no DNS entries configured. Set the cmsdomain to notebrew.com and contentdomain nbrew.io.

@@ -764,7 +764,7 @@ func main() {
 					return err
 				}
 				if len(tables) == 0 {
-					_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content=files);")
+					_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
 					if err != nil {
 						return err
 					}

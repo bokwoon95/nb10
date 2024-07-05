@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -232,15 +231,4 @@ func (cmd *StartCmd) Run() error {
 	defer cancel()
 	server.Shutdown(ctx)
 	return nil
-}
-
-type LogFilter struct {
-	Stderr io.Writer
-}
-
-func (logFilter *LogFilter) Write(p []byte) (n int, err error) {
-	if bytes.Contains(p, []byte("http: TLS handshake error from ")) {
-		return 0, nil
-	}
-	return logFilter.Stderr.Write(p)
 }
