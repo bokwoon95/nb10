@@ -422,14 +422,6 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 				return nil, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "database.json"), dataSourceName, err)
 			}
 			nbrew.ErrorCode = sqliteErrorCode
-			ticker := time.NewTicker(4 * time.Hour)
-			go func() {
-				for {
-					<-ticker.C
-					nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-				}
-			}()
-			defer ticker.Stop()
 		case "postgres":
 			values := make(url.Values)
 			for key, value := range databaseConfig.Params {
@@ -464,7 +456,6 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 				}
 				return ""
 			}
-			defer nbrew.DB.Close()
 		case "mysql":
 			values := make(url.Values)
 			for key, value := range databaseConfig.Params {
@@ -502,7 +493,6 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 				}
 				return ""
 			}
-			defer nbrew.DB.Close()
 		default:
 			return nil, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "database.json"), databaseConfig.Dialect)
 		}
@@ -594,18 +584,6 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 				return nil, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
 			}
 			errorCode = sqliteErrorCode
-			defer func() {
-				db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-				db.Close()
-			}()
-			ticker := time.NewTicker(4 * time.Hour)
-			go func() {
-				for {
-					<-ticker.C
-					db.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
-				}
-			}()
-			defer ticker.Stop()
 		case "postgres":
 			values := make(url.Values)
 			for key, value := range filesConfig.Params {
@@ -640,7 +618,6 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 				}
 				return ""
 			}
-			defer db.Close()
 		case "mysql":
 			values := make(url.Values)
 			for key, value := range filesConfig.Params {
@@ -678,7 +655,6 @@ func Notebrew(configDir string, args []string) (*nb10.Notebrew, error) {
 				}
 				return ""
 			}
-			defer db.Close()
 		default:
 			return nil, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), filesConfig.Dialect)
 		}

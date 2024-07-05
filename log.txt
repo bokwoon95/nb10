@@ -54,6 +54,16 @@ if err != nil {
     return err
 }
 
+// put this in main.go, if nbrew.DB != nil. Also do this for databaseFS. Use nbrew.Logger to log any errors.
+ticker := time.NewTicker(4 * time.Hour)
+go func() {
+    for {
+        <-ticker.C
+        nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+    }
+}()
+defer ticker.Stop()
+
 CREATE TABLE payments ();
 
 TODO: changepassword needs to validate against the existing password otherwise password can't be changed.
