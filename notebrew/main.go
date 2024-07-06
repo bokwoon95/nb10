@@ -104,6 +104,10 @@ func main() {
 	}
 	defer nbrew.Close()
 	if nbrew.DB != nil && nbrew.Dialect == "sqlite" {
+		_, err := nbrew.DB.ExecContext(context.Background(), "PRAGMA optimize(0x10002)")
+		if err != nil {
+			nbrew.Logger.Error(err.Error())
+		}
 		ticker := time.NewTicker(4 * time.Hour)
 		defer ticker.Stop()
 		ctx, cancel := context.WithCancel(context.Background())
@@ -111,7 +115,7 @@ func main() {
 		go func() {
 			for {
 				<-ticker.C
-				_, err := nbrew.DB.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
+				_, err := nbrew.DB.ExecContext(ctx, "PRAGMA optimize")
 				if err != nil {
 					nbrew.Logger.Error(err.Error())
 				}
@@ -119,6 +123,10 @@ func main() {
 		}()
 	}
 	if databaseFS, ok := nbrew.FS.(*nb10.DatabaseFS); ok && databaseFS.Dialect == "sqlite" {
+		_, err := databaseFS.DB.ExecContext(context.Background(), "PRAGMA optimize(0x10002)")
+		if err != nil {
+			nbrew.Logger.Error(err.Error())
+		}
 		ticker := time.NewTicker(4 * time.Hour)
 		defer ticker.Stop()
 		ctx, cancel := context.WithCancel(context.Background())
@@ -126,7 +134,7 @@ func main() {
 		go func() {
 			for {
 				<-ticker.C
-				_, err := databaseFS.DB.ExecContext(ctx, "PRAGMA analysis_limit(400); PRAGMA optimize;")
+				_, err := databaseFS.DB.ExecContext(ctx, "PRAGMA optimize")
 				if err != nil {
 					nbrew.Logger.Error(err.Error())
 				}

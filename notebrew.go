@@ -170,14 +170,13 @@ func (nbrew *Notebrew) Close() error {
 	nbrew.cancel()
 	nbrew.waitGroup.Wait()
 	if nbrew.DB != nil && nbrew.Dialect == "sqlite" {
-		nbrew.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+		nbrew.DB.Exec("PRAGMA optimize")
 		nbrew.DB.Close()
 	}
 	if fsys, ok := nbrew.FS.(*DatabaseFS); ok && fsys.Dialect == "sqlite" {
-		fsys.DB.Exec("PRAGMA analysis_limit(400); PRAGMA optimize;")
+		fsys.DB.Exec("PRAGMA optimize")
 		fsys.DB.Close()
 	}
-
 	return nil
 }
 
