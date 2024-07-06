@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,16 +11,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/cli"
-	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/sqddl/ddl"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"golang.org/x/crypto/blake2b"
 )
 
 var (
@@ -282,7 +278,7 @@ func main() {
 	wait := make(chan os.Signal, 1)
 	signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	if server.Addr == ":443" {
-		fmt.Printf(startMessage, server.Addr)
+		go http.ListenAndServe(":80", http.HandlerFunc(nbrew.RedirectToHTTPS))
 		go func() {
 			err := server.ServeTLS(listener, "", "")
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -290,66 +286,8 @@ func main() {
 				close(wait)
 			}
 		}()
-		// Redirect HTTP to HTTPS.
-		go http.ListenAndServe(":80", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != "GET" && r.Method != "HEAD" {
-				http.Error(w, "Use HTTPS", http.StatusBadRequest)
-				return
-			}
-			_ = r.ParseForm()
-			// Don't redirect API calls from HTTP to HTTPS.
-			// https://jviide.iki.fi/http-redirects
-			if r.Host == nbrew.CMSDomain && r.Form.Has("api") {
-				var authenticationTokenHashes [][]byte
-				header := r.Header.Get("Authorization")
-				if header != "" {
-					authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
-					if err == nil {
-						var authenticationTokenHash [8 + blake2b.Size256]byte
-						checksum := blake2b.Sum256(authenticationToken[8:])
-						copy(authenticationTokenHash[:8], authenticationToken[:8])
-						copy(authenticationTokenHash[8:], checksum[:])
-						authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
-					}
-				}
-				cookie, _ := r.Cookie("authentication")
-				if cookie != nil && cookie.Value != "" {
-					authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
-					if err == nil {
-						var authenticationTokenHash [8 + blake2b.Size256]byte
-						checksum := blake2b.Sum256(authenticationToken[8:])
-						copy(authenticationTokenHash[:8], authenticationToken[:8])
-						copy(authenticationTokenHash[8:], checksum[:])
-						authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
-					}
-				}
-				if len(authenticationTokenHashes) > 0 {
-					_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-						Dialect: nbrew.Dialect,
-						Format:  "DELETE FROM authentication WHERE authentication_token_hash IN ({authenticationTokenHashes})",
-						Values: []any{
-							sq.Param("authenticationTokenHashes", authenticationTokenHashes),
-						},
-					})
-				}
-				http.Error(w, "Use HTTPS", http.StatusBadRequest)
-				return
-			}
-			host, _, err := net.SplitHostPort(r.Host)
-			if err != nil {
-				host = r.Host
-			} else {
-				host = net.JoinHostPort(host, "443")
-			}
-			http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusFound)
-		}))
+		fmt.Printf(startMessage, server.Addr)
 	} else {
-		if !nbrew.CMSDomainHTTPS {
-			fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
-			openBrowser("http://" + server.Addr + "/files/")
-		} else {
-			fmt.Printf(startMessage, server.Addr)
-		}
 		go func() {
 			err := server.Serve(listener)
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -357,6 +295,12 @@ func main() {
 				close(wait)
 			}
 		}()
+		if !nbrew.CMSDomainHTTPS {
+			fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
+			openBrowser("http://" + server.Addr + "/files/")
+		} else {
+			fmt.Printf(startMessage, server.Addr)
+		}
 	}
 	<-wait
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)

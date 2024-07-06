@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"path"
 	"strings"
@@ -108,7 +109,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if authenticationTokenString != "" {
 			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
-			if err == nil {
+			if err == nil && len(authenticationToken) == 24 {
 				var authenticationTokenHash [8 + blake2b.Size256]byte
 				checksum := blake2b.Sum256(authenticationToken[8:])
 				copy(authenticationTokenHash[:8], authenticationToken[:8])
@@ -602,4 +603,59 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 			getLogger(r.Context()).Error(err.Error())
 		}
 	}
+}
+
+func (nbrew *Notebrew) RedirectToHTTPS(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" && r.Method != "HEAD" {
+		http.Error(w, "Use HTTPS", http.StatusBadRequest)
+		return
+	}
+	// Redirect HTTP to HTTPS only if it isn't an API call.
+	// https://jviide.iki.fi/http-redirects
+	r.ParseForm()
+	if r.Host != nbrew.CMSDomain || !r.Form.Has("api") {
+		host, _, err := net.SplitHostPort(r.Host)
+		if err != nil {
+			host = r.Host
+		} else {
+			host = net.JoinHostPort(host, "443")
+		}
+		http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusFound)
+		return
+	}
+	// If someone does make an api call via HTTP, revoke their
+	// authentication token.
+	var authenticationTokenHashes [][]byte
+	header := r.Header.Get("Authorization")
+	if header != "" {
+		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
+		if err == nil && len(authenticationToken) == 24 {
+			var authenticationTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(authenticationToken[8:])
+			copy(authenticationTokenHash[:8], authenticationToken[:8])
+			copy(authenticationTokenHash[8:], checksum[:])
+			authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
+		}
+	}
+	cookie, _ := r.Cookie("authentication")
+	if cookie != nil && cookie.Value != "" {
+		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+		if err == nil && len(authenticationToken) == 24 {
+			var authenticationTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(authenticationToken[8:])
+			copy(authenticationTokenHash[:8], authenticationToken[:8])
+			copy(authenticationTokenHash[8:], checksum[:])
+			authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
+		}
+	}
+	if len(authenticationTokenHashes) > 0 {
+		_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "DELETE FROM authentication WHERE authentication_token_hash IN ({authenticationTokenHashes})",
+			Values: []any{
+				sq.Param("authenticationTokenHashes", authenticationTokenHashes),
+			},
+		})
+	}
+	http.Error(w, "Use HTTPS", http.StatusBadRequest)
 }

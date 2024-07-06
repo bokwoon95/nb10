@@ -33,7 +33,7 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 		return
 	}
 	authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
-	if err != nil {
+	if err != nil || len(authenticationToken) != 24 {
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}

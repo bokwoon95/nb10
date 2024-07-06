@@ -84,7 +84,6 @@ func (cmd *StopCmd) Run() error {
 		killCmd := exec.Command("kill", "--", strconv.Itoa(pgid))
 		err = killCmd.Run()
 		if err != nil {
-			fmt.Println("d")
 			return err
 		}
 	}
