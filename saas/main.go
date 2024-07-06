@@ -136,6 +136,7 @@ func main() {
 			}
 		}()
 	}
+	// TODO: saas, err := New(nbrew)
 	if len(args) > 0 {
 		switch args[0] {
 		case "createinvite":
@@ -223,6 +224,7 @@ func main() {
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
+			// TODO: cmd.Handler = saas
 			err = cmd.Run()
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
@@ -257,6 +259,7 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
+	// TODO: server.Handler = saas
 	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		var errno syscall.Errno
