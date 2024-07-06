@@ -7,7 +7,7 @@ import (
 	"github.com/bokwoon95/nb10"
 )
 
-type SAAS struct {
+type Notebrew2 struct {
 	Notebrew *nb10.Notebrew
 
 	StripeConfig struct {
@@ -23,12 +23,20 @@ type SAAS struct {
 	}
 }
 
-func (saas *SAAS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Host == saas.Notebrew.CMSDomain {
+func NewNotebrew2(nbrew *nb10.Notebrew) (*Notebrew2, error) {
+	nbrew2 := &Notebrew2{
+		Notebrew: nbrew,
+	}
+	// TODO: read config from stripe.json and smtp.json.
+	return nbrew2, nil
+}
+
+func (nbrew2 *Notebrew2) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Host == nbrew2.Notebrew.CMSDomain {
 		urlPath := strings.Trim(r.URL.Path, "/")
 		if urlPath == "users/signup" {
 		} else if strings.HasPrefix(urlPath, "users/signup/") {
 		}
 	}
-	saas.Notebrew.ServeHTTP(w, r)
+	nbrew2.Notebrew.ServeHTTP(w, r)
 }

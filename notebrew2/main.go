@@ -74,6 +74,16 @@ func main() {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
 			return
+		case "config2":
+			cmd, err := Config2Command(configDir, args[1:]...)
+			if err != nil {
+				exit(fmt.Errorf("%s: %w", args[0], err))
+			}
+			err = cmd.Run()
+			if err != nil {
+				exit(fmt.Errorf("%s: %w", args[0], err))
+			}
+			return
 		case "hashpassword":
 			cmd, err := cli.HashpasswordCommand(args[1:]...)
 			if err != nil {
@@ -83,8 +93,6 @@ func main() {
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
-			return
-		case "saasconfig":
 			return
 		}
 	}
@@ -136,7 +144,10 @@ func main() {
 			}
 		}()
 	}
-	// TODO: saas, err := New(nbrew)
+	nbrew2, err := NewNotebrew2(nbrew)
+	if err != nil {
+		exit(err)
+	}
 	if len(args) > 0 {
 		switch args[0] {
 		case "createinvite":
@@ -224,7 +235,7 @@ func main() {
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
-			// TODO: cmd.Handler = saas
+			cmd.Handler = nbrew2
 			err = cmd.Run()
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
@@ -259,7 +270,7 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
-	// TODO: server.Handler = saas
+	server.Handler = nbrew2
 	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		var errno syscall.Errno
