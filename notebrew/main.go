@@ -17,7 +17,6 @@ import (
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/cli"
 	"github.com/bokwoon95/sqddl/ddl"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var (
