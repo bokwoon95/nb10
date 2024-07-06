@@ -27,6 +27,10 @@ import (
 var (
 	openBrowser  = func(address string) {}
 	startMessage = "Running on %s\n"
+	exit         = func(exitErr error) {
+		fmt.Println(exitErr)
+		os.Exit(1)
+	}
 )
 
 func main() {
