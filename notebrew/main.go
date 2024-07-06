@@ -69,7 +69,6 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
-
 	if len(args) > 0 {
 		switch args[0] {
 		case "config":
@@ -94,7 +93,6 @@ func main() {
 			return
 		}
 	}
-
 	nbrew, err := cli.Notebrew(configDir, dataHomeDir, args)
 	if err != nil {
 		var migrationErr *ddl.MigrationError
@@ -135,7 +133,6 @@ func main() {
 			}
 		}()
 	}
-
 	if len(args) > 0 {
 		switch args[0] {
 		case "createinvite":
@@ -253,7 +250,6 @@ func main() {
 			return
 		}
 	}
-
 	server := http.Server{
 		ErrorLog: log.New(&cli.LogFilter{Stderr: os.Stderr}, "", log.LstdFlags),
 	}
@@ -396,7 +392,6 @@ func main() {
 		}
 		exit(err)
 	}
-
 	wait := make(chan os.Signal, 1)
 	signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	if server.Addr == ":443" {
