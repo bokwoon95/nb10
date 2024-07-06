@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"html/template"
 	"io"
 	"io/fs"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -29,6 +31,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/klauspost/cpuid/v2"
 	"github.com/libdns/cloudflare"
 	"github.com/libdns/godaddy"
 	"github.com/libdns/namecheap"
@@ -1078,6 +1081,128 @@ func Notebrew(configDir, dataDir string, args []string) (*nb10.Notebrew, error) 
 	}
 	nbrew.ContentSecurityPolicy = buf.String()
 	return nbrew, nil
+}
+
+func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {
+	server := &http.Server{
+		ErrorLog: log.New(&LogFilter{Stderr: os.Stderr}, "", log.LstdFlags),
+	}
+	switch nbrew.Port {
+	case 443:
+		server.Addr = ":443"
+		server.Handler = nbrew
+		server.ReadHeaderTimeout = 5 * time.Minute
+		server.WriteTimeout = 60 * time.Minute
+		server.IdleTimeout = 5 * time.Minute
+		staticCertConfig := certmagic.NewDefault()
+		staticCertConfig.Storage = nbrew.CertStorage
+		if nbrew.DNSProvider != nil {
+			staticCertConfig.Issuers = []certmagic.Issuer{
+				certmagic.NewACMEIssuer(staticCertConfig, certmagic.ACMEIssuer{
+					CA:        certmagic.DefaultACME.CA,
+					TestCA:    certmagic.DefaultACME.TestCA,
+					Logger:    certmagic.DefaultACME.Logger,
+					HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+					DNS01Solver: &certmagic.DNS01Solver{
+						DNSProvider: nbrew.DNSProvider,
+					},
+				}),
+			}
+		} else {
+			staticCertConfig.Issuers = []certmagic.Issuer{
+				certmagic.NewACMEIssuer(staticCertConfig, certmagic.ACMEIssuer{
+					CA:        certmagic.DefaultACME.CA,
+					TestCA:    certmagic.DefaultACME.TestCA,
+					Logger:    certmagic.DefaultACME.Logger,
+					HTTPProxy: certmagic.DefaultACME.HTTPProxy,
+				}),
+			}
+		}
+		if len(nbrew.ManagingDomains) == 0 {
+			fmt.Printf("WARNING: notebrew is listening on port 443 but no domains are pointing at this current machine's IP address (%s/%s). It means no traffic can reach this current machine. Please configure your DNS correctly.\n", nbrew.IP4.String(), nbrew.IP6.String())
+		}
+		err := staticCertConfig.ManageSync(context.Background(), nbrew.ManagingDomains)
+		if err != nil {
+			return nil, err
+		}
+		dynamicCertConfig := certmagic.NewDefault()
+		dynamicCertConfig.Storage = nbrew.CertStorage
+		dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
+			DecisionFunc: func(ctx context.Context, name string) error {
+				var sitePrefix string
+				if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+					sitePrefix = "@" + strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+				} else {
+					sitePrefix = name
+				}
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), sitePrefix)
+				if err != nil {
+					return err
+				}
+				if !fileInfo.IsDir() {
+					return fmt.Errorf("%q is not a directory", name)
+				}
+				return nil
+			},
+		}
+		server.TLSConfig = &tls.Config{
+			NextProtos: []string{"h2", "http/1.1", "acme-tls/1"},
+			GetCertificate: func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				if clientHello.ServerName == "" {
+					return nil, fmt.Errorf("server name required")
+				}
+				for _, domain := range nbrew.ManagingDomains {
+					if certmagic.MatchWildcard(clientHello.ServerName, domain) {
+						certificate, err := staticCertConfig.GetCertificate(clientHello)
+						if err != nil {
+							return nil, err
+						}
+						return certificate, nil
+					}
+				}
+				certificate, err := dynamicCertConfig.GetCertificate(clientHello)
+				if err != nil {
+					return nil, err
+				}
+				return certificate, nil
+			},
+			MinVersion: tls.VersionTLS12,
+			CurvePreferences: []tls.CurveID{
+				tls.X25519,
+				tls.CurveP256,
+			},
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			},
+			PreferServerCipherSuites: true,
+		}
+		if cpuid.CPU.Supports(cpuid.AESNI) {
+			server.TLSConfig.CipherSuites = []uint16{
+				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+				tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			}
+		}
+	case 80:
+		server.Addr = ":80"
+		server.Handler = nbrew
+	default:
+		if len(nbrew.ProxyConfig.RealIPHeaders) == 0 && len(nbrew.ProxyConfig.ProxyIPs) == 0 {
+			server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
+		} else {
+			server.Addr = ":" + strconv.Itoa(nbrew.Port)
+		}
+		server.Handler = nbrew
+	}
+	return server, nil
 }
 
 type LogFilter struct {
