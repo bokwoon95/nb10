@@ -88,6 +88,7 @@ moderator.notebrew.com/ => package moderator
 
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites
+    - oh: I should be able to write multiple scripts and be given the option to see each of their results. and then it's all deduplicated again in the spam database so each site is only inserted once.
 - for each site flagged out by the shell script, give me a convenient link to browse the site's different pages.
 - give me a button to delete a site (this dumps it into a backblaze bucket so that we can use it for future spam data training)
 - give me a button to disable a user account
