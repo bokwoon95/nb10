@@ -70,7 +70,7 @@ notebrew/open_browser.go
 
 no comments (use disqus)
 subscription-only
-payment upfront
+payment upfront, no trial so no spam. use it in offline or self-host if you want it to be cheaper (probably not)
 
 /users/signup/
 /users/signup/payment
