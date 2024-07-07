@@ -14,12 +14,12 @@ import (
 	"strings"
 )
 
-const config2Help = `Keys:
-  notebrew config2 stripe # (json) Database configuration.
-  notebrew config2 smtp   # (json) File system configuration.
+const configxHelp = `Keys:
+  notebrew configx stripe # (json) Database configuration.
+  notebrew configx smtp   # (json) File system configuration.
 `
 
-type Config2Cmd struct {
+type ConfigxCmd struct {
 	ConfigDir string
 	Stdout    io.Writer
 	Stderr    io.Writer
@@ -27,12 +27,12 @@ type Config2Cmd struct {
 	Value     sql.NullString
 }
 
-func Config2Command(configDir string, args ...string) (*Config2Cmd, error) {
-	var cmd Config2Cmd
+func ConfigxCommand(configDir string, args ...string) (*ConfigxCmd, error) {
+	var cmd ConfigxCmd
 	cmd.ConfigDir = configDir
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
-		io.WriteString(flagset.Output(), config2Help)
+		io.WriteString(flagset.Output(), configxHelp)
 	}
 	err := flagset.Parse(args)
 	if err != nil {
@@ -56,7 +56,7 @@ func Config2Command(configDir string, args ...string) (*Config2Cmd, error) {
 	return &cmd, nil
 }
 
-func (cmd *Config2Cmd) Run() error {
+func (cmd *ConfigxCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
@@ -64,7 +64,7 @@ func (cmd *Config2Cmd) Run() error {
 		cmd.Stderr = os.Stderr
 	}
 	if !cmd.Key.Valid {
-		io.WriteString(cmd.Stderr, config2Help)
+		io.WriteString(cmd.Stderr, configxHelp)
 		return nil
 	}
 	if cmd.Value.String == "nil" {
@@ -141,7 +141,7 @@ func (cmd *Config2Cmd) Run() error {
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		default:
-			io.WriteString(cmd.Stderr, config2Help)
+			io.WriteString(cmd.Stderr, configxHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
 		}
 		return nil
@@ -248,7 +248,7 @@ func (cmd *Config2Cmd) Run() error {
 			return err
 		}
 	default:
-		io.WriteString(cmd.Stderr, config2Help)
+		io.WriteString(cmd.Stderr, configxHelp)
 		return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
 	}
 	return nil
