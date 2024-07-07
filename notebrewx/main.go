@@ -145,11 +145,11 @@ func main() {
 			}
 		}()
 	}
-	nbrew2, err := NewNotebrew2(configDir, nbrew)
+	nbrewx, err := NewNotebrewx(configDir, nbrew)
 	if err != nil {
 		exit(err)
 	}
-	stripe.Key = nbrew2.StripeConfig.SecretKey
+	stripe.Key = nbrewx.StripeConfig.SecretKey
 	if len(args) > 0 {
 		switch args[0] {
 		case "createinvite":
@@ -237,7 +237,7 @@ func main() {
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
-			cmd.Handler = nbrew2
+			cmd.Handler = nbrewx
 			err = cmd.Run()
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
@@ -272,7 +272,7 @@ func main() {
 	if err != nil {
 		exit(err)
 	}
-	server.Handler = nbrew2
+	server.Handler = nbrewx
 	listener, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		var errno syscall.Errno

@@ -81,12 +81,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 	}
 
-	// /users/signup
-	// /users/signup/checkout
-	// /users/signup/return
-	// if urlPath === "users/signup"
-	// else if strings.HasPrefix(urlPath, "users/signup/")
-
 	// Handle the /users/* route on the CMS domain.
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {

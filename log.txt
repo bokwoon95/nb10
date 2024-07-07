@@ -67,8 +67,21 @@ notebrew/open_browser.go
 /users/profile/
 /users/updatebilling/
 
+signup
+checkout
+
+switch tail {
+case "signup":
+case "signup/checkout":
+case "signup/checkout/clientsecret":
+case "signup/return":
+case "profile":
+case "updatebilling":
+}
+
 CREATE TABLE billing ();
 
+TODO: rootdirectory: hide createsite button if the user has already reached their site limit. show the site limit next to the "sites" header.
 TODO: changepassword needs to validate against the existing password otherwise password can't be changed.
 TODO: signup.go
 TODO: tests

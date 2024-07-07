@@ -7,10 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/bokwoon95/nb10"
 )
@@ -22,7 +20,7 @@ var (
 	runtimeFS fs.FS = embedFS
 )
 
-type Notebrew2 struct {
+type Notebrewx struct {
 	*nb10.Notebrew
 
 	StripeConfig struct {
@@ -38,8 +36,8 @@ type Notebrew2 struct {
 	}
 }
 
-func NewNotebrew2(configDir string, nbrew *nb10.Notebrew) (*Notebrew2, error) {
-	nbrew2 := &Notebrew2{
+func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
+	nbrewx := &Notebrewx{
 		Notebrew: nbrew,
 	}
 	// Stripe.
@@ -56,8 +54,8 @@ func NewNotebrew2(configDir string, nbrew *nb10.Notebrew) (*Notebrew2, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
 		}
-		nbrew2.StripeConfig.PublishableKey = stripeConfig.PublishableKey
-		nbrew2.StripeConfig.SecretKey = stripeConfig.SecretKey
+		nbrewx.StripeConfig.PublishableKey = stripeConfig.PublishableKey
+		nbrewx.StripeConfig.SecretKey = stripeConfig.SecretKey
 	}
 	// SMTP.
 	b, err = os.ReadFile(filepath.Join(configDir, "smtp.json"))
@@ -73,22 +71,10 @@ func NewNotebrew2(configDir string, nbrew *nb10.Notebrew) (*Notebrew2, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
 		}
-		nbrew2.SMTPConfig.Username = smtpConfig.Username
-		nbrew2.SMTPConfig.Password = smtpConfig.Password
-		nbrew2.SMTPConfig.Host = smtpConfig.Host
-		nbrew2.SMTPConfig.Port = smtpConfig.Port
+		nbrewx.SMTPConfig.Username = smtpConfig.Username
+		nbrewx.SMTPConfig.Password = smtpConfig.Password
+		nbrewx.SMTPConfig.Host = smtpConfig.Host
+		nbrewx.SMTPConfig.Port = smtpConfig.Port
 	}
-	return nbrew2, nil
-}
-
-func (nbrew2 *Notebrew2) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Host != nbrew2.Notebrew.CMSDomain {
-		nbrew2.Notebrew.ServeHTTP(w, r)
-		return
-	}
-	urlPath := strings.Trim(r.URL.Path, "/")
-	if urlPath == "users/signup" {
-	} else if strings.HasPrefix(urlPath, "users/signup/") {
-	}
-	nbrew2.Notebrew.ServeHTTP(w, r)
+	return nbrewx, nil
 }
