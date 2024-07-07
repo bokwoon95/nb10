@@ -75,8 +75,8 @@ func main() {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
 			return
-		case "config2":
-			cmd, err := Config2Command(configDir, args[1:]...)
+		case "configx":
+			cmd, err := ConfigxCommand(configDir, args[1:]...)
 			if err != nil {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
