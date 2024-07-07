@@ -75,6 +75,7 @@ easiest way to get started is to just mail them an invite link
 
 == Initial ==
 Free: 10 MB, 1 site
+1 USD/month: 1 GB, 3 sites
 4 USD/month: 6GB, 10 sites
 
 == Spam lockdown mode ==
