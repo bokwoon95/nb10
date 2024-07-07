@@ -170,7 +170,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			" OR file_path LIKE '%.gif'" +
 			") ",
 		Values: []any{
-			sq.StringParam("pattern", path.Join(siteGen.sitePrefix, "output")+"/%"),
+			sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(siteGen.sitePrefix, "output"))+"/%"),
 		},
 	}, func(row *sq.Row) (result struct {
 		FileID   ID

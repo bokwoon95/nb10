@@ -457,7 +457,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 				return
 			}
-			fileType, ok := fileTypes[path.Ext(urlPath)]
+			ext := path.Ext(urlPath)
+			if ext == ".tgz" {
+				http.Error(w, "404 Not Found", http.StatusNotFound)
+				return
+			}
+			fileType, ok := fileTypes[ext]
 			if !ok || !fileType.IsObject {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 			}

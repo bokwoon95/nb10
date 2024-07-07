@@ -61,14 +61,20 @@ notebrew/main.go
 notebrew/open_browser.go
 
 /users/signup/
-/users/signup/checkout
+/users/signup/createsession
+/users/signup/return
 /users/signup/createcheckoutsession
 /users/signup/return
 /users/profile/
 /users/updatebilling/
 
-signup
-checkout
+no comments (use disqus)
+subscription-only
+payment upfront
+
+/users/signup/
+/users/signup/payment
+/users/signup/payment?sessionid
 
 switch tail {
 case "signup":
