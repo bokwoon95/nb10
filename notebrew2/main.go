@@ -17,6 +17,7 @@ import (
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/cli"
 	"github.com/bokwoon95/sqddl/ddl"
+	"github.com/stripe/stripe-go/v79"
 )
 
 var (
@@ -144,10 +145,11 @@ func main() {
 			}
 		}()
 	}
-	nbrew2, err := NewNotebrew2(nbrew)
+	nbrew2, err := NewNotebrew2(configDir, nbrew)
 	if err != nil {
 		exit(err)
 	}
+	stripe.Key = nbrew2.StripeConfig.SecretKey
 	if len(args) > 0 {
 		switch args[0] {
 		case "createinvite":

@@ -54,6 +54,7 @@ require (
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/stripe/stripe-go/v79 v79.2.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
