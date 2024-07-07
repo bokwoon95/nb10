@@ -89,23 +89,8 @@ the admin page needs to:
 - for each site flagged out by the shell script, give me a convenient link to browse the site's different pages.
 - give me a button to delete a site (this dumps it into a backblaze bucket so that we can use it for future spam data training)
 - give me a button to disable a user account
-
-admin tools I need:
-- bad email domains: use an SQL query and filter out everything that's not from a whitelisted provider
-- bad gmail/hotmail/yahoo etc usernames: write a shell script that counts the number of digits and flags it out if more than 2
-- bad site title/description/index.html: use a FTS SQL query that searches for a list of banned words and print it out
-- the above can be a simple shell script that runs those SQL queries and does the filtering and then writes the results into another SQLite database.
-- it must be a shell script so that I can tweak the heuristics easily without recompiling a go program
-- then I just need a separate go program that calls the above shell script on demand, connects to the SQLite database and shows me one site after another.
-- for each site, I can either whitelist the site (they will not be put into the badlist again), ban the site (also bans all other sites the user has created)
-- the moment a suspicious flag is triggered, the site gets put at the front of the review list.
-- if I manually review a site and deem it bad, I need a convenient button that exports all sites of that user and then deletes the user plus all their sites from the database.
-    - for free users, the exports will be under 10 MB and so can be mailed directly to them.
-    - for paying users, the situation is trickier. since I don't want them to issue a chargeback, I must
-- a way to monitor cdn usage, by listening to the bunnyCDN API
-- if I receive a usage notification that a user is using too much bandwidth, I need to manually issue them an email gently warning them that their site is using too much CDN bandwidth and that if it continues, I will be forced to terminate their site and email an export of everything to them (using the same button as before).
-
-the mailing of export files, the notifications of bandwidth usage, the moving of export files to a backblaze bucket is all done manually at first. if we get a high enough rate of offenders such that doing it manually becomes an arduous task, then start writing programs for it.
+- through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
+- show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
 TODO: allow username to be null, and in the cases where it is null /users/profile/ has to flag it out saying their username is null and needs to be updated ASAP.
     - this allows us to still successfully create a user even if they make a payment but their desired username is not available
