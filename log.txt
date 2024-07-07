@@ -84,6 +84,8 @@ Immediately need to pick a plan. The sign up flow has to be rewritten from immed
 12 USD/year (or 1 USD/month): 1 GB, 3 sites
 48 USD/year (or 4 USD/month): 6GB, 10 sites
 
+moderator.notebrew.com/ => package moderator
+
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites
 - for each site flagged out by the shell script, give me a convenient link to browse the site's different pages.
