@@ -76,11 +76,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
-		referer := nbrew.getReferer(r)
+		referer := nbrew.GetReferer(r)
 		clipboard := make(url.Values)
 		isInClipboard := make(map[string]bool)
 		cookie, _ := r.Cookie("clipboard")
@@ -115,7 +115,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			"hasSuffix":             strings.HasSuffix,
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
-			"humanReadableFileSize": humanReadableFileSize,
+			"humanReadableFileSize": HumanReadableFileSize,
 			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 			"referer":               func() string { return referer },
@@ -181,31 +181,31 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		nbrew.executeTemplate(w, r, tmpl, &response)
+		nbrew.ExecuteTemplate(w, r, tmpl, &response)
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 		return
 	}
 
 	head, _, _ := strings.Cut(filePath, "/")
 	if head != "notes" && head != "pages" && head != "posts" && head != "output" {
-		nbrew.notFound(w, r)
+		nbrew.NotFound(w, r)
 		return
 	}
 
 	var response Response
-	_, err := nbrew.getSession(r, "flash", &response)
+	_, err := nbrew.GetSession(r, "flash", &response)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 	}
-	nbrew.clearSession(w, r, "flash")
-	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+	nbrew.ClearSession(w, r, "flash")
+	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.SitePrefix = sitePrefix
@@ -331,16 +331,16 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	if !ok {
 		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, filePath))
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		response.Files = make([]File, 0, len(dirEntries))
 		for _, dirEntry := range dirEntries {
 			fileInfo, err := dirEntry.Info()
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			name := fileInfo.Name()
@@ -2015,8 +2015,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	err = group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	writeResponse(w, r, response)

@@ -48,7 +48,7 @@ var (
 
 	RuntimeFS fs.FS = embedFS
 
-	devMode = false
+	developerMode = false
 
 	StylesCSS string
 
@@ -57,10 +57,6 @@ var (
 	BaselineJS string
 
 	BaselineJSHash string
-
-	contentSecurityPolicy string
-
-	contentSecurityPolicyWithCaptcha string
 )
 
 func init() {
@@ -195,14 +191,14 @@ type contextKey struct{}
 
 var loggerKey = &contextKey{}
 
-func getLogger(ctx context.Context) *slog.Logger {
+func GetLogger(ctx context.Context) *slog.Logger {
 	if logger, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
 		return logger
 	}
 	return slog.Default()
 }
 
-func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name string, value any) error {
+func (nbrew *Notebrew) SetSession(w http.ResponseWriter, r *http.Request, name string, value any) error {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {
@@ -223,7 +219,7 @@ func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name s
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
-	if devMode {
+	if developerMode {
 		os.Stderr.WriteString(buf.String())
 	}
 	if nbrew.DB == nil {
@@ -256,7 +252,7 @@ func (nbrew *Notebrew) setSession(w http.ResponseWriter, r *http.Request, name s
 	return nil
 }
 
-func (nbrew *Notebrew) getSession(r *http.Request, name string, valuePtr any) (ok bool, err error) {
+func (nbrew *Notebrew) GetSession(r *http.Request, name string, valuePtr any) (ok bool, err error) {
 	cookie, _ := r.Cookie(name)
 	if cookie == nil {
 		return false, nil
@@ -304,7 +300,7 @@ func (nbrew *Notebrew) getSession(r *http.Request, name string, valuePtr any) (o
 	return true, nil
 }
 
-func (nbrew *Notebrew) clearSession(w http.ResponseWriter, r *http.Request, name string) {
+func (nbrew *Notebrew) ClearSession(w http.ResponseWriter, r *http.Request, name string) {
 	cookie, _ := r.Cookie(name)
 	if cookie == nil {
 		return
@@ -337,7 +333,7 @@ func (nbrew *Notebrew) clearSession(w http.ResponseWriter, r *http.Request, name
 		},
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 	}
 }
 
@@ -477,7 +473,7 @@ var readerPool = sync.Pool{
 	},
 }
 
-func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
+func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {
@@ -502,15 +498,15 @@ func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, t
 
 	err := tmpl.Execute(gzipWriter, data)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		fmt.Printf(fmt.Sprintf("%#v", data))
-		nbrew.internalServerError(w, r, err)
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	err = gzipWriter.Close()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 
@@ -522,7 +518,7 @@ func (nbrew *Notebrew) executeTemplate(w http.ResponseWriter, r *http.Request, t
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
-func (nbrew *Notebrew) contentBaseURL(sitePrefix string) string {
+func (nbrew *Notebrew) ContentBaseURL(sitePrefix string) string {
 	if strings.Contains(sitePrefix, ".") {
 		return "https://" + sitePrefix
 	}
@@ -538,7 +534,7 @@ func (nbrew *Notebrew) contentBaseURL(sitePrefix string) string {
 	return "http://" + nbrew.CMSDomain
 }
 
-func (nbrew *Notebrew) getReferer(r *http.Request) string {
+func (nbrew *Notebrew) GetReferer(r *http.Request) string {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer
 	//
 	// "The Referer header can contain an origin, path, and querystring, and
@@ -575,7 +571,7 @@ var errorTemplate = template.Must(template.
 	ParseFS(RuntimeFS, "embed/error.html"),
 )
 
-func humanReadableFileSize(size int64) string {
+func HumanReadableFileSize(size int64) string {
 	// https://yourbasic.org/golang/formatting-byte-size-to-human-readable-format/
 	if size < 0 {
 		return ""
@@ -592,11 +588,11 @@ func humanReadableFileSize(size int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "kMGTPE"[exp])
 }
 
-func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, serverErr error) {
+func (nbrew *Notebrew) BadRequest(w http.ResponseWriter, r *http.Request, serverErr error) {
 	var message string
 	var maxBytesErr *http.MaxBytesError
 	if errors.As(serverErr, &maxBytesErr) {
-		message = "payload is too big (max " + humanReadableFileSize(maxBytesErr.Limit) + ")"
+		message = "payload is too big (max " + HumanReadableFileSize(maxBytesErr.Limit) + ")"
 	} else {
 		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		if contentType == "application/json" {
@@ -625,7 +621,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 			"message": message,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -642,7 +638,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 		"Byline":   message,
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "BadRequest: "+message, http.StatusBadRequest)
 		return
 	}
@@ -654,7 +650,7 @@ func (nbrew *Notebrew) badRequest(w http.ResponseWriter, r *http.Request, server
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) NotAuthenticated(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusUnauthorized)
@@ -668,7 +664,7 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 			"error": "NotAuthenticated",
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -693,7 +689,7 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 		"Byline":   fmt.Sprintf("You are not authenticated, please <a href='/users/login/%s'>log in</a>.", query),
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "NotAuthenticated", http.StatusUnauthorized)
 		return
 	}
@@ -705,7 +701,7 @@ func (nbrew *Notebrew) notAuthenticated(w http.ResponseWriter, r *http.Request) 
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) NotAuthorized(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)
@@ -719,7 +715,7 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 			"error": "NotAuthorized",
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -737,13 +733,13 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 		byline = "You do not have permission to perform that action (try logging in to a different account)."
 	}
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  nbrew.getReferer(r),
+		"Referer":  nbrew.GetReferer(r),
 		"Title":    "403 forbidden",
 		"Headline": "403 forbidden",
 		"Byline":   byline,
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "NotAuthorized", http.StatusForbidden)
 		return
 	}
@@ -755,7 +751,7 @@ func (nbrew *Notebrew) notAuthorized(w http.ResponseWriter, r *http.Request) {
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) NotFound(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusNotFound)
@@ -769,7 +765,7 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 			"error": "NotFound",
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -781,13 +777,13 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  nbrew.getReferer(r),
+		"Referer":  nbrew.GetReferer(r),
 		"Title":    "404 not found",
 		"Headline": "404 not found",
 		"Byline":   "The page you are looking for does not exist.",
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "NotFound", http.StatusNotFound)
 		return
 	}
@@ -799,7 +795,7 @@ func (nbrew *Notebrew) notFound(w http.ResponseWriter, r *http.Request) {
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -814,7 +810,7 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 			"method": r.Method,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -826,12 +822,12 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  nbrew.getReferer(r),
+		"Referer":  nbrew.GetReferer(r),
 		"Title":    "405 method not allowed",
 		"Headline": "405 method not allowed: " + r.Method,
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "NotFound", http.StatusMethodNotAllowed)
 		return
 	}
@@ -843,7 +839,7 @@ func (nbrew *Notebrew) methodNotAllowed(w http.ResponseWriter, r *http.Request) 
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) UnsupportedContentType(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	var message string
 	if contentType == "" {
@@ -865,7 +861,7 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 			"message": message,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -877,12 +873,12 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 		}
 	}()
 	err := errorTemplate.Execute(buf, map[string]any{
-		"Referer":  nbrew.getReferer(r),
+		"Referer":  nbrew.GetReferer(r),
 		"Title":    "415 unsupported media type",
 		"Headline": message,
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "UnsupportedMediaType "+message, http.StatusUnsupportedMediaType)
 		return
 	}
@@ -894,7 +890,7 @@ func (nbrew *Notebrew) unsupportedContentType(w http.ResponseWriter, r *http.Req
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
+func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
 	if serverErr == nil {
 		if r.Method == "HEAD" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -917,7 +913,7 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 			"message": serverErr.Error(),
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -931,13 +927,13 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	var data map[string]any
 	if errors.Is(serverErr, context.DeadlineExceeded) {
 		data = map[string]any{
-			"Referer":  nbrew.getReferer(r),
+			"Referer":  nbrew.GetReferer(r),
 			"Title":    "deadline exceeded",
 			"Headline": "The server took too long to process your request.",
 		}
 	} else {
 		data = map[string]any{
-			"Referer":  nbrew.getReferer(r),
+			"Referer":  nbrew.GetReferer(r),
 			"Title":    "500 internal server error",
 			"Headline": "500 internal server error",
 			"Byline":   "There's a bug with notebrew.",
@@ -946,7 +942,7 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	}
 	err := errorTemplate.Execute(buf, data)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "ServerError", http.StatusInternalServerError)
 		return
 	}
@@ -958,7 +954,7 @@ func (nbrew *Notebrew) internalServerError(w http.ResponseWriter, r *http.Reques
 	buf.WriteTo(w)
 }
 
-func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, fileType FileType, reader io.Reader, cacheControl string) {
+func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, fileType FileType, reader io.Reader, cacheControl string) {
 	// If max-age is present in Cache-Control, don't set the ETag because that
 	// would override max-age. https://stackoverflow.com/a/51257030
 	hasMaxAge := strings.Contains(cacheControl, "max-age=")
@@ -986,13 +982,13 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			}()
 			_, err := io.Copy(hasher, reader)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
 			_, err = readSeeker.Seek(0, io.SeekStart)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -1018,7 +1014,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		}
 		_, err := io.Copy(w, reader)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -1047,7 +1043,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			}()
 			_, err := hasher.Write(databaseFile.buf.Bytes())
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -1093,13 +1089,13 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		}()
 		_, err := io.Copy(gzipWriter, reader)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		err = gzipWriter.Close()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -1134,11 +1130,11 @@ func serveFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	}
 	_, err := io.Copy(gzipWriter, reader)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 	} else {
 		err = gzipWriter.Close()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 	}
 }
@@ -1172,7 +1168,7 @@ func init() {
 
 var ErrStorageLimitExceeded = fmt.Errorf("storage limit exceeded")
 
-func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) StorageLimitExceeded(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusInsufficientStorage)
@@ -1186,7 +1182,7 @@ func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Reque
 			"error": "StorageLimitExceeded",
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -1204,7 +1200,7 @@ func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Reque
 		"Byline":   "You have exceeded your storage limit.",
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "StorageLimitExceeded", http.StatusInsufficientStorage)
 		return
 	}
@@ -1216,7 +1212,7 @@ func (nbrew *Notebrew) storageLimitExceeded(w http.ResponseWriter, r *http.Reque
 	buf.WriteTo(w)
 }
 
-func (nbrew *Notebrew) accountDisabled(w http.ResponseWriter, r *http.Request, disableReason string) {
+func (nbrew *Notebrew) AccountDisabled(w http.ResponseWriter, r *http.Request, disableReason string) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusForbidden)
@@ -1228,7 +1224,7 @@ func (nbrew *Notebrew) accountDisabled(w http.ResponseWriter, r *http.Request, d
 			"disableReason": disableReason,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -1247,7 +1243,7 @@ func (nbrew *Notebrew) accountDisabled(w http.ResponseWriter, r *http.Request, d
 		"Details":  "disable reason: " + disableReason,
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "AccountDisabled", http.StatusForbidden)
 		return
 	}

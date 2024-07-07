@@ -51,13 +51,13 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 
 	if r.Method != "GET" {
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 		return
 	}
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
-		nbrew.notFound(w, r)
+		nbrew.NotFound(w, r)
 		return
 	}
 
@@ -69,11 +69,11 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
-		referer := nbrew.getReferer(r)
+		referer := nbrew.GetReferer(r)
 		extMap := make(map[string]struct{})
 		for _, ext := range response.Exts {
 			extMap[ext] = struct{}{}
@@ -120,12 +120,12 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		tmpl, err := template.New("search.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/search.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		nbrew.executeTemplate(w, r, tmpl, &response)
+		nbrew.ExecuteTemplate(w, r, tmpl, &response)
 	}
 
 	request := Request{
@@ -140,7 +140,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 
 	var response Response
-	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.SitePrefix = sitePrefix
@@ -282,8 +282,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			return match
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 	case "postgres":

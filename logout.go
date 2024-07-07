@@ -50,12 +50,12 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 		}
 		tmpl, err := template.New("logout.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/logout.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		nbrew.executeTemplate(w, r, tmpl, nil)
+		nbrew.ExecuteTemplate(w, r, tmpl, nil)
 	case "POST":
 		http.SetCookie(w, &http.Cookie{
 			Path:   "/",
@@ -72,13 +72,13 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		}
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 	default:
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 	}
 }

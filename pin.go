@@ -24,17 +24,17 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	}
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
-		nbrew.notFound(w, r)
+		nbrew.NotFound(w, r)
 		return
 	}
 	if r.Method != "POST" {
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 	err := r.ParseForm()
 	if err != nil {
-		nbrew.badRequest(w, r, err)
+		nbrew.BadRequest(w, r, err)
 		return
 	}
 	referer := r.Referer()
@@ -50,7 +50,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
@@ -58,15 +58,15 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			http.Redirect(w, r, "/"+path.Join("files", sitePrefix)+"/", http.StatusFound)
 			return
 		}
-		err := nbrew.setSession(w, r, "flash", map[string]any{
+		err := nbrew.SetSession(w, r, "flash", map[string]any{
 			"postRedirectGet": map[string]any{
 				"from":      "pin",
 				"numPinned": response.NumPinned,
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		http.Redirect(w, r, referer, http.StatusFound)
@@ -95,8 +95,8 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			writeResponse(w, r, response)
 			return
 		}
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	names := r.Form["name"]
@@ -109,8 +109,8 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	numPinned := atomic.Int64{}
 	tx, err := databaseFS.DB.BeginTx(r.Context(), nil)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -134,8 +134,8 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 	case "mysql":
@@ -150,8 +150,8 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 	default:
@@ -181,14 +181,14 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 	}
 	err = group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	err = tx.Commit()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	response.NumPinned = int(numPinned.Load())

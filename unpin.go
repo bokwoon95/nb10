@@ -43,7 +43,7 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 	}
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
 	if !ok {
-		nbrew.notFound(w, r)
+		nbrew.NotFound(w, r)
 		return
 	}
 
@@ -61,38 +61,38 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
-			referer := nbrew.getReferer(r)
+			referer := nbrew.GetReferer(r)
 			funcMap := map[string]any{
 				"join":                  path.Join,
 				"base":                  path.Base,
 				"ext":                   path.Ext,
 				"hasPrefix":             strings.HasPrefix,
 				"trimPrefix":            strings.TrimPrefix,
-				"humanReadableFileSize": humanReadableFileSize,
+				"humanReadableFileSize": HumanReadableFileSize,
 				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 				"referer":               func() string { return referer },
 			}
 			tmpl, err := template.New("unpin.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/unpin.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			nbrew.executeTemplate(w, r, tmpl, &response)
+			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 		var response Response
-		_, err := nbrew.getSession(r, "flash", &response)
+		_, err := nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.clearSession(w, r, "flash")
-		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+		nbrew.ClearSession(w, r, "flash")
+		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.ImgDomain = nbrew.ImgDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
@@ -117,8 +117,8 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				writeResponse(w, r, response)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		if !fileInfo.IsDir() {
@@ -174,8 +174,8 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		err = group.Wait()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		n := 0
@@ -190,13 +190,13 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		writeResponse(w, r, response)
 	case "POST":
 		if user.DisableReason != "" {
-			nbrew.accountDisabled(w, r, user.DisableReason)
+			nbrew.AccountDisabled(w, r, user.DisableReason)
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 		err := r.ParseForm()
 		if err != nil {
-			nbrew.badRequest(w, r, err)
+			nbrew.BadRequest(w, r, err)
 			return
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -207,29 +207,29 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.setSession(w, r, "flash", &response)
+				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "unpin")+"/?parent="+url.QueryEscape(response.Parent), http.StatusFound)
 				return
 			}
-			err := nbrew.setSession(w, r, "flash", map[string]any{
+			err := nbrew.SetSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":        "unpin",
 					"numUnpinned": len(response.Files),
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			head, tail, _ := strings.Cut(response.Parent, "/")
@@ -277,8 +277,8 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				writeResponse(w, r, response)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		names := r.Form["name"]
@@ -290,8 +290,8 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		names = slices.Compact(names)
 		tx, err := databaseFS.DB.BeginTx(r.Context(), nil)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		defer tx.Rollback()
@@ -306,8 +306,8 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		defer preparedExec.Close()
@@ -338,14 +338,14 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		err = group.Wait()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		err = tx.Commit()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		n := 0
@@ -359,6 +359,6 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		response.Files = response.Files[:n]
 		writeResponse(w, r, response)
 	default:
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 	}
 }

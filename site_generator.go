@@ -1953,7 +1953,7 @@ var funcMap = map[string]any{
 	"trimPrefix":            strings.TrimPrefix,
 	"trimSuffix":            strings.TrimSuffix,
 	"trimSpace":             strings.TrimSpace,
-	"humanReadableFileSize": humanReadableFileSize,
+	"humanReadableFileSize": HumanReadableFileSize,
 	"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 	"head": func(s string) string {
 		head, _, _ := strings.Cut(s, "/")

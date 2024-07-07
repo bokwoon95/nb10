@@ -54,7 +54,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
-		nbrew.badRequest(w, r, err)
+		nbrew.BadRequest(w, r, err)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {
 		if nbrew.DB == nil {
-			nbrew.notFound(w, r)
+			nbrew.NotFound(w, r)
 			return
 		}
 		var user User
@@ -136,7 +136,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					if !errors.Is(err, sql.ErrNoRows) {
 						logger.Error(err.Error())
-						nbrew.internalServerError(w, r, err)
+						nbrew.InternalServerError(w, r, err)
 						return
 					}
 				}
@@ -157,7 +157,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if user.UserID.IsZero() {
-			nbrew.notAuthenticated(w, r)
+			nbrew.NotAuthenticated(w, r)
 			return
 		}
 		switch tail {
@@ -171,7 +171,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.editprofile(w, r, user)
 			return
 		default:
-			nbrew.notFound(w, r)
+			nbrew.NotFound(w, r)
 			return
 		}
 	}
@@ -182,32 +182,32 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		head, tail, _ := strings.Cut(urlPath, "/")
 		if head == "static" {
 			if r.Method != "GET" {
-				nbrew.methodNotAllowed(w, r)
+				nbrew.MethodNotAllowed(w, r)
 				return
 			}
 			fileType, ok := fileTypes[path.Ext(urlPath)]
 			if !ok {
-				nbrew.notFound(w, r)
+				nbrew.NotFound(w, r)
 				return
 			}
 			file, err := RuntimeFS.Open(urlPath)
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					nbrew.notFound(w, r)
+					nbrew.NotFound(w, r)
 					return
 				}
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			serveFile(w, r, path.Base(urlPath), fileInfo.Size(), fileType, file, "max-age=31536000, immutable" /* 1 year */)
+			ServeFile(w, r, path.Base(urlPath), fileInfo.Size(), fileType, file, "max-age=31536000, immutable" /* 1 year */)
 			return
 		}
 
@@ -248,7 +248,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
 				}
-				nbrew.notAuthenticated(w, r)
+				nbrew.NotAuthenticated(w, r)
 				return
 			}
 			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
@@ -257,7 +257,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
 				}
-				nbrew.notAuthenticated(w, r)
+				nbrew.NotAuthenticated(w, r)
 				return
 			}
 			var authenticationTokenHash [8 + blake2b.Size256]byte
@@ -295,14 +295,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
 					logger.Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
 				}
-				nbrew.notAuthenticated(w, r)
+				nbrew.NotAuthenticated(w, r)
 				return
 			}
 			user = result.User
@@ -329,7 +329,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !isAuthorizedForSite {
-			nbrew.notAuthorized(w, r)
+			nbrew.NotAuthorized(w, r)
 			return
 		}
 
@@ -351,11 +351,11 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, urlPath))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
-						nbrew.notFound(w, r)
+						nbrew.NotFound(w, r)
 						return
 					}
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				if fileInfo.IsDir() {
@@ -368,18 +368,18 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, urlPath))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					nbrew.notFound(w, r)
+					nbrew.NotFound(w, r)
 					return
 				}
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			if fileInfo.IsDir() {
@@ -440,7 +440,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.cancelexport(w, r, user, sitePrefix)
 			return
 		default:
-			nbrew.notFound(w, r)
+			nbrew.NotFound(w, r)
 			return
 		}
 	}
@@ -561,14 +561,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		cacheControl = "max-age=300, stale-while-revalidate=604800" /* 5 minutes, 1 week */
 	}
-	serveFile(w, r, path.Base(filePath), fileInfo.Size(), fileType, file, cacheControl)
+	ServeFile(w, r, path.Base(filePath), fileInfo.Size(), fileType, file, cacheControl)
 }
 
 func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix string) {
 	file, err := fsys.WithContext(r.Context()).Open(path.Join(sitePrefix, "output/404/index.html"))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
@@ -580,7 +580,7 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 		w.WriteHeader(http.StatusNotFound)
 		_, err := io.Copy(w, bytes.NewReader(databaseFile.buf.Bytes()))
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -596,11 +596,11 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	w.WriteHeader(http.StatusNotFound)
 	_, err = io.Copy(gzipWriter, file)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 	} else {
 		err = gzipWriter.Close()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
 	}
 }

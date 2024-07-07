@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,8 +15,15 @@ import (
 	"github.com/bokwoon95/nb10"
 )
 
+var (
+	//go:embed embed
+	embedFS embed.FS
+
+	runtimeFS fs.FS = embedFS
+)
+
 type Notebrew2 struct {
-	Notebrew *nb10.Notebrew
+	*nb10.Notebrew
 
 	StripeConfig struct {
 		PublishableKey string

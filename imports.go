@@ -54,31 +54,31 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 	}
 
 	if r.Method != "GET" && r.Method != "HEAD" {
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 		return
 	}
 	if fileName != "" {
 		if strings.Contains(fileName, "/") || !strings.HasSuffix(fileName, ".tgz") {
-			nbrew.notFound(w, r)
+			nbrew.NotFound(w, r)
 			return
 		}
 		file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, "imports", fileName))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				nbrew.notFound(w, r)
+				nbrew.NotFound(w, r)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		fileInfo, err := file.Stat()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		serveFile(w, r, fileName, fileInfo.Size(), fileTypes[".tgz"], file, "no-cache")
+		ServeFile(w, r, fileName, fileInfo.Size(), fileTypes[".tgz"], file, "no-cache")
 		return
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -89,11 +89,11 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
-		referer := nbrew.getReferer(r)
+		referer := nbrew.GetReferer(r)
 		clipboard := make(url.Values)
 		isInClipboard := make(map[string]bool)
 		cookie, _ := r.Cookie("clipboard")
@@ -123,7 +123,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 			"hasSuffix":             strings.HasSuffix,
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
-			"humanReadableFileSize": humanReadableFileSize,
+			"humanReadableFileSize": HumanReadableFileSize,
 			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 			"referer":               func() string { return referer },
@@ -158,27 +158,27 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 		}
 		tmpl, err := template.New("imports.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/imports.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-		nbrew.executeTemplate(w, r, tmpl, &response)
+		nbrew.ExecuteTemplate(w, r, tmpl, &response)
 	}
 
 	fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "imports"))
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	var response Response
-	_, err = nbrew.getSession(r, "flash", &response)
+	_, err = nbrew.GetSession(r, "flash", &response)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		GetLogger(r.Context()).Error(err.Error())
 	}
-	nbrew.clearSession(w, r, "flash")
-	response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+	nbrew.ClearSession(w, r, "flash")
+	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.SitePrefix = sitePrefix
@@ -345,8 +345,8 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 	}
 	err = group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	writeResponse(w, r, response)

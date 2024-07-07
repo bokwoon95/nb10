@@ -17,24 +17,24 @@ import (
 
 func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, user User) {
 	if nbrew.DB == nil {
-		nbrew.notFound(w, r)
+		nbrew.NotFound(w, r)
 		return
 	}
 	if r.Method != "POST" {
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 		return
 	}
 	contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if contentType == "multipart/form-data" {
 		err := r.ParseMultipartForm(1 << 20 /* 1 MB */)
 		if err != nil {
-			nbrew.badRequest(w, r, err)
+			nbrew.BadRequest(w, r, err)
 			return
 		}
 	} else {
 		err := r.ParseForm()
 		if err != nil {
-			nbrew.badRequest(w, r, err)
+			nbrew.BadRequest(w, r, err)
 			return
 		}
 	}
@@ -93,18 +93,18 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 	}
 	err := group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
-	err = nbrew.setSession(w, r, "flash", map[string]any{
+	err = nbrew.SetSession(w, r, "flash", map[string]any{
 		"postRedirectGet": map[string]any{
 			"from": "calculatestorage",
 		},
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.internalServerError(w, r, err)
+		GetLogger(r.Context()).Error(err.Error())
+		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	referer := r.Referer()

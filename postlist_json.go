@@ -51,11 +51,11 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
-			referer := nbrew.getReferer(r)
+			referer := nbrew.GetReferer(r)
 			funcMap := map[string]any{
 				"join":       path.Join,
 				"base":       path.Base,
@@ -68,20 +68,20 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			}
 			tmpl, err := template.New("postlist_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/postlist_json.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			nbrew.executeTemplate(w, r, tmpl, &response)
+			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 		var response Response
-		_, err := nbrew.getSession(r, "flash", &response)
+		_, err := nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			GetLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.clearSession(w, r, "flash")
-		response.ContentBaseURL = nbrew.contentBaseURL(sitePrefix)
+		nbrew.ClearSession(w, r, "flash")
+		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -89,16 +89,16 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		response.Category = category
 		b, err := fs.ReadFile(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", category, "postlist.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		var request Request
 		if len(b) > 0 {
 			err := json.Unmarshal(b, &request)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		}
@@ -107,7 +107,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		writeResponse(w, r, response)
 	case "POST":
 		if user.DisableReason != "" {
-			nbrew.accountDisabled(w, r, user.DisableReason)
+			nbrew.AccountDisabled(w, r, user.DisableReason)
 			return
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -118,19 +118,19 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
-			err := nbrew.setSession(w, r, "flash", map[string]any{
+			err := nbrew.SetSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "postlist.json",
 				},
 				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "posts", category, "postlist.json"), http.StatusFound)
@@ -143,57 +143,57 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		case "application/json":
 			err := json.NewDecoder(r.Body).Decode(&request)
 			if err != nil {
-				nbrew.badRequest(w, r, err)
+				nbrew.BadRequest(w, r, err)
 				return
 			}
 		case "application/x-www-form-urlencoded", "multipart/form-data":
 			if contentType == "multipart/form-data" {
 				err := r.ParseMultipartForm(1 << 20 /* 1 MB */)
 				if err != nil {
-					nbrew.badRequest(w, r, err)
+					nbrew.BadRequest(w, r, err)
 					return
 				}
 			} else {
 				err := r.ParseForm()
 				if err != nil {
-					nbrew.badRequest(w, r, err)
+					nbrew.BadRequest(w, r, err)
 					return
 				}
 			}
 			request.PostsPerPage, _ = strconv.Atoi(r.Form.Get("postsPerPage"))
 		default:
-			nbrew.unsupportedContentType(w, r)
+			nbrew.UnsupportedContentType(w, r)
 			return
 		}
 
 		request = normalizeRequest(request)
 		b, err := json.MarshalIndent(&request, "", "  ")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, "posts", category, "postlist.json"), 0644)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		defer writer.Close()
 		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		err = writer.Close()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		response := Response{
-			ContentBaseURL: nbrew.contentBaseURL(sitePrefix),
+			ContentBaseURL: nbrew.ContentBaseURL(sitePrefix),
 			SitePrefix:     sitePrefix,
 			PostsPerPage:   request.PostsPerPage,
 		}
@@ -206,22 +206,22 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		startedAt := time.Now()
 		postListTemplate, err := siteGen.PostListTemplate(r.Context(), category)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		count, err := siteGen.GeneratePostList(r.Context(), category, postListTemplate)
 		if err != nil {
 			if !errors.As(err, &response.RegenerationStats.TemplateError) {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		}
@@ -229,6 +229,6 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 		response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 		writeResponse(w, r, response)
 	default:
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 	}
 }

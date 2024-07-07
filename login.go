@@ -70,7 +70,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
 			if nbrew.CaptchaConfig.VerificationURL != "" {
-				ip := realClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
+				ip := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
 				failedLoginAttempts, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format:  "SELECT {*} FROM ip_login WHERE ip = {ip}",
@@ -81,8 +81,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 					return row.Int("failed_login_attempts")
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				if failedLoginAttempts >= 3 {
@@ -100,7 +100,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -111,27 +111,27 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			}
 			tmpl, err := template.New("login.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/login.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			nbrew.executeTemplate(w, r, tmpl, &response)
+			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 
 		err := r.ParseForm()
 		if err != nil {
-			nbrew.badRequest(w, r, err)
+			nbrew.BadRequest(w, r, err)
 			return
 		}
 		var response Response
-		_, err = nbrew.getSession(r, "flash", &response)
+		_, err = nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		nbrew.clearSession(w, r, "flash")
+		nbrew.ClearSession(w, r, "flash")
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
 		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
@@ -157,7 +157,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if response.Error == "IncorrectLoginCredentials" || response.Error == "ErrUserNotFound" {
-				ip := realClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
+				ip := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
 				if nbrew.Dialect == sq.DialectMySQL {
 					_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 						Dialect: nbrew.Dialect,
@@ -168,8 +168,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 						},
 					})
 					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.internalServerError(w, r, err)
+						GetLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
 						return
 					}
 				} else {
@@ -182,8 +182,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 						},
 					})
 					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.internalServerError(w, r, err)
+						GetLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
 						return
 					}
 				}
@@ -195,12 +195,12 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 					},
 				})
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 			} else if response.Error == "" {
-				ip := realClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
+				ip := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
 				_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format:  "DELETE FROM ip_login WHERE ip = {ip}",
@@ -209,8 +209,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 					},
 				})
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
@@ -221,8 +221,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 					},
 				})
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 			}
@@ -233,15 +233,15 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.setSession(w, r, "flash", &response)
+				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				var query string
@@ -274,20 +274,20 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		case "application/json":
 			err := json.NewDecoder(r.Body).Decode(&request)
 			if err != nil {
-				nbrew.badRequest(w, r, err)
+				nbrew.BadRequest(w, r, err)
 				return
 			}
 		case "application/x-www-form-urlencoded", "multipart/form-data":
 			if contentType == "multipart/form-data" {
 				err := r.ParseMultipartForm(2 << 20 /* 2MB */)
 				if err != nil {
-					nbrew.badRequest(w, r, err)
+					nbrew.BadRequest(w, r, err)
 					return
 				}
 			} else {
 				err := r.ParseForm()
 				if err != nil {
-					nbrew.badRequest(w, r, err)
+					nbrew.BadRequest(w, r, err)
 					return
 				}
 			}
@@ -296,7 +296,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			request.CaptchaResponse = r.Form.Get("h-captcha-response")
 			redirect = r.Form.Get("redirect")
 		default:
-			nbrew.unsupportedContentType(w, r)
+			nbrew.UnsupportedContentType(w, r)
 			return
 		}
 
@@ -345,8 +345,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			})
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				userNotFound = true
@@ -370,8 +370,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			})
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				userNotFound = true
@@ -384,7 +384,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			if failedLoginAttempts >= 3 {
 				response.RequireCaptcha = true
 			} else {
-				ip := realClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
+				ip := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs).As16()
 				failedLoginAttempts, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format:  "SELECT {*} FROM ip_login WHERE ip = {ip}",
@@ -395,8 +395,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 					return row.Int("failed_login_attempts")
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.internalServerError(w, r, err)
+					GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				if failedLoginAttempts >= 3 {
@@ -419,31 +419,31 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				"response": []string{request.CaptchaResponse},
 				"sitekey":  []string{nbrew.CaptchaConfig.SiteKey},
 			}
-			ip := realClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs)
+			ip := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs)
 			if ip != (netip.Addr{}) {
 				values.Set("remoteip", ip.String())
 			}
 			resp, err := client.Post(nbrew.CaptchaConfig.VerificationURL, "application/x-www-form-urlencoded", strings.NewReader(values.Encode()))
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			defer resp.Body.Close()
 			result := make(map[string]any)
 			err = json.NewDecoder(resp.Body).Decode(&result)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			value := result["success"]
 			if value == nil {
 				b, err := json.Marshal(result)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					GetLogger(r.Context()).Error(err.Error())
 				} else {
-					getLogger(r.Context()).Error(string(b))
+					GetLogger(r.Context()).Error(string(b))
 				}
 			}
 			success, _ := value.(bool)
@@ -471,8 +471,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		binary.BigEndian.PutUint64(authenticationToken[:8], uint64(time.Now().Unix()))
 		_, err = rand.Read(authenticationToken[8:])
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.internalServerError(w, r, err)
+			GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		var authenticationTokenHash [8 + blake2b.Size256]byte
@@ -490,8 +490,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			response.Username, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
@@ -504,8 +504,8 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				return row.String("username")
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		} else {
@@ -519,19 +519,19 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.internalServerError(w, r, err)
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		}
 		response.AuthenticationToken = strings.TrimLeft(hex.EncodeToString(authenticationToken[:]), "0")
 		writeResponse(w, r, response)
 	default:
-		nbrew.methodNotAllowed(w, r)
+		nbrew.MethodNotAllowed(w, r)
 	}
 }
 
-func realClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs map[netip.Addr]struct{}) netip.Addr {
+func RealClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs map[netip.Addr]struct{}) netip.Addr {
 	// Reference: https://adam-p.ca/blog/2022/03/x-forwarded-for/
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
