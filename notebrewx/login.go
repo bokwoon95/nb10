@@ -81,7 +81,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 					return row.Int("failed_login_attempts")
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -100,7 +100,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -111,7 +111,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			}
 			tmpl, err := template.New("login.html").Funcs(funcMap).ParseFS(nb10.RuntimeFS, "embed/login.html")
 			if err != nil {
-				nb10.GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -127,7 +127,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 		var response Response
 		_, err = nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			nb10.GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -168,7 +168,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 						},
 					})
 					if err != nil {
-						nb10.GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
@@ -182,7 +182,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 						},
 					})
 					if err != nil {
-						nb10.GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
@@ -195,7 +195,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 					},
 				})
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -209,7 +209,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 					},
 				})
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -221,7 +221,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 					},
 				})
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -233,14 +233,14 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -345,7 +345,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			})
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -370,7 +370,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			})
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -395,7 +395,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 					return row.Int("failed_login_attempts")
 				})
 				if err != nil && !errors.Is(err, sql.ErrNoRows) {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -425,7 +425,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			}
 			resp, err := client.Post(nbrew.CaptchaConfig.VerificationURL, "application/x-www-form-urlencoded", strings.NewReader(values.Encode()))
 			if err != nil {
-				nb10.GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -433,7 +433,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			result := make(map[string]any)
 			err = json.NewDecoder(resp.Body).Decode(&result)
 			if err != nil {
-				nb10.GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -441,9 +441,9 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			if value == nil {
 				b, err := json.Marshal(result)
 				if err != nil {
-					nb10.GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				} else {
-					nb10.GetLogger(r.Context()).Error(string(b))
+					getLogger(r.Context()).Error(string(b))
 				}
 			}
 			success, _ := value.(bool)
@@ -471,7 +471,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 		binary.BigEndian.PutUint64(authenticationToken[:8], uint64(time.Now().Unix()))
 		_, err = rand.Read(authenticationToken[8:])
 		if err != nil {
-			nb10.GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -490,7 +490,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				},
 			})
 			if err != nil {
-				nb10.GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -504,7 +504,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				return row.String("username")
 			})
 			if err != nil {
-				nb10.GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -519,7 +519,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				},
 			})
 			if err != nil {
-				nb10.GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}

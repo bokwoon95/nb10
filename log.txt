@@ -61,10 +61,12 @@ notebrew/main.go
 notebrew/open_browser.go
 
 /users/signup/
-/users/signup/payment
-/users/signup/payment?sessionID=
+/users/signup/?sessionID= (if the signup page also includes an embedded payment form)
 /users/profile/
-/users/updatebilling/
+/users/billing/ => user can view their current plan as well as other plans (no payment form yet)
+/users/updatebilling/ => user can change their plan, which kicks in the next year (payment form present)
+
+signup simply sends an invite email. in spam lockdown mode, the user needs to complete a payment form instead (after returning, we can retrieve the email from the stripe session).
 
 no comments (use disqus)
 subscription-only
