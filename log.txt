@@ -102,6 +102,7 @@ TODO: for directory.html, for every directory show a new link called 'apply them
     - TODO: /applytheme/: needs to check if the current theme folder has any valid template we can apply
         - TODO: the user can also choose between applying the theme for all categories or one specific category.
     - TODO: in site.json, we also need a 'reset theme' option which updates all post.html, postlist.html and index.html to their original format.
+        - TODO: /resettheme/: similar to /applytheme/, the user can choose to reset themes for all categories or just one specific category.
 I feel like I will regret it if I conflate API sessions and user login sessions
 but the primary benefit of making them the same is that the user can manage their own login sessions the same way the manage user API sessions!
 TODO: create a sessions table that lets users manage their sessions. They can also generate new sessions, whereby the session token is shown once and then deleted.
