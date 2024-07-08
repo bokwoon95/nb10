@@ -297,14 +297,14 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 	}
 }
 
-type progressReader struct {
+type importProgressReader struct {
 	ctx            context.Context
 	reader         io.Reader
 	preparedExec   *sq.PreparedExec
 	processedBytes int64
 }
 
-func (r *progressReader) Read(p []byte) (n int, err error) {
+func (r *importProgressReader) Read(p []byte) (n int, err error) {
 	err = r.ctx.Err()
 	if err != nil {
 		return 0, err
@@ -378,7 +378,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			return err
 		}
 		defer preparedExec.Close()
-		src = &progressReader{
+		src = &importProgressReader{
 			ctx:            ctx,
 			reader:         file,
 			preparedExec:   preparedExec,

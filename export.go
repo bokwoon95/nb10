@@ -565,13 +565,36 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
+		var storageRemaining *atomic.Int64
+		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
+		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
+			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "SELECT {*}" +
+					" FROM site" +
+					" JOIN site_owner ON site_owner.site_id = site.site_id" +
+					" WHERE site_owner.user_id = {userID}",
+				Values: []any{
+					sq.UUIDParam("userID", user.UserID),
+				},
+			}, func(row *sq.Row) int64 {
+				return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			storageRemaining = &atomic.Int64{}
+			storageRemaining.Store(user.StorageLimit - storageUsed)
+		}
 		// 1. prepare the row to be inserted
 		// 2. attempt to acquire a slot (insert the row)
 		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 		exportJobID := NewID()
 		response.TotalBytes = totalBytes.Load()
 		if nbrew.DB == nil {
-			err = nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, fileName)
+			err = nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, fileName, storageRemaining)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -613,7 +636,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, fileName)
+				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, fileName, storageRemaining)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("exportJobID", exportJobID.String()),
@@ -631,19 +654,27 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 }
 
-type progressWriter struct {
-	ctx            context.Context
-	writer         io.Writer
-	preparedExec   *sq.PreparedExec
-	processedBytes int64
+type exportProgressWriter struct {
+	ctx              context.Context
+	writer           io.Writer
+	preparedExec     *sq.PreparedExec
+	processedBytes   int64
+	storageRemaining *atomic.Int64
 }
 
-func (w *progressWriter) Write(p []byte) (n int, err error) {
+func (w *exportProgressWriter) Write(p []byte) (n int, err error) {
 	err = w.ctx.Err()
 	if err != nil {
 		return 0, err
 	}
 	n, err = w.writer.Write(p)
+	if err == nil {
+		if w.storageRemaining != nil {
+			if w.storageRemaining.Add(-int64(n)) < 1 {
+				return n, ErrStorageLimitExceeded
+			}
+		}
+	}
 	if w.preparedExec == nil {
 		return n, err
 	}
@@ -663,7 +694,7 @@ func (w *progressWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, fileName string) error {
+func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, fileName string, storageRemaining *atomic.Int64) error {
 	success := false
 	defer func() {
 		if nbrew.DB == nil {
@@ -728,11 +759,12 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 			return err
 		}
 		defer preparedExec.Close()
-		dest = &progressWriter{
-			ctx:            ctx,
-			writer:         gzipWriter,
-			preparedExec:   preparedExec,
-			processedBytes: 0,
+		dest = &exportProgressWriter{
+			ctx:              ctx,
+			writer:           gzipWriter,
+			preparedExec:     preparedExec,
+			processedBytes:   0,
+			storageRemaining: storageRemaining,
 		}
 	}
 	tarWriter := tar.NewWriter(dest)
