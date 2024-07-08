@@ -16,7 +16,8 @@ import (
 
 func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
-		Password        string `json:"password"`
+		OldPassword     string `json:"oldPassword"`
+		NewPassword     string `json:"newPassword"`
 		ConfirmPassword string `json:"confirmPassword"`
 	}
 	type Response struct {
@@ -147,7 +148,8 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 					return
 				}
 			}
-			request.Password = r.Form.Get("password")
+			request.OldPassword = r.Form.Get("oldPassword")
+			request.NewPassword = r.Form.Get("newPassword")
 			request.ConfirmPassword = r.Form.Get("confirmPassword")
 		default:
 			nbrew.UnsupportedContentType(w, r)
@@ -157,23 +159,46 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 		response := Response{
 			FormErrors: url.Values{},
 		}
-		// password
-		if request.Password == "" {
-			response.FormErrors.Add("password", "required")
+		// oldPassword
+		if request.OldPassword == "" {
+			response.FormErrors.Add("oldPassword", "required")
 		} else {
-			if utf8.RuneCountInString(request.Password) < 8 {
-				response.FormErrors.Add("password", "password must be at least 8 characters")
+			oldPasswordHash, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT {*} FROM users WHERE user_id = {userID}",
+				Values: []any{
+					sq.UUIDParam("userID", user.UserID),
+				},
+			}, func(row *sq.Row) []byte {
+				return row.Bytes(nil, "password_hash")
+			})
+			if err != nil {
+				GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
 			}
-			if _, ok := commonPasswords[request.Password]; ok {
-				response.FormErrors.Add("password", "password is too common")
+			err = bcrypt.CompareHashAndPassword(oldPasswordHash, []byte(request.OldPassword))
+			if err != nil {
+				response.FormErrors.Add("oldPassword", "password is incorrect")
+			}
+		}
+		// newPassword
+		if request.NewPassword == "" {
+			response.FormErrors.Add("newPassword", "required")
+		} else {
+			if utf8.RuneCountInString(request.NewPassword) < 8 {
+				response.FormErrors.Add("newPassword", "password must be at least 8 characters")
+			}
+			if _, ok := commonPasswords[request.NewPassword]; ok {
+				response.FormErrors.Add("newPassword", "password is too common")
 			}
 		}
 		// confirmPassword
-		if !response.FormErrors.Has("password") {
+		if !response.FormErrors.Has("newPassword") {
 			if request.ConfirmPassword == "" {
 				response.FormErrors.Add("confirmPassword", "required")
 			} else {
-				if request.Password != request.ConfirmPassword {
+				if request.NewPassword != request.ConfirmPassword {
 					response.FormErrors.Add("confirmPassword", "password does not match")
 				}
 			}
@@ -183,7 +208,7 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 			writeResponse(w, r, response)
 			return
 		}
-		passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+		newPasswordHash, err := bcrypt.GenerateFromPassword([]byte(request.NewPassword), bcrypt.DefaultCost)
 		if err != nil {
 			GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
@@ -210,9 +235,9 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 		}
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "UPDATE users SET password_hash = {passwordHash}, reset_token_hash = NULL WHERE user_id = {userID}",
+			Format:  "UPDATE users SET password_hash = {newPasswordHash}, reset_token_hash = NULL WHERE user_id = {userID}",
 			Values: []any{
-				sq.StringParam("passwordHash", string(passwordHash)),
+				sq.StringParam("newPasswordHash", string(newPasswordHash)),
 				sq.UUIDParam("userID", user.UserID),
 			},
 		})

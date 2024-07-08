@@ -96,7 +96,7 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
-TODO: changepassword needs to validate against the existing password otherwise password can't be changed.
+TODO: make getLogger private again, create our own getLogger() class in notebrewx
 TODO: for directory.html, for every directory show a new link called 'apply theme' which applies post.html, postlist.html and index.html if they exist.
     - TODO: /applytheme/: needs to check if the current theme folder has any valid template we can apply
         - TODO: the user can also choose between applying the theme for all categories or one specific category.
