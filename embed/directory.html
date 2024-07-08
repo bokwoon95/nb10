@@ -247,6 +247,14 @@
         <hr>
         <div class='ma2 tr'><a href='{{ orderBy "asc" }}' class='nowrap{{ if eq $.Order "asc" }} arrow-before{{ end }}'>ascending</a></div>
         <div class='ma2 tr'><a href='{{ orderBy "desc" }}' class='nowrap{{ if eq $.Order "desc" }} arrow-before{{ end }}'>descending</a></div>
+        <hr>
+        {{- if $.IsDatabaseFS }}
+          {{- if and (ne $.Limit 20) (ne $.Limit 200) }}
+          <div class='ma2 tr'><a href='{{ limitTo $.Limit }}' class='nowrap arrow-before'>limit {{ $.Limit }}</a></div>
+          {{- end }}
+          <div class='ma2 tr'><a href='{{ limitTo 20 }}' class='nowrap{{ if eq $.Limit 20 }} arrow-before{{ end }}'>limit 20</a></div>
+          <div class='ma2 tr'><a href='{{ limitTo 200 }}' class='nowrap{{ if eq $.Limit 200 }} arrow-before{{ end }}'>limit 200</a></div>
+        {{- end }}
       </div>
     </details>
   </div>

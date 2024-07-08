@@ -157,26 +157,56 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				return isInClipboard[name]
 			},
 			"sortBy": func(sort string) template.URL {
-				queryParams := "?persist&sort=" + url.QueryEscape(sort) + "&order=" + url.QueryEscape(response.Order)
+				queryParams := "?persist" +
+					"&sort=" + url.QueryEscape(sort) +
+					"&order=" + url.QueryEscape(response.Order) +
+					"&limit=" + strconv.Itoa(response.Limit)
 				if isSeeking && response.IsDatabaseFS && len(response.Files) > 0 {
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit)
+						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat))
 				}
 				return template.URL(queryParams)
 			},
 			"orderBy": func(order string) template.URL {
-				queryParams := "?persist&sort=" + url.QueryEscape(response.Sort) + "&order=" + url.QueryEscape(order)
+				queryParams := "?persist" +
+					"&sort=" + url.QueryEscape(response.Sort) +
+					"&order=" + url.QueryEscape(order) +
+					"&limit=" + strconv.Itoa(response.Limit)
 				if isSeeking && response.IsDatabaseFS && len(response.Files) > 0 {
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit)
+						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat))
 				}
 				return template.URL(queryParams)
+			},
+			"limitTo": func(limit int) template.URL {
+				var b strings.Builder
+				b.WriteString("?persist")
+				b.WriteString("&sort=" + url.QueryEscape(response.Sort))
+				b.WriteString("&order=" + url.QueryEscape(response.Order))
+				b.WriteString("&limit=" + strconv.Itoa(limit))
+				if response.From != "" {
+					b.WriteString("&from=" + url.QueryEscape(response.From))
+				}
+				if response.FromEdited != "" {
+					b.WriteString("&fromEdited=" + url.QueryEscape(response.FromEdited))
+				}
+				if response.FromCreated != "" {
+					b.WriteString("&fromCreated=" + url.QueryEscape(response.FromCreated))
+				}
+				if response.Before != "" {
+					b.WriteString("&before=" + url.QueryEscape(response.Before))
+				}
+				if response.BeforeEdited != "" {
+					b.WriteString("&beforeEdited=" + url.QueryEscape(response.BeforeEdited))
+				}
+				if response.BeforeCreated != "" {
+					b.WriteString("&beforeCreated=" + url.QueryEscape(response.BeforeCreated))
+				}
+				return template.URL(b.String())
 			},
 		}
 		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory.html")
@@ -225,13 +255,15 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	response.FilePath = filePath
 	response.IsDir = true
-	var sortCookie, orderCookie *http.Cookie
+	var sortCookie, orderCookie, limitCookie *http.Cookie
 	for _, cookie := range r.Cookies() {
 		switch cookie.Name {
 		case "sort":
 			sortCookie = cookie
 		case "order":
 			orderCookie = cookie
+		case "limit":
+			limitCookie = cookie
 		}
 	}
 	response.Sort = strings.ToLower(strings.TrimSpace(r.Form.Get("sort")))
@@ -263,6 +295,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		} else {
 			response.Order = "asc"
 		}
+	}
+	response.Limit, _ = strconv.Atoi(r.Form.Get("limit"))
+	if response.Limit == 0 && limitCookie != nil {
+		response.Limit, _ = strconv.Atoi(limitCookie.Value)
+	}
+	if response.Limit <= 0 {
+		response.Limit = 200
 	}
 	if r.Form.Has("persist") {
 		if r.Form.Has("sort") {
@@ -318,6 +357,29 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:     r.URL.EscapedPath(),
 					Name:     "order",
 					Value:    response.Order,
+					MaxAge:   int((time.Hour * 24 * 365).Seconds()),
+					Secure:   r.TLS != nil,
+					HttpOnly: true,
+					SameSite: http.SameSiteLaxMode,
+				})
+			}
+		}
+		if r.Form.Has("limit") {
+			if response.Limit == 0 || response.Limit == 200 {
+				http.SetCookie(w, &http.Cookie{
+					Path:     r.URL.EscapedPath(),
+					Name:     "limit",
+					Value:    "0",
+					MaxAge:   -1,
+					Secure:   r.TLS != nil,
+					HttpOnly: true,
+					SameSite: http.SameSiteLaxMode,
+				})
+			} else {
+				http.SetCookie(w, &http.Cookie{
+					Path:     r.URL.EscapedPath(),
+					Name:     "limit",
+					Value:    strconv.Itoa(response.Limit),
 					MaxAge:   int((time.Hour * 24 * 365).Seconds()),
 					Secure:   r.TLS != nil,
 					HttpOnly: true,
@@ -488,10 +550,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				response.BeforeCreated = beforeCreated.Format(timeFormat)
 			}
 		}
-	}
-	response.Limit, _ = strconv.Atoi(r.Form.Get("limit"))
-	if response.Limit <= 0 {
-		response.Limit = 200
 	}
 	scheme := "https"
 	if r.TLS == nil {

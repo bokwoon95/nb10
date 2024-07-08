@@ -50,8 +50,7 @@
         "type": {
           "default": "VARCHAR(500)"
         },
-        "unique": true,
-        "notnull": true
+        "unique": true
       },
       {
         "column": "email",
@@ -221,6 +220,12 @@
         "references": {
           "table": "users",
           "column": "user_id"
+        }
+      },
+      {
+        "column": "label",
+        "type": {
+          "default": "VARCHAR(500)"
         }
       }
     ]
