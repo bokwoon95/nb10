@@ -16,6 +16,7 @@ import (
 func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Request struct {
 		ResetIndexHTML     bool   `json:"resetIndexHTML"`
+		Reset404HTML       bool   `json:"reset404HTML"`
 		ResetAllCategories bool   `json:"resetAllCategories"`
 		ResetCategory      string `json:"resetCategory"`
 		ResetPostHTML      bool   `json:"resetPostHTML"`
@@ -30,6 +31,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		DisableReason      string            `json:"disableReason"`
 		Categories         []string          `json:"categories"`
 		ResetIndexHTML     bool              `json:"resetIndexHTML"`
+		Reset404HTML       bool              `json:"reset404HTML"`
 		ResetAllCategories bool              `json:"resetAllCategories"`
 		ResetCategory      string            `json:"resetCategory"`
 		ResetPostHTML      bool              `json:"resetPostHTML"`
@@ -188,7 +190,14 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		}
 
 		response := Response{
-			ResetIndexHTML: request.ResetIndexHTML,
+			ResetIndexHTML:    request.ResetIndexHTML,
+			Reset404HTML:      request.Reset404HTML,
+			ResetPostHTML:     request.ResetPostHTML,
+			ResetPostListHTML: request.ResetPostListHTML,
+		}
+		if !response.ResetIndexHTML && !response.Reset404HTML && !response.ResetPostHTML && !response.ResetPostListHTML {
+			writeResponse(w, r, response)
+			return
 		}
 		if request.ResetAllCategories {
 			response.ResetAllCategories = true

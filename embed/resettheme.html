@@ -24,31 +24,35 @@
 <form method='post' data-prevent-double-submit>
   <fieldset>
     <legend><h2 class='mv0 mh2'>pages</h2></legend>
-    <label for='resetIndexHTML' class='flex flex-wrap items-center pointer'>
+    <label for='resetIndexHTML' class='flex flex-wrap items-center pointer mv2'>
       <input id='resetIndexHTML' type='checkbox' name='resetIndexHTML' value='true' class='pointer' checked>
       <span class='ml2'>reset index.html</span>
+    </label>
+    <label for='reset404HTML' class='flex flex-wrap items-center pointer mv2'>
+      <input id='reset404HTML' type='checkbox' name='reset404HTML' value='true' class='pointer' checked>
+      <span class='ml2'>reset 404.html</span>
     </label>
   </fieldset>
   <fieldset>
     <legend><h2 class='mv0 mh2'>posts</h2></legend>
-    <label for='resetAllCategories:true' class='flex flex-wrap items-center pointer'>
+    <label for='resetAllCategories:true' class='flex flex-wrap items-center pointer mv2'>
       <input id='resetAllCategories:true' type='radio' name='resetAllCategories' value='true' class='pointer' checked>
       <span class='ml2'>for all categories</span>
     </label>
-    <label for='resetAllCategories:false' class='flex flex-wrap items-center pointer'>
+    <label for='resetAllCategories:false' class='flex flex-wrap items-center pointer mv2'>
       <input id='resetAllCategories:false' type='radio' name='resetAllCategories' value='false' class='pointer'>
       <span class='ml2'>for category</span>
       <select name='resetCategory' class='ml2'>
         {{- range $category := $.Categories }}
-        <option value='{{ $category }}'>{{ $category }}</option>
+        <option value='{{ $category }}'>{{ if $category }}{{ $category }}{{ else }}&lt;default&gt;{{ end }}</option>
         {{- end }}
       </select>
     </label>
-    <label for='resetPostHTML' class='flex flex-wrap items-center pointer'>
+    <label for='resetPostHTML' class='flex flex-wrap items-center pointer mv2'>
       <input id='resetPostHTML' type='checkbox' name='resetPostHTML' value='true' class='pointer' checked>
       <span class='ml2'>reset post.html</span>
     </label>
-    <label for='resetPostListHTML' class='flex flex-wrap items-center pointer'>
+    <label for='resetPostListHTML' class='flex flex-wrap items-center pointer mv2'>
       <input id='resetPostListHTML' type='checkbox' name='resetPostListHTML' value='true' class='pointer' checked>
       <span class='ml2'>reset postlist.html</span>
     </label>

@@ -200,6 +200,15 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+{{- if eq (index $.PostRedirectGet "from") "resettheme" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  <div class='pv1'>
+    {{ if $.RegenerationStats.Count }}reset theme (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ else }}no files to reset (regenerated 0 files){{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if len $clipboard }}
 {{- $srcParent := $clipboard.Get "parent" }}
 {{- $names := index $clipboard "name" }}
