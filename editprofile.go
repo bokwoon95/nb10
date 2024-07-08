@@ -42,7 +42,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -58,7 +58,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			}
 			tmpl, err := template.New("editprofile.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/editprofile.html")
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -69,7 +69,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		var response Response
 		_, err := nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.ClearSession(w, r, "flash")
 		response.UserID = user.UserID
@@ -98,14 +98,14 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -118,7 +118,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -195,7 +195,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -221,7 +221,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -248,7 +248,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -265,7 +265,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -282,7 +282,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			},
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}

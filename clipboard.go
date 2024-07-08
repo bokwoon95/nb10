@@ -135,7 +135,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -147,7 +147,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					},
 				})
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -168,7 +168,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -217,7 +217,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -240,7 +240,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
 				})
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -693,7 +693,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				nbrew.StorageLimitExceeded(w, r)
 				return
 			}
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -711,21 +711,21 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					SitePrefix:         sitePrefix,
 				})
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					return
 				}
 				srcCategory := srcTail
 				srcTemplate, err := siteGen.PostListTemplate(r.Context(), srcCategory)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
 				_, err = siteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
@@ -733,14 +733,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				destTemplate, err := siteGen.PostListTemplate(r.Context(), destCategory)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
 				_, err = siteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}

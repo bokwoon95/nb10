@@ -190,14 +190,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					nbrew.NotFound(w, r)
 					return
 				}
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -348,7 +348,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						nbrew.NotFound(w, r)
 						return
 					}
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -365,14 +365,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					nbrew.NotFound(w, r)
 					return
 				}
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -567,7 +567,7 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	file, err := fsys.WithContext(r.Context()).Open(path.Join(sitePrefix, "output/404/index.html"))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
@@ -579,7 +579,7 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 		w.WriteHeader(http.StatusNotFound)
 		_, err := io.Copy(w, bytes.NewReader(databaseFile.buf.Bytes()))
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 		return
 	}
@@ -595,11 +595,11 @@ func custom404(w http.ResponseWriter, r *http.Request, fsys FS, sitePrefix strin
 	w.WriteHeader(http.StatusNotFound)
 	_, err = io.Copy(gzipWriter, file)
 	if err != nil {
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 	} else {
 		err = gzipWriter.Close()
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 	}
 }

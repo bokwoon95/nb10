@@ -68,13 +68,13 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				nbrew.NotFound(w, r)
 				return
 			}
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		fileInfo, err := file.Stat()
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -89,7 +89,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
@@ -167,7 +167,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		}
 		tmpl, err := template.New("exports.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/exports.html")
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -177,14 +177,14 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 
 	fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "exports"))
 	if err != nil {
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	var response Response
 	_, err = nbrew.GetSession(r, "flash", &response)
 	if err != nil {
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 	}
 	nbrew.ClearSession(w, r, "flash")
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
@@ -354,7 +354,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	}
 	err = group.Wait()
 	if err != nil {
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}

@@ -45,7 +45,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -59,7 +59,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			}
 			tmpl, err := template.New("resetpassword.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/resetpassword.html")
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -70,7 +70,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 		var response Response
 		_, err := nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.ClearSession(w, r, "flash")
 		if response.Error != "" {
@@ -106,7 +106,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			},
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -129,14 +129,14 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -153,7 +153,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -230,7 +230,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			},
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -267,13 +267,13 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 		}
 		passwordHash, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		tx, err := nbrew.DB.Begin()
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -288,7 +288,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			},
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -301,13 +301,13 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			},
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		err = tx.Commit()
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}

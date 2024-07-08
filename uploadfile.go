@@ -46,7 +46,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
@@ -62,7 +62,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			},
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -75,7 +75,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			nbrew.UnsupportedContentType(w, r)
 			return
 		}
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
@@ -87,7 +87,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
@@ -105,7 +105,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			nbrew.BadRequest(w, r, err)
 			return
 		}
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
@@ -127,7 +127,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -144,7 +144,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		if err != nil {
 			var templateErr TemplateError
 			if !errors.As(err, &templateErr) {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -181,7 +181,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
 		})
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -225,7 +225,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 
 	tempDir, err := filepath.Abs(filepath.Join(os.TempDir(), "notebrew-temp"))
 	if err != nil {
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
@@ -238,7 +238,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			if err == io.EOF {
 				break
 			}
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -268,7 +268,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		_, err = fs.Stat(nbrew.FS.WithContext(r.Context()), filePath)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -294,7 +294,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 						nbrew.StorageLimitExceeded(w, r)
 						return
 					}
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -310,7 +310,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 						nbrew.StorageLimitExceeded(w, r)
 						return
 					}
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -330,7 +330,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					response.FilesTooBig = append(response.FilesTooBig, fileName)
 					continue
 				}
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -373,7 +373,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					response.FilesTooBig = append(response.FilesTooBig, fileName)
 					continue
 				}
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -426,7 +426,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 							nbrew.StorageLimitExceeded(w, r)
 							return
 						}
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
@@ -434,7 +434,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				}
 				cmdPath, err := exec.LookPath(nbrew.ImgCmd)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -444,19 +444,19 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				input, err := os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 				if err != nil {
 					if !errors.Is(err, fs.ErrNotExist) {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
 					err := os.MkdirAll(filepath.Dir(inputPath), 0755)
 					if err != nil {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
 					input, err = os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 					if err != nil {
-						GetLogger(r.Context()).Error(err.Error())
+						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
@@ -469,13 +469,13 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 						response.FilesTooBig = append(response.FilesTooBig, fileName)
 						continue
 					}
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
 				err = input.Close()
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -516,7 +516,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 						nbrew.StorageLimitExceeded(w, r)
 						return
 					}
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -531,7 +531,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					nbrew.StorageLimitExceeded(w, r)
 					return
 				}
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -545,7 +545,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			nbrew.StorageLimitExceeded(w, r)
 			return
 		}
-		GetLogger(r.Context()).Error(err.Error())
+		getLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
@@ -566,7 +566,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		if err != nil {
 			var templateErr TemplateError
 			if !errors.As(err, &templateErr) {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}

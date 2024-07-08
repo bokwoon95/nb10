@@ -59,7 +59,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -77,7 +77,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 			}
 			tmpl, err := template.New("import.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/import.html")
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -87,7 +87,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		var response Response
 		_, err := nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.ClearSession(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
@@ -110,7 +110,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				writeResponse(w, r, response)
 				return
 			}
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -129,7 +129,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -153,14 +153,14 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -174,7 +174,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -225,7 +225,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				writeResponse(w, r, response)
 				return
 			}
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -240,7 +240,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		if nbrew.DB == nil {
 			err := nbrew.doImport(r.Context(), importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -266,12 +266,12 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 						return
 					}
 				}
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			nbrew.waitGroup.Add(1)
-			logger := GetLogger(r.Context())
+			logger := getLogger(r.Context())
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {

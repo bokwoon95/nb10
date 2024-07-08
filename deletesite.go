@@ -83,7 +83,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -98,7 +98,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			}
 			tmpl, err := template.New("deletesite.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/deletesite.html")
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -109,7 +109,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		var response Response
 		_, err := nbrew.GetSession(r, "flash", &response)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 		}
 		nbrew.ClearSession(w, r, "flash")
 		response.UserID = user.UserID
@@ -134,7 +134,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		}
 		siteNotFound, userIsAuthorized, err := getSitePermissions(response.SiteName, user.Username)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -159,7 +159,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				w.Header().Set("Content-Type", "application/json; charset=utf-8")
 				b, err := json.Marshal(&response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -169,7 +169,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 			if response.Error != "" {
 				err := nbrew.SetSession(w, r, "flash", &response)
 				if err != nil {
-					GetLogger(r.Context()).Error(err.Error())
+					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -183,7 +183,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -239,7 +239,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		}
 		siteNotFound, userIsAuthorized, err := getSitePermissions(response.SiteName, user.Username)
 		if err != nil {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -268,14 +268,14 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		}
 		err = nbrew.FS.RemoveAll(sitePrefix)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			GetLogger(r.Context()).Error(err.Error())
+			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		if nbrew.DB != nil {
 			tx, err := nbrew.DB.Begin()
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -290,7 +290,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -304,7 +304,7 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -316,13 +316,13 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			err = tx.Commit()
 			if err != nil {
-				GetLogger(r.Context()).Error(err.Error())
+				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
