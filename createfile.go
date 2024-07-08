@@ -201,16 +201,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			http.Redirect(w, r, urlReplacer.Replace("/"+path.Join("files", sitePrefix, response.Parent, response.Name+response.Ext)), http.StatusFound)
 		}
-		if nbrew.DB != nil {
-			// TODO: calculate the available storage space of the owner and add
-			// it as a MaxBytesReader to the request body.
-			//
-			// TODO: but then: how do we differentiate between a MaxBytesError
-			// returned by a file exceeding 10 MB vs a MaxBytesError returned
-			// by the request body exceeding available storage space? Maybe if
-			// maxBytesErr is 10 MB we assume it's a file going over the limit,
-			// otherwise we assume it's the owner exceeding his storage space?
-		}
 
 		var err error
 		var request Request

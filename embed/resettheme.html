@@ -22,49 +22,36 @@
 {{- end }}
 <h2 class='ma0 b'>Reset theme</h2>
 <form method='post' data-prevent-double-submit>
-  <div class='mv3'>
+  <fieldset>
+    <legend><h2 class='mv0 mh2'>pages</h2></legend>
     <label for='resetIndexHTML' class='flex flex-wrap items-center pointer'>
       <input id='resetIndexHTML' type='checkbox' name='resetIndexHTML' value='true' class='pointer' checked>
       <span class='ml2'>reset index.html</span>
     </label>
-  </div>
-  <div class='mv3'>
+  </fieldset>
+  <fieldset>
+    <legend><h2 class='mv0 mh2'>posts</h2></legend>
+    <label for='resetAllCategories:true' class='flex flex-wrap items-center pointer'>
+      <input id='resetAllCategories:true' type='radio' name='resetAllCategories' value='true' class='pointer' checked>
+      <span class='ml2'>for all categories</span>
+    </label>
+    <label for='resetAllCategories:false' class='flex flex-wrap items-center pointer'>
+      <input id='resetAllCategories:false' type='radio' name='resetAllCategories' value='false' class='pointer'>
+      <span class='ml2'>for category</span>
+      <select name='resetCategory' class='ml2'>
+        {{- range $category := $.Categories }}
+        <option value='{{ $category }}'>{{ $category }}</option>
+        {{- end }}
+      </select>
+    </label>
     <label for='resetPostHTML' class='flex flex-wrap items-center pointer'>
       <input id='resetPostHTML' type='checkbox' name='resetPostHTML' value='true' class='pointer' checked>
       <span class='ml2'>reset post.html</span>
     </label>
-    <label for='resetPostHTMLAllCategories:true' class='flex flex-wrap items-center pointer'>
-      <input id='resetPostHTMLAllCategories:true' type='radio' name='resetPostHTMLAllCategories' value='true' class='pointer' checked>
-      <span class='ml2'>for all categories</span>
-    </label>
-    <label for='resetPostHTMLAllCategories:false' class='flex flex-wrap items-center pointer'>
-      <input id='resetPostHTMLAllCategories:false' type='radio' name='resetPostHTMLAllCategories' value='false' class='pointer'>
-      <span class='ml2'>for category</span>
-      <select name='resetPostHTMLCategory' class='ml2'>
-        {{- range $category := $.Categories }}
-        <option value='{{ $category }}'>{{ $category }}</option>
-        {{- end }}
-      </select>
-    </label>
-  </div>
-  <div class='mv3'>
     <label for='resetPostListHTML' class='flex flex-wrap items-center pointer'>
       <input id='resetPostListHTML' type='checkbox' name='resetPostListHTML' value='true' class='pointer' checked>
       <span class='ml2'>reset postlist.html</span>
     </label>
-    <label for='resetPostListHTMLAllCategories:true' class='flex flex-wrap items-center pointer'>
-      <input id='resetPostListHTMLAllCategories:true' type='radio' name='resetPostListHTMLAllCategories' value='true' class='pointer' checked>
-      <span class='ml2'>for all categories</span>
-    </label>
-    <label for='resetPostListHTMLAllCategories:false' class='flex flex-wrap items-center pointer'>
-      <input id='resetPostListHTMLAllCategories:false' type='radio' name='resetPostListHTMLAllCategories' value='false' class='pointer'>
-      <span class='ml2'>for category</span>
-      <select name='resetPostListHTMLCategory' class='ml2'>
-        {{- range $category := $.Categories }}
-        <option value='{{ $category }}'>{{ $category }}</option>
-        {{- end }}
-      </select>
-    </label>
-  </div>
+  </fieldset>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>reset theme</button>
 </form>
