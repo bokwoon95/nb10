@@ -693,10 +693,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 							Path:   r.URL.Path,
 							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 								"&order=" + url.QueryEscape(response.Order) +
+								"&limit=" + strconv.Itoa(response.Limit) +
 								"&before=" + url.QueryEscape(firstFile.Name) +
 								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-								"&limit=" + strconv.Itoa(response.Limit),
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 						}
 						response.PreviousURL = uri.String()
 					}
@@ -749,10 +749,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 						"&order=" + url.QueryEscape(response.Order) +
+						"&limit=" + strconv.Itoa(response.Limit) +
 						"&from=" + url.QueryEscape(nextFile.Name) +
 						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit),
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -815,10 +815,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&from=" + url.QueryEscape(nextFile.Name) +
 							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.NextURL = uri.String()
 				}
@@ -864,10 +864,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 							Path:   r.URL.Path,
 							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 								"&order=" + url.QueryEscape(response.Order) +
+								"&limit=" + strconv.Itoa(response.Limit) +
 								"&before=" + url.QueryEscape(firstFile.Name) +
 								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-								"&limit=" + strconv.Itoa(response.Limit),
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 						}
 						response.PreviousURL = uri.String()
 					}
@@ -933,10 +933,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&before=" + url.QueryEscape(firstFile.Name) +
 							"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.PreviousURL = uri.String()
 				} else {
@@ -990,10 +990,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 						"&order=" + url.QueryEscape(response.Order) +
+						"&limit=" + strconv.Itoa(response.Limit) +
 						"&from=" + url.QueryEscape(nextFile.Name) +
 						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit),
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -1052,10 +1052,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&from=" + url.QueryEscape(nextFile.Name) +
 							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.NextURL = uri.String()
 				}
@@ -1168,10 +1168,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 							Path:   r.URL.Path,
 							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 								"&order=" + url.QueryEscape(response.Order) +
+								"&limit=" + strconv.Itoa(response.Limit) +
 								"&before=" + url.QueryEscape(firstFile.Name) +
 								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-								"&limit=" + strconv.Itoa(response.Limit),
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 						}
 						response.PreviousURL = uri.String()
 					}
@@ -1230,10 +1230,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 						"&order=" + url.QueryEscape(response.Order) +
+						"&limit=" + strconv.Itoa(response.Limit) +
 						"&from=" + url.QueryEscape(nextFile.Name) +
 						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit),
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -1302,10 +1302,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&from=" + url.QueryEscape(nextFile.Name) +
 							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
-							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)),
 					}
 					response.NextURL = uri.String()
 				}
@@ -1357,10 +1357,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 							Path:   r.URL.Path,
 							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 								"&order=" + url.QueryEscape(response.Order) +
+								"&limit=" + strconv.Itoa(response.Limit) +
 								"&before=" + url.QueryEscape(firstFile.Name) +
 								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-								"&limit=" + strconv.Itoa(response.Limit),
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 						}
 						response.PreviousURL = uri.String()
 					}
@@ -1432,10 +1432,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&before=" + url.QueryEscape(firstFile.Name) +
 							"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.PreviousURL = uri.String()
 				} else {
@@ -1495,10 +1495,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 						"&order=" + url.QueryEscape(response.Order) +
+						"&limit=" + strconv.Itoa(response.Limit) +
 						"&from=" + url.QueryEscape(nextFile.Name) +
 						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit),
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -1556,10 +1556,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&from=" + url.QueryEscape(nextFile.Name) +
 							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.NextURL = uri.String()
 				}
@@ -1672,10 +1672,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 							Path:   r.URL.Path,
 							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 								"&order=" + url.QueryEscape(response.Order) +
+								"&limit=" + strconv.Itoa(response.Limit) +
 								"&before=" + url.QueryEscape(firstFile.Name) +
 								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-								"&limit=" + strconv.Itoa(response.Limit),
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 						}
 						response.PreviousURL = uri.String()
 					}
@@ -1734,10 +1734,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 						"&order=" + url.QueryEscape(response.Order) +
+						"&limit=" + strconv.Itoa(response.Limit) +
 						"&from=" + url.QueryEscape(nextFile.Name) +
 						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit),
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -1806,10 +1806,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&from=" + url.QueryEscape(nextFile.Name) +
 							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(timeFormat)) +
-							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(timeFormat)),
 					}
 					response.NextURL = uri.String()
 				}
@@ -1861,10 +1861,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 							Path:   r.URL.Path,
 							RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 								"&order=" + url.QueryEscape(response.Order) +
+								"&limit=" + strconv.Itoa(response.Limit) +
 								"&before=" + url.QueryEscape(firstFile.Name) +
 								"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-								"&limit=" + strconv.Itoa(response.Limit),
+								"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 						}
 						response.PreviousURL = uri.String()
 					}
@@ -1936,10 +1936,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&before=" + url.QueryEscape(firstFile.Name) +
 							"&beforeEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&beforeCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.PreviousURL = uri.String()
 				} else {
@@ -1999,10 +1999,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					Path:   r.URL.Path,
 					RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 						"&order=" + url.QueryEscape(response.Order) +
+						"&limit=" + strconv.Itoa(response.Limit) +
 						"&from=" + url.QueryEscape(nextFile.Name) +
 						"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-						"&limit=" + strconv.Itoa(response.Limit),
+						"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 				}
 				response.NextURL = uri.String()
 				return nil
@@ -2060,10 +2060,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 						Path:   r.URL.Path,
 						RawQuery: "sort=" + url.QueryEscape(response.Sort) +
 							"&order=" + url.QueryEscape(response.Order) +
+							"&limit=" + strconv.Itoa(response.Limit) +
 							"&from=" + url.QueryEscape(nextFile.Name) +
 							"&fromEdited=" + url.QueryEscape(nextFile.ModTime.UTC().Format(zuluTimeFormat)) +
-							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)) +
-							"&limit=" + strconv.Itoa(response.Limit),
+							"&fromCreated=" + url.QueryEscape(nextFile.CreationTime.UTC().Format(zuluTimeFormat)),
 					}
 					response.NextURL = uri.String()
 				}
