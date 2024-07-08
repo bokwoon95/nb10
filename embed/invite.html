@@ -44,6 +44,11 @@
   </div>
   <div class='mv3'>
     <div><span class='dark-red'>*&nbsp;</span><label for='email' class='b'>Email:</label></div>
+    {{- if $.ValidateEmail }}
+    <ul class='list-style-disc ph3 f6 mid-gray'>
+      <li>provide the email that you signed up with</li>
+    </ul>
+    {{- end }}
     <input type='email' id='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "email" }}

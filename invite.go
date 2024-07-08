@@ -36,12 +36,13 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		SiteName        string `json:"siteName"`
 	}
 	type Response struct {
-		Token      string     `json:"token"`
-		Username   string     `json:"username"`
-		Email      string     `json:"email"`
-		SiteName   string     `json:"siteName"`
-		Error      string     `json:"error"`
-		FormErrors url.Values `json:"formErrors"`
+		Token         string     `json:"token"`
+		ValidateEmail bool       `json:"validateEmail"`
+		Username      string     `json:"username"`
+		Email         string     `json:"email"`
+		SiteName      string     `json:"siteName"`
+		Error         string     `json:"error"`
+		FormErrors    url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -116,23 +117,26 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		var inviteTokenHash [8 + blake2b.Size256]byte
 		copy(inviteTokenHash[:8], inviteToken[:8])
 		copy(inviteTokenHash[8:], checksum[:])
-		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+		validateEmail, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "SELECT 1 FROM invite WHERE invite_token_hash = {inviteTokenHash}",
+			Format:  "SELECT {*} FROM invite WHERE invite_token_hash = {inviteTokenHash}",
 			Values: []any{
 				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
 			},
+		}, func(row *sq.Row) bool {
+			return row.Bool("email IS NOT NULL")
 		})
 		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				response.Error = "InvalidInviteToken"
+				writeResponse(w, r, response)
+				return
+			}
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		if !exists {
-			response.Error = "InvalidInviteToken"
-			writeResponse(w, r, response)
-			return
-		}
+		response.ValidateEmail = validateEmail
 		writeResponse(w, r, response)
 	case "POST":
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -249,9 +253,11 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
 			},
 		}, func(row *sq.Row) (result struct {
+			Email        sql.NullString
 			SiteLimit    sql.NullInt64
 			StorageLimit sql.NullInt64
 		}) {
+			result.Email = row.NullString("email")
 			result.SiteLimit = row.NullInt64("site_limit")
 			result.StorageLimit = row.NullInt64("storage_limit")
 			return result
@@ -308,6 +314,14 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			_, err := mail.ParseAddress(response.Email)
 			if err != nil {
 				response.FormErrors.Add("email", "invalid email address")
+			}
+		}
+		if !response.FormErrors.Has("email") {
+			if result.Email.Valid {
+				response.ValidateEmail = true
+				if result.Email.String != response.Email {
+					response.FormErrors.Add("email", "email is incorrect")
+				}
 			}
 		}
 		if !response.FormErrors.Has("email") {
