@@ -197,7 +197,10 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		if err != nil {
 			return err
 		}
-		defer writer.Close()
+		defer func() {
+			cancelWriter()
+			writer.Close()
+		}()
 		var n int64
 		if storageRemaining != nil {
 			limitedWriter := &LimitedWriter{
@@ -211,7 +214,6 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			n, err = io.Copy(writer, reader)
 		}
 		if err != nil {
-			cancelWriter()
 			return err
 		}
 		err = writer.Close()

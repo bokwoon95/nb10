@@ -719,11 +719,16 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 			}
 		}
 	}()
-	writer, err := nbrew.FS.WithContext(ctx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
+	writerCtx, cancelWriter := context.WithCancel(ctx)
+	defer cancelWriter()
+	writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(path.Join(sitePrefix, "exports", fileName), 0644)
 	if err != nil {
 		return err
 	}
-	defer writer.Close()
+	defer func() {
+		cancelWriter()
+		writer.Close()
+	}()
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(writer)
 	defer func() {
@@ -760,7 +765,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 		}
 		defer preparedExec.Close()
 		dest = &exportProgressWriter{
-			ctx:              ctx,
+			ctx:              writerCtx,
 			writer:           gzipWriter,
 			preparedExec:     preparedExec,
 			processedBytes:   0,

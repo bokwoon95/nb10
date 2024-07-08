@@ -511,7 +511,10 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		defer writer.Close()
+		defer func() {
+			cancelWriter()
+			writer.Close()
+		}()
 		var n int64
 		if storageRemaining != nil {
 			limitedWriter := &LimitedWriter{
@@ -525,7 +528,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			n, err = io.Copy(writer, strings.NewReader(response.Content))
 		}
 		if err != nil {
-			cancelWriter()
 			if errors.Is(err, ErrStorageLimitExceeded) {
 				nbrew.StorageLimitExceeded(w, r)
 				return
@@ -575,7 +577,10 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 						return err
 					}
 				}
-				defer writer.Close()
+				defer func() {
+					cancelWriter()
+					writer.Close()
+				}()
 				var n int64
 				if storageRemaining != nil {
 					limitedWriter := &LimitedWriter{
@@ -589,7 +594,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					n, err = io.Copy(writer, reader)
 				}
 				if err != nil {
-					cancelWriter()
 					return err
 				}
 				err = writer.Close()
