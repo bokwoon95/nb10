@@ -283,7 +283,13 @@
   {{- end }}
   <div class='mt2 pb2 bb'>
     <div class='flex flex-wrap items-center'>
-      <div class='b'>sites</div>
+      <div class='b'>
+        sites
+        {{- if ge $.SiteLimit 0 }}
+        ({{ $.SiteCount }}/{{ $.SiteLimit }})
+        {{- end }}
+      </div>
+      {{- if or (lt $.SiteLimit 0) (lt $.SiteCount $.SiteLimit) }}
       <div class='flex items-center'>
         <details class='relative ml2' data-autoclose-details>
           <summary role='button' title='Create' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
@@ -295,6 +301,7 @@
           </div>
         </details>
       </div>
+      {{- end }}
     </div>
   </div>
   {{- if $.Sites }}

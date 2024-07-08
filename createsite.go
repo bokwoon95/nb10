@@ -34,6 +34,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		UserID               ID         `json:"userID"`
 		Username             string     `json:"username"`
 		DisableReason        string     `json:"disableReason"`
+		SiteLimit            int64      `json:"siteLimit"`
 		SiteName             string     `json:"siteName"`
 		UserSiteNames        []string   `json:"userSiteNames"`
 		Error                string     `json:"error"`
@@ -61,17 +62,15 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil, false, err
 		}
 		n := 0
-		var unlimitedSites bool
 		for _, userSiteName := range userSiteNames {
 			if userSiteName == "" {
-				unlimitedSites = true
 				continue
 			}
 			userSiteNames[n] = userSiteName
 			n++
 		}
 		userSiteNames = userSiteNames[:n]
-		return userSiteNames, !unlimitedSites && user.SiteLimit >= 0 && len(userSiteNames) >= int(user.SiteLimit), nil
+		return userSiteNames, user.SiteLimit >= 0 && len(userSiteNames) >= int(user.SiteLimit), nil
 	}
 
 	switch r.Method {
@@ -124,6 +123,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
+		response.SiteLimit = user.SiteLimit
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

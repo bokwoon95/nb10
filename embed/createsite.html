@@ -22,8 +22,8 @@
   {{- else }}
   <div><a href='/files/'>&larr; back</a></div>
   {{- end }}
-  <div class='mv3 b'>You have reached the maximum of {{ maxSites }} sites, cannot create any more.</div>
-  <ul class='ph3'>
+  <div class='mv3 b'>You have reached the maximum of {{ maxSites }} site{{ if ne $.SiteLimit 1 }}s{{ end }}, cannot create any more.</div>
+  <ul class='list-style-disc ph3'>
     {{- range $siteName := $.UserSiteNames }}
     <li><a href='/files/{{ if not (contains $siteName ".") }}@{{ end }}{{ $siteName }}/'>{{ $siteName }}</a></li>
     {{- end }}
@@ -53,7 +53,7 @@
   </div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>create site</button>
   <div role='status'></div>
-  {{- if or $.ValidateCustomDomain true }}
+  {{- if $.ValidateCustomDomain }}
   <details class='mv2'>
     <summary class='pointer f6'>If you are adding a custom domain, read this!!! <strong class='dark-red'>(important)</strong></summary>
     <p>Create a CNAME record in the DNS settings of the domain registrar you purchased your domain from.</p>

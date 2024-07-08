@@ -38,7 +38,9 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		IsDatabaseFS      bool              `json:"isDatabaseFS"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		SiteCount         int64             `json:"siteCount"`
 		DisableReason     string            `json:"disableReason"`
+		SiteLimit         int64             `json:"siteLimit"`
 		FilePath          string            `json:"filePath"`
 		IsDir             bool              `json:"isDir"`
 		Files             []File            `json:"files"`
@@ -133,6 +135,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.DisableReason = user.DisableReason
+	response.SiteLimit = user.SiteLimit
 	response.IsDir = true
 	if sitePrefix == "" && nbrew.DB != nil {
 		sites, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
@@ -172,13 +175,22 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			return
 		}
 		response.Sites = sites
+		authorizedForDefaultSite := false
 		n := slices.IndexFunc(response.Sites, func(site Site) bool { return site.Name == "" })
-		if n < 0 {
+		if n >= 0 {
+			authorizedForDefaultSite = true
+			copy(response.Sites[n:], response.Sites[n+1:])
+			response.Sites = response.Sites[:len(response.Sites)-1]
+		}
+		for _, site := range response.Sites {
+			if site.Owner == user.Username {
+				response.SiteCount++
+			}
+		}
+		if !authorizedForDefaultSite {
 			writeResponse(w, r, response)
 			return
 		}
-		copy(response.Sites[n:], response.Sites[n+1:])
-		response.Sites = response.Sites[:len(response.Sites)-1]
 	}
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)
