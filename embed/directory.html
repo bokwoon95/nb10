@@ -233,6 +233,8 @@
   <div class='flex-grow-1'></div>
   {{- if eq (head $.FilePath) "posts" }}
   <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/'>view posts</a></div>
+  {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") }}
+  <div><a href='/{{ join "files" $.SitePrefix "resettheme" }}/'>reset theme</a></div>
   {{- end }}
   <div class='flex items-center'>
     <details class='relative ml2' data-autoclose-details>

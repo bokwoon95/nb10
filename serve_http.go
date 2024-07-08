@@ -433,6 +433,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "cancelexport":
 			nbrew.cancelexport(w, r, user, sitePrefix)
 			return
+		case "applytheme":
+			nbrew.applytheme(w, r, user, sitePrefix)
+			return
+		case "resettheme":
+			nbrew.resettheme(w, r, user, sitePrefix)
+			return
 		default:
 			nbrew.NotFound(w, r)
 			return
