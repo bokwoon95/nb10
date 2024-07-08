@@ -242,6 +242,12 @@
         "primarykey": true
       },
       {
+        "column": "email",
+        "type": {
+          "default": "VARCHAR(500)"
+        }
+      },
+      {
         "column": "site_limit",
         "type": {
           "default": "BIGINT"
