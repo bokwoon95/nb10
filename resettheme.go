@@ -1,16 +1,21 @@
 package nb10
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"html/template"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/bokwoon95/nb10/sq"
+	"golang.org/x/sync/errgroup"
 )
 
 func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
@@ -36,6 +41,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		ResetCategory      string            `json:"resetCategory"`
 		ResetPostHTML      bool              `json:"resetPostHTML"`
 		ResetPostListHTML  bool              `json:"resetPostListHTML"`
+		Error              string            `json:"error"`
 		RegenerationStats  RegenerationStats `json:"regenerationStats"`
 	}
 
@@ -142,6 +148,16 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				}
 				return
 			}
+			if response.Error != "" {
+				err := nbrew.SetSession(w, r, "flash", &response)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				}
+				http.Redirect(w, r, "/"+path.Join(sitePrefix, "files/resettheme")+"/", http.StatusFound)
+				return
+			}
 			err := nbrew.SetSession(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "resettheme",
@@ -238,6 +254,215 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				}
 			}
 		} else {
+			category := filepath.ToSlash(request.ResetCategory)
+			if strings.Contains(category, "/") {
+				response.Error = "InvalidCategory"
+				writeResponse(w, r, response)
+				return
+			}
+			_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", request.ResetCategory))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					response.Error = "InvalidCategory"
+					writeResponse(w, r, response)
+					return
+				}
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			response.ResetCategory = category
+		}
+		siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+			FS:                 nbrew.FS,
+			ContentDomain:      nbrew.ContentDomain,
+			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+			ImgDomain:          nbrew.ImgDomain,
+			SitePrefix:         sitePrefix,
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		var regenerationCount atomic.Int64
+		var templateErrPtr atomic.Pointer[TemplateError]
+		group, groupctx := errgroup.WithContext(r.Context())
+		if response.ResetIndexHTML {
+			group.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				regenerationCount.Add(1)
+				return nil
+			})
+		}
+		if response.Reset404HTML {
+			group.Go(func() error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				regenerationCount.Add(1)
+				return nil
+			})
+		}
+		if response.ResetPostHTML {
+			resetPostHTML := func(ctx context.Context, category string) error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "post.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "post.html"), string(b))
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				n, err := siteGen.GeneratePosts(ctx, category, tmpl)
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				regenerationCount.Add(n)
+				return nil
+			}
+			if response.ResetAllCategories {
+				for _, category := range response.Categories {
+					category := category
+					group.Go(func() error {
+						return resetPostHTML(groupctx, category)
+					})
+				}
+			} else {
+				group.Go(func() error {
+					return resetPostHTML(groupctx, response.ResetCategory)
+				})
+			}
+		}
+		if response.ResetPostListHTML {
+			resetPostListHTML := func(ctx context.Context, category string) error {
+				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
+				if err != nil {
+					return err
+				}
+				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "postlist.html"), 0644)
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				_, err = writer.Write(b)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
+					return err
+				}
+				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "postlist.html"), string(b))
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				n, err := siteGen.GeneratePostList(ctx, category, tmpl)
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				regenerationCount.Add(n)
+				return nil
+			}
+			if response.ResetAllCategories {
+				for _, category := range response.Categories {
+					category := category
+					group.Go(func() error {
+						return resetPostListHTML(groupctx, category)
+					})
+				}
+			} else {
+				group.Go(func() error {
+					return resetPostListHTML(groupctx, response.ResetCategory)
+				})
+			}
+		}
+		err = group.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
 		}
 		writeResponse(w, r, response)
 	default:
