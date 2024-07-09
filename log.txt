@@ -129,6 +129,7 @@ TODO: allow username to be null, and in the cases where it is null /users/profil
 TODO: DO WHEN AT HOME INTERNET: no choice, need to switch live back to backblze because only it has the potential to scale past 10,000 customers. we need to take the performance hit.
     - TODO: export all our data, then tear down the existing site data and regenerate it from scratch so that we can seamlessly change users.username from NOT NULL to NULL as well as rename the session table to the flash table and the authentication table to the session table.
 TODO: signup.go
+TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
 TODO: tests
 TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
