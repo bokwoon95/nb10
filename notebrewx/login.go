@@ -125,13 +125,13 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			return
 		}
 		var response Response
-		_, err = nbrew.GetSession(r, "flash", &response)
+		_, err = nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
 		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
@@ -238,7 +238,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetSession(w, r, "flash", &response)
+				err := nbrew.SetFlash(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)

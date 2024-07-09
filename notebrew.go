@@ -198,7 +198,7 @@ func getLogger(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
-func (nbrew *Notebrew) SetSession(w http.ResponseWriter, r *http.Request, name string, value any) error {
+func (nbrew *Notebrew) SetFlash(w http.ResponseWriter, r *http.Request, name string, value any) error {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {
@@ -252,7 +252,7 @@ func (nbrew *Notebrew) SetSession(w http.ResponseWriter, r *http.Request, name s
 	return nil
 }
 
-func (nbrew *Notebrew) GetSession(r *http.Request, name string, valuePtr any) (ok bool, err error) {
+func (nbrew *Notebrew) UnmarshalFlash(r *http.Request, name string, valuePtr any) (ok bool, err error) {
 	cookie, _ := r.Cookie(name)
 	if cookie == nil {
 		return false, nil
@@ -300,7 +300,7 @@ func (nbrew *Notebrew) GetSession(r *http.Request, name string, valuePtr any) (o
 	return true, nil
 }
 
-func (nbrew *Notebrew) ClearSession(w http.ResponseWriter, r *http.Request, name string) {
+func (nbrew *Notebrew) Unflash(w http.ResponseWriter, r *http.Request, name string) {
 	cookie, _ := r.Cookie(name)
 	if cookie == nil {
 		return

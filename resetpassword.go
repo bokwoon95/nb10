@@ -68,11 +68,11 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 		}
 
 		var response Response
-		_, err := nbrew.GetSession(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
@@ -134,7 +134,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetSession(w, r, "flash", &response)
+				err := nbrew.SetFlash(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -147,7 +147,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				http.Redirect(w, r, "/users/resetpassword/"+query, http.StatusFound)
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "resetpassword",
 				},

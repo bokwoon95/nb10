@@ -141,11 +141,11 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 		var response Response
-		_, err := nbrew.GetSession(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
@@ -192,7 +192,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				}
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "site.json",
 				},

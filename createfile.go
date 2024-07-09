@@ -99,11 +99,11 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		}
 
 		var response Response
-		_, err := nbrew.GetSession(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
 		response.UserID = user.UserID
@@ -176,7 +176,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetSession(w, r, "flash", &response)
+				err := nbrew.SetFlash(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -185,7 +185,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "createfile")+"/?parent="+url.QueryEscape(response.Parent), http.StatusFound)
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "createfile",
 				},

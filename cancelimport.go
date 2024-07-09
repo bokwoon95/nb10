@@ -85,11 +85,11 @@ func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user
 		}
 
 		var response Response
-		_, err := nbrew.GetSession(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.ImgDomain = nbrew.ImgDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
@@ -174,7 +174,7 @@ func (nbrew *Notebrew) cancelimport(w http.ResponseWriter, r *http.Request, user
 				}
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":         "cancelimport",
 					"numCanceled":  len(response.ImportJobs),

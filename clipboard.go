@@ -140,7 +140,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetSession(w, r, "flash", map[string]any{
+				err := nbrew.SetFlash(w, r, "flash", map[string]any{
 					"postRedirectGet": map[string]any{
 						"from":  "clipboard/paste",
 						"error": response.Error,
@@ -154,7 +154,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				http.Redirect(w, r, referer, http.StatusFound)
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":          "clipboard/paste",
 					"srcParent":     response.SrcParent,

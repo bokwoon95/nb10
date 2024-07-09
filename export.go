@@ -101,11 +101,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		var response Response
-		_, err := nbrew.GetSession(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.ImgDomain = nbrew.ImgDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
@@ -366,7 +366,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetSession(w, r, "flash", &response)
+				err := nbrew.SetFlash(w, r, "flash", &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -379,7 +379,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "export")+"/?"+values.Encode(), http.StatusFound)
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":     "export",
 					"fileName": response.OutputName + ".tgz",

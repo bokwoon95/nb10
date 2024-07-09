@@ -68,11 +68,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			return
 		}
 		var response Response
-		_, err := nbrew.GetSession(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.ClearSession(w, r, "flash")
+		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
 		response.ImgDomain = nbrew.ImgDomain
@@ -288,7 +288,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 				return
 			}
-			err := nbrew.SetSession(w, r, "flash", map[string]any{
+			err := nbrew.SetFlash(w, r, "flash", map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "image",
 				},
