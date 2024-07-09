@@ -185,11 +185,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				var filter sq.Expression
 				if response.Parent == "." {
-					filter = sq.Expr("(files.file_path LIKE {notes}"+
-						" OR files.file_path LIKE {pages}"+
-						" OR files.file_path LIKE {posts}"+
-						" OR files.file_path LIKE {output}"+
-						" OR files.file_path = {siteJSON})",
+					filter = sq.Expr("(file_path LIKE {notes}"+
+						" OR file_path LIKE {pages}"+
+						" OR file_path LIKE {posts}"+
+						" OR file_path LIKE {output}"+
+						" OR file_path = {siteJSON})",
 						sq.StringParam("notes", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
 						sq.StringParam("pages", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
 						sq.StringParam("posts", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
@@ -197,7 +197,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						sq.StringParam("siteJSON", wildcardReplacer.Replace(path.Join(sitePrefix, "site.json"))),
 					)
 				} else {
-					filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
+					filter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
 				}
 				n, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
 					Debug:   true,
@@ -216,7 +216,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				}
 				response.TotalBytes = n
 			} else {
-				err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.Parent), func(filePath string, dirEntry fs.DirEntry, err error) error {
+				var totalBytes atomic.Int64
+				walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
 					if err != nil {
 						if errors.Is(err, fs.ErrNotExist) {
 							return nil
@@ -230,14 +231,47 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					if err != nil {
 						return err
 					}
-					response.TotalBytes += fileInfo.Size()
+					totalBytes.Add(fileInfo.Size())
 					return nil
-				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
 				}
+				if response.Parent == "." {
+					group, groupctx := errgroup.WithContext(r.Context())
+					for _, root := range []string{
+						path.Join(sitePrefix, "notes"),
+						path.Join(sitePrefix, "pages"),
+						path.Join(sitePrefix, "posts"),
+						path.Join(sitePrefix, "output"),
+						path.Join(sitePrefix, "site.json"),
+					} {
+						root := root
+						group.Go(func() (err error) {
+							defer func() {
+								if v := recover(); v != nil {
+									err = fmt.Errorf("panic: " + string(debug.Stack()))
+								}
+							}()
+							err = fs.WalkDir(nbrew.FS.WithContext(groupctx), root, walkDirFunc)
+							if err != nil {
+								return err
+							}
+							return nil
+						})
+					}
+					err := group.Wait()
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+				} else {
+					err = fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.Parent), walkDirFunc)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+				}
+				response.TotalBytes = totalBytes.Load()
 			}
 			writeResponse(w, r, response)
 			return
@@ -248,6 +282,9 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.Files = make([]File, len(names))
 		for i, name := range names {
 			i, name := i, name
+			if name == "" {
+				continue
+			}
 			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
@@ -286,38 +323,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				root := path.Join(sitePrefix, response.Parent, name)
 				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-					var filter sq.Expression
-					if root == "." {
-						filter = sq.Expr("(files.file_path LIKE 'notes/%'" +
-							" OR files.file_path LIKE 'pages/%'" +
-							" OR files.file_path LIKE 'posts/%'" +
-							" OR files.file_path LIKE 'output/%'" +
-							" OR files.file_path = 'site.json')")
-					} else {
-						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
-					}
-					if response.Parent == "." {
-						filter = sq.Expr("(files.file_path LIKE {notes}"+
-							" OR files.file_path LIKE {pages}"+
-							" OR files.file_path LIKE {posts}"+
-							" OR files.file_path LIKE {output}"+
-							" OR files.file_path = {siteJSON})",
-							sq.StringParam("notes", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
-							sq.StringParam("pages", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
-							sq.StringParam("posts", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
-							sq.StringParam("output", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
-							sq.StringParam("siteJSON", wildcardReplacer.Replace(path.Join(sitePrefix, "site.json"))),
-						)
-					} else {
-						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
-					}
 					n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
-						Format:  "SELECT {*} FROM files WHERE {filter}",
+						Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\'",
 						Values: []any{
-							sq.Param("filter", filter),
+							sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent, name))+"/%"),
 						},
 					}, func(row *sq.Row) int64 {
 						return row.Int64("sum(coalesce(size, 0))")
@@ -327,7 +338,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 					totalBytes.Add(n)
 				} else {
-					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name), func(filePath string, dirEntry fs.DirEntry, err error) error {
 						if err != nil {
 							if errors.Is(err, fs.ErrNotExist) {
 								return nil
