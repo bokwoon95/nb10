@@ -182,19 +182,25 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		if response.ExportParent {
-			root := path.Join(sitePrefix, response.Parent)
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				var filter sq.Expression
-				if root == "." {
-					filter = sq.Expr("(files.file_path LIKE 'notes/%'" +
-						" OR files.file_path LIKE 'pages/%'" +
-						" OR files.file_path LIKE 'posts/%'" +
-						" OR files.file_path LIKE 'output/%'" +
-						" OR files.file_path = 'site.json')")
+				if response.Parent == "." {
+					filter = sq.Expr("(files.file_path LIKE {notes}"+
+						" OR files.file_path LIKE {pages}"+
+						" OR files.file_path LIKE {posts}"+
+						" OR files.file_path LIKE {output}"+
+						" OR files.file_path = {siteJSON})",
+						sq.StringParam("notes", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
+						sq.StringParam("pages", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
+						sq.StringParam("posts", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
+						sq.StringParam("output", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+						sq.StringParam("siteJSON", wildcardReplacer.Replace(path.Join(sitePrefix, "site.json"))),
+					)
 				} else {
-					filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
+					filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
 				}
 				n, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
+					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format:  "SELECT {*} FROM files WHERE {filter}",
 					Values: []any{
@@ -210,7 +216,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				}
 				response.TotalBytes = n
 			} else {
-				err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+				err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.Parent), func(filePath string, dirEntry fs.DirEntry, err error) error {
 					if err != nil {
 						if errors.Is(err, fs.ErrNotExist) {
 							return nil
@@ -291,6 +297,21 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							" OR files.file_path = 'site.json')")
 					} else {
 						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
+					}
+					if response.Parent == "." {
+						filter = sq.Expr("(files.file_path LIKE {notes}"+
+							" OR files.file_path LIKE {pages}"+
+							" OR files.file_path LIKE {posts}"+
+							" OR files.file_path LIKE {output}"+
+							" OR files.file_path = {siteJSON})",
+							sq.StringParam("notes", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
+							sq.StringParam("pages", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
+							sq.StringParam("posts", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
+							sq.StringParam("output", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+							sq.StringParam("siteJSON", wildcardReplacer.Replace(path.Join(sitePrefix, "site.json"))),
+						)
+					} else {
+						filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
 					}
 					n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
