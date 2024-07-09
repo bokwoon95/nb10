@@ -478,6 +478,13 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		checksum := blake2b.Sum256(sessionToken[8:])
 		copy(sessionTokenHash[:8], sessionToken[:8])
 		copy(sessionTokenHash[8:], checksum[:])
+		var label sql.NullString
+		userAgent := r.UserAgent()
+		i := strings.Index(userAgent, "(")
+		j := strings.Index(userAgent, ")")
+		if i > 0 && j > i {
+			label = sql.NullString{String: userAgent[i+1 : j], Valid: true}
+		}
 		if email != "" {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -486,7 +493,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				Values: []any{
 					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					sq.StringParam("email", email),
-					sq.StringParam("label", r.UserAgent()),
+					sq.Param("label", label),
 				},
 			})
 			if err != nil {
@@ -516,7 +523,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				Values: []any{
 					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					sq.StringParam("username", response.Username),
-					sq.StringParam("label", r.UserAgent()),
+					sq.Param("label", label),
 				},
 			})
 			if err != nil {
