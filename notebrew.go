@@ -225,28 +225,28 @@ func (nbrew *Notebrew) SetFlash(w http.ResponseWriter, r *http.Request, name str
 	if nbrew.DB == nil {
 		cookie.Value = base64.URLEncoding.EncodeToString(buf.Bytes())
 	} else {
-		var sessionToken [8 + 16]byte
-		binary.BigEndian.PutUint64(sessionToken[:8], uint64(time.Now().Unix()))
-		_, err := rand.Read(sessionToken[8:])
+		var flashToken [8 + 16]byte
+		binary.BigEndian.PutUint64(flashToken[:8], uint64(time.Now().Unix()))
+		_, err := rand.Read(flashToken[8:])
 		if err != nil {
 			return fmt.Errorf("reading rand: %w", err)
 		}
-		var sessionTokenHash [8 + blake2b.Size256]byte
-		checksum := blake2b.Sum256(sessionToken[8:])
-		copy(sessionTokenHash[:8], sessionToken[:8])
-		copy(sessionTokenHash[8:], checksum[:])
+		var flashTokenHash [8 + blake2b.Size256]byte
+		checksum := blake2b.Sum256(flashToken[8:])
+		copy(flashTokenHash[:8], flashToken[:8])
+		copy(flashTokenHash[8:], checksum[:])
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "INSERT INTO session (session_token_hash, data) VALUES ({sessionTokenHash}, {data})",
+			Format:  "INSERT INTO flash (flash_token_hash, data) VALUES ({flashTokenHash}, {data})",
 			Values: []any{
-				sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+				sq.BytesParam("flashTokenHash", flashTokenHash[:]),
 				sq.StringParam("data", strings.TrimSpace(buf.String())),
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("saving session: %w", err)
+			return fmt.Errorf("flash: %w", err)
 		}
-		cookie.Value = strings.TrimLeft(hex.EncodeToString(sessionToken[:]), "0")
+		cookie.Value = strings.TrimLeft(hex.EncodeToString(flashToken[:]), "0")
 	}
 	http.SetCookie(w, cookie)
 	return nil
@@ -273,25 +273,25 @@ func (nbrew *Notebrew) UnmarshalFlash(w http.ResponseWriter, r *http.Request, na
 			return false, nil
 		}
 	} else {
-		sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+		flashToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
 		if err != nil {
 			return false, nil
 		}
-		creationTime := time.Unix(int64(binary.BigEndian.Uint64(sessionToken[:8])), 0)
+		creationTime := time.Unix(int64(binary.BigEndian.Uint64(flashToken[:8])), 0)
 		if time.Now().Sub(creationTime) > 5*time.Minute {
 			return false, nil
 		}
-		var sessionTokenHash [8 + blake2b.Size256]byte
-		checksum := blake2b.Sum256(sessionToken[8:])
-		copy(sessionTokenHash[:8], sessionToken[:8])
-		copy(sessionTokenHash[8:], checksum[:])
+		var flashTokenHash [8 + blake2b.Size256]byte
+		checksum := blake2b.Sum256(flashToken[8:])
+		copy(flashTokenHash[:8], flashToken[:8])
+		copy(flashTokenHash[8:], checksum[:])
 		switch nbrew.Dialect {
 		case "sqlite", "postgres":
 			data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format:  "DELETE FROM session WHERE session_token_hash = {sessionTokenHash} RETURNING {*}",
+				Format:  "DELETE FROM flash WHERE flash_token_hash = {flashTokenHash} RETURNING {*}",
 				Values: []any{
-					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+					sq.BytesParam("flashTokenHash", flashTokenHash[:]),
 				},
 			}, func(row *sq.Row) []byte {
 				return row.Bytes(nil, "data")
@@ -305,9 +305,9 @@ func (nbrew *Notebrew) UnmarshalFlash(w http.ResponseWriter, r *http.Request, na
 		default:
 			data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format:  "SELECT {*} FROM session WHERE session_token_hash = {sessionTokenHash}",
+				Format:  "SELECT {*} FROM flash WHERE flash_token_hash = {flashTokenHash}",
 				Values: []any{
-					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+					sq.BytesParam("flashTokenHash", flashTokenHash[:]),
 				},
 			}, func(row *sq.Row) []byte {
 				return row.Bytes(nil, "data")
@@ -320,9 +320,9 @@ func (nbrew *Notebrew) UnmarshalFlash(w http.ResponseWriter, r *http.Request, na
 			}
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format:  "DELETE FROM session WHERE session_token_hash = {sessionTokenHash}",
+				Format:  "DELETE FROM flash WHERE flash_token_hash = {flashTokenHash}",
 				Values: []any{
-					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+					sq.BytesParam("flashTokenHash", flashTokenHash[:]),
 				},
 			})
 			if err != nil {

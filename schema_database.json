@@ -180,10 +180,10 @@
     ]
   },
   {
-    "table": "session",
+    "table": "flash",
     "columns": [
       {
-        "column": "session_token_hash",
+        "column": "flash_token_hash",
         "type": {
           "default": "BINARY(40)",
           "postgres": "BYTEA"
