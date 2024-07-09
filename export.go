@@ -185,11 +185,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				var filter sq.Expression
 				if response.Parent == "." {
-					filter = sq.Expr("(files.file_path LIKE {notes}"+
+					filter = sq.Expr("files.file_path LIKE {notes}"+
 						" OR files.file_path LIKE {pages}"+
 						" OR files.file_path LIKE {posts}"+
 						" OR files.file_path LIKE {output}"+
-						" OR files.file_path = {siteJSON})",
+						" OR files.file_path = {siteJSON}",
 						sq.StringParam("notes", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
 						sq.StringParam("pages", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
 						sq.StringParam("posts", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
