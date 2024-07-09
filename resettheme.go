@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -289,7 +291,12 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		var templateErrPtr atomic.Pointer[TemplateError]
 		group, groupctx := errgroup.WithContext(r.Context())
 		if response.ResetIndexHTML {
-			group.Go(func() error {
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
 				b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 				if err != nil {
 					return err
@@ -321,7 +328,12 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			})
 		}
 		if response.Reset404HTML {
-			group.Go(func() error {
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
 				b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 				if err != nil {
 					return err
@@ -395,12 +407,22 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			if response.ResetAllCategories {
 				for _, category := range response.Categories {
 					category := category
-					group.Go(func() error {
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
 						return resetPostHTML(groupctx, category)
 					})
 				}
 			} else {
-				group.Go(func() error {
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
 					return resetPostHTML(groupctx, response.ResetCategory)
 				})
 			}
@@ -448,12 +470,22 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			if response.ResetAllCategories {
 				for _, category := range response.Categories {
 					category := category
-					group.Go(func() error {
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
 						return resetPostListHTML(groupctx, category)
 					})
 				}
 			} else {
-				group.Go(func() error {
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
 					return resetPostListHTML(groupctx, response.ResetCategory)
 				})
 			}
