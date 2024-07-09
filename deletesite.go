@@ -107,11 +107,10 @@ func (nbrew *Notebrew) deletesite(w http.ResponseWriter, r *http.Request, user U
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.Unflash(w, r, "flash")
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason

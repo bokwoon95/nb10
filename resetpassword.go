@@ -68,11 +68,10 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.Unflash(w, r, "flash")
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

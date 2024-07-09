@@ -141,11 +141,10 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 		var response Response
-		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID

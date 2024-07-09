@@ -124,11 +124,10 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 
 	var response Response
-	_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+	_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 	}
-	nbrew.Unflash(w, r, "flash")
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.SitePrefix = sitePrefix
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)

@@ -72,11 +72,10 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
 		response.UserID = user.UserID

@@ -252,11 +252,20 @@ func (nbrew *Notebrew) SetFlash(w http.ResponseWriter, r *http.Request, name str
 	return nil
 }
 
-func (nbrew *Notebrew) UnmarshalFlash(r *http.Request, name string, valuePtr any) (ok bool, err error) {
+func (nbrew *Notebrew) UnmarshalFlash(w http.ResponseWriter, r *http.Request, name string, valuePtr any) (ok bool, err error) {
 	cookie, _ := r.Cookie(name)
 	if cookie == nil {
 		return false, nil
 	}
+	http.SetCookie(w, &http.Cookie{
+		Path:     "/",
+		Name:     name,
+		Value:    "0",
+		MaxAge:   -1,
+		Secure:   r.TLS != nil,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	var data []byte
 	if nbrew.DB == nil {
 		data, err = base64.URLEncoding.DecodeString(cookie.Value)
@@ -276,20 +285,49 @@ func (nbrew *Notebrew) UnmarshalFlash(r *http.Request, name string, valuePtr any
 		checksum := blake2b.Sum256(sessionToken[8:])
 		copy(sessionTokenHash[:8], sessionToken[:8])
 		copy(sessionTokenHash[8:], checksum[:])
-		data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format:  "SELECT {*} FROM session WHERE session_token_hash = {sessionTokenHash}",
-			Values: []any{
-				sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
-			},
-		}, func(row *sq.Row) []byte {
-			return row.Bytes(nil, "data")
-		})
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return false, nil
+		switch nbrew.Dialect {
+		case "sqlite", "postgres":
+			data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "DELETE FROM session WHERE session_token_hash = {sessionTokenHash} RETURNING {*}",
+				Values: []any{
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+				},
+			}, func(row *sq.Row) []byte {
+				return row.Bytes(nil, "data")
+			})
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return false, nil
+				}
+				return false, err
 			}
-			return false, err
+		default:
+			data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT {*} FROM session WHERE session_token_hash = {sessionTokenHash}",
+				Values: []any{
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+				},
+			}, func(row *sq.Row) []byte {
+				return row.Bytes(nil, "data")
+			})
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return false, nil
+				}
+				return false, err
+			}
+			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "DELETE FROM session WHERE session_token_hash = {sessionTokenHash}",
+				Values: []any{
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+				},
+			})
+			if err != nil {
+				return false, err
+			}
 		}
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -298,43 +336,6 @@ func (nbrew *Notebrew) UnmarshalFlash(r *http.Request, name string, valuePtr any
 		return false, err
 	}
 	return true, nil
-}
-
-func (nbrew *Notebrew) Unflash(w http.ResponseWriter, r *http.Request, name string) {
-	cookie, _ := r.Cookie(name)
-	if cookie == nil {
-		return
-	}
-	http.SetCookie(w, &http.Cookie{
-		Path:     "/",
-		Name:     name,
-		Value:    "0",
-		MaxAge:   -1,
-		Secure:   r.TLS != nil,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
-	if nbrew.DB == nil {
-		return
-	}
-	sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
-	if err != nil {
-		return
-	}
-	var sessionTokenHash [8 + blake2b.Size256]byte
-	checksum := blake2b.Sum256(sessionToken[8:])
-	copy(sessionTokenHash[:8], sessionToken[:8])
-	copy(sessionTokenHash[8:], checksum[:])
-	_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-		Dialect: nbrew.Dialect,
-		Format:  "DELETE FROM session WHERE session_token_hash = {sessionTokenHash}",
-		Values: []any{
-			sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
-		},
-	})
-	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-	}
 }
 
 var base32Encoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)

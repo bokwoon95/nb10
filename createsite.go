@@ -113,11 +113,10 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.Unflash(w, r, "flash")
 		response.ContentDomain = nbrew.ContentDomain
 		response.ValidateCustomDomain = nbrew.Port == 443
 		response.UserID = user.UserID

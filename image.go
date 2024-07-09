@@ -68,11 +68,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			return
 		}
 		var response Response
-		_, err := nbrew.UnmarshalFlash(r, "flash", &response)
+		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
-		nbrew.Unflash(w, r, "flash")
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
 		response.ImgDomain = nbrew.ImgDomain
