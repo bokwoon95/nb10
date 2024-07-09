@@ -200,7 +200,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					filter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
 				}
 				n, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format:  "SELECT {*} FROM files WHERE {filter}",
 					Values: []any{

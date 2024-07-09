@@ -132,7 +132,6 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 			filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
 		}
 		storageUsed, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE {filter}",
 			Values: []any{
