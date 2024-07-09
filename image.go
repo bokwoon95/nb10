@@ -68,7 +68,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			return
 		}
 		var response Response
-		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
+		_, err := nbrew.PopFlash(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -287,7 +287,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 				return
 			}
-			err := nbrew.SetFlash(w, r, "flash", map[string]any{
+			err := nbrew.PushFlash(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "image",
 				},

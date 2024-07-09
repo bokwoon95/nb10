@@ -87,7 +87,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		nbrew.ExecuteTemplate(w, r, tmpl, &response)
 	}
 	var response Response
-	_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
+	_, err := nbrew.PopFlash(w, r, &response)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 	}

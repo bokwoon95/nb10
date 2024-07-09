@@ -85,7 +85,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
+		_, err := nbrew.PopFlash(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -173,7 +173,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 				}
 				return
 			}
-			err := nbrew.SetFlash(w, r, "flash", map[string]any{
+			err := nbrew.PushFlash(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":         "cancelexport",
 					"numCanceled":  len(response.ExportJobs),

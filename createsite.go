@@ -113,7 +113,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
+		_, err := nbrew.PopFlash(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -158,7 +158,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetFlash(w, r, "flash", &response)
+				err := nbrew.PushFlash(w, r, &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -171,7 +171,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			if !strings.Contains(response.SiteName, ".") {
 				sitePrefix = "@" + response.SiteName
 			}
-			err := nbrew.SetFlash(w, r, "flash", map[string]any{
+			err := nbrew.PushFlash(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":       "createsite",
 					"sitePrefix": sitePrefix,

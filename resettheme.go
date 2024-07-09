@@ -86,7 +86,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		}
 
 		var response Response
-		_, err := nbrew.UnmarshalFlash(w, r, "flash", &response)
+		_, err := nbrew.PopFlash(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -150,7 +150,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.SetFlash(w, r, "flash", &response)
+				err := nbrew.PushFlash(w, r, &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -159,7 +159,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				http.Redirect(w, r, "/"+path.Join(sitePrefix, "files/resettheme")+"/", http.StatusFound)
 				return
 			}
-			err := nbrew.SetFlash(w, r, "flash", map[string]any{
+			err := nbrew.PushFlash(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "resettheme",
 				},
