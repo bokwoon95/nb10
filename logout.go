@@ -16,31 +16,31 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}
-	var authenticationTokenString string
+	var sessionTokenString string
 	header := r.Header.Get("Authorization")
 	if header != "" {
 		if strings.HasPrefix(header, "Notebrew ") {
-			authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
+			sessionTokenString = strings.TrimPrefix(header, "Notebrew ")
 		}
 	} else {
-		cookie, _ := r.Cookie("authentication")
+		cookie, _ := r.Cookie("session")
 		if cookie != nil {
-			authenticationTokenString = cookie.Value
+			sessionTokenString = cookie.Value
 		}
 	}
-	if authenticationTokenString == "" {
+	if sessionTokenString == "" {
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}
-	authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
-	if err != nil || len(authenticationToken) != 24 {
+	sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", sessionTokenString))
+	if err != nil || len(sessionToken) != 24 {
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}
-	var authenticationTokenHash [8 + blake2b.Size256]byte
-	checksum := blake2b.Sum256(authenticationToken[8:])
-	copy(authenticationTokenHash[:8], authenticationToken[:8])
-	copy(authenticationTokenHash[8:], checksum[:])
+	var sessionTokenHash [8 + blake2b.Size256]byte
+	checksum := blake2b.Sum256(sessionToken[8:])
+	copy(sessionTokenHash[:8], sessionToken[:8])
+	copy(sessionTokenHash[8:], checksum[:])
 	switch r.Method {
 	case "GET", "HEAD":
 		funcMap := map[string]any{
@@ -59,16 +59,16 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 	case "POST":
 		http.SetCookie(w, &http.Cookie{
 			Path:   "/",
-			Name:   "authentication",
+			Name:   "session",
 			Value:  "0",
 			MaxAge: -1,
 		})
-		if authenticationTokenHash != [len(authenticationTokenHash)]byte{} {
+		if sessionTokenHash != [len(sessionTokenHash)]byte{} {
 			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format:  "DELETE FROM authentication WHERE authentication_token_hash = {authenticationTokenHash}",
+				Format:  "DELETE FROM session WHERE session_token_hash = {sessionTokenHash}",
 				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 				},
 			})
 			if err != nil {

@@ -36,7 +36,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 		CaptchaSiteKey         string         `json:"captchaSiteKey"`
 		Error                  string         `json:"error"`
 		FormErrors             url.Values     `json:"formErrors"`
-		AuthenticationToken    string         `json:"authenticationToken"`
+		SessionToken           string         `json:"sessionToken"`
 		Redirect               string         `json:"redirect"`
 		PostRedirectGet        map[string]any `json:"postRedirectGet"`
 	}
@@ -252,8 +252,8 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			}
 			http.SetCookie(w, &http.Cookie{
 				Path:     "/",
-				Name:     "authentication",
-				Value:    response.AuthenticationToken,
+				Name:     "session",
+				Value:    response.SessionToken,
 				Secure:   r.TLS != nil,
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
@@ -466,25 +466,25 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			return
 		}
 
-		var authenticationToken [8 + 16]byte
-		binary.BigEndian.PutUint64(authenticationToken[:8], uint64(time.Now().Unix()))
-		_, err = rand.Read(authenticationToken[8:])
+		var sessionToken [8 + 16]byte
+		binary.BigEndian.PutUint64(sessionToken[:8], uint64(time.Now().Unix()))
+		_, err = rand.Read(sessionToken[8:])
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		var authenticationTokenHash [8 + blake2b.Size256]byte
-		checksum := blake2b.Sum256(authenticationToken[8:])
-		copy(authenticationTokenHash[:8], authenticationToken[:8])
-		copy(authenticationTokenHash[8:], checksum[:])
+		var sessionTokenHash [8 + blake2b.Size256]byte
+		checksum := blake2b.Sum256(sessionToken[8:])
+		copy(sessionTokenHash[:8], sessionToken[:8])
+		copy(sessionTokenHash[8:], checksum[:])
 		if email != "" {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO authentication (authentication_token_hash, user_id)" +
-					" VALUES ({authenticationTokenHash}, (SELECT user_id FROM users WHERE email = {email}))",
+				Format: "INSERT INTO session (session_token_hash, user_id)" +
+					" VALUES ({sessionTokenHash}, (SELECT user_id FROM users WHERE email = {email}))",
 				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					sq.StringParam("email", email),
 				},
 			})
@@ -510,10 +510,10 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 		} else {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO authentication (authentication_token_hash, user_id)" +
-					" VALUES ({authenticationTokenHash}, (SELECT user_id FROM users WHERE username = {username}))",
+				Format: "INSERT INTO session (session_token_hash, user_id)" +
+					" VALUES ({sessionTokenHash}, (SELECT user_id FROM users WHERE username = {username}))",
 				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					sq.StringParam("username", response.Username),
 				},
 			})
@@ -523,7 +523,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				return
 			}
 		}
-		response.AuthenticationToken = strings.TrimLeft(hex.EncodeToString(authenticationToken[:]), "0")
+		response.SessionToken = strings.TrimLeft(hex.EncodeToString(sessionToken[:]), "0")
 		writeResponse(w, r, response)
 	default:
 		nbrew.MethodNotAllowed(w, r)

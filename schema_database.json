@@ -200,10 +200,10 @@
     ]
   },
   {
-    "table": "authentication",
+    "table": "session",
     "columns": [
       {
-        "column": "authentication_token_hash",
+        "column": "session_token_hash",
         "type": {
           "default": "BINARY(40)",
           "postgres": "BYTEA"

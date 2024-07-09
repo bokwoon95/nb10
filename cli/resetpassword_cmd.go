@@ -216,8 +216,8 @@ func (cmd *ResetpasswordCmd) Run() error {
 		email := cmd.User
 		_, err = sq.Exec(context.Background(), tx, sq.Query{
 			Dialect: cmd.Notebrew.Dialect,
-			Format: "DELETE FROM authentication WHERE EXISTS (" +
-				"SELECT 1 FROM users WHERE users.user_id = authentication.user_id AND users.email = {email}" +
+			Format: "DELETE FROM session WHERE EXISTS (" +
+				"SELECT 1 FROM users WHERE users.user_id = session.user_id AND users.email = {email}" +
 				")",
 			Values: []any{
 				sq.StringParam("email", email),
@@ -241,8 +241,8 @@ func (cmd *ResetpasswordCmd) Run() error {
 		username := strings.TrimPrefix(cmd.User, "@")
 		_, err = sq.Exec(context.Background(), tx, sq.Query{
 			Dialect: cmd.Notebrew.Dialect,
-			Format: "DELETE FROM authentication WHERE EXISTS (" +
-				"SELECT 1 FROM users WHERE users.user_id = authentication.user_id AND users.username = {username}" +
+			Format: "DELETE FROM session WHERE EXISTS (" +
+				"SELECT 1 FROM users WHERE users.user_id = session.user_id AND users.username = {username}" +
 				")",
 			Values: []any{
 				sq.StringParam("username", username),

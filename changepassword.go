@@ -222,7 +222,7 @@ func (nbrew *Notebrew) changepassword(w http.ResponseWriter, r *http.Request, us
 		defer tx.Rollback()
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "DELETE FROM authentication WHERE user_id = {userID}",
+			Format:  "DELETE FROM session WHERE user_id = {userID}",
 			Values: []any{
 				sq.UUIDParam("userID", user.UserID),
 			},

@@ -89,33 +89,33 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var user User
-		var authenticationTokenString string
+		var sessionTokenString string
 		header := r.Header.Get("Authorization")
 		if header != "" {
 			if strings.HasPrefix(header, "Notebrew ") {
-				authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
+				sessionTokenString = strings.TrimPrefix(header, "Notebrew ")
 			}
 		} else {
-			cookie, _ := r.Cookie("authentication")
+			cookie, _ := r.Cookie("session")
 			if cookie != nil {
-				authenticationTokenString = cookie.Value
+				sessionTokenString = cookie.Value
 			}
 		}
-		if authenticationTokenString != "" {
-			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
-			if err == nil && len(authenticationToken) == 24 {
-				var authenticationTokenHash [8 + blake2b.Size256]byte
-				checksum := blake2b.Sum256(authenticationToken[8:])
-				copy(authenticationTokenHash[:8], authenticationToken[:8])
-				copy(authenticationTokenHash[8:], checksum[:])
+		if sessionTokenString != "" {
+			sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", sessionTokenString))
+			if err == nil && len(sessionToken) == 24 {
+				var sessionTokenHash [8 + blake2b.Size256]byte
+				checksum := blake2b.Sum256(sessionToken[8:])
+				copy(sessionTokenHash[:8], sessionToken[:8])
+				copy(sessionTokenHash[8:], checksum[:])
 				user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format: "SELECT {*}" +
-						" FROM authentication" +
-						" JOIN users ON users.user_id = authentication.user_id" +
-						" WHERE authentication.authentication_token_hash = {authenticationTokenHash}",
+						" FROM session" +
+						" JOIN users ON users.user_id = session.user_id" +
+						" WHERE session.session_token_hash = {sessionTokenHash}",
 					Values: []any{
-						sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+						sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					},
 				}, func(row *sq.Row) User {
 					return User{
@@ -225,19 +225,19 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var user User
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
-			var authenticationTokenString string
+			var sessionTokenString string
 			header := r.Header.Get("Authorization")
 			if header != "" {
 				if strings.HasPrefix(header, "Notebrew ") {
-					authenticationTokenString = strings.TrimPrefix(header, "Notebrew ")
+					sessionTokenString = strings.TrimPrefix(header, "Notebrew ")
 				}
 			} else {
-				cookie, _ := r.Cookie("authentication")
+				cookie, _ := r.Cookie("session")
 				if cookie != nil {
-					authenticationTokenString = cookie.Value
+					sessionTokenString = cookie.Value
 				}
 			}
-			if authenticationTokenString == "" {
+			if sessionTokenString == "" {
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
@@ -245,7 +245,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.NotAuthenticated(w, r)
 				return
 			}
-			authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", authenticationTokenString))
+			sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", sessionTokenString))
 			if err != nil {
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
@@ -254,18 +254,18 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.NotAuthenticated(w, r)
 				return
 			}
-			var authenticationTokenHash [8 + blake2b.Size256]byte
-			checksum := blake2b.Sum256(authenticationToken[8:])
-			copy(authenticationTokenHash[:8], authenticationToken[:8])
-			copy(authenticationTokenHash[8:], checksum[:])
+			var sessionTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(sessionToken[8:])
+			copy(sessionTokenHash[:8], sessionToken[:8])
+			copy(sessionTokenHash[8:], checksum[:])
 			result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
-					" FROM authentication" +
-					" JOIN users ON users.user_id = authentication.user_id" +
-					" WHERE authentication.authentication_token_hash = {authenticationTokenHash}",
+					" FROM session" +
+					" JOIN users ON users.user_id = session.user_id" +
+					" WHERE session.session_token_hash = {sessionTokenHash}",
 				Values: []any{
-					sq.BytesParam("authenticationTokenHash", authenticationTokenHash[:]),
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 				},
 			}, func(row *sq.Row) (result struct {
 				User
@@ -629,36 +629,36 @@ func (nbrew *Notebrew) RedirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// If someone does make an api call via HTTP, revoke their
-	// authentication token.
-	var authenticationTokenHashes [][]byte
+	// session token.
+	var sessionTokenHashes [][]byte
 	header := r.Header.Get("Authorization")
 	if header != "" {
-		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
-		if err == nil && len(authenticationToken) == 24 {
-			var authenticationTokenHash [8 + blake2b.Size256]byte
-			checksum := blake2b.Sum256(authenticationToken[8:])
-			copy(authenticationTokenHash[:8], authenticationToken[:8])
-			copy(authenticationTokenHash[8:], checksum[:])
-			authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
+		sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
+		if err == nil && len(sessionToken) == 24 {
+			var sessionTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(sessionToken[8:])
+			copy(sessionTokenHash[:8], sessionToken[:8])
+			copy(sessionTokenHash[8:], checksum[:])
+			sessionTokenHashes = append(sessionTokenHashes, sessionTokenHash[:])
 		}
 	}
-	cookie, _ := r.Cookie("authentication")
+	cookie, _ := r.Cookie("session")
 	if cookie != nil && cookie.Value != "" {
-		authenticationToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
-		if err == nil && len(authenticationToken) == 24 {
-			var authenticationTokenHash [8 + blake2b.Size256]byte
-			checksum := blake2b.Sum256(authenticationToken[8:])
-			copy(authenticationTokenHash[:8], authenticationToken[:8])
-			copy(authenticationTokenHash[8:], checksum[:])
-			authenticationTokenHashes = append(authenticationTokenHashes, authenticationTokenHash[:])
+		sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+		if err == nil && len(sessionToken) == 24 {
+			var sessionTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(sessionToken[8:])
+			copy(sessionTokenHash[:8], sessionToken[:8])
+			copy(sessionTokenHash[8:], checksum[:])
+			sessionTokenHashes = append(sessionTokenHashes, sessionTokenHash[:])
 		}
 	}
-	if len(authenticationTokenHashes) > 0 {
+	if len(sessionTokenHashes) > 0 {
 		_, _ = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "DELETE FROM authentication WHERE authentication_token_hash IN ({authenticationTokenHashes})",
+			Format:  "DELETE FROM session WHERE session_token_hash IN ({sessionTokenHashes})",
 			Values: []any{
-				sq.Param("authenticationTokenHashes", authenticationTokenHashes),
+				sq.Param("sessionTokenHashes", sessionTokenHashes),
 			},
 		})
 	}

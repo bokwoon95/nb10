@@ -279,8 +279,8 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 		defer tx.Rollback()
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format: "DELETE FROM authentication WHERE EXISTS (" +
-				"SELECT 1 FROM users WHERE users.user_id = authentication.user_id AND users.reset_token_hash = {resetTokenHash}" +
+			Format: "DELETE FROM session WHERE EXISTS (" +
+				"SELECT 1 FROM users WHERE users.user_id = session.user_id AND users.reset_token_hash = {resetTokenHash}" +
 				")",
 			Values: []any{
 				sq.BytesParam("resetTokenHash", resetTokenHash[:]),
