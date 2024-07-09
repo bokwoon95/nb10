@@ -481,11 +481,12 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		if email != "" {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO session (session_token_hash, user_id)" +
-					" VALUES ({sessionTokenHash}, (SELECT user_id FROM users WHERE email = {email}))",
+				Format: "INSERT INTO session (session_token_hash, user_id, label)" +
+					" VALUES ({sessionTokenHash}, (SELECT user_id FROM users WHERE email = {email}), {label})",
 				Values: []any{
 					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					sq.StringParam("email", email),
+					sq.StringParam("label", r.UserAgent()),
 				},
 			})
 			if err != nil {
@@ -510,11 +511,12 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		} else {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO session (session_token_hash, user_id)" +
-					" VALUES ({sessionTokenHash}, (SELECT user_id FROM users WHERE username = {username}))",
+				Format: "INSERT INTO session (session_token_hash, user_id, label)" +
+					" VALUES ({sessionTokenHash}, (SELECT user_id FROM users WHERE username = {username}), {label})",
 				Values: []any{
 					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					sq.StringParam("username", response.Username),
+					sq.StringParam("label", r.UserAgent()),
 				},
 			})
 			if err != nil {
