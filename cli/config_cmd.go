@@ -829,8 +829,8 @@ const objectsHelp = `# == objects keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider        - Object storage provider (possible values: directory, s3).
 # filePath        - Object storage directory filePath (if using a directory).
-# endpoint        - Object storage provider endpoint (if using s3).
-# region          - S3 region.
+# endpoint        - Object storage provider endpoint (if using s3). e.g. https://s3.us-east-1.amazonaws.com, https://s3.us-west-004.backblazeb2.com.
+# region          - S3 region. e.g. us-east-1, us-west-004
 # bucket          - S3 bucket.
 # accessKeyID     - S3 access key ID.
 # secretAccessKey - S3 secret access key.
