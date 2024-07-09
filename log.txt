@@ -81,6 +81,20 @@ Sign up, 10 MB at first. Upgrade/change plan in the dashboard.
 12 USD/year (or 1 USD/month): 1 GB, 3 sites
 48 USD/year (or 4 USD/month): 6GB, 10 sites
 
+----
+0.48 USD => 1 GB storage
+0.1 USD => 20 GB CDN bandwidth
+----
+Total cost: 0.58 USD (0.42 USD profit)
+
+----
+2.88 USD => 6 GB storage
+0.6 USD => 120 GB bandwidth
+----
+Total cost: 3.48 USD (0.52 USD profit)
+
+0.52 * 1666 = 866 USD profit / mo
+
 == Spam lockdown mode ==
 Immediately need to pick a plan. The sign up flow has to be rewritten from immediately letting the users in to immediately directing them to a payment page, only after payment will they be let in. If their username is already taken, keep it as null. If the site is already taken, don't create the site and let them create it manually.
 12 USD/year (or 1 USD/month): 1 GB, 3 sites
