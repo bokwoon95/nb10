@@ -82,7 +82,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		}
 
 		var response Response
-		_, err := nbrew.PopFlashSession(w, r, &response)
+		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -155,7 +155,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.PushFlashSession(w, r, &response)
+				err := nbrew.SetFlashSession(w, r, &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -168,7 +168,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				http.Redirect(w, r, "/users/invite/"+query, http.StatusFound)
 				return
 			}
-			err := nbrew.PushFlashSession(w, r, map[string]any{
+			err := nbrew.SetFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "invite",
 				},

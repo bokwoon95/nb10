@@ -112,7 +112,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	switch r.Method {
 	case "GET", "HEAD":
 		var response Response
-		_, err := nbrew.PopFlashSession(w, r, &response)
+		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -564,7 +564,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 				return
 			}
-			err := nbrew.PushFlashSession(w, r, map[string]any{
+			err := nbrew.SetFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "file",
 				},

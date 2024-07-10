@@ -97,7 +97,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
-	err = nbrew.PushFlashSession(w, r, map[string]any{
+	err = nbrew.SetFlashSession(w, r, map[string]any{
 		"postRedirectGet": map[string]any{
 			"from": "calculatestorage",
 		},
