@@ -253,7 +253,9 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 	return nil
 }
 
-// GetFlashSession reads a value from the user's flash session and deletes the session.
+// GetFlashSession retrieves a value from the user's flash session, unmarshals
+// it into the valuePtr and then deletes the session. It returns a boolean
+// result indicating if a flash session was retrieved.
 func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, valuePtr any) (ok bool, err error) {
 	cookie, _ := r.Cookie("flash")
 	if cookie == nil {
