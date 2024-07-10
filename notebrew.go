@@ -337,7 +337,7 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	err = decoder.Decode(valuePtr)
 	if err != nil {
-		return false, err
+		return true, err
 	}
 	return true, nil
 }
