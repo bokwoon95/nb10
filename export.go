@@ -101,7 +101,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 
 		var response Response
-		_, err := nbrew.PopFlash(w, r, &response)
+		_, err := nbrew.PopFlashSession(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -380,7 +380,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.PushFlash(w, r, &response)
+				err := nbrew.PushFlashSession(w, r, &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
@@ -393,7 +393,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "export")+"/?"+values.Encode(), http.StatusFound)
 				return
 			}
-			err := nbrew.PushFlash(w, r, map[string]any{
+			err := nbrew.PushFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from":     "export",
 					"fileName": response.OutputName + ".tgz",

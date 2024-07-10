@@ -198,8 +198,8 @@ func getLogger(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
-// PushFlash pushes a flash session into the user's cookies.
-func (nbrew *Notebrew) PushFlash(w http.ResponseWriter, r *http.Request, value any) error {
+// PushFlashSession pushes a flash session into the user's cookies.
+func (nbrew *Notebrew) PushFlashSession(w http.ResponseWriter, r *http.Request, value any) error {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {
@@ -253,8 +253,8 @@ func (nbrew *Notebrew) PushFlash(w http.ResponseWriter, r *http.Request, value a
 	return nil
 }
 
-// PopFlash pops a flash session from the user's cookies.
-func (nbrew *Notebrew) PopFlash(w http.ResponseWriter, r *http.Request, valuePtr any) (ok bool, err error) {
+// PopFlashSession pops a flash session from the user's cookies.
+func (nbrew *Notebrew) PopFlashSession(w http.ResponseWriter, r *http.Request, valuePtr any) (ok bool, err error) {
 	cookie, _ := r.Cookie("flash")
 	if cookie == nil {
 		return false, nil

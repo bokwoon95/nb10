@@ -58,7 +58,7 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			http.Redirect(w, r, "/"+path.Join("files", sitePrefix)+"/", http.StatusFound)
 			return
 		}
-		err := nbrew.PushFlash(w, r, map[string]any{
+		err := nbrew.PushFlashSession(w, r, map[string]any{
 			"postRedirectGet": map[string]any{
 				"from":      "pin",
 				"numPinned": response.NumPinned,

@@ -125,7 +125,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 			return
 		}
 		var response Response
-		_, err = nbrew.PopFlash(w, r, &response)
+		_, err = nbrew.PopFlashSession(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
@@ -237,7 +237,7 @@ func (nbrew *Notebrewx) login(w http.ResponseWriter, r *http.Request, user nb10.
 				return
 			}
 			if response.Error != "" {
-				err := nbrew.PushFlash(w, r, &response)
+				err := nbrew.PushFlashSession(w, r, &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)

@@ -141,7 +141,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 		var response Response
-		_, err := nbrew.PopFlash(w, r, &response)
+		_, err := nbrew.PopFlashSession(w, r, &response)
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
@@ -191,7 +191,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				}
 				return
 			}
-			err := nbrew.PushFlash(w, r, map[string]any{
+			err := nbrew.PushFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
 					"from": "site.json",
 				},

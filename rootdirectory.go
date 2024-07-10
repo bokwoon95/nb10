@@ -124,7 +124,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 
 	var response Response
-	_, err := nbrew.PopFlash(w, r, &response)
+	_, err := nbrew.PopFlashSession(w, r, &response)
 	if err != nil {
 		getLogger(r.Context()).Error(err.Error())
 	}

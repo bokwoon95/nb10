@@ -50,7 +50,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			return
 		}
-		err := nbrew.PushFlash(w, r, map[string]any{
+		err := nbrew.PushFlashSession(w, r, map[string]any{
 			"postRedirectGet": map[string]any{
 				"from":              "uploadfile",
 				"regenerationStats": response.RegenerationStats,
