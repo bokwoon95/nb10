@@ -35,7 +35,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clean the path and redirect if necessary.
-	if r.Method == "GET" {
+	var urlPath string
+	if r.Method == "GET" || r.Method == "HEAD" {
 		cleanedPath := path.Clean(r.URL.Path)
 		if cleanedPath != "/" {
 			_, ok := fileTypes[path.Ext(cleanedPath)]
@@ -49,8 +50,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
 			return
 		}
+		urlPath = strings.Trim(r.URL.Path, "/")
+	} else {
+		urlPath = strings.Trim(path.Clean(r.URL.Path), "/")
 	}
-	urlPath := strings.Trim(r.URL.Path, "/")
 
 	err := r.ParseForm()
 	if err != nil {
