@@ -96,7 +96,7 @@ Total cost: 3.48 USD (0.52 USD profit)
 0.52 * 1666 = 866 USD profit / mo
 
 == Spam lockdown mode ==
-Immediately need to pick a plan. The sign up flow has to be rewritten from immediately letting the users in to immediately directing them to a payment page, only after payment will they be let in. If their username is already taken, keep it as null. If the site is already taken, don't create the site and let them create it manually.
+Immediately need to pick a plan. The sign up flow has to be rewritten from immediately letting the users in to immediately directing them to a payment page, only after payment will they be let in. If their username is already taken, keep it as null. If the site is already taken, don't create the site and let them create it manually. In all cases the user joins via an invite link sent to their email.
 12 USD/year (or 1 USD/month): 1 GB, 3 sites
 48 USD/year (or 4 USD/month): 6GB, 10 sites
 
