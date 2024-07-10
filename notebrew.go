@@ -198,7 +198,7 @@ func getLogger(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
-// SetFlashSession sets a flash session into the user's cookies.
+// SetFlashSession writes a value into the user's flash session.
 func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, value any) error {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
@@ -253,7 +253,7 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 	return nil
 }
 
-// GetFlashSession gets a flash session from the user's cookies and deletes it.
+// GetFlashSession reads a value from the user's flash session and deletes the session.
 func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, valuePtr any) (ok bool, err error) {
 	cookie, _ := r.Cookie("flash")
 	if cookie == nil {
