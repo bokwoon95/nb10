@@ -92,23 +92,25 @@
 <fieldset class='mt2'>
   <legend><h2 class='mv0 mh2'>sessions</h2></legend>
   <div class='mv2'><a href='/files/users/createsession/'>create session token</a></div>
-  <table class='mv2 collapse' style='overflow-x: auto;'>
-    <thead>
-      <tr class='bb h2'>
-        <th class='pa2'><input type='checkbox'></th>
-        <th class='pa2'>Creation time</th>
-        <th class='pa2'>Label</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{- range $session := $.Sessions }}
-      <tr class='bb'>
-        <th class='pa2'><input type='checkbox'></th>
-        <td class='pa2'>{{ $session.CreationTime.UTC.Format "2006-01-02 15:04:05 -07:00" }} (current)</td>
-        <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
-      </tr>
-      {{- end }}
-    </tbody>
-  </table>
+  <div class='overflow-x-auto'>
+    <table class='mv2 collapse'>
+      <thead>
+        <tr class='bb h2'>
+          <th class='pa2'><input type='checkbox'></th>
+          <th class='pa2'>Creation time</th>
+          <th class='pa2'>Label</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range $session := $.Sessions }}
+        <tr class='bb'>
+          <th class='pa2'><input type='checkbox'></th>
+          <td class='pa2'>{{ $session.CreationTime.UTC.Format "2006-01-02 15:04:05 -07:00" }} (current)</td>
+          <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
 </fieldset>
 
