@@ -104,7 +104,7 @@
       {{- range $session := $.Sessions }}
       <tr class='bb'>
         <th class='pa2'><input type='checkbox'></th>
-        <td class='pa2'>{{ $session.CreationTime.UTC.Format "2006-01-02 15:04:05Z" }} (current)</td>
+        <td class='pa2'>{{ $session.CreationTime.UTC.Format "2006-01-02 15:04:05 -07:00" }} (current)</td>
         <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
       </tr>
       {{- end }}
