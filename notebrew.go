@@ -26,6 +26,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,6 +58,8 @@ var (
 	BaselineJS string
 
 	BaselineJSHash string
+
+	Revision string
 )
 
 func init() {
@@ -78,6 +81,15 @@ func init() {
 	hash = sha256.Sum256(b)
 	BaselineJS = string(b)
 	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+	// vcs.revision
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				Revision = setting.Value
+				break
+			}
+		}
+	}
 }
 
 // Notebrew represents a notebrew instance.

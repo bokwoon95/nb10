@@ -263,6 +263,9 @@ func main() {
 				exit(fmt.Errorf("%s: %w", args[0], err))
 			}
 			return
+		case "version":
+			fmt.Println(nb10.Revision)
+			return
 		default:
 			exit(fmt.Errorf("unknown command: %s", args[0]))
 			return
