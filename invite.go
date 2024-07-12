@@ -34,15 +34,19 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		Password        string `json:"password"`
 		ConfirmPassword string `json:"confirmPassword"`
 		SiteName        string `json:"siteName"`
+		SiteTitle       string `json:"siteTitle"`
+		SiteDescription string `json:"siteDescription"`
 	}
 	type Response struct {
-		Token         string     `json:"token"`
-		ValidateEmail bool       `json:"validateEmail"`
-		Username      string     `json:"username"`
-		Email         string     `json:"email"`
-		SiteName      string     `json:"siteName"`
-		Error         string     `json:"error"`
-		FormErrors    url.Values `json:"formErrors"`
+		Token           string     `json:"token"`
+		ValidateEmail   bool       `json:"validateEmail"`
+		Username        string     `json:"username"`
+		Email           string     `json:"email"`
+		SiteName        string     `json:"siteName"`
+		SiteTitle       string     `json:"siteTitle"`
+		SiteDescription string     `json:"siteDescription"`
+		Error           string     `json:"error"`
+		FormErrors      url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {

@@ -77,22 +77,43 @@
       {{- end }}
     </ul>
   </div>
-  <div class='mv3'>
-    <div><label for='siteName' class='b'>Site name (optional, you can create a site later):</label></div>
-    <ul class='list-style-disc ph3 f6 mid-gray'>
-      <li>only lowercase letters, numbers and hyphen</li>
-      <li>max 30 characters</li>
-    </ul>
-    <div class=''>
-      <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}'>
-      <span>.nbrew.net</span>
+  <fieldset>
+    <legend><h3 class='mv0 mh2'>Create a site (optional, you can create a site later)</h3></legend>
+    <div class='mv3'>
+      <div><label for='siteName' class='b'>Name:</label></div>
+      <ul class='list-style-disc ph3 f6 mid-gray'>
+        <li>only lowercase letters, numbers and hyphen</li>
+        <li>max 30 characters</li>
+      </ul>
+      <div class=''>
+        <input id='siteName' name='siteName' value='{{ $.SiteName }}' class='pv1 ph2 br2 ba{{ if index $.FormErrors "siteName" }} b--invalid-red{{ end }}'>
+        <span>.nbrew.net</span>
+      </div>
+      <ul class='list-style-disc ph3 f6 invalid-red'>
+        {{- range $error := index $.FormErrors "siteName" }}
+        <li>{{ $error }}</li>
+        {{- end }}
+      </ul>
     </div>
-    <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "siteName" }}
-      <li>{{ $error }}</li>
-      {{- end }}
-    </ul>
-  </div>
+    <div class='mv3'>
+      <div><label for='siteTitle' class='b'>Title:</label></div>
+      <input id='siteTitle' name='siteTitle' value='{{ $.SiteTitle }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteTitle" }} b--invalid-red{{ end }}'>
+      <ul class='list-style-disc ph3 f6 invalid-red'>
+        {{- range $error := index $.FormErrors "siteTitle" }}
+        <li>{{ $error }}</li>
+        {{- end }}
+      </ul>
+    </div>
+    <div class='mv3'>
+      <div><label for='siteDescription' class='b'>Description:</label></div>
+      <textarea id='siteDescription' name='siteDescription' class='min-h4 pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteDescription" }} b--invalid-red{{ end }}'>{{ $.SiteDescription }}</textarea>
+      <ul class='list-style-disc ph3 f6 invalid-red'>
+        {{- range $error := index $.FormErrors "siteDescription" }}
+        <li>{{ $error }}</li>
+        {{- end }}
+      </ul>
+    </div>
+  </fieldset>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>create account</button>
   <div role='status'></div>
 </form>
