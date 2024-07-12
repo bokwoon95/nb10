@@ -9,6 +9,7 @@ import (
 	"errors"
 	"html/template"
 	"mime"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -478,11 +479,29 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		copy(sessionTokenHash[:8], sessionToken[:8])
 		copy(sessionTokenHash[8:], checksum[:])
 		var label sql.NullString
+		if nbrew.MaxMindDBReader != nil {
+			addr := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs)
+			if addr.IsValid() {
+				var record MaxMindDBRecord
+				err := nbrew.MaxMindDBReader.Lookup(net.IP(addr.AsSlice()), &record)
+				if err == nil {
+					country, ok := CountryCodes[record.Country.ISOCode]
+					if ok {
+						label.String = country
+						label.Valid = true
+					}
+				}
+			}
+		}
 		userAgent := r.UserAgent()
 		i := strings.Index(userAgent, "(")
 		j := strings.Index(userAgent, ")")
 		if i > 0 && j > i {
-			label = sql.NullString{String: userAgent[i+1 : j], Valid: true}
+			if label.String != "" {
+				label.String += " "
+			}
+			label.String += userAgent[i+1 : j]
+			label.Valid = true
 		}
 		if email != "" {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{

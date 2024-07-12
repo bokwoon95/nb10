@@ -1353,3 +1353,9 @@ func RealClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs
 	}
 	return netip.Addr{}
 }
+
+type MaxMindDBRecord struct {
+	Country struct {
+		ISOCode string `maxminddb:"iso_code"`
+	} `maxminddb:"country"`
+}
