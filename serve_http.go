@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -273,6 +274,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				},
 			}, func(row *sq.Row) (result struct {
 				User
+				TimezoneOffsetHours float64
 				IsAuthorizedForSite bool
 			}) {
 				result.UserID = row.UUID("users.user_id")
@@ -280,6 +282,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				result.DisableReason = row.String("users.disable_reason")
 				result.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
 				result.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
+				result.TimezoneOffsetHours = row.Float64("users.timezone_offset_hours")
 				result.IsAuthorizedForSite = row.Bool("EXISTS (SELECT 1"+
 					" FROM site"+
 					" JOIN site_user ON site_user.site_id = site.site_id"+
@@ -304,6 +307,15 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			user = result.User
+			offsetSeconds := int(time.Duration(int64(result.TimezoneOffsetHours*float64(time.Hour))).Milliseconds() * 1000)
+			sign := "+"
+			if offsetSeconds < 0 {
+				sign = "-"
+				offsetSeconds = -offsetSeconds
+			}
+			hourComponent := offsetSeconds / 3600
+			minuteComponent := (offsetSeconds % 3600) / 60
+			user.Location = time.FixedZone(sign+strconv.Itoa(hourComponent)+":"+strconv.Itoa(minuteComponent), int(offsetSeconds))
 			isAuthorizedForSite = result.IsAuthorizedForSite
 			logger := logger.With(slog.String("username", user.Username))
 			r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))

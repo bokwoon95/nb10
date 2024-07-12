@@ -4,6 +4,7 @@
   "emoji": "☕",
   "favicon": "",
   "codeStyle": "onedark",
+  "timezoneOffset": "{{ if $.TimezoneOffset }}{{ $.TimezoneOffset }}{{ else }}+00:00{{ end }}",
   "description": "{{ if $.Description }}{{ $.Description }}{{ else }}# Hello World!\n\nWelcome to my blog.{{ end }}",
   "navigationLinks": [
     {

@@ -80,6 +80,12 @@
         }
       },
       {
+        "column": "timezone_offset_hours",
+        "type": {
+          "default": "DECIMAL(4,2)"
+        }
+      },
+      {
         "column": "disable_reason",
         "type": {
           "default": "VARCHAR(500)"

@@ -20,6 +20,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// formatTime $file.CreationTime ""
+
 func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user User, sitePrefix, filePath string, fileInfo fs.FileInfo) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
@@ -37,6 +39,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
+		Location          *time.Location    `json:"location"`
 		DisableReason     string            `json:"disableReason"`
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
@@ -240,6 +243,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
+	response.Location = user.Location
 	response.DisableReason = user.DisableReason
 	if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 		response.FileID = fileInfo.FileID
