@@ -231,7 +231,9 @@ func (cmd *CreatesiteCmd) Run() error {
 				return err
 			}
 			defer writer.Close()
-			err = tmpl.Execute(writer, home)
+			err = tmpl.Execute(writer, map[string]string{
+				"Home": home,
+			})
 			if err != nil {
 				return err
 			}

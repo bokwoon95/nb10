@@ -1,13 +1,13 @@
 {
   "lang": "en",
-  "title": "My Blog",
+  "title": "{{ if $.Title }}{{ $.Title }}{{ else }}My Blog{{ end }}",
   "emoji": "☕",
   "favicon": "",
   "codeStyle": "onedark",
-  "description": "# Hello World!\n\nWelcome to my blog.",
+  "description": "{{ if $.Description }}{{ $.Description }}{{ else }}# Hello World!\n\nWelcome to my blog.{{ end }}",
   "navigationLinks": [
     {
-      "name": "{{ $ }}",
+      "name": "{{ if $.Home }}{{ $.Home }}{{ else }}home{{ end }}",
       "url": "/"
     },
     {

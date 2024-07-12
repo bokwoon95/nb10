@@ -536,7 +536,9 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return
 		}
 		defer writer.Close()
-		err = tmpl.Execute(writer, home)
+		err = tmpl.Execute(writer, map[string]string{
+			"Home": home,
+		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)

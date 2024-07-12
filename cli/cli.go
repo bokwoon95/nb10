@@ -850,7 +850,7 @@ func Notebrew(configDir, dataDir string, args []string) (*nb10.Notebrew, error) 
 			return nil, err
 		}
 		defer writer.Close()
-		err = tmpl.Execute(writer, "home")
+		err = tmpl.Execute(writer, nil)
 		if err != nil {
 			return nil, err
 		}

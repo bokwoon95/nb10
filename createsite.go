@@ -403,7 +403,9 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		defer writer.Close()
-		err = tmpl.Execute(writer, home)
+		err = tmpl.Execute(writer, map[string]string{
+			"Home": home,
+		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
