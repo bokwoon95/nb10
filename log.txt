@@ -115,6 +115,7 @@ the admin page needs to:
 
 TODO: look into setting a timezone string as a user setting that would allow reformatting all timestamps in the context of the timezone. important thing is to realize there are two settings: one for the user (requires a database) and onr for the site (doesn't require a database). The one for a user would dynamically update all timestamps shown in the CMS in context of their timezone, the one for a site would end up regenerating all pages snd posts in it.
     TODO: this also means we need to ask the user to input their preferred utc offset in invite.go and set it in site.json as well.
+    TODO: use DECIMAL(4,2) to represent hour offset from UTC.
 TODO: create a sessions table hat lets users manage their sessions. They can also generate new sessions, whereby the session token is shown once and then deleted.
     - profile => sessions => generate session token
     - TODO: /profile/ should show the current user's sessions
