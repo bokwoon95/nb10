@@ -22,6 +22,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -37,11 +38,11 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/libdns"
+	"github.com/oschwald/maxminddb-golang"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 	"golang.org/x/crypto/blake2b"
-	"github.com/oschwald/maxminddb-golang"
 )
 
 var (
@@ -61,27 +62,13 @@ var (
 	BaselineJSHash string
 
 	Revision string
+
+	commonPasswords = make(map[string]struct{})
+
+	CountryCodes map[string]string
 )
 
 func init() {
-	// styles.css
-	b, err := fs.ReadFile(embedFS, "static/styles.css")
-	if err != nil {
-		return
-	}
-	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-	hash := sha256.Sum256(b)
-	StylesCSS = string(b)
-	StylesCSSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
-	// baseline.js
-	b, err = fs.ReadFile(embedFS, "static/baseline.js")
-	if err != nil {
-		return
-	}
-	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-	hash = sha256.Sum256(b)
-	BaselineJS = string(b)
-	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
 	// vcs.revision
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
@@ -90,6 +77,57 @@ func init() {
 				break
 			}
 		}
+	}
+	// styles.css
+	b, err := fs.ReadFile(embedFS, "static/styles.css")
+	if err != nil {
+		panic(err)
+	}
+	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+	hash := sha256.Sum256(b)
+	StylesCSS = string(b)
+	StylesCSSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+	// baseline.js
+	b, err = fs.ReadFile(embedFS, "static/baseline.js")
+	if err != nil {
+		panic(err)
+	}
+	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+	hash = sha256.Sum256(b)
+	BaselineJS = string(b)
+	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+	// common passwords
+	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	done := false
+	for {
+		if done {
+			break
+		}
+		line, err := reader.ReadBytes('\n')
+		done = err == io.EOF
+		if err != nil && !done {
+			panic(err)
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		commonPasswords[string(line)] = struct{}{}
+	}
+	// country codes
+	file, err = RuntimeFS.Open("embed/country_codes.json")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	err = json.NewDecoder(file).Decode(&CountryCodes)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -1159,33 +1197,6 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	}
 }
 
-var commonPasswords = make(map[string]struct{})
-
-func init() {
-	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	done := false
-	for {
-		if done {
-			break
-		}
-		line, err := reader.ReadBytes('\n')
-		done = err == io.EOF
-		if err != nil && !done {
-			panic(err)
-		}
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
-			continue
-		}
-		commonPasswords[string(line)] = struct{}{}
-	}
-}
-
 var ErrStorageLimitExceeded = fmt.Errorf("storage limit exceeded")
 
 func (nbrew *Notebrew) StorageLimitExceeded(w http.ResponseWriter, r *http.Request) {
@@ -1289,4 +1300,56 @@ func (lw *LimitedWriter) Write(p []byte) (int, error) {
 	n, err := lw.W.Write(p)
 	lw.N -= int64(n)
 	return n, err
+}
+
+func RealClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs map[netip.Addr]struct{}) netip.Addr {
+	// Reference: https://adam-p.ca/blog/2022/03/x-forwarded-for/
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return netip.Addr{}
+	}
+	remoteAddr, err := netip.ParseAddr(strings.TrimSpace(ip))
+	if err != nil {
+		return netip.Addr{}
+	}
+	// If we don't have any proxy servers configured (i.e. we are directly
+	// connected to the internet), treat remoteAddr as the real client IP.
+	if len(realIPHeaders) == 0 && len(proxyIPs) == 0 {
+		return remoteAddr
+	}
+	// If remoteAddr is trusted to populate a known header with the real client
+	// IP, look in that header.
+	if header, ok := realIPHeaders[remoteAddr]; ok {
+		addr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(header)))
+		if err != nil {
+			return netip.Addr{}
+		}
+		return addr
+	}
+	// Check X-Forwarded-For header only if remoteAddr is the IP of a proxy
+	// server.
+	_, ok := proxyIPs[remoteAddr]
+	if !ok {
+		return remoteAddr
+	}
+	// Loop over all IP addresses in X-Forwarded-For headers from right to
+	// left. We want to rightmost IP address that isn't a proxy server's IP
+	// address.
+	values := r.Header.Values("X-Forwarded-For")
+	for i := len(values) - 1; i >= 0; i-- {
+		ips := strings.Split(values[i], ",")
+		for j := len(ips) - 1; j >= 0; j-- {
+			ip := ips[j]
+			addr, err := netip.ParseAddr(strings.TrimSpace(ip))
+			if err != nil {
+				continue
+			}
+			_, ok := proxyIPs[addr]
+			if ok {
+				continue
+			}
+			return addr
+		}
+	}
+	return netip.Addr{}
 }

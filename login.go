@@ -9,7 +9,6 @@ import (
 	"errors"
 	"html/template"
 	"mime"
-	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
@@ -537,56 +536,4 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 	default:
 		nbrew.MethodNotAllowed(w, r)
 	}
-}
-
-func RealClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs map[netip.Addr]struct{}) netip.Addr {
-	// Reference: https://adam-p.ca/blog/2022/03/x-forwarded-for/
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return netip.Addr{}
-	}
-	remoteAddr, err := netip.ParseAddr(strings.TrimSpace(ip))
-	if err != nil {
-		return netip.Addr{}
-	}
-	// If we don't have any proxy servers configured (i.e. we are directly
-	// connected to the internet), treat remoteAddr as the real client IP.
-	if len(realIPHeaders) == 0 && len(proxyIPs) == 0 {
-		return remoteAddr
-	}
-	// If remoteAddr is trusted to populate a known header with the real client
-	// IP, look in that header.
-	if header, ok := realIPHeaders[remoteAddr]; ok {
-		addr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(header)))
-		if err != nil {
-			return netip.Addr{}
-		}
-		return addr
-	}
-	// Check X-Forwarded-For header only if remoteAddr is the IP of a proxy
-	// server.
-	_, ok := proxyIPs[remoteAddr]
-	if !ok {
-		return remoteAddr
-	}
-	// Loop over all IP addresses in X-Forwarded-For headers from right to
-	// left. We want to rightmost IP address that isn't a proxy server's IP
-	// address.
-	values := r.Header.Values("X-Forwarded-For")
-	for i := len(values) - 1; i >= 0; i-- {
-		ips := strings.Split(values[i], ",")
-		for j := len(ips) - 1; j >= 0; j-- {
-			ip := ips[j]
-			addr, err := netip.ParseAddr(strings.TrimSpace(ip))
-			if err != nil {
-				continue
-			}
-			_, ok := proxyIPs[addr]
-			if ok {
-				continue
-			}
-			return addr
-		}
-	}
-	return netip.Addr{}
 }
