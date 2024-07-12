@@ -19,12 +19,14 @@ require (
 	github.com/libdns/namecheap v0.0.0-20211109042440-fc7440785c8e
 	github.com/libdns/porkbun v0.1.2
 	github.com/mattn/go-sqlite3 v1.14.16
+	github.com/oschwald/maxminddb-golang v1.13.1
+	github.com/stripe/stripe-go/v79 v79.2.0
 	github.com/yuin/goldmark v1.4.13
 	github.com/yuin/goldmark-highlighting v0.0.0-20220208100518-594be1970594
 	golang.org/x/crypto v0.18.0
 	golang.org/x/net v0.20.0
 	golang.org/x/sync v0.6.0
-	golang.org/x/sys v0.16.0
+	golang.org/x/sys v0.21.0
 	golang.org/x/term v0.16.0
 	modernc.org/sqlite v1.29.2
 )
@@ -54,7 +56,6 @@ require (
 	github.com/miekg/dns v1.1.55 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/stripe/stripe-go/v79 v79.2.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

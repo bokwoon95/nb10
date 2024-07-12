@@ -41,6 +41,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
 	"golang.org/x/crypto/blake2b"
+	"github.com/oschwald/maxminddb-golang"
 )
 
 var (
@@ -157,6 +158,8 @@ type Notebrew struct {
 	ContentSecurityPolicy string
 
 	Logger *slog.Logger
+
+	MaxMindDBReader *maxminddb.Reader
 
 	// ctx is associated with this struct. When Close() is called, the ctx is
 	// canceled.

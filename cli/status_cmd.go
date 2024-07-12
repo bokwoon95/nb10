@@ -82,8 +82,20 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "imgcmd        = %s\n", cmd.Notebrew.ImgCmd)
 	}
 
+	// MaxMind DB.
+	b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "maxminddb.txt"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "maxminddb.txt"), err)
+	}
+	maxMindDBFilePath := string(bytes.TrimSpace(b))
+	if maxMindDBFilePath == "" {
+		fmt.Fprintf(cmd.Stdout, "maxminddb     = <not configured>\n")
+	} else {
+		fmt.Fprintf(cmd.Stdout, "maxminddb     = %s\n", maxMindDBFilePath)
+	}
+
 	// Database.
-	b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
+	b, err = os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		fmt.Fprintf(cmd.Stdout, "database      = <error: %s: %s>\n", filepath.Join(cmd.ConfigDir, "database.json"), err)
 	} else {

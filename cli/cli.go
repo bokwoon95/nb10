@@ -36,6 +36,7 @@ import (
 	"github.com/libdns/godaddy"
 	"github.com/libdns/namecheap"
 	"github.com/libdns/porkbun"
+	"github.com/oschwald/maxminddb-golang"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -75,6 +76,27 @@ func Notebrew(configDir, dataDir string, args []string) (*nb10.Notebrew, error) 
 		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "imgcmd.txt"), err)
 	}
 	nbrew.ImgCmd = string(bytes.TrimSpace(b))
+
+	// MaxMind DB reader.
+	b, err = os.ReadFile(filepath.Join(configDir, "maxminddb.txt"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "maxminddb.txt"), err)
+	}
+	maxMindDBFilePath := string(bytes.TrimSpace(b))
+	if maxMindDBFilePath != "" {
+		_, err = os.Stat(maxMindDBFilePath)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil, fmt.Errorf("%s: %s does not exist", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath)
+			}
+			return nil, fmt.Errorf("%s: %s: %w", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath, err)
+		}
+		maxmindDBReader, err := maxminddb.Open(maxMindDBFilePath)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s: %w", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath, err)
+		}
+		nbrew.MaxMindDBReader = maxmindDBReader
+	}
 
 	// Port.
 	b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
