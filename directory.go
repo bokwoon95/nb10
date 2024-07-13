@@ -33,34 +33,34 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		Size         int64     `json:"size"`
 	}
 	type Response struct {
-		ContentBaseURL    string            `json:"contentBaseURL"`
-		ImgDomain         string            `json:"imgDomain"`
-		IsDatabaseFS      bool              `json:"isDatabaseFS"`
-		SitePrefix        string            `json:"sitePrefix"`
-		UserID            ID                `json:"userID"`
-		Username          string            `json:"username"`
-		Location          *time.Location    `json:"location"`
-		DisableReason     string            `json:"disableReason"`
-		FileID            ID                `json:"fileID"`
-		FilePath          string            `json:"filePath"`
-		IsDir             bool              `json:"isDir"`
-		ModTime           time.Time         `json:"modTime"`
-		CreationTime      time.Time         `json:"creationTime"`
-		PinnedFiles       []File            `json:"pinnedFiles"`
-		Files             []File            `json:"files"`
-		Sort              string            `json:"sort"`
-		Order             string            `json:"order"`
-		From              string            `json:"from"`
-		FromEdited        string            `json:"fromEdited"`
-		FromCreated       string            `json:"fromCreated"`
-		Before            string            `json:"before"`
-		BeforeEdited      string            `json:"beforeEdited"`
-		BeforeCreated     string            `json:"beforeCreated"`
-		Limit             int               `json:"limit"`
-		PreviousURL       string            `json:"previousURL"`
-		NextURL           string            `json:"nextURL"`
-		RegenerationStats RegenerationStats `json:"regenerationStats"`
-		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
+		ContentBaseURL      string            `json:"contentBaseURL"`
+		ImgDomain           string            `json:"imgDomain"`
+		IsDatabaseFS        bool              `json:"isDatabaseFS"`
+		SitePrefix          string            `json:"sitePrefix"`
+		UserID              ID                `json:"userID"`
+		Username            string            `json:"username"`
+		TimezoneOffsetHours float64           `json:"timezoneOffsetHours"`
+		DisableReason       string            `json:"disableReason"`
+		FileID              ID                `json:"fileID"`
+		FilePath            string            `json:"filePath"`
+		IsDir               bool              `json:"isDir"`
+		ModTime             time.Time         `json:"modTime"`
+		CreationTime        time.Time         `json:"creationTime"`
+		PinnedFiles         []File            `json:"pinnedFiles"`
+		Files               []File            `json:"files"`
+		Sort                string            `json:"sort"`
+		Order               string            `json:"order"`
+		From                string            `json:"from"`
+		FromEdited          string            `json:"fromEdited"`
+		FromCreated         string            `json:"fromCreated"`
+		Before              string            `json:"before"`
+		BeforeEdited        string            `json:"beforeEdited"`
+		BeforeCreated       string            `json:"beforeCreated"`
+		Limit               int               `json:"limit"`
+		PreviousURL         string            `json:"previousURL"`
+		NextURL             string            `json:"nextURL"`
+		RegenerationStats   RegenerationStats `json:"regenerationStats"`
+		PostRedirectGet     map[string]any    `json:"postRedirectGet"`
 	}
 	const dateFormat = "2006-01-02"
 	const timeFormat = "2006-01-02T150405.999999999-0700"
@@ -119,6 +119,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
 			"humanReadableFileSize": HumanReadableFileSize,
+			"formatTime":            FormatTime,
 			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 			"referer":               func() string { return referer },
@@ -243,7 +244,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
-	response.Location = user.Location
+	response.TimezoneOffsetHours = user.TimezoneOffsetHours
 	response.DisableReason = user.DisableReason
 	if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 		response.FileID = fileInfo.FileID

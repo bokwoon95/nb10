@@ -386,7 +386,7 @@
           {{- if not $file.IsDir }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
-          <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
+          <span class='ml2 f6 mid-gray'>{{ formatTime $file.CreationTime "2006-01-02" $.TimezoneOffsetHours }}</span>
         </div>
         <div class='flex-grow-1'></div>
         <details class='relative ml1' data-autoclose-details>
@@ -466,7 +466,7 @@
           {{- if not $file.IsDir }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
-          <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
+          <span class='ml2 f6 mid-gray'>{{ formatTime $file.CreationTime "2006-01-02" $.TimezoneOffsetHours }}</span>
         </div>
         <div class='flex-grow-1'></div>
         <details class='relative ml1' data-autoclose-details>
