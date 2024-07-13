@@ -80,9 +80,9 @@
         }
       },
       {
-        "column": "timezone_offset_hours",
+        "column": "timezone_offset_seconds",
         "type": {
-          "default": "DECIMAL(4,2)"
+          "default": "INT"
         }
       },
       {

@@ -27,17 +27,17 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		Label            string    `json:"label"`
 	}
 	type Response struct {
-		UserID              ID             `json:"userID"`
-		Username            string         `json:"username"`
-		Email               string         `json:"email"`
-		TimezoneOffsetHours float64        `json:"timezoneOffsetHours"`
-		DisableReason       string         `json:"disableReason"`
-		SiteLimit           int64          `json:"siteLimit"`
-		StorageLimit        int64          `json:"storageLimit"`
-		StorageUsed         int64          `json:"storageUsed"`
-		Sites               []Site         `json:"sites"`
-		Sessions            []Session      `json:"sessions"`
-		PostRedirectGet     map[string]any `json:"postRedirectGet"`
+		UserID                ID             `json:"userID"`
+		Username              string         `json:"username"`
+		Email                 string         `json:"email"`
+		TimezoneOffsetSeconds int            `json:"timezoneOffsetSeconds"`
+		DisableReason         string         `json:"disableReason"`
+		SiteLimit             int64          `json:"siteLimit"`
+		StorageLimit          int64          `json:"storageLimit"`
+		StorageUsed           int64          `json:"storageUsed"`
+		Sites                 []Site         `json:"sites"`
+		Sessions              []Session      `json:"sessions"`
+		PostRedirectGet       map[string]any `json:"postRedirectGet"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.MethodNotAllowed(w, r)
@@ -66,12 +66,14 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
 			"humanReadableFileSize": HumanReadableFileSize,
-			"formatTime":            FormatTime,
 			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 			"referer":               func() string { return referer },
 			"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 			"float64ToInt64":        func(n float64) int64 { return int64(n) },
+			"formatTime": func(t time.Time, layout string, offset int) string {
+				return t.In(time.FixedZone("", offset)).Format(layout)
+			},
 			"head": func(s string) string {
 				head, _, _ := strings.Cut(s, "/")
 				return head
@@ -107,7 +109,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.Email = user.Email
-	response.TimezoneOffsetHours = user.TimezoneOffsetHours
+	response.TimezoneOffsetSeconds = user.TimezoneOffsetSeconds
 	response.DisableReason = user.DisableReason
 	response.SiteLimit = user.SiteLimit
 	response.StorageLimit = user.StorageLimit

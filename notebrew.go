@@ -233,7 +233,7 @@ type User struct {
 	UserID              ID
 	Username            string
 	Email               string
-	TimezoneOffsetHours float64
+	TimezoneOffsetSeconds int
 	// func accountDisabled(): "you may not perform that action as your account has been disabled for the following reason: {{ $disableReason }}"
 	DisableReason string
 	SiteLimit     int64
@@ -1359,9 +1359,4 @@ type MaxMindDBRecord struct {
 	Country struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"country"`
-}
-
-func FormatTime(t time.Time, layout string, timezoneOffsetHours float64) string {
-	offset := int(time.Duration(int64(timezoneOffsetHours * float64(time.Hour))).Seconds())
-	return t.In(time.FixedZone("", offset)).Format(layout)
 }

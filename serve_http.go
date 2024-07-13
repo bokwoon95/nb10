@@ -123,12 +123,13 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					},
 				}, func(row *sq.Row) User {
 					return User{
-						UserID:        row.UUID("users.user_id"),
-						Username:      row.String("users.username"),
-						Email:         row.String("users.email"),
-						DisableReason: row.String("users.disable_reason"),
-						SiteLimit:     row.Int64("coalesce(users.site_limit, -1)"),
-						StorageLimit:  row.Int64("coalesce(users.storage_limit, -1)"),
+						UserID:                row.UUID("users.user_id"),
+						Username:              row.String("users.username"),
+						Email:                 row.String("users.email"),
+						TimezoneOffsetSeconds: row.Int("users.timezone_offset_seconds"),
+						DisableReason:         row.String("users.disable_reason"),
+						SiteLimit:             row.Int64("coalesce(users.site_limit, -1)"),
+						StorageLimit:          row.Int64("coalesce(users.storage_limit, -1)"),
 					}
 				})
 				if err != nil {
@@ -263,7 +264,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			copy(sessionTokenHash[:8], sessionToken[:8])
 			copy(sessionTokenHash[8:], checksum[:])
 			result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
 					" FROM session" +
@@ -278,7 +278,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}) {
 				result.UserID = row.UUID("users.user_id")
 				result.Username = row.String("users.username")
-				result.TimezoneOffsetHours = row.Float64("users.timezone_offset_hours")
+				result.TimezoneOffsetSeconds = row.Int("users.timezone_offset_seconds")
 				result.DisableReason = row.String("users.disable_reason")
 				result.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
 				result.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
