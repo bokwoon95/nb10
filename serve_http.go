@@ -263,6 +263,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			copy(sessionTokenHash[:8], sessionToken[:8])
 			copy(sessionTokenHash[8:], checksum[:])
 			result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
 					" FROM session" +
@@ -304,6 +305,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.NotAuthenticated(w, r)
 				return
 			}
+			user = result.User
 			isAuthorizedForSite = result.IsAuthorizedForSite
 			logger := logger.With(slog.String("username", user.Username))
 			r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
