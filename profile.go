@@ -171,7 +171,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 			if len(sessionTokenHash) != 40 {
 				continue
 			}
-			sessions[i].CreationTime = time.Unix(int64(binary.BigEndian.Uint64(sessionTokenHash[:8])), 0)
+			sessions[i].CreationTime = time.Unix(int64(binary.BigEndian.Uint64(sessionTokenHash[:8])), 0).UTC()
 		}
 		response.Sessions = sessions
 		return nil
