@@ -121,7 +121,7 @@
           <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
           <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
           <td class='pa2'>
-            {{- if true }}
+            {{- if not $session.Current }}
             <button type='submit' formmethod='get' formaction='/users/deletesession/' name='name' value='' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
             {{- end }}
           </td>
