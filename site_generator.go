@@ -311,7 +311,8 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			// should be treated as a signal by other goroutines that parsing
 			// this template has errors. Other goroutines are blocked from
 			// accessing the cachedTemplate pointer until the wait channel is
-			// closed by the defer function below (once this goroutine exits).
+			// closed by the defer function below (which is once this goroutine
+			// exits).
 			wait = make(chan struct{})
 			siteGen.mu.Lock()
 			siteGen.templateCache[externalName] = nil
