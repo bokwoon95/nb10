@@ -247,7 +247,6 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			return
 		}
 		_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
-			Debug:   true,
 			Dialect: nbrew.Dialect,
 			Format: "UPDATE users" +
 				" SET username = {username}" +
