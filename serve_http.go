@@ -50,7 +50,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
 			return
 		}
-		urlPath = strings.Trim(r.URL.Path, "/")
+		urlPath = strings.Trim(cleanedPath, "/")
 	} else {
 		urlPath = strings.Trim(path.Clean(r.URL.Path), "/")
 	}
