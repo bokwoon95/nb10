@@ -25,11 +25,11 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		StorageUsed int64  `json:"storageUsed"`
 	}
 	type Session struct {
-		sessionTokenHash    []byte    `json:"-"`
-		SessionTokenPreview string    `json:"sessionTokenPreview"`
-		CreationTime        time.Time `json:"creationTime"`
-		Label               string    `json:"label"`
-		Current             bool      `json:"current"`
+		sessionTokenHash   []byte    `json:"-"`
+		SessionTokenPrefix string    `json:"sessionTokenPrefix"`
+		CreationTime       time.Time `json:"creationTime"`
+		Label              string    `json:"label"`
+		Current            bool      `json:"current"`
 	}
 	type Response struct {
 		UserID                ID             `json:"userID"`
@@ -200,7 +200,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 			if len(sessionTokenHash) != 40 {
 				continue
 			}
-			sessions[i].SessionTokenPreview = strings.TrimLeft(hex.EncodeToString(sessionTokenHash[:8]), "0")
+			sessions[i].SessionTokenPrefix = strings.TrimLeft(hex.EncodeToString(sessionTokenHash[:8]), "0")
 			sessions[i].CreationTime = time.Unix(int64(binary.BigEndian.Uint64(sessionTokenHash[:8])), 0).UTC()
 			sessions[i].Current = bytes.Equal(sessionTokenHash, currentSessionTokenHash)
 		}

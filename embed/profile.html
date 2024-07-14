@@ -103,7 +103,7 @@
     <thead>
       <tr class='bb h2'>
         <th class='pa2'><input type='checkbox' data-checkbox-leader></th>
-        <th class='pa2'>Session token</th>
+        <th class='pa2'>Session token prefix</th>
         <th class='pa2'>Label</th>
         <th class='pa2'>Creation time</th>
         <th class='pa2'></th>
@@ -112,13 +112,13 @@
     <tbody>
       {{- range $session := $.Sessions }}
       <tr class='bb tc'>
-        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='session' value='{{ $session.SessionTokenPreview }}' data-checkbox-follower>{{ end }}</th>
-        <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPreview }}&hellip;</td>
+        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='session' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</th>
+        <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPrefix }}&hellip;</td>
         <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
         <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
         <td class='pa2{{ if $session.Current}} b{{ end }}'>
           {{- if not $session.Current }}
-          <button type='submit' formmethod='get' formaction='/users/deletesession/' name='session' value='{{ $session.SessionTokenPreview }}' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
+          <button type='submit' formmethod='get' formaction='/users/deletesession/' name='session' value='{{ $session.SessionTokenPrefix }}' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
           {{- else }}
           <em>current session</em>
           {{- end }}
