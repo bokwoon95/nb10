@@ -160,3 +160,19 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     dataPreventDoubleSubmit.submit();
   });
 }
+
+for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
+  if (dataCheckboxLeader.tagName != "INPUT" || dataCheckboxLeader.getAttribute("type") != "checkbox") {
+    continue;
+  }
+  const leaderGroup = dataCheckboxLeader.getAttribute("data-checkbox-leader");
+  dataCheckboxLeader.addEventListener("change", function() {
+    for (const dataCheckboxFollower of document.querySelectorAll("[data-checkbox-follower]")) {
+      const followerGroup = dataCheckboxFollower.getAttribute("data-checkbox-follower");
+      if (followerGroup != leaderGroup) {
+        return;
+      }
+      dataCheckboxFollower.checked = dataCheckboxLeader.checked;
+    }
+  });
+}
