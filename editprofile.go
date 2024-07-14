@@ -9,6 +9,7 @@ import (
 	"net/mail"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -77,6 +78,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
 		response.Email = user.Email
+		response.TimezoneOffsetSeconds = user.TimezoneOffsetSeconds
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
@@ -152,16 +154,25 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			}
 			request.Username = r.Form.Get("username")
 			request.Email = r.Form.Get("email")
+			if s := r.Form.Get("timezoneOffsetSeconds"); s != "" {
+				timezoneOffsetSeconds, err := strconv.Atoi(s)
+				if err != nil {
+					nbrew.BadRequest(w, r, fmt.Errorf("timezoneOffsetSeconds: %s is not an integer", s))
+					return
+				}
+				request.TimezoneOffsetSeconds = timezoneOffsetSeconds
+			}
 		default:
 			nbrew.UnsupportedContentType(w, r)
 			return
 		}
 
 		response := Response{
-			UserID:     user.UserID,
-			Username:   strings.TrimSpace(request.Username),
-			Email:      strings.TrimSpace(request.Email),
-			FormErrors: url.Values{},
+			UserID:                user.UserID,
+			Username:              strings.TrimSpace(request.Username),
+			Email:                 strings.TrimSpace(request.Email),
+			TimezoneOffsetSeconds: request.TimezoneOffsetSeconds,
+			FormErrors:            url.Values{},
 		}
 		// username
 		if user.Username == "" {
@@ -235,50 +246,18 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			writeResponse(w, r, response)
 			return
 		}
-		if response.Username == user.Username && response.Email == user.Email {
-			writeResponse(w, r, response)
-			return
-		}
-		if user.Username == response.Username || user.Username == "" {
-			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "UPDATE users SET email = {email} WHERE user_id = {userID}",
-				Values: []any{
-					sq.StringParam("email", response.Email),
-					sq.UUIDParam("userID", user.UserID),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			writeResponse(w, r, response)
-			return
-		}
-		if user.Email == response.Email {
-			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "UPDATE users SET username = {username} WHERE user_id = {userID}",
-				Values: []any{
-					sq.StringParam("username", response.Username),
-					sq.UUIDParam("userID", user.UserID),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			writeResponse(w, r, response)
-			return
-		}
 		_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Debug:   true,
 			Dialect: nbrew.Dialect,
-			Format:  "UPDATE users SET username = {username}, email = {email} WHERE user_id = {userID}",
+			Format: "UPDATE users" +
+				" SET username = {username}" +
+				", email = {email}" +
+				", timezone_offset_seconds = {timezoneOffsetSeconds}" +
+				" WHERE user_id = {userID}",
 			Values: []any{
 				sq.StringParam("username", response.Username),
 				sq.StringParam("email", response.Email),
+				sq.IntParam("timezoneOffsetSeconds", response.TimezoneOffsetSeconds),
 				sq.UUIDParam("userID", user.UserID),
 			},
 		})
