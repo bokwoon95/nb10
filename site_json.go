@@ -39,6 +39,17 @@ var chromaStyles = map[string]bool{
 	"vs": true, "vulcan": true, "witchhazel": true, "xcode-dark": true, "xcode": true,
 }
 
+var timezoneOffsets = map[string]bool{
+	"-12:00": true, "-11:00": true, "-10:00": true, "-09:30": true, "-09:00": true,
+	"-08:00": true, "-07:00": true, "-06:00": true, "-05:00": true, "-04:00": true,
+	"-03:00": true, "-02:00": true, "-01:00": true, "+00:00": true, "+01:00": true,
+	"+02:00": true, "+03:00": true, "+03:30": true, "+04:00": true, "+04:30": true,
+	"+05:00": true, "+05:30": true, "+05:45": true, "+06:00": true, "+06:30": true,
+	"+07:00": true, "+08:00": true, "+08:45": true, "+09:00": true, "+09:30": true,
+	"+10:00": true, "+10:30": true, "+11:00": true, "+12:00": true, "+12:45": true,
+	"+13:00": true, "+14:00": true,
+}
+
 func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type NavigationLink struct {
 		Name string       `json:"name"`
@@ -49,6 +60,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		Emoji           string           `json:"emoji"`
 		Favicon         string           `json:"favicon"`
 		CodeStyle       string           `json:"codeStyle"`
+		TimezoneOffset  string           `json:"timezoneOffset"`
 		Description     string           `json:"description"`
 		NavigationLinks []NavigationLink `json:"navigationLinks"`
 	}
@@ -63,6 +75,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		Emoji             string            `json:"emoji"`
 		Favicon           string            `json:"favicon"`
 		CodeStyle         string            `json:"codeStyle"`
+		TimezoneOffset    string            `json:"timezoneOffset"`
 		Description       string            `json:"description"`
 		NavigationLinks   []NavigationLink  `json:"navigationLinks"`
 		RegenerationStats RegenerationStats `json:"regenerationStats"`
@@ -77,6 +90,9 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		}
 		if !chromaStyles[request.CodeStyle] {
 			request.CodeStyle = "onedark"
+		}
+		if !timezoneOffsets[request.TimezoneOffset] {
+			request.TimezoneOffset = "+00:00"
 		}
 		if request.Description == "" {
 			request.Description = "# Hello World!\n\nWelcome to my blog."
@@ -129,6 +145,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 				"referer":               func() string { return referer },
 				"chromaStyles":          func() map[string]bool { return chromaStyles },
+				"timezoneOffsets":       func() map[string]bool { return timezoneOffsets },
 				"incr":                  func(n int) int { return n + 1 },
 			}
 			tmpl, err := template.New("site_json.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/site_json.html")
@@ -171,6 +188,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.Emoji = request.Emoji
 		response.Favicon = request.Favicon
 		response.CodeStyle = request.CodeStyle
+		response.TimezoneOffset = request.TimezoneOffset
 		response.Description = request.Description
 		response.NavigationLinks = request.NavigationLinks
 		writeResponse(w, r, response)
@@ -233,6 +251,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			request.Emoji = r.Form.Get("emoji")
 			request.Favicon = r.Form.Get("favicon")
 			request.CodeStyle = r.Form.Get("codeStyle")
+			request.TimezoneOffset = r.Form.Get("timezoneOffset")
 			request.Description = r.Form.Get("description")
 			navigationLinkNames := r.Form["navigationLinkName"]
 			navigationLinkURLs := r.Form["navigationLinkURL"]
@@ -264,6 +283,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			return
 		}
 		defer writer.Close()
+		fmt.Println(string(b))
 		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())

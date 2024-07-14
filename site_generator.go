@@ -56,12 +56,12 @@ type NavigationLink struct {
 }
 
 type Site struct {
-	Lang            string
-	Title           string
-	Favicon         template.URL
-	TimezoneOffset  string
-	Description     template.HTML
-	NavigationLinks []NavigationLink
+	Lang                  string
+	Title                 string
+	Favicon               template.URL
+	TimezoneOffsetSeconds int
+	Description           template.HTML
+	NavigationLinks       []NavigationLink
 }
 
 type SiteGeneratorConfig struct {
@@ -138,11 +138,27 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			goldmarkhtml.WithUnsafe(),
 		),
 	)
+	var timezoneOffsetSeconds int
+	if strings.HasPrefix(config.TimezoneOffset, "+") || strings.HasPrefix(config.TimezoneOffset, "-") {
+		before, after, ok := strings.Cut(config.TimezoneOffset, ":")
+		hours, err := strconv.Atoi(before)
+		if err == nil && hours >= -12 && hours <= 14 {
+			if ok {
+				minutes, err := strconv.Atoi(after)
+				if err == nil && minutes >= 0 && minutes <= 59 {
+					timezoneOffsetSeconds = ((hours * 60) + minutes) * 60
+				}
+			} else {
+				timezoneOffsetSeconds = hours * 60 * 60
+			}
+		}
+	}
 	siteGen.Site = Site{
-		Lang:            config.Lang,
-		Title:           config.Title,
-		Favicon:         template.URL(config.Favicon),
-		NavigationLinks: config.NavigationLinks,
+		Lang:                  config.Lang,
+		Title:                 config.Title,
+		Favicon:               template.URL(config.Favicon),
+		TimezoneOffsetSeconds: timezoneOffsetSeconds,
+		NavigationLinks:       config.NavigationLinks,
 	}
 	if config.Description != "" {
 		var b strings.Builder

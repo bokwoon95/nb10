@@ -80,6 +80,48 @@
     </select>
   </div>
   <div class='mv3'>
+    <div><label for='timezoneOffset' class='b'>Preferred Timezone Offset:</label></div>
+    <select id='timezoneOffset' name='timezoneOffset' class='br2'>
+      <option value='-12:00'{{ if eq $.TimezoneOffset "-12:00" }} selected{{ end }}>-12:00</option>
+      <option value='-11:00'{{ if eq $.TimezoneOffset "-11:00" }} selected{{ end }}>-11:00</option>
+      <option value='-10:00'{{ if eq $.TimezoneOffset "-10:00" }} selected{{ end }}>-10:00</option>
+      <option value='-09:30'{{ if eq $.TimezoneOffset "-09:30" }} selected{{ end }}>-09:30</option>
+      <option value='-09:00'{{ if eq $.TimezoneOffset "-09:00" }} selected{{ end }}>-09:00</option>
+      <option value='-08:00'{{ if eq $.TimezoneOffset "-08:00" }} selected{{ end }}>-08:00</option>
+      <option value='-07:00'{{ if eq $.TimezoneOffset "-07:00" }} selected{{ end }}>-07:00</option>
+      <option value='-06:00'{{ if eq $.TimezoneOffset "-06:00" }} selected{{ end }}>-06:00</option>
+      <option value='-05:00'{{ if eq $.TimezoneOffset "-05:00" }} selected{{ end }}>-05:00</option>
+      <option value='-04:00'{{ if eq $.TimezoneOffset "-04:00" }} selected{{ end }}>-04:00</option>
+      <option value='-03:00'{{ if eq $.TimezoneOffset "-03:00" }} selected{{ end }}>-03:00</option>
+      <option value='-02:00'{{ if eq $.TimezoneOffset "-02:00" }} selected{{ end }}>-02:00</option>
+      <option value='-01:00'{{ if eq $.TimezoneOffset "-01:00" }} selected{{ end }}>-01:00</option>
+      <option value='+00:00'{{ if eq $.TimezoneOffset "+00:00" }} selected{{ end }}>+00:00</option>
+      <option value='+01:00'{{ if eq $.TimezoneOffset "+01:00" }} selected{{ end }}>+01:00</option>
+      <option value='+02:00'{{ if eq $.TimezoneOffset "+02:00" }} selected{{ end }}>+02:00</option>
+      <option value='+03:00'{{ if eq $.TimezoneOffset "+03:00" }} selected{{ end }}>+03:00</option>
+      <option value='+03:30'{{ if eq $.TimezoneOffset "+03:30" }} selected{{ end }}>+03:30</option>
+      <option value='+04:00'{{ if eq $.TimezoneOffset "+04:00" }} selected{{ end }}>+04:00</option>
+      <option value='+04:30'{{ if eq $.TimezoneOffset "+04:30" }} selected{{ end }}>+04:30</option>
+      <option value='+05:00'{{ if eq $.TimezoneOffset "+05:00" }} selected{{ end }}>+05:00</option>
+      <option value='+05:30'{{ if eq $.TimezoneOffset "+05:30" }} selected{{ end }}>+05:30</option>
+      <option value='+05:45'{{ if eq $.TimezoneOffset "+05:45" }} selected{{ end }}>+05:45</option>
+      <option value='+06:00'{{ if eq $.TimezoneOffset "+06:00" }} selected{{ end }}>+06:00</option>
+      <option value='+06:30'{{ if eq $.TimezoneOffset "+06:30" }} selected{{ end }}>+06:30</option>
+      <option value='+07:00'{{ if eq $.TimezoneOffset "+07:00" }} selected{{ end }}>+07:00</option>
+      <option value='+08:00'{{ if eq $.TimezoneOffset "+08:00" }} selected{{ end }}>+08:00</option>
+      <option value='+08:45'{{ if eq $.TimezoneOffset "+08:45" }} selected{{ end }}>+08:45</option>
+      <option value='+09:00'{{ if eq $.TimezoneOffset "+09:00" }} selected{{ end }}>+09:00</option>
+      <option value='+09:30'{{ if eq $.TimezoneOffset "+09:30" }} selected{{ end }}>+09:30</option>
+      <option value='+10:00'{{ if eq $.TimezoneOffset "+10:00" }} selected{{ end }}>+10:00</option>
+      <option value='+10:30'{{ if eq $.TimezoneOffset "+10:30" }} selected{{ end }}>+10:30</option>
+      <option value='+11:00'{{ if eq $.TimezoneOffset "+11:00" }} selected{{ end }}>+11:00</option>
+      <option value='+12:00'{{ if eq $.TimezoneOffset "+12:00" }} selected{{ end }}>+12:00</option>
+      <option value='+12:45'{{ if eq $.TimezoneOffset "+12:45" }} selected{{ end }}>+12:45</option>
+      <option value='+13:00'{{ if eq $.TimezoneOffset "+13:00" }} selected{{ end }}>+13:00</option>
+      <option value='+14:00'{{ if eq $.TimezoneOffset "+14:00" }} selected{{ end }}>+14:00</option>
+    </select>
+  </div>
+  <div class='mv3'>
     <div><label for='description' class='b'>Description:</label></div>
     <div data-editor='{"ext":".md"}'>
       <input type='hidden' name='ext:0' value='.md'>
