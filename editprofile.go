@@ -16,16 +16,18 @@ import (
 
 func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
+		Username              string `json:"username"`
+		Email                 string `json:"email"`
+		TimezoneOffsetSeconds int    `json:"timezoneOffsetSeconds"`
 	}
 	type Response struct {
-		UserID        ID         `json:"userID"`
-		Username      string     `json:"username"`
-		DisableReason string     `json:"disableReason"`
-		Email         string     `json:"email"`
-		Error         string     `json:"error"`
-		FormErrors    url.Values `json:"formErrors"`
+		UserID                ID         `json:"userID"`
+		Username              string     `json:"username"`
+		DisableReason         string     `json:"disableReason"`
+		Email                 string     `json:"email"`
+		TimezoneOffsetSeconds int        `json:"timezoneOffsetSeconds"`
+		Error                 string     `json:"error"`
+		FormErrors            url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {

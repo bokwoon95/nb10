@@ -79,6 +79,17 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 			"formatTime": func(t time.Time, layout string, offset int) string {
 				return t.In(time.FixedZone("", offset)).Format(layout)
 			},
+			"formatTimezone": func(offset int) string {
+				sign := "+"
+				seconds := offset
+				if offset < 0 {
+					sign = "-"
+					seconds = -offset
+				}
+				hours := seconds / 3600
+				minutes := (seconds % 3600) / 60
+				return fmt.Sprintf("%s%02d:%02d", sign, hours, minutes)
+			},
 			"head": func(s string) string {
 				head, _, _ := strings.Cut(s, "/")
 				return head
