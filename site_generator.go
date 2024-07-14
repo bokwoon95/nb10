@@ -972,8 +972,12 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 					if v := recover(); v != nil {
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
-					result.Text = result.Text[:0]
-					bufPool.Put(bytes.NewBuffer(result.Text))
+				}()
+				defer func() {
+					if len(result.Text) <= maxPoolableBufferCapacity {
+						result.Text = result.Text[:0]
+						bufPool.Put(bytes.NewBuffer(result.Text))
+					}
 				}()
 				err = groupctx.Err()
 				if err != nil {
