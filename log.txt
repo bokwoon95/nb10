@@ -113,6 +113,8 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
+TODO: figure out how to overflow the sessions table in /users/profile/ properly.
+    TODO: bold the entire current session row. Move (current) from the session token preview to the delete button column.
 TODO: look into setting a timezone string as a user setting that would allow reformatting all timestamps in the context of the timezone. important thing is to realize there are two settings: one for the user (requires a database) and onr for the site (doesn't require a database). The one for a user would dynamically update all timestamps shown in the CMS in context of their timezone, the one for a site would end up regenerating all pages snd posts in it.
     TODO: this also means we need to ask the user to input their preferred utc offset in invite.go and set it in site.json as well.
     TODO: use DECIMAL(4,2) to represent hour offset from UTC.
