@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	texttemplate "text/template"
 	"unicode/utf8"
@@ -28,25 +29,27 @@ import (
 
 func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
-		Token           string `json:"token"`
-		Username        string `json:"username"`
-		Email           string `json:"email"`
-		Password        string `json:"password"`
-		ConfirmPassword string `json:"confirmPassword"`
-		SiteName        string `json:"siteName"`
-		SiteTitle       string `json:"siteTitle"`
-		SiteDescription string `json:"siteDescription"`
+		Token                 string `json:"token"`
+		Username              string `json:"username"`
+		Email                 string `json:"email"`
+		Password              string `json:"password"`
+		ConfirmPassword       string `json:"confirmPassword"`
+		TimezoneOffsetSeconds int    `json:"timezoneOffsetSeconds"`
+		SiteName              string `json:"siteName"`
+		SiteTitle             string `json:"siteTitle"`
+		SiteDescription       string `json:"siteDescription"`
 	}
 	type Response struct {
-		Token           string     `json:"token"`
-		ValidateEmail   bool       `json:"validateEmail"`
-		Username        string     `json:"username"`
-		Email           string     `json:"email"`
-		SiteName        string     `json:"siteName"`
-		SiteTitle       string     `json:"siteTitle"`
-		SiteDescription string     `json:"siteDescription"`
-		Error           string     `json:"error"`
-		FormErrors      url.Values `json:"formErrors"`
+		Token                 string     `json:"token"`
+		ValidateEmail         bool       `json:"validateEmail"`
+		Username              string     `json:"username"`
+		Email                 string     `json:"email"`
+		TimezoneOffsetSeconds int        `json:"timezoneOffsetSeconds"`
+		SiteName              string     `json:"siteName"`
+		SiteTitle             string     `json:"siteTitle"`
+		SiteDescription       string     `json:"siteDescription"`
+		Error                 string     `json:"error"`
+		FormErrors            url.Values `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -215,18 +218,31 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			request.Email = r.Form.Get("email")
 			request.Password = r.Form.Get("password")
 			request.ConfirmPassword = r.Form.Get("confirmPassword")
+			if s := r.Form.Get("timezoneOffsetSeconds"); s != "" {
+				timezoneOffsetSeconds, err := strconv.Atoi(s)
+				if err != nil {
+					nbrew.BadRequest(w, r, fmt.Errorf("timezoneOffsetSeconds: %s is not an integer", s))
+					return
+				}
+				request.TimezoneOffsetSeconds = timezoneOffsetSeconds
+			}
 			request.SiteName = r.Form.Get("siteName")
+			request.SiteTitle = r.Form.Get("siteTitle")
+			request.SiteDescription = r.Form.Get("siteDescription")
 		default:
 			nbrew.UnsupportedContentType(w, r)
 			return
 		}
 
 		response := Response{
-			Token:      request.Token,
-			Username:   request.Username,
-			Email:      request.Email,
-			SiteName:   request.SiteName,
-			FormErrors: url.Values{},
+			Token:                 request.Token,
+			Username:              request.Username,
+			Email:                 request.Email,
+			TimezoneOffsetSeconds: request.TimezoneOffsetSeconds,
+			SiteName:              request.SiteName,
+			SiteTitle:             request.SiteTitle,
+			SiteDescription:       request.SiteDescription,
+			FormErrors:            url.Values{},
 		}
 		// token
 		if response.Token == "" {
@@ -444,13 +460,14 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		}
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO users (user_id, username, email, password_hash, site_limit, storage_limit)" +
-				" VALUES ({userID}, {username}, {email}, {passwordHash}, {siteLimit}, {storageLimit})",
+			Format: "INSERT INTO users (user_id, username, email, password_hash, timezone_offset_seconds, site_limit, storage_limit)" +
+				" VALUES ({userID}, {username}, {email}, {passwordHash}, {timezoneOffsetSeconds}, {siteLimit}, {storageLimit})",
 			Values: []any{
 				sq.UUIDParam("userID", NewID()),
 				sq.StringParam("username", response.Username),
 				sq.StringParam("email", response.Email),
 				sq.StringParam("passwordHash", string(passwordHash)),
+				sq.IntParam("timezoneOffsetSeconds", response.TimezoneOffsetSeconds),
 				sq.Param("siteLimit", result.SiteLimit),
 				sq.Param("storageLimit", result.StorageLimit),
 			},
@@ -540,8 +557,17 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return
 		}
 		defer writer.Close()
+		sign := "+"
+		seconds := response.TimezoneOffsetSeconds
+		if response.TimezoneOffsetSeconds < 0 {
+			sign = "-"
+			seconds = -response.TimezoneOffsetSeconds
+		}
+		hours := seconds / 3600
+		minutes := (seconds % 3600) / 60
 		err = tmpl.Execute(writer, map[string]string{
-			"Home": home,
+			"Home":           home,
+			"TimezoneOffset": fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())

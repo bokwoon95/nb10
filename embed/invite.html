@@ -30,7 +30,7 @@
   {{- end }}
   <input type='hidden' name='token' value='{{ $.Token }}'>
   <div class='mv3'>
-    <div><span class='dark-red'>*&nbsp;</span><label for='username' class='b'>Username (you can change this later):</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='username' class='b'>Username:</label></div>
     <ul class='list-style-disc ph3 f6 mid-gray'>
       <li>only lowercase letters, numbers and hyphen</li>
       <li>max 30 characters</li>
@@ -73,6 +73,53 @@
     <input type='password' id='confirmPassword' name='confirmPassword' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "confirmPassword" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "confirmPassword" }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  <div class='mv3'>
+    <div><label for='timezoneOffsetSeconds' class='b'>Preferred timezone offset:</label></div>
+    <select id='timezoneOffsetSeconds' name='timezoneOffsetSeconds' class='br2 {{ if index $.FormErrors "timezoneOffsetSeconds" }} b--invalid-red{{ end }}'>
+      <option value='-43200'>-12:00</option>
+      <option value='-39600'>-11:00</option>
+      <option value='-36000'>-10:00</option>
+      <option value='-34200'>-09:30</option>
+      <option value='-32400'>-09:00</option>
+      <option value='-28800'>-08:00</option>
+      <option value='-25200'>-07:00</option>
+      <option value='-21600'>-06:00</option>
+      <option value='-18000'>-05:00</option>
+      <option value='-14400'>-04:00</option>
+      <option value='-10800'>-03:00</option>
+      <option value='-7200'>-02:00</option>
+      <option value='-3600'>-01:00</option>
+      <option value='0' selected>+00:00</option>
+      <option value='3600'>+01:00</option>
+      <option value='7200'>+02:00</option>
+      <option value='10800'>+03:00</option>
+      <option value='12600'>+03:30</option>
+      <option value='14400'>+04:00</option>
+      <option value='16200'>+04:30</option>
+      <option value='18000'>+05:00</option>
+      <option value='19800'>+05:30</option>
+      <option value='20700'>+05:45</option>
+      <option value='21600'>+06:00</option>
+      <option value='23400'>+06:30</option>
+      <option value='25200'>+07:00</option>
+      <option value='28800'>+08:00</option>
+      <option value='31500'>+08:45</option>
+      <option value='32400'>+09:00</option>
+      <option value='34200'>+09:30</option>
+      <option value='36000'>+10:00</option>
+      <option value='37800'>+10:30</option>
+      <option value='39600'>+11:00</option>
+      <option value='43200'>+12:00</option>
+      <option value='45900'>+12:45</option>
+      <option value='46800'>+13:00</option>
+      <option value='50400'>+14:00</option>
+    </select>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "timezoneOffsetSeconds" }}
       <li>{{ $error }}</li>
       {{- end }}
     </ul>
