@@ -283,7 +283,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			return
 		}
 		defer writer.Close()
-		fmt.Println(string(b))
 		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
