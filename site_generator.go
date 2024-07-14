@@ -59,6 +59,7 @@ type Site struct {
 	Lang            string
 	Title           string
 	Favicon         template.URL
+	TimezoneOffset  string
 	Description     template.HTML
 	NavigationLinks []NavigationLink
 }
@@ -88,6 +89,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		Emoji           string
 		Favicon         string
 		CodeStyle       string
+		TimezoneOffset  string
 		Description     string
 		NavigationLinks []NavigationLink
 	}
