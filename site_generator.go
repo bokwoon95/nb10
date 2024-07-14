@@ -1977,6 +1977,9 @@ var userFuncMap = map[string]any{
 	"trimSpace":             strings.TrimSpace,
 	"humanReadableFileSize": HumanReadableFileSize,
 	"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
+	"formatTime": func(t time.Time, layout string, offset int) string {
+		return t.In(time.FixedZone("", offset)).Format(layout)
+	},
 	"head": func(s string) string {
 		head, _, _ := strings.Cut(s, "/")
 		return head

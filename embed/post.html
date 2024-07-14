@@ -33,7 +33,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
   {{ end }}
 </nav>
 <hr>
-<div class='text-sm gray-600'>{{ $.CreationTime.Format "2006-01-02" }}</div>
+<div class='text-sm gray-600'>{{ formatTime $.CreationTime "2006-01-02" $.Site.TimezoneOffsetSeconds }}</div>
 <div><a href='/{{ join "posts" $.Category }}/'>&larr; index</a></div>
 <main>
 {{ $.Content }}
@@ -48,4 +48,4 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 </div>
 </main>
 <hr>
-<div class='text-sm gray-600'>last modified {{ $.ModificationTime.Format "2006-01-02 15:04:05 UTC" }}</div>
+<div class='text-sm gray-600'>last modified {{ formatTime $.ModificationTime "2006-01-02 15:04:05 -07:00" $.Site.TimezoneOffsetSeconds }}</div>

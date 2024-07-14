@@ -40,7 +40,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
     <li>
       <div>
         <a href='{{ $post.Name }}/' class='font-bold'>{{ $post.Title }}</a>
-        <span class='ml-2 text-sm gray-600'>{{ $post.CreationTime.Format "2006-01-02" }}</span>
+        <span class='ml-2 text-sm gray-600'>{{ formatTime $post.CreationTime "2006-01-02" $.Site.TimezoneOffsetSeconds }}</span>
       </div>
       <div title='{{ $post.Preview }}' class='my-1 text-sm'>
         {{ $post.Preview }}{{ if $post.HasMore }} <a href='{{ $post.Name }}/'>read more</a>{{ end }}
