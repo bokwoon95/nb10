@@ -89,7 +89,7 @@
     <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
   </form>
 </fieldset>
-<fieldset class='mt2 overflow-x-auto'>
+<fieldset class='mt2'>
   <legend><h2 class='mv0 mh2'>sessions</h2></legend>
   <div class='flex items-center'>
     <details class='relative ml2' data-autoclose-details>
@@ -102,7 +102,7 @@
       </div>
     </details>
   </div>
-  <div class=''>
+  <div class='overflow-x-auto'>
     <table class='mv2 collapse'>
       <thead>
         <tr class='bb h2'>
@@ -117,12 +117,14 @@
         {{- range $session := $.Sessions }}
         <tr class='bb tc'>
           <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox'>{{ end }}</th>
-          <td class='pa2'>{{ if $session.Current }}<strong>{{ $session.SessionTokenPreview }}&hellip; (current)</strong>{{ else }}{{ $session.SessionTokenPreview }}&hellip;{{ end }}</td>
+          <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPreview }}&hellip;</td>
           <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
           <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
-          <td class='pa2'>
+          <td class='pa2{{ if $session.Current}} b{{ end }}'>
             {{- if not $session.Current }}
             <button type='submit' formmethod='get' formaction='/users/deletesession/' name='name' value='' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
+            {{- else }}
+            <em>current session</em>
             {{- end }}
           </td>
         </tr>
