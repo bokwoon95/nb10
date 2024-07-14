@@ -337,7 +337,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "":
 			nbrew.rootdirectory(w, r, user, sitePrefix, time.Time{})
 			return
-		case "posts", "notes", "pages", "output":
+		case "notes", "pages", "posts", "output":
 			if head == "posts" && path.Base(tail) == "postlist.json" {
 				category := path.Dir(tail)
 				if category == "." {
