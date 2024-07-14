@@ -206,7 +206,7 @@ func (siteGen *SiteGenerator) ParseTemplate(ctx context.Context, name, text stri
 }
 
 func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text string, callers []string) (*template.Template, error) {
-	currentTemplate, err := template.New(name).Funcs(funcMap).Parse(text)
+	currentTemplate, err := template.New(name).Funcs(userFuncMap).Parse(text)
 	if err != nil {
 		return nil, NewTemplateError(err)
 	}
@@ -380,7 +380,7 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 		return nil, err
 	}
 
-	finalTemplate := template.New(name).Funcs(funcMap)
+	finalTemplate := template.New(name).Funcs(userFuncMap)
 	for i, externalTemplate := range externalTemplates {
 		for _, tmpl := range externalTemplate.Templates() {
 			_, err = finalTemplate.AddParseTree(tmpl.Name(), tmpl.Tree)
@@ -1946,7 +1946,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	}
 }
 
-var funcMap = map[string]any{
+var userFuncMap = map[string]any{
 	"join":                  path.Join,
 	"base":                  path.Base,
 	"ext":                   path.Ext,
