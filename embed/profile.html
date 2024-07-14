@@ -6,7 +6,6 @@
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
 <script type='module' src='/files/static/editor-153f9bcd.js'></script>
-<script type='module' src='/files/static/file-43560899.js'></script>
 <title>profile{{ if $.Username }} - {{ $.Username }}{{ end }}</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -40,27 +39,25 @@
 <h2 class='mv0 mh2 invalid-red'>ACCOUNT DISABLED</h2>
 <div><span class='b invalid-red'>Disable reason:</span> {{ $.DisableReason }}</div>
 {{- end }}
-<fieldset>
-  <legend><h2 class='mv0 mh2'>profile</h2></legend>
-  <div class='mv2'>
-    <a href='/users/editprofile/'>edit profile</a>
-  </div>
-  <div class='mv2'>
-    <div class='b'>Username:</div>
-    <div>{{ if $.Username }}{{ $.Username }}{{ else }}<em>default user</em>{{ end }}</div>
-  </div>
-  <div class='mv2'>
-    <div class='b'>Email:</div>
-    <div>{{ $.Email }}</div>
-  </div>
-  <div class='mv2'>
-    <div class='b'>Password:</div>
-    <div><a href='/users/changepassword/'>change password</a></div>
-  </div>
-</fieldset>
-<fieldset class='mt2'>
-  <legend><h2 class='mv0 mh2'>sites</h2></legend>
-  <table class='mv2 collapse'>
+<h2 class='mb0 mh2 underline'>Profile</h2>
+<div class='ma2'>
+  <a href='/users/editprofile/'>edit profile</a>
+</div>
+<div class='ma2'>
+  <div class='b'>Username:</div>
+  <div>{{ if $.Username }}{{ $.Username }}{{ else }}<em>default user</em>{{ end }}</div>
+</div>
+<div class='ma2'>
+  <div class='b'>Email:</div>
+  <div>{{ $.Email }}</div>
+</div>
+<div class='ma2'>
+  <div class='b'>Password:</div>
+  <div><a href='/users/changepassword/'>change password</a></div>
+</div>
+<h2 class='mb0 mh2 underline'>Sites</h2>
+<div class='overflow-x-auto'>
+  <table class='ma2 collapse'>
     <thead>
       <tr class='bb h2'>
         <th class='pv2'>Site names</th>
@@ -82,57 +79,55 @@
       </tr>
     </tfoot>
   </table>
-  <form method='post' action='/files/calculatestorage/' class='mv2' data-prevent-double-submit>
-    {{- range $site := $.Sites }}
-    <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
-    {{- end }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
-  </form>
-</fieldset>
-<fieldset class='mt2'>
-  <legend><h2 class='mv0 mh2'>sessions</h2></legend>
-  <div class='flex items-center'>
-    <details class='relative ml2' data-autoclose-details>
-      <summary role='button' title='Create' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
-        {{ template "octicons-plus" }}
-        {{ template "octicons-triangle-down" }}
-      </summary>
-      <div class='absolute bg-white br2' style='top: calc(2rem + 4px); left: 0px; z-index: 1000; border: 1px solid black;'>
-        <div class='ma2 tr'><a href='/users/createsession/' class='nowrap'>create session token</a></div>
-      </div>
-    </details>
-  </div>
-  <div class='overflow-x-auto'>
-    <table class='mv2 collapse'>
-      <thead>
-        <tr class='bb h2'>
-          <th class='pa2'><input type='checkbox'></th>
-          <th class='pa2'>Session token</th>
-          <th class='pa2'>Label</th>
-          <th class='pa2'>Creation time</th>
-          <th class='pa2'></th>
-        </tr>
-      </thead>
-      <tbody>
-        {{- range $session := $.Sessions }}
-        <tr class='bb tc'>
-          <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox'>{{ end }}</th>
-          <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPreview }}&hellip;</td>
-          <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
-          <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
-          <td class='pa2{{ if $session.Current}} b{{ end }}'>
-            {{- if not $session.Current }}
-            <button type='submit' formmethod='get' formaction='/users/deletesession/' name='name' value='' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
-            {{- else }}
-            <em>current session</em>
-            {{- end }}
-          </td>
-        </tr>
-        {{- end }}
-      </tbody>
+</div>
+<form method='post' action='/files/calculatestorage/' class='ma2' data-prevent-double-submit>
+  {{- range $site := $.Sites }}
+  <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
+  {{- end }}
+  <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
+</form>
+<h2 class='mb0 mh2 underline'>Sessions</h2>
+<div class='flex items-center'>
+  <details class='relative ml2' data-autoclose-details>
+    <summary role='button' title='Create' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
+      {{ template "octicons-plus" }}
+      {{ template "octicons-triangle-down" }}
+    </summary>
+    <div class='absolute bg-white br2' style='top: calc(2rem + 4px); left: 0px; z-index: 1000; border: 1px solid black;'>
+      <div class='ma2 tr'><a href='/users/createsession/' class='nowrap'>create session token</a></div>
     </div>
-  </div>
-</fieldset>
+  </details>
+</div>
+<form class='overflow-x-auto'>
+  <table class='mv2 collapse'>
+    <thead>
+      <tr class='bb h2'>
+        <th class='pa2'><input type='checkbox'></th>
+        <th class='pa2'>Session token</th>
+        <th class='pa2'>Label</th>
+        <th class='pa2'>Creation time</th>
+        <th class='pa2'></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range $session := $.Sessions }}
+      <tr class='bb tc'>
+        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox'>{{ end }}</th>
+        <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPreview }}&hellip;</td>
+        <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
+        <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
+        <td class='pa2{{ if $session.Current}} b{{ end }}'>
+          {{- if not $session.Current }}
+          <button type='submit' formmethod='get' formaction='/users/deletesession/' name='name' value='' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
+          {{- else }}
+          <em>current session</em>
+          {{- end }}
+        </td>
+      </tr>
+      {{- end }}
+    </tbody>
+  </table>
+</form>
 
 {{- define "octicons-plus" }}
 <svg aria-hidden='true' height='16' viewBox='0 0 16 16' version='1.1' width='16' data-view-component='true' class='octicon octicon-plus'>
