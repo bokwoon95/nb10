@@ -169,7 +169,7 @@ The main usefulness of being able to run notebrew on plain IP addresses or HTTP 
 # Ops tutorial #
 
 self hosting guide, starting from scratch/zero, does not assume any prior server knowledge (just good at following instructions)
-step 0: can you purchase a VPS? Can you ssh into it and run commands?
+step 0: can you purchase a VPS? Can you ssh into it/open a console and run commands?
 step 1: can you download the binary? this is also how you update notebrew in the future, just redownload it. can it start?
 step 2: can you talk to it over the internet using an ip address?
 step 3: can you enable user accounts, create the default user and log in using the credentials?
