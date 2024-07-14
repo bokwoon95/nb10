@@ -1143,18 +1143,38 @@ func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {
 		dynamicCertConfig.Storage = nbrew.CertStorage
 		dynamicCertConfig.OnDemand = &certmagic.OnDemandConfig{
 			DecisionFunc: func(ctx context.Context, name string) error {
-				var sitePrefix string
-				if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
-					sitePrefix = "@" + strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+				if nbrew.DB != nil {
+					var siteName string
+					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+						siteName = strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+					} else {
+						siteName = name
+					}
+					exists, err := sq.FetchExists(ctx, nbrew.DB, sq.Query{
+						Dialect: nbrew.Dialect,
+						Format:  "SELECT 1 FROM site WHERE site_name = {}",
+						Values:  []any{siteName},
+					})
+					if err != nil {
+						return err
+					}
+					if !exists {
+						return fmt.Errorf("site does not exist")
+					}
 				} else {
-					sitePrefix = name
-				}
-				fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), sitePrefix)
-				if err != nil {
-					return err
-				}
-				if !fileInfo.IsDir() {
-					return fmt.Errorf("%q is not a directory", name)
+					var sitePrefix string
+					if certmagic.MatchWildcard(name, "*."+nbrew.ContentDomain) {
+						sitePrefix = "@" + strings.TrimSuffix(name, "."+nbrew.ContentDomain)
+					} else {
+						sitePrefix = name
+					}
+					fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), sitePrefix)
+					if err != nil {
+						return err
+					}
+					if !fileInfo.IsDir() {
+						return fmt.Errorf("site does not exist")
+					}
 				}
 				return nil
 			},
