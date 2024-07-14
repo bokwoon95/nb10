@@ -17,19 +17,19 @@ if (dataEditor) {
       }
       const name = config.get("name");
       const altText = config.get("altText");
+      let text = "";
+      if (name.endsWith(".css")) {
+        text = `\n<link rel='stylesheet' href='${name}'>\n`;
+      } else if (name.endsWith(".js")) {
+        text = `\n<script src='${name}'></script>\n`;
+      } else if (name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif")) {
+        text = `\n<img src='${name}' alt='${altText}' style='max-width: 100%; height: auto;'>\n`;
+      } else if (name.endsWith(".md")) {
+        text = `\n{{ index $.Markdown "${name}" }}\n`;
+      } else {
+        continue;
+      }
       dataInsert.addEventListener("click", function() {
-        let text = "";
-        if (name.endsWith(".css")) {
-          text = `\n<link rel='stylesheet' href='${name}'>\n`;
-        } else if (name.endsWith(".js")) {
-          text = `\n<script src='${name}'></script>\n`;
-        } else if (name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif")) {
-          text = `\n<img src='${name}' alt='${altText}' style='max-width: 100%; height: auto;'>\n`;
-        } else if (name.endsWith(".md")) {
-          text = `\n{{ index $.Markdown "${name}" }}\n`;
-        } else {
-          return;
-        }
         if (ext == ".html" || ext == ".css" || ext == ".js") {
           const range = editor.state.selection.ranges[0];
           editor.dispatch({

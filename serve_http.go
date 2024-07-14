@@ -96,8 +96,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var sessionTokenString string
 		header := r.Header.Get("Authorization")
 		if header != "" {
-			if strings.HasPrefix(header, "Notebrew ") {
-				sessionTokenString = strings.TrimPrefix(header, "Notebrew ")
+			if strings.HasPrefix(header, "Bearer ") {
+				sessionTokenString = strings.TrimPrefix(header, "Bearer ")
 			}
 		} else {
 			cookie, _ := r.Cookie("session")
@@ -233,8 +233,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			var sessionTokenString string
 			header := r.Header.Get("Authorization")
 			if header != "" {
-				if strings.HasPrefix(header, "Notebrew ") {
-					sessionTokenString = strings.TrimPrefix(header, "Notebrew ")
+				if strings.HasPrefix(header, "Bearer ") {
+					sessionTokenString = strings.TrimPrefix(header, "Bearer ")
 				}
 			} else {
 				cookie, _ := r.Cookie("session")
@@ -639,7 +639,7 @@ func (nbrew *Notebrew) RedirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 	var sessionTokenHashes [][]byte
 	header := r.Header.Get("Authorization")
 	if header != "" {
-		sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Notebrew ")))
+		sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Bearer ")))
 		if err == nil && len(sessionToken) == 24 {
 			var sessionTokenHash [8 + blake2b.Size256]byte
 			checksum := blake2b.Sum256(sessionToken[8:])

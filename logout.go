@@ -19,8 +19,8 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 	var sessionTokenString string
 	header := r.Header.Get("Authorization")
 	if header != "" {
-		if strings.HasPrefix(header, "Notebrew ") {
-			sessionTokenString = strings.TrimPrefix(header, "Notebrew ")
+		if strings.HasPrefix(header, "Bearer ") {
+			sessionTokenString = strings.TrimPrefix(header, "Bearer ")
 		}
 	} else {
 		cookie, _ := r.Cookie("session")

@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -22,9 +23,10 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		StorageUsed int64  `json:"storageUsed"`
 	}
 	type Session struct {
-		sessionTokenHash []byte    `json:"-"`
-		CreationTime     time.Time `json:"creationTime"`
-		Label            string    `json:"label"`
+		sessionTokenHash    []byte    `json:"-"`
+		SessionTokenPreview string    `json:"sessionTokenPreview"`
+		CreationTime        time.Time `json:"creationTime"`
+		Label               string    `json:"label"`
 	}
 	type Response struct {
 		UserID                ID             `json:"userID"`
@@ -166,11 +168,26 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		if err != nil {
 			return err
 		}
+		var sessionTokenString string
+		header := r.Header.Get("Authorization")
+		if header != "" {
+			if strings.HasPrefix(header, "Bearer ") {
+				sessionTokenString = strings.TrimPrefix(header, "Bearer ")
+			}
+		} else {
+			cookie, _ := r.Cookie("session")
+			if cookie != nil {
+				sessionTokenString = cookie.Value
+			}
+		}
+		if sessionTokenString != "" {
+		}
 		for i := range sessions {
 			sessionTokenHash := sessions[i].sessionTokenHash
 			if len(sessionTokenHash) != 40 {
 				continue
 			}
+			sessions[i].SessionTokenPreview = strings.TrimLeft(hex.EncodeToString(sessionTokenHash[:8]), "0")
 			sessions[i].CreationTime = time.Unix(int64(binary.BigEndian.Uint64(sessionTokenHash[:8])), 0).UTC()
 		}
 		response.Sessions = sessions
