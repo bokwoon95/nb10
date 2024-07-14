@@ -117,7 +117,7 @@
         {{- range $session := $.Sessions }}
         <tr class='bb tc'>
           <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox'>{{ end }}</th>
-          <td class='pa2'>{{ if $session.Current }}<strong>{{ $session.SessionTokenPreview }}&hellip; (current)</strong>{{ else }}{{ $session.SessionTokenPreview }}{{ end }}</td>
+          <td class='pa2'>{{ if $session.Current }}<strong>{{ $session.SessionTokenPreview }}&hellip; (current)</strong>{{ else }}{{ $session.SessionTokenPreview }}&hellip;{{ end }}</td>
           <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
           <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
           <td class='pa2'>
