@@ -261,7 +261,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 	// sort | uniq deduplication.
 	slices.Sort(externalNames)
 	externalNames = slices.Compact(externalNames)
-	_ = template.ParseFiles
 
 	group, groupctx := errgroup.WithContext(ctx)
 	externalTemplates := make([]*template.Template, len(externalNames))
