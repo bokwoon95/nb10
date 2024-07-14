@@ -222,5 +222,5 @@ details > summary.hide-marker::marker, /* Latest Chrome, Edge, Firefox */ detail
 .o-70 { opacity: 0.7; }
 .pointer:hover { cursor: pointer; }
 .resize-vertical { resize: vertical; }
-.arrow-before:before { content: '\00bb\00a0'; font-weight: bold; }
+.arrow-content:before { content: '\00bb'; font-weight: bold; }
 .overflow-x-auto { overflow-x: auto; }

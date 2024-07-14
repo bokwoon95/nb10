@@ -1,6 +1,7 @@
 package nb10
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -27,6 +29,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		SessionTokenPreview string    `json:"sessionTokenPreview"`
 		CreationTime        time.Time `json:"creationTime"`
 		Label               string    `json:"label"`
+		Current             bool      `json:"current"`
 	}
 	type Response struct {
 		UserID                ID             `json:"userID"`
@@ -168,19 +171,29 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		if err != nil {
 			return err
 		}
-		var sessionTokenString string
+		var currentSessionTokenHash []byte
 		header := r.Header.Get("Authorization")
 		if header != "" {
 			if strings.HasPrefix(header, "Bearer ") {
-				sessionTokenString = strings.TrimPrefix(header, "Bearer ")
+				currentSessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Bearer ")))
+				if err == nil && len(currentSessionToken) == 24 {
+					currentSessionTokenHash = make([]byte, 8+blake2b.Size256)
+					checksum := blake2b.Sum256(currentSessionToken[8:])
+					copy(currentSessionTokenHash[:8], currentSessionToken[:8])
+					copy(currentSessionTokenHash[8:], checksum[:])
+				}
 			}
 		} else {
 			cookie, _ := r.Cookie("session")
 			if cookie != nil {
-				sessionTokenString = cookie.Value
+				currentSessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+				if err == nil && len(currentSessionToken) == 24 {
+					currentSessionTokenHash = make([]byte, 8+blake2b.Size256)
+					checksum := blake2b.Sum256(currentSessionToken[8:])
+					copy(currentSessionTokenHash[:8], currentSessionToken[:8])
+					copy(currentSessionTokenHash[8:], checksum[:])
+				}
 			}
-		}
-		if sessionTokenString != "" {
 		}
 		for i := range sessions {
 			sessionTokenHash := sessions[i].sessionTokenHash
@@ -189,6 +202,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 			}
 			sessions[i].SessionTokenPreview = strings.TrimLeft(hex.EncodeToString(sessionTokenHash[:8]), "0")
 			sessions[i].CreationTime = time.Unix(int64(binary.BigEndian.Uint64(sessionTokenHash[:8])), 0).UTC()
+			sessions[i].Current = bytes.Equal(sessionTokenHash, currentSessionTokenHash)
 		}
 		response.Sessions = sessions
 		return nil
