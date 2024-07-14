@@ -246,17 +246,25 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 			writeResponse(w, r, response)
 			return
 		}
+		var assignments []sq.Expression
+		if response.Username != user.Username {
+			assignments = append(assignments, sq.Expr("username = {}", response.Username))
+		}
+		if response.Email != user.Email {
+			assignments = append(assignments, sq.Expr("email = {}", response.Email))
+		}
+		if response.TimezoneOffsetSeconds != user.TimezoneOffsetSeconds {
+			assignments = append(assignments, sq.Expr("timezone_offset_seconds = {}", response.TimezoneOffsetSeconds))
+		}
+		if len(assignments) == 0 {
+			writeResponse(w, r, response)
+			return
+		}
 		_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format: "UPDATE users" +
-				" SET username = {username}" +
-				", email = {email}" +
-				", timezone_offset_seconds = {timezoneOffsetSeconds}" +
-				" WHERE user_id = {userID}",
+			Format:  "UPDATE users SET {assignments} WHERE user_id = {userID}",
 			Values: []any{
-				sq.StringParam("username", response.Username),
-				sq.StringParam("email", response.Email),
-				sq.IntParam("timezoneOffsetSeconds", response.TimezoneOffsetSeconds),
+				sq.Param("assignments", assignments),
 				sq.UUIDParam("userID", user.UserID),
 			},
 		})
