@@ -245,14 +245,12 @@
   {{- if eq (index $.PostRedirectGet "from") "createfile" "rename" }}
   <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>&larr; back</a>
   <span>&boxv;</span>
+  {{- else if referer }}
+  <a href='{{ referer }}' data-go-back>&larr; back</a>
+  <span>&boxv;</span>
   {{- else }}
-    {{- if referer }}
-    <a href='{{ referer }}' data-go-back>&larr; back</a>
-    <span>&boxv;</span>
-    {{- else }}
-    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>&larr; back</a>
-    <span>&boxv;</span>
-    {{- end }}
+  <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>&larr; back</a>
+  <span>&boxv;</span>
   {{- end }}
   {{- if eq (head $.FilePath) "notes" }}
   <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>

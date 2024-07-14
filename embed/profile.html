@@ -30,7 +30,9 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
-{{- if referer }}
+{{- if eq (index $.PostRedirectGet "from") "editprofile" }}
+<div><a href='/files/'>&larr; back</a></div>
+{{- else if referer }}
 <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
 {{- else }}
 <div><a href='/files/'>&larr; back</a></div>
