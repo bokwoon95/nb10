@@ -52,32 +52,43 @@ type FS interface {
 	Copy(srcName, destName string) error
 }
 
+type Attribute int
+
+const (
+	AttributeGzippable  Attribute = 1 << 0
+	AttributeObject     Attribute = 1 << 1
+	AttributeAttachment Attribute = 1 << 2
+	AttributeFont       Attribute = 1 << 3
+	AttributeImage      Attribute = 1 << 4
+)
+
+func (a Attribute) With(attr Attribute) Attribute { return a | attr }
+func (a Attribute) Has(attr Attribute) bool       { return a&attr != 0 }
+
 type FileType struct {
-	Ext          string
-	ContentType  string
-	IsGzippable  bool
-	IsObject     bool
-	IsAttachment bool
+	Ext         string
+	ContentType string
+	Attribute   Attribute
 }
 
 var fileTypes = map[string]FileType{
-	".html":  {Ext: ".html", ContentType: "text/html; charset=utf-8", IsGzippable: true},
-	".css":   {Ext: ".css", ContentType: "text/css; charset=utf-8", IsGzippable: true},
-	".js":    {Ext: ".js", ContentType: "text/javascript; charset=utf-8", IsGzippable: true},
-	".md":    {Ext: ".md", ContentType: "text/markdown; charset=utf-8", IsGzippable: true},
-	".txt":   {Ext: ".txt", ContentType: "text/plain; charset=utf-8", IsGzippable: true},
-	".jpeg":  {Ext: ".jpeg", ContentType: "image/jpeg", IsObject: true},
-	".jpg":   {Ext: ".jpg", ContentType: "image/jpeg", IsObject: true},
-	".png":   {Ext: ".png", ContentType: "image/png", IsObject: true},
-	".webp":  {Ext: ".webp", ContentType: "image/webp", IsObject: true},
-	".gif":   {Ext: ".gif", ContentType: "image/gif", IsObject: true},
-	".svg":   {Ext: ".svg", ContentType: "image/svg+xml", IsGzippable: true},
-	".eot":   {Ext: ".eot", ContentType: "font/eot", IsGzippable: true},
-	".otf":   {Ext: ".otf", ContentType: "font/otf", IsGzippable: true},
-	".ttf":   {Ext: ".ttf", ContentType: "font/ttf", IsGzippable: true},
-	".woff":  {Ext: ".woff", ContentType: "font/woff"},
-	".woff2": {Ext: ".woff2", ContentType: "font/woff2"},
-	".atom":  {Ext: ".atom", ContentType: "application/atom+xml; charset=utf-8", IsGzippable: true},
-	".json":  {Ext: ".json", ContentType: "application/json", IsGzippable: true},
-	".tgz":   {Ext: ".tgz", ContentType: "application/octet-stream", IsObject: true, IsAttachment: true},
+	".html":  {Ext: ".html", ContentType: "text/html; charset=utf-8", Attribute: AttributeGzippable},
+	".css":   {Ext: ".css", ContentType: "text/css; charset=utf-8", Attribute: AttributeGzippable},
+	".js":    {Ext: ".js", ContentType: "text/javascript; charset=utf-8", Attribute: AttributeGzippable},
+	".md":    {Ext: ".md", ContentType: "text/markdown; charset=utf-8", Attribute: AttributeGzippable},
+	".txt":   {Ext: ".txt", ContentType: "text/plain; charset=utf-8", Attribute: AttributeGzippable},
+	".jpeg":  {Ext: ".jpeg", ContentType: "image/jpeg", Attribute: AttributeObject | AttributeImage},
+	".jpg":   {Ext: ".jpg", ContentType: "image/jpeg", Attribute: AttributeObject | AttributeImage},
+	".png":   {Ext: ".png", ContentType: "image/png", Attribute: AttributeObject | AttributeImage},
+	".webp":  {Ext: ".webp", ContentType: "image/webp", Attribute: AttributeObject | AttributeImage},
+	".gif":   {Ext: ".gif", ContentType: "image/gif", Attribute: AttributeObject | AttributeImage},
+	".svg":   {Ext: ".svg", ContentType: "image/svg+xml", Attribute: AttributeGzippable | AttributeImage},
+	".eot":   {Ext: ".eot", ContentType: "font/eot", Attribute: AttributeGzippable | AttributeFont},
+	".otf":   {Ext: ".otf", ContentType: "font/otf", Attribute: AttributeGzippable | AttributeFont},
+	".ttf":   {Ext: ".ttf", ContentType: "font/ttf", Attribute: AttributeGzippable | AttributeFont},
+	".woff":  {Ext: ".woff", ContentType: "font/woff", Attribute: AttributeFont},
+	".woff2": {Ext: ".woff2", ContentType: "font/woff2", Attribute: AttributeFont},
+	".atom":  {Ext: ".atom", ContentType: "application/atom+xml; charset=utf-8", Attribute: AttributeGzippable},
+	".json":  {Ext: ".json", ContentType: "application/json", Attribute: AttributeGzippable},
+	".tgz":   {Ext: ".tgz", ContentType: "application/octet-stream", Attribute: AttributeObject | AttributeAttachment},
 }

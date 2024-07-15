@@ -475,7 +475,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fileType, ok := fileTypes[ext]
-			if !ok || !fileType.IsObject {
+			if !ok || !fileType.Attribute.Has(AttributeObject) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 			}
 			reader, err := databaseFS.ObjectStorage.Get(r.Context(), urlPath)
@@ -524,7 +524,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
 		fileType.Ext = ".html"
 		fileType.ContentType = "text/html; charset=utf-8"
-		fileType.IsGzippable = true
+		fileType.Attribute = fileType.Attribute.With(AttributeGzippable)
 	} else {
 		if path.Base(urlPath) == "index.html" {
 			custom404(w, r, nbrew.FS, sitePrefix)
@@ -537,7 +537,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
 			fileType.Ext = ".html"
 			fileType.ContentType = "text/html; charset=utf-8"
-			fileType.IsGzippable = true
+			fileType.Attribute = fileType.Attribute.With(AttributeGzippable)
 		}
 	}
 	file, err := nbrew.FS.Open(filePath)

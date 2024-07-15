@@ -936,7 +936,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
-				if fileType.IsObject {
+				if fileType.Attribute.Has(AttributeObject) {
 					reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 					if err != nil {
 						return err
@@ -950,7 +950,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 						return err
 					}
 				} else {
-					if fileType.IsGzippable && !IsFulltextIndexed(file.FilePath) {
+					if fileType.Attribute.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
 						if gzipReader == nil {
 							gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
 							if err != nil {
