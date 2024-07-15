@@ -524,7 +524,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
 		fileType.Ext = ".html"
 		fileType.ContentType = "text/html; charset=utf-8"
-		fileType.Attribute = fileType.Attribute | AttributeGzippable
+		fileType.Attribute |= AttributeGzippable
 	} else {
 		if path.Base(urlPath) == "index.html" {
 			custom404(w, r, nbrew.FS, sitePrefix)
@@ -537,7 +537,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
 			fileType.Ext = ".html"
 			fileType.ContentType = "text/html; charset=utf-8"
-			fileType.Attribute = fileType.Attribute | AttributeGzippable
+			fileType.Attribute |= AttributeGzippable
 		}
 	}
 	file, err := nbrew.FS.Open(filePath)
