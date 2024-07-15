@@ -133,7 +133,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return row.Bool("email IS NOT NULL")
 		})
 		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
+			if errors.Is(err, sql.ErrNoRows) {
 				response.Error = "InvalidInviteToken"
 				writeResponse(w, r, response)
 				return
