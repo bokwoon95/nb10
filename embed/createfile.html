@@ -79,28 +79,8 @@
     <div class='flex'>
       <input id='name' name='name' value='{{ $.Name }}' class='pv1 ph2 br2 ba flex-grow-1{{ if index $.FormErrors "name" }} b--invalid-red{{ end }}'{{ if not (eq (head $.Parent) "notes" "posts") }} autofocus{{ end }}>
       <select name='ext' class='br2 ml2{{ if index $.FormErrors "name" }} b--invalid-red{{ end }}'>
-        {{- if eq (head $.Parent) "notes" }}
-        <option{{ if eq $.Ext ".html" }} selected{{ end }}>.html</option>
-        <option{{ if eq $.Ext ".css" }} selected{{ end }}>.css</option>
-        <option{{ if eq $.Ext ".js" }} selected{{ end }}>.js</option>
-        <option{{ if eq $.Ext ".md" }} selected{{ end }}>.md</option>
-        <option{{ if eq $.Ext ".txt" }} selected{{ end }}>.txt</option>
-        {{- else if eq (head $.Parent) "pages" }}
-        <option selected>.html</option>
-        {{- else if eq (head $.Parent) "posts" }}
-        <option selected>.md</option>
-        {{- else if eq (head $.Parent) "output" }}
-          {{- if eq (head (tail $.Parent)) "themes" }}
-          <option{{ if eq $.Ext ".html" }} selected{{ end }}>.html</option>
-          <option{{ if eq $.Ext ".css" }} selected{{ end }}>.css</option>
-          <option{{ if eq $.Ext ".js" }} selected{{ end }}>.js</option>
-          <option{{ if eq $.Ext ".md" }} selected{{ end }}>.md</option>
-          <option{{ if eq $.Ext ".txt" }} selected{{ end }}>.txt</option>
-          {{- else }}
-          <option{{ if eq $.Ext ".css" }} selected{{ end }}>.css</option>
-          <option{{ if eq $.Ext ".js" }} selected{{ end }}>.js</option>
-          <option{{ if eq $.Ext ".md" }} selected{{ end }}>.md</option>
-          {{- end }}
+        {{- range $ext := $.FileExts }}
+        <option{{ if eq $ext $.Ext }} selected{{ end }}>{{ $ext }}</option>
         {{- end }}
       </select>
     </div>
@@ -113,12 +93,12 @@
   <div data-editor='{"extElementName":"ext","wordwrapCheckboxID":"wordwrap"}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
   </div>
-  {{- if eq (head $.Parent) "pages" "posts" }}
+  {{- if $.UploadableExts }}
   <div class='mt2'>
-    <div class='b'>Images:</div>
+    <div class='b'>Assets:</div>
     <div class='f6'>(uploading images may add noticeable delay to form submission, please be patient)</div>
-    <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.svg' multiple></div>
-    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".svg"]}'></div>
+    <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
+    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
   </div>
   {{- end }}
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>

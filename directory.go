@@ -46,6 +46,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		IsDir                 bool              `json:"isDir"`
 		ModTime               time.Time         `json:"modTime"`
 		CreationTime          time.Time         `json:"creationTime"`
+		UploadableExts        []string          `json:"uploadableExts"`
 		PinnedFiles           []File            `json:"pinnedFiles"`
 		Files                 []File            `json:"files"`
 		Sort                  string            `json:"sort"`
@@ -118,6 +119,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			"hasSuffix":             strings.HasSuffix,
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
+			"joinStrings":           strings.Join,
 			"humanReadableFileSize": HumanReadableFileSize,
 			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
@@ -135,6 +137,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			"tail": func(s string) string {
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
+			},
+			"isImg": func(file File) bool {
+				if file.IsDir {
+					return false
+				}
+				fileType := AllowedFileTypes[path.Ext(file.Name)]
+				return fileType.Has(AttributeImg)
 			},
 			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
 				var b strings.Builder
@@ -161,6 +170,13 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					return false
 				}
 				return isInClipboard[name]
+			},
+			"jsonArray": func(s []string) (string, error) {
+				b, err := json.Marshal(s)
+				if err != nil {
+					return "", err
+				}
+				return string(b), nil
 			},
 			"sortBy": func(sort string) template.URL {
 				queryParams := "?persist" +
@@ -393,6 +409,19 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				})
 			}
 		}
+	}
+	switch head {
+	case "pages":
+		response.UploadableExts = []string{".html"}
+	case "posts":
+		response.UploadableExts = []string{".md"}
+	default:
+		for _, fileType := range AllowedFileTypes {
+			if fileType.Has(AttributeEditable) || fileType.Has(AttributeImg) || fileType.Has(AttributeFont) {
+				response.UploadableExts = append(response.UploadableExts, fileType.Ext)
+			}
+		}
+		slices.Sort(response.UploadableExts)
 	}
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)

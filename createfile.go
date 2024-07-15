@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -41,6 +42,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		Username          string            `json:"username"`
 		DisableReason     string            `json:"disableReason"`
 		Parent            string            `json:"parent"`
+		FileExts          []string          `json:"fileExts"`
+		UploadableExts    []string          `json:"uploadableExts"`
 		Name              string            `json:"name"`
 		Ext               string            `json:"ext"`
 		Content           string            `json:"content"`
@@ -72,13 +75,14 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			referer := nbrew.GetReferer(r)
 			funcMap := map[string]any{
-				"join":       path.Join,
-				"base":       path.Base,
-				"hasPrefix":  strings.HasPrefix,
-				"trimPrefix": strings.TrimPrefix,
-				"stylesCSS":  func() template.CSS { return template.CSS(StylesCSS) },
-				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
-				"referer":    func() string { return referer },
+				"join":        path.Join,
+				"base":        path.Base,
+				"hasPrefix":   strings.HasPrefix,
+				"trimPrefix":  strings.TrimPrefix,
+				"joinStrings": strings.Join,
+				"stylesCSS":   func() template.CSS { return template.CSS(StylesCSS) },
+				"baselineJS":  func() template.JS { return template.JS(BaselineJS) },
+				"referer":     func() string { return referer },
 				"head": func(s string) string {
 					head, _, _ := strings.Cut(s, "/")
 					return head
@@ -86,6 +90,13 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				"tail": func(s string) string {
 					_, tail, _ := strings.Cut(s, "/")
 					return tail
+				},
+				"jsonArray": func(s []string) (string, error) {
+					b, err := json.Marshal(s)
+					if err != nil {
+						return "", err
+					}
+					return string(b), nil
 				},
 			}
 			tmpl, err := template.New("createfile.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/createfile.html")
@@ -140,22 +151,51 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		switch head {
 		case "notes":
 			response.Ext = ".txt"
+			for _, fileType := range AllowedFileTypes {
+				if fileType.Has(AttributeEditable) {
+					response.FileExts = append(response.FileExts, fileType.Ext)
+				}
+			}
 		case "pages":
 			response.Ext = ".html"
+			response.FileExts = []string{".html"}
+			for _, fileType := range AllowedFileTypes {
+				if fileType.Has(AttributeImg) || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
+					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
+				}
+			}
 		case "posts":
 			response.Ext = ".md"
+			response.FileExts = []string{".md"}
+			for _, fileType := range AllowedFileTypes {
+				if fileType.Has(AttributeImg) {
+					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
+				}
+			}
 		case "output":
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "themes" {
 				response.Ext = ".html"
+				for _, fileType := range AllowedFileTypes {
+					if fileType.Has(AttributeEditable) {
+						response.FileExts = append(response.FileExts, fileType.Ext)
+					}
+				}
 			} else {
 				response.Ext = ".js"
+				for _, fileType := range AllowedFileTypes {
+					if fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
+						response.FileExts = append(response.FileExts, fileType.Ext)
+					}
+				}
 			}
 		default:
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
 		}
+		slices.Sort(response.FileExts)
+		slices.Sort(response.UploadableExts)
 		writeResponse(w, r, response)
 	case "POST":
 		if user.DisableReason != "" {

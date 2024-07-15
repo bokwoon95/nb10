@@ -19,6 +19,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -58,6 +59,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		URL               template.URL      `json:"url"`
 		BelongsTo         string            `json:"belongsTo"`
 		AssetDir          string            `json:"assetDir"`
+		UploadableExts    []string          `json:"uploadableExts"`
 		PinnedAssets      []Asset           `json:"pinnedAssets"`
 		Assets            []Asset           `json:"assets"`
 		UploadCount       int64             `json:"uploadCount"`
@@ -159,6 +161,27 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(tail, ".html") + "/")
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
+			for _, fileType := range AllowedFileTypes {
+				if fileType.Has(AttributeImg) || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
+					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
+				}
+			}
+			extFilter := sq.Expr("1 = 1")
+			if len(response.UploadableExts) > 0 {
+				slices.Sort(response.UploadableExts)
+				var b strings.Builder
+				var args []any
+				b.WriteString("(")
+				for i, ext := range response.UploadableExts {
+					if i > 0 {
+						b.WriteString(" OR ")
+					}
+					b.WriteString("files.file_path LIKE {}")
+					args = append(args, "%"+wildcardReplacer.Replace(ext))
+				}
+				b.WriteString(")")
+				extFilter = sq.Expr(b.String(), args...)
+			}
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() (err error) {
@@ -174,20 +197,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							" JOIN files ON files.file_id = pinned_file.file_id" +
 							" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
 							" AND NOT files.is_dir" +
-							" AND (" +
-							"files.file_path LIKE '%.jpeg'" +
-							" OR files.file_path LIKE '%.jpg'" +
-							" OR files.file_path LIKE '%.png'" +
-							" OR files.file_path LIKE '%.webp'" +
-							" OR files.file_path LIKE '%.gif'" +
-							" OR files.file_path LIKE '%.svg'" +
-							" OR files.file_path LIKE '%.css'" +
-							" OR files.file_path LIKE '%.js'" +
-							" OR files.file_path LIKE '%.md'" +
-							") " +
+							" AND {extFilter}" +
 							" ORDER BY files.file_path",
 						Values: []any{
 							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+							sq.Param("extFilter", extFilter),
 						},
 					}, func(row *sq.Row) Asset {
 						filePath := row.String("files.file_path")
@@ -226,20 +240,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							" FROM files" +
 							" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
 							" AND NOT is_dir" +
-							" AND (" +
-							"file_path LIKE '%.jpeg'" +
-							" OR file_path LIKE '%.jpg'" +
-							" OR file_path LIKE '%.png'" +
-							" OR file_path LIKE '%.webp'" +
-							" OR file_path LIKE '%.gif'" +
-							" OR file_path LIKE '%.svg'" +
-							" OR file_path LIKE '%.css'" +
-							" OR file_path LIKE '%.js'" +
-							" OR file_path LIKE '%.md'" +
-							") " +
+							" AND {extFilter}" +
 							" ORDER BY file_path",
 						Values: []any{
 							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+							sq.Param("extFilter", extFilter),
 						},
 					}, func(row *sq.Row) Asset {
 						return Asset{
@@ -308,6 +313,27 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		case "posts":
 			response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
+			for _, fileType := range AllowedFileTypes {
+				if fileType.Has(AttributeImg) {
+					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
+				}
+			}
+			extFilter := sq.Expr("1 = 1")
+			if len(response.UploadableExts) > 0 {
+				slices.Sort(response.UploadableExts)
+				var b strings.Builder
+				var args []any
+				b.WriteString("(")
+				for i, ext := range response.UploadableExts {
+					if i > 0 {
+						b.WriteString(" OR ")
+					}
+					b.WriteString("files.file_path LIKE {}")
+					args = append(args, "%"+wildcardReplacer.Replace(ext))
+				}
+				b.WriteString(")")
+				extFilter = sq.Expr(b.String(), args...)
+			}
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() (err error) {
@@ -323,17 +349,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							" JOIN files ON files.file_id = pinned_file.file_id" +
 							" WHERE pinned_file.parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
 							" AND NOT files.is_dir" +
-							" AND (" +
-							"files.file_path LIKE '%.jpeg'" +
-							" OR files.file_path LIKE '%.jpg'" +
-							" OR files.file_path LIKE '%.png'" +
-							" OR files.file_path LIKE '%.webp'" +
-							" OR files.file_path LIKE '%.gif'" +
-							" OR files.file_path LIKE '%.svg'" +
-							") " +
+							" AND {extFilter}" +
 							" ORDER BY files.file_path",
 						Values: []any{
 							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+							sq.Param("extFilter", extFilter),
 						},
 					}, func(row *sq.Row) Asset {
 						filePath := row.String("files.file_path")
@@ -372,17 +392,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							" FROM files" +
 							" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {assetDir})" +
 							" AND NOT is_dir" +
-							" AND (" +
-							"file_path LIKE '%.jpeg'" +
-							" OR file_path LIKE '%.jpg'" +
-							" OR file_path LIKE '%.png'" +
-							" OR file_path LIKE '%.webp'" +
-							" OR file_path LIKE '%.gif'" +
-							" OR file_path LIKE '%.svg'" +
-							") " +
+							" AND {extFilter}" +
 							" ORDER BY file_path",
 						Values: []any{
 							sq.StringParam("assetDir", path.Join(sitePrefix, response.AssetDir)),
+							sq.Param("extFilter", extFilter),
 						},
 					}, func(row *sq.Row) Asset {
 						return Asset{
@@ -519,6 +533,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			"hasSuffix":             strings.HasSuffix,
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
+			"joinStrings":           strings.Join,
 			"humanReadableFileSize": HumanReadableFileSize,
 			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
@@ -533,6 +548,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
+			"isImg": func(asset Asset) bool {
+				fileType := AllowedFileTypes[path.Ext(asset.Name)]
+				return fileType.Has(AttributeImg)
+			},
 			"isInClipboard": func(name string) bool {
 				if sitePrefix != clipboard.Get("sitePrefix") {
 					return false
@@ -541,6 +560,13 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return false
 				}
 				return isInClipboard[name]
+			},
+			"jsonArray": func(s []string) (string, error) {
+				b, err := json.Marshal(s)
+				if err != nil {
+					return "", err
+				}
+				return string(b), nil
 			},
 		}
 		tmpl, err := template.New("file.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/file.html")

@@ -78,6 +78,13 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 				"referer":               func() string { return referer },
+				"isImg": func(file File) bool {
+					if file.IsDir {
+						return false
+					}
+					fileType := AllowedFileTypes[path.Ext(file.Name)]
+					return fileType.Has(AttributeImg)
+				},
 			}
 			tmpl, err := template.New("delete.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/delete.html")
 			if err != nil {
