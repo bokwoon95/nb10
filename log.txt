@@ -113,7 +113,6 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
-TODO: pasting images and markdown should regenerate into posts.
 TODO: rename ImgDomain to CDNDomain, change "img" subdomain to "cdn" subdomain.
     TODO: Add an AttributeCDN which is only for uh, images? including SVG? maybe videos in the future? What about scripts and stylesheets?
     TODO: maybe just add AttributeVideo and cdndomain will support Img,Video,.css and .js. No! CDNDomain is only for immutable objects! So images and video, and nothing else.
