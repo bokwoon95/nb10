@@ -134,7 +134,12 @@
     {{- $filesInvalid := index $.PostRedirectGet "filesInvalid" }}
     {{- $numPasted := len (index $.PostRedirectGet "filesPasted") }}
     <div>
-      <div>{{ $numPasted }} file{{ if ne $numPasted 1 }}s{{ end }} pasted</div>
+      <div>
+        {{ $numPasted }} file{{ if ne $numPasted 1 }}s{{ end }} pasted
+        {{- if and (not $.RegenerationStats.TemplateError.ErrorMessage) $.RegenerationStats.Count }}
+        (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }})
+        {{- end }}
+      </div>
       {{- if $filesExist }}
       <br>
       <div>

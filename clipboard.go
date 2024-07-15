@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
@@ -708,6 +709,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					getLogger(r.Context()).Error(err.Error())
 					return
 				}
+				startedAt := time.Now()
 				srcCategory := srcTail
 				srcTemplate, err := siteGen.PostListTemplate(r.Context(), srcCategory)
 				if err != nil {
@@ -716,13 +718,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					}
 					return
 				}
-				_, err = siteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
+				n, err := siteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
+				response.RegenerationStats.Count += n
 				destCategory := destTail
 				destTemplate, err := siteGen.PostListTemplate(r.Context(), destCategory)
 				if err != nil {
@@ -731,14 +734,88 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					}
 					return
 				}
-				_, err = siteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
+				n, err = siteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
 				if err != nil {
 					if !errors.As(err, &response.RegenerationStats.TemplateError) {
 						getLogger(r.Context()).Error(err.Error())
 					}
 					return
 				}
+				response.RegenerationStats.Count += n
+				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			}()
+		} else if destHead == "output" {
+			// output/posts/ abcd
+			// output/posts/ food/abcd
+			nextHead, nextTail, _ := strings.Cut(destTail, "/")
+			if nextHead == "posts" {
+				category, name, _ := strings.Cut(nextTail, "/")
+				if name == "" {
+					name = category
+					category = ""
+				}
+				if strings.Contains(name, "/") {
+					return
+				}
+				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+					FS:                 nbrew.FS,
+					ContentDomain:      nbrew.ContentDomain,
+					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+					ImgDomain:          nbrew.ImgDomain,
+					SitePrefix:         sitePrefix,
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					return
+				}
+				filePath := path.Join(sitePrefix, "posts", category, name+".md")
+				file, err := nbrew.FS.WithContext(r.Context()).Open(filePath)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					return
+				}
+				defer file.Close()
+				fileInfo, err := file.Stat()
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					return
+				}
+				var creationTime time.Time
+				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+					creationTime = fileInfo.CreationTime
+				} else {
+					var absolutePath string
+					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						absolutePath = path.Join(dirFS.RootDir, filePath)
+					}
+					creationTime = CreationTime(absolutePath, fileInfo)
+				}
+				var b strings.Builder
+				b.Grow(int(fileInfo.Size()))
+				_, err = io.Copy(&b, file)
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					return
+				}
+				text := b.String()
+				startedAt := time.Now()
+				tmpl, err := siteGen.PostTemplate(r.Context(), category)
+				if err != nil {
+					if !errors.As(err, &response.RegenerationStats.TemplateError) {
+						getLogger(r.Context()).Error(err.Error())
+					}
+					return
+				}
+				err = siteGen.GeneratePost(r.Context(), filePath, text, creationTime, tmpl)
+				if err != nil {
+					if !errors.As(err, &response.RegenerationStats.TemplateError) {
+						getLogger(r.Context()).Error(err.Error())
+					}
+					return
+				}
+				response.RegenerationStats.Count = 1
+				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+			}
 		}
 		waitGroup.Wait()
 		writeResponse(w, r, response)
