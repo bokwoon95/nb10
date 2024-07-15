@@ -86,7 +86,7 @@ func main() {
 			return
 		}
 	}
-	nbrew, err := cli.Notebrew(configDir, dataHomeDir, args)
+	nbrew, err := cli.Notebrew(configDir, dataHomeDir)
 	if err != nil {
 		var migrationErr *ddl.MigrationError
 		if errors.As(err, &migrationErr) {

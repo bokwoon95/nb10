@@ -61,6 +61,7 @@ const (
 	AttributeEditable   Attribute = 1 << 3 // Can be edited by the user.
 	AttributeFont       Attribute = 1 << 4 // Can be used as a @font-face src.
 	AttributeImg        Attribute = 1 << 5 // Can be displayed with an <img> tag.
+	AttributeVideo      Attribute = 1 << 6 // Can be displayed with a <video> tag.
 )
 
 type FileType struct {

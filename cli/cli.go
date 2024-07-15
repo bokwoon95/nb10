@@ -40,7 +40,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func Notebrew(configDir, dataDir string, args []string) (*nb10.Notebrew, error) {
+func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	nbrew := nb10.New()
 	nbrew.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
