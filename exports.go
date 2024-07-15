@@ -78,7 +78,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		ServeFile(w, r, fileName, fileInfo.Size(), fileTypes[".tgz"], file, "no-cache")
+		ServeFile(w, r, fileName, fileInfo.Size(), AllowedFileTypes[".tgz"], file, "no-cache")
 		return
 	}
 	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
@@ -342,7 +342,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 					response.Files = append(response.Files, file)
 					continue
 				}
-				_, ok := fileTypes[path.Ext(file.Name)]
+				_, ok := AllowedFileTypes[path.Ext(file.Name)]
 				if !ok {
 					continue
 				}

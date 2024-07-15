@@ -171,7 +171,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	}
 	var fileType FileType
 	if ext := path.Ext(name); ext != "" {
-		fileType = fileTypes[ext]
+		fileType = AllowedFileTypes[ext]
 	}
 	file, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
@@ -409,7 +409,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	}
 	var fileType FileType
 	if ext := path.Ext(name); ext != "" {
-		fileType = fileTypes[ext]
+		fileType = AllowedFileTypes[ext]
 	}
 	now := time.Now().UTC()
 	modTime, creationTime := now, now
@@ -1066,7 +1066,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if file.hasChildren {
 		return &fs.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
 	}
-	fileType := fileTypes[path.Ext(name)]
+	fileType := AllowedFileTypes[path.Ext(name)]
 	if fileType.Has(AttributeObject) {
 		err = fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
@@ -1465,7 +1465,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			return err
 		}
 		ext := path.Ext(srcName)
-		fileType := fileTypes[ext]
+		fileType := AllowedFileTypes[ext]
 		if fileType.Has(AttributeObject) {
 			err := fsys.ObjectStorage.Copy(fsys.ctx, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
@@ -1537,7 +1537,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		}
 		totalSize += srcFile.Size
 		ext := path.Ext(srcFile.FilePath)
-		fileType := fileTypes[ext]
+		fileType := AllowedFileTypes[ext]
 		if fileType.Has(AttributeObject) {
 			wg.Add(1)
 			go func() {

@@ -920,7 +920,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 					}
 					continue
 				}
-				fileType, ok := fileTypes[path.Ext(file.FilePath)]
+				fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
 				if !ok {
 					continue
 				}
@@ -1012,7 +1012,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 				}
 				return nil
 			}
-			_, ok := fileTypes[path.Ext(filePath)]
+			_, ok := AllowedFileTypes[path.Ext(filePath)]
 			if !ok {
 				return nil
 			}

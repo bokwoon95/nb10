@@ -59,7 +59,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return
 			}
 			defer file.Close()
-			fileType, ok := fileTypes[path.Ext(filePath)]
+			fileType, ok := AllowedFileTypes[path.Ext(filePath)]
 			if !ok {
 				nbrew.NotFound(w, r)
 				return

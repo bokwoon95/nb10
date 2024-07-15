@@ -74,7 +74,7 @@ func (fileType FileType) Has(attribute Attribute) bool {
 	return fileType.Attribute&attribute != 0
 }
 
-var fileTypes = map[string]FileType{
+var AllowedFileTypes = map[string]FileType{
 	".html": {
 		Ext:         ".html",
 		ContentType: "text/html; charset=utf-8",

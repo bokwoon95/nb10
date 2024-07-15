@@ -428,7 +428,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				response.Files = append(response.Files, file)
 				continue
 			}
-			_, ok := fileTypes[path.Ext(file.Name)]
+			_, ok := AllowedFileTypes[path.Ext(file.Name)]
 			if !ok {
 				continue
 			}

@@ -571,7 +571,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			continue
 		}
 		head, tail, _ := strings.Cut(header.Name, "/")
-		fileType, ok := fileTypes[path.Ext(header.Name)]
+		fileType, ok := AllowedFileTypes[path.Ext(header.Name)]
 		if !ok {
 			continue
 		}

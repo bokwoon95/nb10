@@ -39,7 +39,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" || r.Method == "HEAD" {
 		cleanedPath := path.Clean(r.URL.Path)
 		if cleanedPath != "/" {
-			_, ok := fileTypes[path.Ext(cleanedPath)]
+			_, ok := AllowedFileTypes[path.Ext(cleanedPath)]
 			if !ok {
 				cleanedPath += "/"
 			}
@@ -184,7 +184,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.MethodNotAllowed(w, r)
 				return
 			}
-			fileType, ok := fileTypes[path.Ext(urlPath)]
+			fileType, ok := AllowedFileTypes[path.Ext(urlPath)]
 			if !ok {
 				nbrew.NotFound(w, r)
 				return
@@ -218,7 +218,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			head, tail, _ = strings.Cut(urlPath, "/")
 		} else if tld != "" {
 			// head is a sitePrefix only if its TLD is not a file extension.
-			_, ok := fileTypes[tld]
+			_, ok := AllowedFileTypes[tld]
 			if !ok {
 				sitePrefix, urlPath = head, tail
 				head, tail, _ = strings.Cut(urlPath, "/")
@@ -346,7 +346,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.postlistJSON(w, r, user, sitePrefix, category)
 				return
 			}
-			fileType := fileTypes[path.Ext(urlPath)]
+			fileType := AllowedFileTypes[path.Ext(urlPath)]
 			if fileType.Has(AttributeImg) {
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, urlPath))
 				if err != nil {
@@ -474,7 +474,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 				return
 			}
-			fileType, ok := fileTypes[ext]
+			fileType, ok := AllowedFileTypes[ext]
 			if !ok || !fileType.Has(AttributeObject) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 			}
@@ -530,7 +530,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			custom404(w, r, nbrew.FS, sitePrefix)
 			return
 		}
-		fileType, ok = fileTypes[ext]
+		fileType, ok = AllowedFileTypes[ext]
 		if ok {
 			filePath = path.Join(sitePrefix, "output", urlPath)
 		} else {

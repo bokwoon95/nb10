@@ -349,7 +349,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				response.Name = strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
 			}
 			ext := path.Ext(response.Name)
-			if _, ok := fileTypes[ext]; ok {
+			if _, ok := AllowedFileTypes[ext]; ok {
 				response.Name = strings.TrimSuffix(response.Name, ext)
 			}
 			switch response.Ext {
@@ -387,7 +387,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				}
 			}
 			ext := path.Ext(response.Name)
-			if _, ok := fileTypes[ext]; ok {
+			if _, ok := AllowedFileTypes[ext]; ok {
 				response.Name = strings.TrimSuffix(response.Name, ext)
 			}
 			switch response.Ext {
@@ -619,7 +619,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					continue
 				}
 				fileName = filenameSafe(fileName)
-				fileType := fileTypes[path.Ext(fileName)]
+				fileType := AllowedFileTypes[path.Ext(fileName)]
 				switch head {
 				case "pages":
 					if !fileType.Has(AttributeImg) && fileType.Ext != ".css" && fileType.Ext != ".js" && fileType.Ext != ".md" {

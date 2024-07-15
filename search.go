@@ -175,7 +175,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
-			fileType, ok := fileTypes[ext]
+			fileType, ok := AllowedFileTypes[ext]
 			if !ok {
 				continue
 			}

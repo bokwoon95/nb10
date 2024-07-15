@@ -68,7 +68,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 
-	fileType, ok := fileTypes[path.Ext(filePath)]
+	fileType, ok := AllowedFileTypes[path.Ext(filePath)]
 	if !ok {
 		nbrew.NotFound(w, r)
 		return
@@ -82,7 +82,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		nbrew.NotFound(w, r)
 		return
 	case "notes":
-		isEditable = fileType.Ext == ".html" || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" || fileType.Ext == ".txt"
+		isEditable = fileType.Has(AttributeEditable)
 	case "pages":
 		isEditable = fileType.Ext == ".html"
 	case "posts":
@@ -97,7 +97,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		case "posts":
 			isEditable = false
 		case "themes":
-			isEditable = fileType.Ext == ".html" || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" || fileType.Ext == ".txt"
+			isEditable = fileType.Has(AttributeEditable)
 		default:
 			isEditable = fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md"
 		}
@@ -283,7 +283,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						continue
 					}
 					name := dirEntry.Name()
-					fileType := fileTypes[path.Ext(name)]
+					fileType := AllowedFileTypes[path.Ext(name)]
 					if fileType.Has(AttributeImg) || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
 						fileInfo, err := dirEntry.Info()
 						if err != nil {
@@ -426,7 +426,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						continue
 					}
 					name := dirEntry.Name()
-					fileType := fileTypes[path.Ext(name)]
+					fileType := AllowedFileTypes[path.Ext(name)]
 					if fileType.Has(AttributeImg) {
 						fileInfo, err := dirEntry.Info()
 						if err != nil {
@@ -822,7 +822,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					continue
 				}
 				fileName = filenameSafe(fileName)
-				fileType := fileTypes[path.Ext(fileName)]
+				fileType := AllowedFileTypes[path.Ext(fileName)]
 				switch head {
 				case "pages":
 					if !fileType.Has(AttributeImg) && fileType.Ext != ".css" && fileType.Ext != ".js" && fileType.Ext != ".md" {

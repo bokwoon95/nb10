@@ -525,7 +525,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					return err
 				}
 				name := path.Base(result.FilePath)
-				fileType := fileTypes[path.Ext(result.FilePath)]
+				fileType := AllowedFileTypes[path.Ext(result.FilePath)]
 				if fileType.Has(AttributeImg) {
 					pageData.Images = append(pageData.Images, Image{
 						Parent: urlPath,
@@ -605,7 +605,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			for _, dirEntry := range dirEntries {
 				dirEntry := dirEntry
 				name := dirEntry.Name()
-				fileType := fileTypes[path.Ext(name)]
+				fileType := AllowedFileTypes[path.Ext(name)]
 				if fileType.Has(AttributeImg) {
 					pageData.Images = append(pageData.Images, Image{Parent: urlPath, Name: name})
 				} else if fileType.Ext == ".md" {
@@ -1037,7 +1037,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			if dirEntry.IsDir() {
 				continue
 			}
-			fileType := fileTypes[path.Ext(name)]
+			fileType := AllowedFileTypes[path.Ext(name)]
 			if fileType.Has(AttributeImg) {
 				if _, ok := imgIsMentioned[name]; ok {
 					continue
@@ -1922,7 +1922,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
 					uri, err := url.Parse(string(val))
 					if err == nil && uri.Scheme == "" && uri.Host == "" {
-						fileType := fileTypes[path.Ext(uri.Path)]
+						fileType := AllowedFileTypes[path.Ext(uri.Path)]
 						if fileType.Has(AttributeImg) {
 							uri.Scheme = ""
 							uri.Host = siteGen.imgDomain

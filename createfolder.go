@@ -231,7 +231,7 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 			writeResponse(w, r, response)
 			return
 		}
-		_, ok := fileTypes[strings.ToLower(path.Ext(response.Name))]
+		_, ok := AllowedFileTypes[strings.ToLower(path.Ext(response.Name))]
 		if ok {
 			response.FormErrors.Add("name", "cannot end in a file extension")
 			response.Error = "FormErrorsPresent"

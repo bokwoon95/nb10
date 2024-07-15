@@ -627,7 +627,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
-			fileType := fileTypes[response.Ext]
+			fileType := AllowedFileTypes[response.Ext]
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "posts" {
 				if fileType.Has(AttributeImg) {

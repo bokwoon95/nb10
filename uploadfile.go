@@ -257,7 +257,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			continue
 		}
 		fileName = filenameSafe(fileName)
-		fileType := fileTypes[path.Ext(fileName)]
+		fileType := AllowedFileTypes[path.Ext(fileName)]
 		if fileType.Has(AttributeImg) && strings.TrimSuffix(fileName, fileType.Ext) == "image" {
 			var timestamp [8]byte
 			now := time.Now()
