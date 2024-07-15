@@ -295,7 +295,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		ftsQuery := b.String()
 		response.Matches, err = sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
