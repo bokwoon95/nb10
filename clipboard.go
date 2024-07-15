@@ -304,67 +304,50 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			}
 		}
 		var waitGroup sync.WaitGroup
-		waitGroup.Add(4)
 		notExistCh := make(chan string)
+		waitGroup.Add(1)
 		go func() {
-			defer func() {
-				if v := recover(); v != nil {
-					fmt.Println("panic:\n" + string(debug.Stack()))
-				}
-			}()
 			defer waitGroup.Done()
 			for name := range notExistCh {
 				response.FilesNotExist = append(response.FilesNotExist, name)
 			}
 		}()
 		existCh := make(chan string)
+		waitGroup.Add(1)
 		go func() {
-			defer func() {
-				if v := recover(); v != nil {
-					fmt.Println("panic:\n" + string(debug.Stack()))
-				}
-			}()
 			defer waitGroup.Done()
 			for name := range existCh {
 				response.FilesExist = append(response.FilesExist, name)
 			}
 		}()
 		invalidCh := make(chan string)
+		waitGroup.Add(1)
 		go func() {
-			defer func() {
-				if v := recover(); v != nil {
-					fmt.Println("panic:\n" + string(debug.Stack()))
-				}
-			}()
 			defer waitGroup.Done()
 			for name := range invalidCh {
 				response.FilesInvalid = append(response.FilesInvalid, name)
 			}
 		}()
 		pastedCh := make(chan string)
+		waitGroup.Add(1)
 		go func() {
-			defer func() {
-				if v := recover(); v != nil {
-					fmt.Println("panic:\n" + string(debug.Stack()))
-				}
-			}()
 			defer waitGroup.Done()
 			for name := range pastedCh {
 				response.FilesPasted = append(response.FilesPasted, name)
 			}
 		}()
 		moveNotAllowed := (srcHead == "pages" && destHead != "pages") || (srcHead == "posts" && destHead != "posts")
-		group, groupctx := errgroup.WithContext(r.Context())
+		groupA, groupctxA := errgroup.WithContext(r.Context())
 		for _, name := range names {
 			name := name
-			group.Go(func() (err error) {
+			groupA.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
 				srcFilePath := path.Join(sitePrefix, response.SrcParent, name)
-				srcFileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), srcFilePath)
+				srcFileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxA), srcFilePath)
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
 						notExistCh <- name
@@ -373,7 +356,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					return err
 				}
 				destFilePath := path.Join(sitePrefix, response.DestParent, name)
-				_, err = fs.Stat(nbrew.FS.WithContext(groupctx), destFilePath)
+				_, err = fs.Stat(nbrew.FS.WithContext(groupctxA), destFilePath)
 				if err != nil {
 					if !errors.Is(err, fs.ErrNotExist) {
 						return err
@@ -391,7 +374,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						}
 					} else {
 						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-							exists, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
+							exists, err := sq.FetchExists(groupctxA, databaseFS.DB, sq.Query{
 								Dialect: databaseFS.Dialect,
 								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} AND NOT is_dir AND file_path NOT LIKE '%.html'",
 								Values: []any{
@@ -406,7 +389,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 								return nil
 							}
 						} else {
-							err := fs.WalkDir(nbrew.FS.WithContext(groupctx), srcFilePath, func(filePath string, dirEntry fs.DirEntry, err error) error {
+							err := fs.WalkDir(nbrew.FS.WithContext(groupctxA), srcFilePath, func(filePath string, dirEntry fs.DirEntry, err error) error {
 								if err != nil {
 									return err
 								}
@@ -432,7 +415,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						}
 					} else {
 						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-							exists, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
+							exists, err := sq.FetchExists(groupctxA, databaseFS.DB, sq.Query{
 								Dialect: databaseFS.Dialect,
 								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} AND NOT is_dir AND file_path NOT LIKE '%.md'",
 								Values: []any{
@@ -447,7 +430,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 								return nil
 							}
 						} else {
-							err := fs.WalkDir(nbrew.FS.WithContext(groupctx), srcFilePath, func(filePath string, dirEntry fs.DirEntry, err error) error {
+							err := fs.WalkDir(nbrew.FS.WithContext(groupctxA), srcFilePath, func(filePath string, dirEntry fs.DirEntry, err error) error {
 								if err != nil {
 									return err
 								}
@@ -508,13 +491,13 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				}
 				isMove := response.IsCut && !moveNotAllowed && !isPermanentFile
 				if isMove {
-					err := nbrew.FS.WithContext(groupctx).Rename(srcFilePath, destFilePath)
+					err := nbrew.FS.WithContext(groupctxA).Rename(srcFilePath, destFilePath)
 					if err != nil {
 						return err
 					}
 				} else {
 					if storageRemaining != nil {
-						storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, srcFilePath)
+						storageUsed, err := calculateStorageUsed(groupctxA, nbrew.FS, srcFilePath)
 						if err != nil {
 							return err
 						}
@@ -522,7 +505,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							return ErrStorageLimitExceeded
 						}
 					}
-					err := nbrew.FS.WithContext(groupctx).Copy(srcFilePath, destFilePath)
+					err := nbrew.FS.WithContext(groupctxA).Copy(srcFilePath, destFilePath)
 					if err != nil {
 						return err
 					}
@@ -553,7 +536,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					if !counterpartExists {
 						// Fast path: if the counterpart doesn't exist, we can
 						// just rename the entire output directory.
-						err := nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
+						err := nbrew.FS.WithContext(groupctxA).Rename(srcOutputDir, destOutputDir)
 						if err != nil {
 							return err
 						}
@@ -561,15 +544,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						// Otherwise, we have to loop over each corresponding
 						// item in the output directory one by one to rename
 						// it.
-						err := nbrew.FS.WithContext(groupctx).MkdirAll(destOutputDir, 0755)
+						err := nbrew.FS.WithContext(groupctxA).MkdirAll(destOutputDir, 0755)
 						if err != nil {
 							return err
 						}
-						dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(srcOutputDir)
+						dirEntries, err := nbrew.FS.WithContext(groupctxA).ReadDir(srcOutputDir)
 						if err != nil {
 							return err
 						}
-						subgroup, subctx := errgroup.WithContext(groupctx)
+						subgroup, subctx := errgroup.WithContext(groupctxA)
 						for _, dirEntry := range dirEntries {
 							if dirEntry.IsDir() == srcFileInfo.IsDir() {
 								name := dirEntry.Name()
@@ -615,13 +598,13 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						// Fast path: if the counterpart doesn't exist, we can
 						// just rename or copy the entire output directory.
 						if isMove {
-							err = nbrew.FS.WithContext(groupctx).Rename(srcOutputDir, destOutputDir)
+							err = nbrew.FS.WithContext(groupctxA).Rename(srcOutputDir, destOutputDir)
 							if err != nil {
 								return err
 							}
 						} else {
 							if storageRemaining != nil {
-								storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, srcFilePath)
+								storageUsed, err := calculateStorageUsed(groupctxA, nbrew.FS, srcFilePath)
 								if err != nil {
 									return err
 								}
@@ -629,7 +612,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 									return ErrStorageLimitExceeded
 								}
 							}
-							err = nbrew.FS.WithContext(groupctx).Copy(srcOutputDir, destOutputDir)
+							err = nbrew.FS.WithContext(groupctxA).Copy(srcOutputDir, destOutputDir)
 							if err != nil {
 								return err
 							}
@@ -638,15 +621,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						// Otherwise, we have to loop over each corresponding
 						// item in the output directory one by one to rename or
 						// copy it.
-						err := nbrew.FS.WithContext(groupctx).MkdirAll(destOutputDir, 0755)
+						err := nbrew.FS.WithContext(groupctxA).MkdirAll(destOutputDir, 0755)
 						if err != nil {
 							return err
 						}
-						dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(srcOutputDir)
+						dirEntries, err := nbrew.FS.WithContext(groupctxA).ReadDir(srcOutputDir)
 						if err != nil {
 							return err
 						}
-						subgroup, subctx := errgroup.WithContext(groupctx)
+						subgroup, subctx := errgroup.WithContext(groupctxA)
 						for _, dirEntry := range dirEntries {
 							if dirEntry.IsDir() == srcFileInfo.IsDir() {
 								name := dirEntry.Name()
@@ -660,7 +643,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 										return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
 									} else {
 										if storageRemaining != nil {
-											storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(srcOutputDir, name))
+											storageUsed, err := calculateStorageUsed(groupctxA, nbrew.FS, path.Join(srcOutputDir, name))
 											if err != nil {
 												return err
 											}
@@ -682,7 +665,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				return nil
 			})
 		}
-		err = group.Wait()
+		err = groupA.Wait()
 		if err != nil {
 			if errors.Is(err, ErrStorageLimitExceeded) {
 				nbrew.StorageLimitExceeded(w, r)
@@ -696,128 +679,235 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		close(existCh)
 		close(invalidCh)
 		close(pastedCh)
+		var templateErrPtr atomic.Pointer[TemplateError]
+		var count atomic.Int64
+		startedAt := time.Now()
+		groupB, groupctxB := errgroup.WithContext(r.Context())
+		newSiteGenerator := sync.OnceValues(func() (*SiteGenerator, error) {
+			return NewSiteGenerator(groupctxB, SiteGeneratorConfig{
+				FS:                 nbrew.FS,
+				ContentDomain:      nbrew.ContentDomain,
+				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+				ImgDomain:          nbrew.ImgDomain,
+				SitePrefix:         sitePrefix,
+			})
+		})
 		if srcHead == "posts" && destHead == "posts" {
-			func() {
-				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
-					FS:                 nbrew.FS,
-					ContentDomain:      nbrew.ContentDomain,
-					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-					ImgDomain:          nbrew.ImgDomain,
-					SitePrefix:         sitePrefix,
-				})
+			groupB.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				siteGen, err := newSiteGenerator()
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					return
+					return err
 				}
-				startedAt := time.Now()
 				srcCategory := srcTail
-				srcTemplate, err := siteGen.PostListTemplate(r.Context(), srcCategory)
+				srcTemplate, err := siteGen.PostListTemplate(groupctxB, srcCategory)
 				if err != nil {
-					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						getLogger(r.Context()).Error(err.Error())
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
+				}
+				n, err := siteGen.GeneratePostList(groupctxB, srcCategory, srcTemplate)
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
 					}
 					return
 				}
-				n, err := siteGen.GeneratePostList(r.Context(), srcCategory, srcTemplate)
-				if err != nil {
-					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						getLogger(r.Context()).Error(err.Error())
-					}
-					return
-				}
-				response.RegenerationStats.Count += n
+				count.Add(n)
 				destCategory := destTail
-				destTemplate, err := siteGen.PostListTemplate(r.Context(), destCategory)
+				destTemplate, err := siteGen.PostListTemplate(groupctxB, destCategory)
 				if err != nil {
-					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						getLogger(r.Context()).Error(err.Error())
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
 					}
-					return
+					return err
 				}
-				n, err = siteGen.GeneratePostList(r.Context(), destCategory, destTemplate)
+				n, err = siteGen.GeneratePostList(groupctxB, destCategory, destTemplate)
 				if err != nil {
-					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						getLogger(r.Context()).Error(err.Error())
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
 					}
-					return
+					return err
 				}
-				response.RegenerationStats.Count += n
-				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
-			}()
-		} else if destHead == "output" {
-			// output/posts/ abcd
-			// output/posts/ food/abcd
+				count.Add(n)
+				return nil
+			})
+		}
+		if srcHead == "output" {
+			nextHead, nextTail, _ := strings.Cut(srcTail, "/")
+			if nextHead == "posts" {
+				groupB.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					category, name, _ := strings.Cut(nextTail, "/")
+					if name == "" {
+						name = category
+						category = ""
+					}
+					if strings.Contains(name, "/") {
+						return nil
+					}
+					siteGen, err := newSiteGenerator()
+					if err != nil {
+						return err
+					}
+					filePath := path.Join(sitePrefix, "posts", category, name+".md")
+					file, err := nbrew.FS.WithContext(groupctxB).Open(filePath)
+					if err != nil {
+						if errors.Is(err, fs.ErrNotExist) {
+							return nil
+						}
+						return err
+					}
+					defer file.Close()
+					fileInfo, err := file.Stat()
+					if err != nil {
+						return err
+					}
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = fileInfo.CreationTime
+					} else {
+						var absolutePath string
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, filePath)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						return err
+					}
+					text := b.String()
+					tmpl, err := siteGen.PostTemplate(groupctxB, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					err = siteGen.GeneratePost(groupctxB, filePath, text, creationTime, tmpl)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(1)
+					return nil
+				})
+			}
+		}
+		if destHead == "output" {
 			nextHead, nextTail, _ := strings.Cut(destTail, "/")
 			if nextHead == "posts" {
-				category, name, _ := strings.Cut(nextTail, "/")
-				if name == "" {
-					name = category
-					category = ""
-				}
-				if strings.Contains(name, "/") {
-					return
-				}
-				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
-					FS:                 nbrew.FS,
-					ContentDomain:      nbrew.ContentDomain,
-					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-					ImgDomain:          nbrew.ImgDomain,
-					SitePrefix:         sitePrefix,
+				groupB.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					category, name, _ := strings.Cut(nextTail, "/")
+					if name == "" {
+						name = category
+						category = ""
+					}
+					if strings.Contains(name, "/") {
+						return nil
+					}
+					siteGen, err := newSiteGenerator()
+					if err != nil {
+						return err
+					}
+					filePath := path.Join(sitePrefix, "posts", category, name+".md")
+					file, err := nbrew.FS.WithContext(groupctxB).Open(filePath)
+					if err != nil {
+						if errors.Is(err, fs.ErrNotExist) {
+							return nil
+						}
+						return err
+					}
+					defer file.Close()
+					fileInfo, err := file.Stat()
+					if err != nil {
+						return err
+					}
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = fileInfo.CreationTime
+					} else {
+						var absolutePath string
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, filePath)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						return err
+					}
+					text := b.String()
+					tmpl, err := siteGen.PostTemplate(groupctxB, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					err = siteGen.GeneratePost(groupctxB, filePath, text, creationTime, tmpl)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(1)
+					return nil
 				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					return
-				}
-				filePath := path.Join(sitePrefix, "posts", category, name+".md")
-				file, err := nbrew.FS.WithContext(r.Context()).Open(filePath)
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					return
-				}
-				defer file.Close()
-				fileInfo, err := file.Stat()
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					return
-				}
-				var creationTime time.Time
-				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-					creationTime = fileInfo.CreationTime
-				} else {
-					var absolutePath string
-					if dirFS, ok := nbrew.FS.(*DirFS); ok {
-						absolutePath = path.Join(dirFS.RootDir, filePath)
-					}
-					creationTime = CreationTime(absolutePath, fileInfo)
-				}
-				var b strings.Builder
-				b.Grow(int(fileInfo.Size()))
-				_, err = io.Copy(&b, file)
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					return
-				}
-				text := b.String()
-				startedAt := time.Now()
-				tmpl, err := siteGen.PostTemplate(r.Context(), category)
-				if err != nil {
-					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						getLogger(r.Context()).Error(err.Error())
-					}
-					return
-				}
-				err = siteGen.GeneratePost(r.Context(), filePath, text, creationTime, tmpl)
-				if err != nil {
-					if !errors.As(err, &response.RegenerationStats.TemplateError) {
-						getLogger(r.Context()).Error(err.Error())
-					}
-					return
-				}
-				response.RegenerationStats.Count = 1
-				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			}
 		}
 		waitGroup.Wait()
+		err = groupB.Wait()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		if n := count.Load(); n > 0 {
+			response.RegenerationStats.Count = n
+			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+			if ptr := templateErrPtr.Load(); ptr != nil {
+				response.RegenerationStats.TemplateError = *ptr
+			}
+		}
 		writeResponse(w, r, response)
 	default:
 		nbrew.NotFound(w, r)
