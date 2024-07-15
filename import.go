@@ -571,7 +571,10 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			continue
 		}
 		head, tail, _ := strings.Cut(header.Name, "/")
-		ext := path.Ext(header.Name)
+		fileType, ok := fileTypes[path.Ext(header.Name)]
+		if !ok {
+			continue
+		}
 		modTime := header.ModTime
 		if s, ok := header.PAXRecords["NOTEBREW.file.modTime"]; ok {
 			t, err := time.Parse("2006-01-02T15:04:05Z", s)
@@ -594,8 +597,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 			}
 		}
 		caption := ""
-		switch ext {
-		case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+		if fileType.Has(AttributeImg) {
 			if s, ok := header.PAXRecords["NOTEBREW.file.caption"]; ok {
 				caption = s
 			}
@@ -609,16 +611,10 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 					return err
 				}
 			case tar.TypeReg:
-				var limit int64
-				switch ext {
-				case ".html", ".css", ".js", ".md", ".txt":
-					limit = 1 << 20 /* 1 MB */
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-					limit = 10 << 20 /* 10 MB */
-				default:
+				if !fileType.Has(AttributeEditable) && !fileType.Has(AttributeImg) && !fileType.Has(AttributeFont) {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
 				if err != nil {
 					return err
 				}
@@ -631,13 +627,13 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 					return err
 				}
 			case tar.TypeReg:
-				if ext != ".html" {
+				if fileType.Ext != ".html" {
 					continue
 				}
 				if tail == "" && (fileName == "posts.html" || fileName == "themes.html") {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
 				if err != nil {
 					return err
 				}
@@ -660,15 +656,11 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if strings.Contains(category, "/") {
 					continue
 				}
-				if ext != ".md" {
-					switch path.Base(header.Name) {
-					case "postlist.json", "postlist.html", "post.html":
-						break
-					default:
-						continue
-					}
+				baseName := path.Base(header.Name)
+				if fileType.Ext != ".md" && baseName != "postlist.json" && baseName != "postlist.html" && baseName != "post.html" {
+					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
 				if err != nil {
 					return err
 				}
@@ -682,16 +674,10 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 					return err
 				}
 			case tar.TypeReg:
-				var limit int64
-				switch ext {
-				case ".html", ".css", ".js", ".md", ".txt":
-					limit = 1 << 20 /* 1 MB */
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-					limit = 10 << 20 /* 10 MB */
-				default:
+				if !fileType.Has(AttributeEditable) && !fileType.Has(AttributeImg) && !fileType.Has(AttributeFont) {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, limit))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
 				if err != nil {
 					return err
 				}
@@ -702,7 +688,7 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 				if header.Name != "site.json" {
 					continue
 				}
-				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, 1<<20 /* 1 MB */))
+				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
 				if err != nil {
 					return err
 				}

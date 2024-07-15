@@ -317,8 +317,8 @@
           <input type='file' name='file' style='max-width: 220px;' accept='.md' multiple>
           <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".md"]}'>
           {{- else }}
-          <input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.html,.css,.js,.md,.txt' multiple>
-          <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".html",".css",".js",".md",".txt"]}'>
+          <input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.svg,.html,.css,.js,.md,.txt' multiple>
+          <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".svg",".html",".css",".js",".md",".txt"]}'>
           {{- end }}
           <button type='submit' class='button ba br2 b--black pa2 w-100 mt2'>upload</button>
           <div role='status'></div>
@@ -375,7 +375,7 @@
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
-          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}
           <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
           {{- else }}
@@ -455,7 +455,7 @@
           {{- else if and (eq (head $file.Parent) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
-          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}
           <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
           {{- else }}

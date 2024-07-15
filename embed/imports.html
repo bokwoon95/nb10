@@ -220,7 +220,7 @@
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
-          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}
           <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
           {{- else }}
@@ -262,7 +262,7 @@
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
-          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+          {{- if and (not $file.IsDir) (eq (ext $file.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg") }}
           {{- if and $.ImgDomain $.IsDatabaseFS }}
           <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
           {{- else }}

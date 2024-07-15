@@ -22,7 +22,7 @@ if (dataEditor) {
         text = `\n<link rel='stylesheet' href='${name}'>\n`;
       } else if (name.endsWith(".js")) {
         text = `\n<script src='${name}'></script>\n`;
-      } else if (name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif")) {
+      } else if (name.endsWith(".jpeg") || name.endsWith(".jpg") || name.endsWith(".png") || name.endsWith(".webp") || name.endsWith(".gif") || name.endsWith(".svg")) {
         text = `\n<img src='${name}' alt='${altText}' style='max-width: 100%; height: auto;'>\n`;
       } else if (name.endsWith(".md")) {
         text = `\n{{ index $.Markdown "${name}" }}\n`;

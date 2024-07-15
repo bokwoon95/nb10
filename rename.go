@@ -627,10 +627,10 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				writeResponse(w, r, response)
 				return
 			}
+			fileType := fileTypes[response.Ext]
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "posts" {
-				switch response.Ext {
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+				if fileType.Has(AttributeImg) {
 					parentPost := tail + ".md"
 					file, err := nbrew.FS.WithContext(r.Context()).Open(parentPost)
 					if err != nil {
@@ -703,8 +703,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 				}
 			} else if next != "themes" {
-				switch response.Ext {
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif", ".md":
+				if fileType.Has(AttributeImg) || fileType.Ext == ".md" {
 					var parentPage string
 					if tail == "" {
 						parentPage = "pages/index.html"

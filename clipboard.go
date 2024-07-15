@@ -471,20 +471,14 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							invalidCh <- name
 							return nil
 						}
-						ext := path.Ext(srcFilePath)
+						fileType := fileTypes[path.Ext(srcFilePath)]
 						if next == "posts" {
-							switch ext {
-							case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-								break
-							default:
+							if !fileType.Has(AttributeImg) {
 								invalidCh <- name
 								return nil
 							}
 						} else {
-							switch ext {
-							case ".jpeg", ".jpg", ".png", ".webp", ".gif", ".css", ".js", ".md":
-								break
-							default:
+							if !fileType.Has(AttributeImg) && fileType.Ext != ".css" && fileType.Ext != ".jd" && fileType.Ext != ".md" {
 								invalidCh <- name
 								return nil
 							}

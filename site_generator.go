@@ -186,6 +186,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			" OR file_path LIKE '%.png'" +
 			" OR file_path LIKE '%.webp'" +
 			" OR file_path LIKE '%.gif'" +
+			" OR file_path LIKE '%.svg'" +
 			") ",
 		Values: []any{
 			sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(siteGen.sitePrefix, "output"))+"/%"),
@@ -498,6 +499,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					" OR file_path LIKE '%.png'" +
 					" OR file_path LIKE '%.webp'" +
 					" OR file_path LIKE '%.gif'" +
+					" OR file_path LIKE '%.svg'" +
 					" OR file_path LIKE '%.md'" +
 					") " +
 					" ORDER BY file_path",
@@ -523,8 +525,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					return err
 				}
 				name := path.Base(result.FilePath)
-				switch path.Ext(result.FilePath) {
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+				fileType := fileTypes[path.Ext(result.FilePath)]
+				if fileType.Has(AttributeImg) {
 					pageData.Images = append(pageData.Images, Image{
 						Parent: urlPath,
 						Name:   name,
@@ -558,7 +560,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						pageData.Images[i].Caption = template.HTML(b.String())
 						return nil
 					})
-				case ".md":
+				} else {
 					subgroup.Go(func() (err error) {
 						defer func() {
 							if v := recover(); v != nil {
@@ -603,10 +605,10 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			for _, dirEntry := range dirEntries {
 				dirEntry := dirEntry
 				name := dirEntry.Name()
-				switch path.Ext(name) {
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+				fileType := fileTypes[path.Ext(name)]
+				if fileType.Has(AttributeImg) {
 					pageData.Images = append(pageData.Images, Image{Parent: urlPath, Name: name})
-				case ".md":
+				} else if fileType.Ext == ".md" {
 					subgroup.Go(func() (err error) {
 						defer func() {
 							if v := recover(); v != nil {
@@ -951,6 +953,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 				" OR file_path LIKE '%.png'" +
 				" OR file_path LIKE '%.webp'" +
 				" OR file_path LIKE '%.gif'" +
+				" OR file_path LIKE '%.svg'" +
 				") " +
 				" ORDER BY file_path",
 			Values: []any{
@@ -1034,8 +1037,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			if dirEntry.IsDir() {
 				continue
 			}
-			switch path.Ext(name) {
-			case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+			fileType := fileTypes[path.Ext(name)]
+			if fileType.Has(AttributeImg) {
 				if _, ok := imgIsMentioned[name]; ok {
 					continue
 				}
@@ -1919,8 +1922,8 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
 					uri, err := url.Parse(string(val))
 					if err == nil && uri.Scheme == "" && uri.Host == "" {
-						switch path.Ext(uri.Path) {
-						case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+						fileType := fileTypes[path.Ext(uri.Path)]
+						if fileType.Has(AttributeImg) {
 							uri.Scheme = ""
 							uri.Host = siteGen.imgDomain
 							if strings.HasPrefix(uri.Path, "/") {

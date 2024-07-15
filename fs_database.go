@@ -192,7 +192,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		file.info.size = row.Int64("size")
 		file.info.modTime = row.Time("mod_time")
 		file.info.CreationTime = row.Time("creation_time")
-		if !fileType.Attribute.Has(AttributeObject) {
+		if !fileType.Has(AttributeObject) {
 			file.buf = bytes.NewBuffer(row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "COALESCE(text, data)"))
 		}
 		return file
@@ -204,7 +204,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		return nil, err
 	}
 	file.isFulltextIndexed = IsFulltextIndexed(file.info.FilePath)
-	if fileType.Attribute.Has(AttributeObject) {
+	if fileType.Has(AttributeObject) {
 		file.readCloser, err = file.objectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
 			return nil, err
@@ -221,7 +221,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 			return file, nil
 		}
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			// Do NOT pass file.buf directly to gzip.Reader or it will do an
 			// unwanted read from the buffer! We want to keep file.buf unread
 			// in case someone wants to reach directly into it and pull out the
@@ -313,10 +313,10 @@ func (file *DatabaseFile) Read(p []byte) (n int, err error) {
 	if file.info.isDir {
 		return 0, &fs.PathError{Op: "read", Path: file.info.FilePath, Err: syscall.EISDIR}
 	}
-	if file.fileType.Attribute.Has(AttributeObject) {
+	if file.fileType.Has(AttributeObject) {
 		return file.readCloser.Read(p)
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			return file.gzipReader.Read(p)
 		} else {
 			return file.buf.Read(p)
@@ -334,7 +334,7 @@ func (file *DatabaseFile) Close() error {
 	if file.info.isDir {
 		return nil
 	}
-	if file.fileType.Attribute.Has(AttributeObject) {
+	if file.fileType.Has(AttributeObject) {
 		if file.readCloser == nil {
 			return fs.ErrClosed
 		}
@@ -344,7 +344,7 @@ func (file *DatabaseFile) Close() error {
 		}
 		file.readCloser = nil
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			if file.gzipReader == nil {
 				return fs.ErrClosed
 			}
@@ -512,7 +512,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 			file.fileID = NewID()
 		}
 	}
-	if fileType.Attribute.Has(AttributeObject) {
+	if fileType.Has(AttributeObject) {
 		pipeReader, pipeWriter := io.Pipe()
 		file.objectStorageWriter = pipeWriter
 		file.objectStorageResult = make(chan error, 1)
@@ -526,7 +526,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 			close(file.objectStorageResult)
 		}()
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			file.buf = bufPool.Get().(*bytes.Buffer)
 			file.gzipWriter = gzipWriterPool.Get().(*gzip.Writer)
 			file.gzipWriter.Reset(file.buf)
@@ -543,10 +543,10 @@ func (file *DatabaseFileWriter) Write(p []byte) (n int, err error) {
 		file.writeFailed = true
 		return 0, err
 	}
-	if file.fileType.Attribute.Has(AttributeObject) {
+	if file.fileType.Has(AttributeObject) {
 		n, err = file.objectStorageWriter.Write(p)
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			n, err = file.gzipWriter.Write(p)
 		} else {
 			n, err = file.buf.Write(p)
@@ -565,10 +565,10 @@ func (file *DatabaseFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 		file.writeFailed = true
 		return 0, err
 	}
-	if file.fileType.Attribute.Has(AttributeObject) {
+	if file.fileType.Has(AttributeObject) {
 		n, err = io.Copy(file.objectStorageWriter, r)
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			n, err = io.Copy(file.gzipWriter, r)
 		} else {
 			n, err = file.buf.ReadFrom(r)
@@ -582,7 +582,7 @@ func (file *DatabaseFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (file *DatabaseFileWriter) Close() error {
-	if file.fileType.Attribute.Has(AttributeObject) {
+	if file.fileType.Has(AttributeObject) {
 		if file.objectStorageWriter == nil {
 			return fs.ErrClosed
 		}
@@ -593,7 +593,7 @@ func (file *DatabaseFileWriter) Close() error {
 			return err
 		}
 	} else {
-		if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			if file.gzipWriter == nil {
 				return fs.ErrClosed
 			}
@@ -630,13 +630,10 @@ func (file *DatabaseFileWriter) Close() error {
 
 	if file.exists {
 		// If file exists, just have to update the file entry in the database.
-		if file.fileType.Attribute.Has(AttributeObject) {
+		if file.fileType.Has(AttributeObject) {
 			var text sql.NullString
-			switch file.fileType.Ext {
-			case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-				if file.caption != "" {
-					text = sql.NullString{String: file.caption, Valid: true}
-				}
+			if file.fileType.Has(AttributeImg) && file.caption != "" {
+				text = sql.NullString{String: file.caption, Valid: true}
 			}
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
 				Dialect: file.dialect,
@@ -652,7 +649,7 @@ func (file *DatabaseFileWriter) Close() error {
 				return err
 			}
 		} else {
-			if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+			if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 				_, err := sq.Exec(file.ctx, file.db, sq.Query{
 					Dialect: file.dialect,
 					Format:  "UPDATE files SET text = NULL, data = {data}, size = {size}, mod_time = {modTime} WHERE file_id = {fileID}",
@@ -685,13 +682,10 @@ func (file *DatabaseFileWriter) Close() error {
 	} else {
 		// If we reach here it means file doesn't exist. Insert a new file entry
 		// into the database.
-		if file.fileType.Attribute.Has(AttributeObject) {
+		if file.fileType.Has(AttributeObject) {
 			var text sql.NullString
-			switch file.fileType.Ext {
-			case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-				if file.caption != "" {
-					text = sql.NullString{String: file.caption, Valid: true}
-				}
+			if file.fileType.Has(AttributeImg) && file.caption != "" {
+				text = sql.NullString{String: file.caption, Valid: true}
 			}
 			_, err := sq.Exec(file.ctx, file.db, sq.Query{
 				Dialect: file.dialect,
@@ -725,7 +719,7 @@ func (file *DatabaseFileWriter) Close() error {
 				return err
 			}
 		} else {
-			if file.fileType.Attribute.Has(AttributeGzippable) && !file.isFulltextIndexed {
+			if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 				_, err := sq.Exec(file.ctx, file.db, sq.Query{
 					Dialect: file.dialect,
 					Format: "INSERT INTO files (file_id, parent_id, file_path, size, data, mod_time, creation_time, is_dir)" +
@@ -1073,7 +1067,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		return &fs.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
 	}
 	fileType := fileTypes[path.Ext(name)]
-	if fileType.Attribute.Has(AttributeObject) {
+	if fileType.Has(AttributeObject) {
 		err = fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
 			return err
@@ -1141,6 +1135,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			" WHERE (file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\')" +
 			" AND NOT is_dir" +
 			" AND (" +
+			// AttributeObject
 			"file_path LIKE '%.jpeg'" +
 			" OR file_path LIKE '%.jpg'" +
 			" OR file_path LIKE '%.png'" +
@@ -1471,7 +1466,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		}
 		ext := path.Ext(srcName)
 		fileType := fileTypes[ext]
-		if fileType.Attribute.Has(AttributeObject) {
+		if fileType.Has(AttributeObject) {
 			err := fsys.ObjectStorage.Copy(fsys.ctx, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
@@ -1543,7 +1538,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		totalSize += srcFile.Size
 		ext := path.Ext(srcFile.FilePath)
 		fileType := fileTypes[ext]
-		if fileType.Attribute.Has(AttributeObject) {
+		if fileType.Has(AttributeObject) {
 			wg.Add(1)
 			go func() {
 				defer func() {

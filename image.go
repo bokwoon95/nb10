@@ -114,6 +114,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						" OR file_path LIKE '%.png'" +
 						" OR file_path LIKE '%.webp'" +
 						" OR file_path LIKE '%.gif'" +
+						" OR file_path LIKE '%.svg'" +
 						")" +
 						" ORDER BY file_path DESC" +
 						" LIMIT 1",
@@ -182,6 +183,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						" OR file_path LIKE '%.png'" +
 						" OR file_path LIKE '%.webp'" +
 						" OR file_path LIKE '%.gif'" +
+						" OR file_path LIKE '%.svg'" +
 						")" +
 						" ORDER BY file_path ASC" +
 						" LIMIT 1",

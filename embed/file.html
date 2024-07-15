@@ -352,13 +352,13 @@
     {{- if eq (head $.FilePath) "pages" }}
     <div class='b'>upload assets:</div>
     <div class='f6'>(uploading images may add noticeable delay to form submission, please be patient)</div>
-    <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.css,.js,.md' multiple></div>
-    <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".css",".js",".md"]}'></div>
+    <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.svg,.css,.js,.md' multiple></div>
+    <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".svg",".css",".js",".md"]}'></div>
     {{- else if eq (head $.FilePath) "posts" }}
     <div class='b'>upload images:</div>
     <div class='f6'>(uploading images may add noticeable delay to form submission, please be patient)</div>
-    <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif' multiple></div>
-    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif"]}'></div>
+    <div><input type='file' name='file' style='max-width: 220px;' accept='.jpeg,.jpg,.png,.webp,.gif,.svg' multiple></div>
+    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":[".jpeg",".jpg",".png",".webp",".gif",".svg"]}'></div>
     {{- end }}
   </div>
   {{- end }}
@@ -436,7 +436,7 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
               <span class='mr1 flex items-center'>📌</span>
-              {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+              {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg") }}
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
                 {{- else }}
@@ -484,7 +484,7 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
           </div>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
-              {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif") }}
+              {{- if and (eq (ext $asset.Name) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg") }}
                 {{- if and $.ImgDomain $.IsDatabaseFS }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.ImgDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1'>
                 {{- else }}

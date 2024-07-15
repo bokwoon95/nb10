@@ -1022,13 +1022,13 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	// http.ServeContent does) so that clients (e.g. internet download
 	// managers) have the ability to download a file in multiple parts.
 
-	// .jpeg .jpg .png .webp .gif .woff .woff2 .tgz
-	if !fileType.Attribute.Has(AttributeGzippable) {
+	// .jpeg .jpg .png .webp .gif .svg .woff .woff2 .tgz
+	if !fileType.Has(AttributeGzippable) {
 		if readSeeker, ok := reader.(io.ReadSeeker); ok {
 			if hasMaxAge {
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
-				if fileType.Attribute.Has(AttributeAttachment) {
+				if fileType.Has(AttributeAttachment) {
 					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 				}
 				http.ServeContent(w, r, "", time.Time{}, readSeeker)
@@ -1055,7 +1055,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			if fileType.Attribute.Has(AttributeAttachment) {
+			if fileType.Has(AttributeAttachment) {
 				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 			}
 			http.ServeContent(w, r, "", time.Time{}, readSeeker)
@@ -1063,7 +1063,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		}
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
-		if fileType.Attribute.Has(AttributeAttachment) {
+		if fileType.Has(AttributeAttachment) {
 			w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 		}
@@ -1084,12 +1084,12 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		// If file is a DatabaseFile that is gzippable and is not fulltext
 		// indexed, its contents are already gzipped. We can reach directly
 		// into its buffer and skip the gzipping step.
-		if databaseFile.fileType.Attribute.Has(AttributeGzippable) && !databaseFile.isFulltextIndexed {
+		if databaseFile.fileType.Has(AttributeGzippable) && !databaseFile.isFulltextIndexed {
 			if hasMaxAge {
 				w.Header().Set("Content-Encoding", "gzip")
 				w.Header().Set("Content-Type", fileType.ContentType)
 				w.Header().Set("Cache-Control", cacheControl)
-				if fileType.Attribute.Has(AttributeAttachment) {
+				if fileType.Has(AttributeAttachment) {
 					w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 				}
 				http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
@@ -1111,7 +1111,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			w.Header().Set("Content-Type", fileType.ContentType)
 			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-			if fileType.Attribute.Has(AttributeAttachment) {
+			if fileType.Has(AttributeAttachment) {
 				w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 			}
 			http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(databaseFile.buf.Bytes()))
@@ -1163,7 +1163,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		w.Header().Set("Content-Type", fileType.ContentType)
 		w.Header().Set("Cache-Control", cacheControl)
 		w.Header().Set("ETag", `"`+hex.EncodeToString(hasher.Sum(b[:0]))+`"`)
-		if fileType.Attribute.Has(AttributeAttachment) {
+		if fileType.Has(AttributeAttachment) {
 			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 		}
 		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
@@ -1173,7 +1173,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	w.Header().Set("Content-Encoding", "gzip")
 	w.Header().Set("Content-Type", fileType.ContentType)
 	w.Header().Set("Cache-Control", cacheControl)
-	if fileType.Attribute.Has(AttributeAttachment) {
+	if fileType.Has(AttributeAttachment) {
 		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 		w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(name))
 	}

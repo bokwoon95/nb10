@@ -924,11 +924,8 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 				if !ok {
 					continue
 				}
-				switch fileType.Ext {
-				case ".jpeg", ".jpg", ".png", ".webp", ".gif":
-					if len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
-						tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
-					}
+				if fileType.Has(AttributeImg) && len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
+					tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
 				}
 				tarHeader.Typeflag = tar.TypeReg
 				tarHeader.Mode = 0644
@@ -936,7 +933,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 				if err != nil {
 					return err
 				}
-				if fileType.Attribute.Has(AttributeObject) {
+				if fileType.Has(AttributeObject) {
 					reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 					if err != nil {
 						return err
@@ -950,7 +947,7 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 						return err
 					}
 				} else {
-					if fileType.Attribute.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
+					if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
 						if gzipReader == nil {
 							gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
 							if err != nil {

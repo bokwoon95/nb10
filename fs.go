@@ -55,40 +55,138 @@ type FS interface {
 type Attribute int
 
 const (
-	AttributeGzippable  Attribute = 1 << 0
-	AttributeObject     Attribute = 1 << 1
-	AttributeAttachment Attribute = 1 << 2
-	AttributeFont       Attribute = 1 << 3
-	AttributeImage      Attribute = 1 << 4
+	AttributeGzippable  Attribute = 1 << 0 // Should be gzipped when sent in the response body.
+	AttributeObject     Attribute = 1 << 1 // Should be stored in ObjectStorage (instead of the database).
+	AttributeAttachment Attribute = 1 << 2 // Should be downloaded with Content-Disposition: attachment.
+	AttributeEditable   Attribute = 1 << 3 // Can be edited by the user.
+	AttributeFont       Attribute = 1 << 4 // Can be used as a @font-face src.
+	AttributeImg        Attribute = 1 << 5 // Can be displayed with an <img> tag.
 )
-
-func (a Attribute) With(attr Attribute) Attribute { return a | attr }
-func (a Attribute) Has(attr Attribute) bool       { return a&attr != 0 }
 
 type FileType struct {
 	Ext         string
 	ContentType string
+	Limit       int64
 	Attribute   Attribute
 }
 
+func (fileType FileType) Has(attribute Attribute) bool {
+	return fileType.Attribute&attribute != 0
+}
+
 var fileTypes = map[string]FileType{
-	".html":  {Ext: ".html", ContentType: "text/html; charset=utf-8", Attribute: AttributeGzippable},
-	".css":   {Ext: ".css", ContentType: "text/css; charset=utf-8", Attribute: AttributeGzippable},
-	".js":    {Ext: ".js", ContentType: "text/javascript; charset=utf-8", Attribute: AttributeGzippable},
-	".md":    {Ext: ".md", ContentType: "text/markdown; charset=utf-8", Attribute: AttributeGzippable},
-	".txt":   {Ext: ".txt", ContentType: "text/plain; charset=utf-8", Attribute: AttributeGzippable},
-	".jpeg":  {Ext: ".jpeg", ContentType: "image/jpeg", Attribute: AttributeObject | AttributeImage},
-	".jpg":   {Ext: ".jpg", ContentType: "image/jpeg", Attribute: AttributeObject | AttributeImage},
-	".png":   {Ext: ".png", ContentType: "image/png", Attribute: AttributeObject | AttributeImage},
-	".webp":  {Ext: ".webp", ContentType: "image/webp", Attribute: AttributeObject | AttributeImage},
-	".gif":   {Ext: ".gif", ContentType: "image/gif", Attribute: AttributeObject | AttributeImage},
-	".svg":   {Ext: ".svg", ContentType: "image/svg+xml", Attribute: AttributeGzippable | AttributeImage},
-	".eot":   {Ext: ".eot", ContentType: "font/eot", Attribute: AttributeGzippable | AttributeFont},
-	".otf":   {Ext: ".otf", ContentType: "font/otf", Attribute: AttributeGzippable | AttributeFont},
-	".ttf":   {Ext: ".ttf", ContentType: "font/ttf", Attribute: AttributeGzippable | AttributeFont},
-	".woff":  {Ext: ".woff", ContentType: "font/woff", Attribute: AttributeFont},
-	".woff2": {Ext: ".woff2", ContentType: "font/woff2", Attribute: AttributeFont},
-	".atom":  {Ext: ".atom", ContentType: "application/atom+xml; charset=utf-8", Attribute: AttributeGzippable},
-	".json":  {Ext: ".json", ContentType: "application/json", Attribute: AttributeGzippable},
-	".tgz":   {Ext: ".tgz", ContentType: "application/octet-stream", Attribute: AttributeObject | AttributeAttachment},
+	".html": {
+		Ext:         ".html",
+		ContentType: "text/html; charset=utf-8",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable | AttributeEditable,
+	},
+	".css": {
+		Ext:         ".css",
+		ContentType: "text/css; charset=utf-8",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable | AttributeEditable,
+	},
+	".js": {
+		Ext:         ".js",
+		ContentType: "text/javascript; charset=utf-8",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable | AttributeEditable,
+	},
+	".md": {
+		Ext:         ".md",
+		ContentType: "text/markdown; charset=utf-8",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable | AttributeEditable,
+	},
+	".txt": {
+		Ext:         ".txt",
+		ContentType: "text/plain; charset=utf-8",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable | AttributeEditable,
+	},
+	".jpeg": {
+		Ext:         ".jpeg",
+		ContentType: "image/jpeg",
+		Limit:       10 << 20, /* 10 MB */
+		Attribute:   AttributeObject | AttributeImg,
+	},
+	".jpg": {
+		Ext:         ".jpg",
+		ContentType: "image/jpeg",
+		Limit:       10 << 20, /* 10 MB */
+		Attribute:   AttributeObject | AttributeImg,
+	},
+	".png": {
+		Ext:         ".png",
+		ContentType: "image/png",
+		Limit:       10 << 20, /* 10 MB */
+		Attribute:   AttributeObject | AttributeImg,
+	},
+	".webp": {
+		Ext:         ".webp",
+		ContentType: "image/webp",
+		Limit:       10 << 20, /* 10 MB */
+		Attribute:   AttributeObject | AttributeImg,
+	},
+	".gif": {
+		Ext:         ".gif",
+		ContentType: "image/gif",
+		Limit:       10 << 20, /* 10 MB */
+		Attribute:   AttributeObject | AttributeImg,
+	},
+	".svg": {
+		Ext:         ".svg",
+		ContentType: "image/svg+xml",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable | AttributeImg,
+	},
+	".eot": {
+		Ext:         ".eot",
+		ContentType: "font/eot",
+		Limit:       2 << 20, /* 2 MB */
+		Attribute:   AttributeGzippable | AttributeFont,
+	},
+	".otf": {
+		Ext:         ".otf",
+		ContentType: "font/otf",
+		Limit:       2 << 20, /* 2 MB */
+		Attribute:   AttributeGzippable | AttributeFont,
+	},
+	".ttf": {
+		Ext:         ".ttf",
+		ContentType: "font/ttf",
+		Limit:       2 << 20, /* 2 MB */
+		Attribute:   AttributeGzippable | AttributeFont,
+	},
+	".woff": {
+		Ext:         ".woff",
+		ContentType: "font/woff",
+		Limit:       2 << 20, /* 2 MB */
+		Attribute:   AttributeFont,
+	},
+	".woff2": {
+		Ext:         ".woff2",
+		ContentType: "font/woff2",
+		Limit:       2 << 20, /* 2 MB */
+		Attribute:   AttributeFont,
+	},
+	".atom": {
+		Ext:         ".atom",
+		ContentType: "application/atom+xml; charset=utf-8",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable,
+	},
+	".json": {
+		Ext:         ".json",
+		ContentType: "application/json",
+		Limit:       1 << 20, /* 1 MB */
+		Attribute:   AttributeGzippable,
+	},
+	".tgz": {
+		Ext:         ".tgz",
+		ContentType: "application/octet-stream",
+		Limit:       -1, /* no limit */
+		Attribute:   AttributeObject | AttributeAttachment,
+	},
 }

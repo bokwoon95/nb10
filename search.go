@@ -33,6 +33,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		OptionalTerms  []string `json:"optionalTerms"`
 		ExcludeTerms   []string `json:"excludeTerms"`
 		Exts           []string `json:"exts"`
+		IncludeFolder  bool     `json:"includeFolder"`
 	}
 	type Response struct {
 		ContentBaseURL string   `json:"contentBaseURL"`
@@ -47,6 +48,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		OptionalTerms  []string `json:"optionalTerms"`
 		ExcludeTerms   []string `json:"excludeTerms"`
 		Exts           []string `json:"exts"`
+		IncludeFolder  bool     `json:"includeFolder"`
 		Matches        []Match  `json:"matches"`
 	}
 
@@ -137,17 +139,19 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		OptionalTerms:  r.Form["optionalTerm"],
 		ExcludeTerms:   r.Form["excludeTerm"],
 		Exts:           r.Form["ext"],
+		IncludeFolder:  r.Form.Has("includeFolder"),
 	}
 
 	var response Response
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.ImgDomain = nbrew.ImgDomain
-	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+	response.IsDatabaseFS = true
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.DisableReason = user.DisableReason
 	response.Parent = path.Clean(strings.Trim(request.Parent, "/"))
+	response.IncludeFolder = request.IncludeFolder
 	// Mandatory terms.
 	for _, mandatoryTerm := range request.MandatoryTerms {
 		response.MandatoryTerms = append(response.MandatoryTerms, quoteReplacer.Replace(mandatoryTerm))
@@ -171,11 +175,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	}
 	if len(request.Exts) > 0 {
 		for _, ext := range request.Exts {
-			switch ext {
-			case ".html", ".css", ".js", ".md", ".txt", ".json",
-				".jpeg", ".jpg", ".png", ".webp", ".gif":
-				response.Exts = append(response.Exts, ext)
+			fileType, ok := fileTypes[ext]
+			if !ok {
+				continue
 			}
+			if !fileType.Has(AttributeEditable) && !fileType.Has(AttributeImg) && fileType.Ext != ".json" {
+				continue
+			}
+			response.Exts = append(response.Exts, ext)
 		}
 		slices.Sort(response.Exts)
 		response.Exts = slices.Compact(response.Exts)
@@ -224,6 +231,12 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		b.WriteString(")")
 		extensionFilter = sq.Expr(b.String(), args...)
 	}
+	dirFilter := sq.Expr("1 = 1")
+	if len(response.Exts) == 0 && response.IncludeFolder {
+		dirFilter = sq.Expr("is_dir")
+	} else if len(response.Exts) > 0 && !response.IncludeFolder {
+		dirFilter = sq.Expr("NOT is_dir")
+	}
 	switch databaseFS.Dialect {
 	case "sqlite":
 		var b strings.Builder
@@ -262,11 +275,13 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				" WHERE {parentFilter}" +
 				" AND files_fts5 MATCH {ftsQuery}" +
 				" AND {extensionFilter}" +
+				" AND {dirFilter}" +
 				" ORDER BY files_fts5.rank, files.creation_time DESC",
 			Values: []any{
 				sq.Param("parentFilter", parentFilter),
 				sq.StringParam("ftsQuery", ftsQuery),
 				sq.Param("extensionFilter", extensionFilter),
+				sq.Param("dirFilter", dirFilter),
 			},
 		}, func(row *sq.Row) Match {
 			match := Match{

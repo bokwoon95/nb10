@@ -55,7 +55,7 @@
     </ul>
   </details>
   <div class='mv3'>
-    <div class='b'>Extensions (leave blank to select all):</div>
+    <div class='b'>File Types (leave blank to select all):</div>
     <div class='flex flex-wrap items-center'>
       <label for='ext.html' class='mr3 pointer nowrap'>
         <input id='ext.html' type='checkbox' name='ext' value='.html' class='pointer'{{ if hasExt ".html" }} checked{{ end }}>
@@ -81,7 +81,6 @@
         <input id='ext.json' type='checkbox' name='ext' value='.json' class='pointer'{{ if hasExt ".json" }} checked{{ end }}>
         <span>.json</span>
       </label>
-      {{- if $.IsDatabaseFS }}
       <label for='ext.jpeg' class='mr3 pointer nowrap'>
         <input id='ext.jpeg' type='checkbox' name='ext' value='.jpeg' class='pointer'{{ if hasExt ".jpeg" }} checked{{ end }}>
         <span>.jpeg</span>
@@ -102,7 +101,14 @@
         <input id='ext.gif' type='checkbox' name='ext' value='.gif' class='pointer'{{ if hasExt ".gif" }} checked{{ end }}>
         <span>.gif</span>
       </label>
-      {{- end }}
+      <label for='ext.svg' class='mr3 pointer nowrap'>
+        <input id='ext.svg' type='checkbox' name='ext' value='.svg' class='pointer'{{ if hasExt ".svg" }} checked{{ end }}>
+        <span>.svg</span>
+      </label>
+      <label for='includeFolder' class='mr3 pointer nowrap'>
+        <input id='includeFolder' type='checkbox' name='ext' value='on' class='pointer'{{ if $.IncludeFolder }} checked{{ end }}>
+        <span>folder</span>
+      </label>
     </div>
   </div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>search</button>
@@ -113,7 +119,7 @@
   <li>
     <div>
       <span class='mr1'>{{ incr $i }}.</span>
-      {{- if eq (ext $match.FilePath) ".jpeg" ".jpg" ".png" ".webp" ".gif" }}
+      {{- if eq (ext $match.FilePath) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg" }}
         {{- if and $.ImgDomain $.IsDatabaseFS }}
         <img src='//{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 ml1' loading='lazy'>
         {{- else }}

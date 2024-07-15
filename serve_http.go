@@ -346,8 +346,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.postlistJSON(w, r, user, sitePrefix, category)
 				return
 			}
-			ext := path.Ext(urlPath)
-			if ext == ".jpeg" || ext == ".jpg" || ext == ".png" || ext == ".webp" || ext == ".gif" {
+			fileType := fileTypes[path.Ext(urlPath)]
+			if fileType.Has(AttributeImg) {
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, urlPath))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
@@ -475,7 +475,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fileType, ok := fileTypes[ext]
-			if !ok || !fileType.Attribute.Has(AttributeObject) {
+			if !ok || !fileType.Has(AttributeObject) {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
 			}
 			reader, err := databaseFS.ObjectStorage.Get(r.Context(), urlPath)
@@ -524,7 +524,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
 		fileType.Ext = ".html"
 		fileType.ContentType = "text/html; charset=utf-8"
-		fileType.Attribute = fileType.Attribute.With(AttributeGzippable)
+		fileType.Attribute = fileType.Attribute | AttributeGzippable
 	} else {
 		if path.Base(urlPath) == "index.html" {
 			custom404(w, r, nbrew.FS, sitePrefix)
@@ -537,7 +537,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			filePath = path.Join(sitePrefix, "output", urlPath, "index.html")
 			fileType.Ext = ".html"
 			fileType.ContentType = "text/html; charset=utf-8"
-			fileType.Attribute = fileType.Attribute.With(AttributeGzippable)
+			fileType.Attribute = fileType.Attribute | AttributeGzippable
 		}
 	}
 	file, err := nbrew.FS.Open(filePath)
@@ -562,14 +562,11 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var cacheControl string
-	switch fileType.Ext {
-	case ".html":
+	if fileType.Ext == ".html" {
 		cacheControl = "no-cache"
-	case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+	} else if fileType.Has(AttributeImg) || fileType.Has(AttributeFont) {
 		cacheControl = "max-age=2592000, stale-while-revalidate=31536000" /* 1 month, 1 year */
-	case ".eot", ".otf", ".ttf", ".woff", ".woff2":
-		cacheControl = "max-age=2592000, stale-while-revalidate=31536000" /* 1 month, 1 year */
-	default:
+	} else {
 		cacheControl = "max-age=300, stale-while-revalidate=604800" /* 5 minutes, 1 week */
 	}
 	ServeFile(w, r, path.Base(filePath), fileInfo.Size(), fileType, file, cacheControl)
