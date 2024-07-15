@@ -20,6 +20,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	type Match struct {
 		FileID       ID        `json:"fileID"`
 		FilePath     string    `json:"filePath"`
+		IsDir        bool      `json:"isDir"`
 		Preview      string    `json:"preview"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
@@ -76,7 +77,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		}
 		referer := nbrew.GetReferer(r)
 		selected := make(map[string]struct{})
-		for _, value := range response.FileTypes{
+		for _, value := range response.FileTypes {
 			selected[value] = struct{}{}
 		}
 		funcMap := map[string]any{
@@ -94,6 +95,13 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			"fileTypeSelected": func(value string) bool {
 				_, ok := selected[value]
 				return ok
+			},
+			"isImg": func(match Match) bool {
+				if match.IsDir {
+					return false
+				}
+				fileType := AllowedFileTypes[path.Ext(match.FilePath)]
+				return fileType.Has(AttributeImg)
 			},
 			"joinTerms": func(termsList ...[]string) string {
 				var b strings.Builder
@@ -305,6 +313,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			match := Match{
 				FileID:       row.UUID("files.file_id"),
 				FilePath:     row.String("files.file_path"),
+				IsDir:        row.Bool("files.is_dir"),
 				Preview:      row.String("CASE WHEN files.file_path LIKE '%.json' THEN '' ELSE substr(files.text, 1, 500) END"),
 				ModTime:      row.Time("files.mod_time"),
 				CreationTime: row.Time("files.creation_time"),

@@ -73,7 +73,7 @@
   <li>
     <div>
       <span class='mr1'>{{ incr $i }}.</span>
-      {{- if eq (ext $match.FilePath) ".jpeg" ".jpg" ".png" ".webp" ".gif" ".svg" }}
+      {{- if isImg $match }}
         {{- if and $.ImgDomain $.IsDatabaseFS }}
         <img src='//{{ $.ImgDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 ml1' loading='lazy'>
         {{- else }}
