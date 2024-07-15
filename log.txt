@@ -113,15 +113,12 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
-FileTypes
-AvailableFileTypes
-
+TODO: wipe all traces of .jpeg hardcoding from the codebase.
 TODO: rename ImgDomain to CDNDomain, change "img" subdomain to "cdn" subdomain.
     TODO: Add an AttributeCDN which is only for uh, images? including SVG? maybe videos in the future? What about scripts and stylesheets?
     TODO: maybe just add AttributeVideo and cdndomain will support Img,Video,.css and .js. No! CDNDomain is only for immutable objects! So images and video, and nothing else.
     TODO: this is important because it determines what fileIDs SiteGenerator fetches in order for rewriteURLs to work. Currently we are only targeting images.
 TODO: createsite.go needs to additionally include site title, preferred timezone offset and site description in the form. If a database is present, preferred timezone offset will be taken from the user's timezone offset.
-TODO: add a hash to the response headers so that clients can do a GET to synchronize their local copy with remote
 TODO: create a sessions table hat lets users manage their sessions. They can also generate new sessions, whereby the session token is shown once and then deleted.
     - profile => sessions => generate session token
     - TODO: /profile/ should show the current user's sessions
@@ -137,6 +134,7 @@ TODO: test font handling (upload + moving it around).
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
+TODO: add a hash to the response headers so that clients can do a GET to synchronize their local copy with remote
 TODO: tests
 TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
