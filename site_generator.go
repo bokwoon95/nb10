@@ -2039,7 +2039,7 @@ var userFuncMap = map[string]any{
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
 	},
-	"cond": func(cond, a, b any) any {
+	"iif": func(cond, a, b any) any {
 		if cond, ok := cond.(bool); ok {
 			if cond {
 				return a
@@ -2051,6 +2051,21 @@ var userFuncMap = map[string]any{
 			return a
 		}
 		return b
+	},
+	"nullif": func(a, b any) any {
+		if a == b {
+			return ""
+		}
+		return a
+	},
+	"coalesce": func(elem ...any) any {
+		for _, elem := range elem {
+			if elem == nil || toString(elem) == "" {
+				continue
+			}
+			return elem
+		}
+		return ""
 	},
 }
 
@@ -2091,12 +2106,12 @@ func toInt64(v any) int64 {
 }
 
 type Pagination struct {
-	First    string
-	Previous string
-	Current  string
-	Next     string
-	Last     string
-	Numbers  []string
+	First    int
+	Previous int
+	Current  int
+	Next     int
+	Last     int
+	Numbers  []int
 }
 
 func NewPagination(currentPage, lastPage, visiblePages int) Pagination {
@@ -2109,24 +2124,24 @@ func NewPagination(currentPage, lastPage, visiblePages int) Pagination {
 		panic("visiblePages cannot be lower than " + strconv.Itoa(minVisiblePages))
 	}
 	pagination := Pagination{
-		First:   "1",
-		Current: strconv.Itoa(currentPage),
-		Last:    strconv.Itoa(lastPage),
+		First:   1,
+		Current: currentPage,
+		Last:    lastPage,
 	}
 	previous := currentPage - 1
 	if previous >= 1 {
-		pagination.Previous = strconv.Itoa(previous)
+		pagination.Previous = previous
 	}
 	next := currentPage + 1
 	if next <= lastPage {
-		pagination.Next = strconv.Itoa(next)
+		pagination.Next = (next)
 	}
 	// If there are fewer pages than visible pages, iterate through all the
 	// page numbers.
 	if lastPage <= visiblePages {
-		pagination.Numbers = make([]string, 0, lastPage)
+		pagination.Numbers = make([]int, 0, lastPage)
 		for page := 1; page <= lastPage; page++ {
-			pagination.Numbers = append(pagination.Numbers, strconv.Itoa(page))
+			pagination.Numbers = append(pagination.Numbers, page)
 		}
 		return pagination
 	}
@@ -2250,21 +2265,14 @@ func NewPagination(currentPage, lastPage, visiblePages int) Pagination {
 		}
 	}
 	// Convert the page numbers in the slots to strings.
-	pagination.Numbers = make([]string, len(slots))
-	for i, num := range slots {
-		pagination.Numbers[i] = strconv.Itoa(num)
-	}
+	pagination.Numbers = slots
 	return pagination
 }
 
-func (p Pagination) All() []string {
-	lastPage, err := strconv.Atoi(p.Last)
-	if err != nil {
-		return nil
-	}
-	numbers := make([]string, 0, lastPage)
-	for page := 1; page <= lastPage; page++ {
-		numbers = append(numbers, strconv.Itoa(page))
+func (p Pagination) All() []int {
+	numbers := make([]int, 0, p.Last)
+	for page := 1; page <= p.Last; page++ {
+		numbers = append(numbers, page)
 	}
 	return numbers
 }

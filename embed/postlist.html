@@ -54,10 +54,10 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
     <a href='/{{ join "posts" $.Category }}/' class='mr-1'>first</a>
     {{ end }}
     {{ if $.Pagination.Previous }}
-    <a href='/{{ join "posts" $.Category (cond (eq $.Pagination.Previous "") $.Pagination.Previous "1") }}/' class='mr-1'>previous</a>
+    <a href='/{{ join "posts" $.Category (nullif $.Pagination.Previous 1) }}/' class='mr-1'>previous</a>
     {{ end }}
     {{ range $number := $.Pagination.Numbers }}
-    <a href='/{{ join "posts" $.Category $number }}/' class='mr-1{{ if eq $number $.Pagination.Current }} font-bold{{ end }}'>{{ $number }}</a>
+    <a href='/{{ join "posts" $.Category (nullif $number 1) }}/' class='mr-1{{ if eq $number $.Pagination.Current }} font-bold{{ end }}'>{{ $number }}</a>
     {{ end }}
     {{ if $.Pagination.Next }}
     <a href='/{{ join "posts" $.Category $.Pagination.Next }}/' class='mr-1'>next</a>
