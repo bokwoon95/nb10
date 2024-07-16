@@ -1970,25 +1970,52 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 }
 
 var userFuncMap = map[string]any{
-	"join":                  path.Join,
-	"base":                  path.Base,
-	"ext":                   path.Ext,
-	"hasPrefix":             strings.HasPrefix,
-	"hasSuffix":             strings.HasSuffix,
-	"trimPrefix":            strings.TrimPrefix,
-	"trimSuffix":            strings.TrimSuffix,
-	"trimSpace":             strings.TrimSpace,
-	"humanReadableFileSize": HumanReadableFileSize,
-	"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
-	"formatTime": func(t time.Time, layout string, offset int) string {
-		return t.In(time.FixedZone("", offset)).Format(layout)
+	"join": func(elem ...any) string {
+		s := make([]string, len(elem))
+		for i, v := range elem {
+			s[i] = toString(v)
+		}
+		return path.Join(s...)
 	},
-	"head": func(s string) string {
-		head, _, _ := strings.Cut(s, "/")
+	"base": func(s any) string {
+		return path.Base(toString(s))
+	},
+	"ext": func(s any) string {
+		return path.Ext(toString(s))
+	},
+	"hasPrefix": func(s, prefix any) bool {
+		return strings.HasPrefix(toString(s), toString(prefix))
+	},
+	"hasSuffix": func(s, suffix any) bool {
+		return strings.HasSuffix(toString(s), toString(suffix))
+	},
+	"trimPrefix": func(s, prefix any) string {
+		return strings.TrimPrefix(toString(s), toString(prefix))
+	},
+	"trimSuffix": func(s, suffix any) string {
+		return strings.TrimSuffix(toString(s), toString(suffix))
+	},
+	"trimSpace": func(s any) string {
+		return strings.TrimSpace(toString(s))
+	},
+	"humanReadableFileSize": func(size any) string {
+		return HumanReadableFileSize(toInt64(size))
+	},
+	"safeHTML": func(s any) template.HTML {
+		return template.HTML(toString(s))
+	},
+	"formatTime": func(t, layout, offset any) string {
+		if t, ok := t.(time.Time); ok {
+			return t.In(time.FixedZone("", int(toInt64(offset)))).Format(toString(layout))
+		}
+		return fmt.Sprintf("not a time: %v", t)
+	},
+	"head": func(s any) string {
+		head, _, _ := strings.Cut(toString(s), "/")
 		return head
 	},
-	"tail": func(s string) string {
-		_, tail, _ := strings.Cut(s, "/")
+	"tail": func(s any) string {
+		_, tail, _ := strings.Cut(toString(s), "/")
 		return tail
 	},
 	"list": func(v ...any) []any { return v },
@@ -1998,12 +2025,7 @@ var userFuncMap = map[string]any{
 			return nil, fmt.Errorf("odd number of arguments passed in")
 		}
 		for i := 0; i+1 < len(dict); i += 2 {
-			key, ok := v[i].(string)
-			if !ok {
-				return nil, fmt.Errorf("value %d (%#v) is not a string", i, v[i])
-			}
-			value := v[i+1]
-			dict[key] = value
+			dict[toString(v[i])] = v[i+1]
 		}
 		return dict, nil
 	},
@@ -2014,9 +2036,58 @@ var userFuncMap = map[string]any{
 		}
 		return template.HTML("<pre style='white-space:pre-wrap;'>" + string(b) + "</pre>")
 	},
-	"throw": func(msg string) (string, error) {
-		return "", fmt.Errorf(msg)
+	"throw": func(v any) (string, error) {
+		return "", fmt.Errorf("%v", v)
 	},
+	"cond": func(cond, a, b any) any {
+		if cond, ok := cond.(bool); ok {
+			if cond {
+				return a
+			}
+			return b
+		}
+		parsedCond, _ := strconv.ParseBool(toString(cond))
+		if parsedCond {
+			return a
+		}
+		return b
+	},
+}
+
+func toString(v any) string {
+	switch v := v.(type) {
+	case string:
+		return v
+	case int:
+		return strconv.Itoa(v)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+func toInt64(v any) int64 {
+	switch v := v.(type) {
+	case int64:
+		return v
+	case int:
+		return int64(v)
+	case string:
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return 0
+		}
+		return i
+	default:
+		i, err := strconv.ParseInt(toString(v), 10, 64)
+		if err != nil {
+			return 0
+		}
+		return i
+	}
 }
 
 type Pagination struct {

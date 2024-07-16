@@ -39,11 +39,11 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
     {{ range $post := $.Posts }}
     <li>
       <div>
-        <a href='{{ $post.Name }}/' class='font-bold'>{{ $post.Title }}</a>
+        <a href='/{{ join "posts" $.Category $post.Name }}/' class='font-bold'>{{ $post.Title }}</a>
         <span class='ml-2 text-sm gray-600'>{{ formatTime $post.CreationTime "2006-01-02" $.Site.TimezoneOffsetSeconds }}</span>
       </div>
       <div title='{{ $post.Preview }}' class='my-1 text-sm'>
-        {{ $post.Preview }}{{ if $post.HasMore }} <a href='{{ $post.Name }}/'>read more</a>{{ end }}
+        {{ $post.Preview }}{{ if $post.HasMore }} <a href='/{{ join "posts" $.Category $post.Name }}/'>read more</a>{{ end }}
       </div>
     </li>
     {{ end }}
@@ -51,19 +51,19 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
   {{ if ne $.Pagination.First $.Pagination.Last }}
   <div>
     {{ if ne $.Pagination.Current $.Pagination.First }}
-    <a href='{{ $.Pagination.First }}/' class='mr-1'>first</a>
+    <a href='/{{ join "posts" $.Category }}/' class='mr-1'>first</a>
     {{ end }}
     {{ if $.Pagination.Previous }}
-    <a href='{{ $.Pagination.Previous }}/' class='mr-1'>previous</a>
+    <a href='/{{ join "posts" $.Category (cond (eq $.Pagination.Previous "") $.Pagination.Previous "1") }}/' class='mr-1'>previous</a>
     {{ end }}
     {{ range $number := $.Pagination.Numbers }}
-    <a href='{{ $number }}/' class='mr-1{{ if eq $number $.Pagination.Current }} font-bold{{ end }}'>{{ $number }}</a>
+    <a href='/{{ join "posts" $.Category $number }}/' class='mr-1{{ if eq $number $.Pagination.Current }} font-bold{{ end }}'>{{ $number }}</a>
     {{ end }}
     {{ if $.Pagination.Next }}
-    <a href='{{ $.Pagination.Next }}/' class='mr-1'>next</a>
+    <a href='/{{ join "posts" $.Category $.Pagination.Next }}/' class='mr-1'>next</a>
     {{ end }}
     {{ if ne $.Pagination.Current $.Pagination.Last }}
-    <a href='{{ $.Pagination.Last }}/' class='mr-1'>last</a>
+    <a href='/{{ join "posts" $.Category $.Pagination.Last }}/' class='mr-1'>last</a>
     {{ end }}
   </div>
   {{ end }}
