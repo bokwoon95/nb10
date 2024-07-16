@@ -591,7 +591,6 @@ func (nbrew *Notebrew) doImport(ctx context.Context, importJobID ID, sitePrefix 
 		}
 		isPinned := false
 		if s, ok := header.PAXRecords["NOTEBREW.file.isPinned"]; ok {
-			fmt.Printf("%s: isPinned: %s\n", header.Name, s)
 			b, err := strconv.ParseBool(s)
 			if err == nil {
 				isPinned = b
