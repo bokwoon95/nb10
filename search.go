@@ -190,7 +190,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		availableFileTypes[ext] = struct{}{}
 	}
 	response.AvailableFileTypes = append(response.AvailableFileTypes, ".json", "folder")
-	availableFileTypes["json"] = struct{}{}
+	availableFileTypes[".json"] = struct{}{}
 	availableFileTypes["folder"] = struct{}{}
 	// File types.
 	if len(request.FileTypes) > 0 {
