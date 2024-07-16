@@ -102,25 +102,34 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
+				extFilter := sq.Expr("1 = 1")
+				if len(imgExts) > 0 {
+					var b strings.Builder
+					var args []any
+					b.WriteString("(")
+					for i, ext := range imgExts {
+						if i > 0 {
+							b.WriteString(" OR ")
+						}
+						b.WriteString("file_path LIKE {}")
+						args = append(args, "%"+wildcardReplacer.Replace(ext))
+					}
+					b.WriteString(")")
+					extFilter = sq.Expr(b.String(), args...)
+				}
 				result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
 						" FROM files" +
 						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 						" AND file_path < {filePath}" +
-						" AND (" +
-						"file_path LIKE '%.jpeg'" +
-						" OR file_path LIKE '%.jpg'" +
-						" OR file_path LIKE '%.png'" +
-						" OR file_path LIKE '%.webp'" +
-						" OR file_path LIKE '%.gif'" +
-						" OR file_path LIKE '%.svg'" +
-						")" +
+						" AND {extFilter}" +
 						" ORDER BY file_path DESC" +
 						" LIMIT 1",
 					Values: []any{
 						sq.StringParam("parent", path.Join(response.SitePrefix, path.Dir(response.FilePath))),
 						sq.StringParam("filePath", path.Join(response.SitePrefix, response.FilePath)),
+						sq.Param("extFilter", extFilter),
 					},
 				}, func(row *sq.Row) (result struct {
 					FileID   ID

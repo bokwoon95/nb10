@@ -1023,7 +1023,6 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	// http.ServeContent does) so that clients (e.g. internet download
 	// managers) have the ability to download a file in multiple parts.
 
-	// .jpeg .jpg .png .webp .gif .svg .woff .woff2 .tgz
 	if !fileType.Has(AttributeGzippable) {
 		if readSeeker, ok := reader.(io.ReadSeeker); ok {
 			if hasMaxAge {
@@ -1078,8 +1077,6 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		}
 		return
 	}
-
-	// .html .css .js .md .txt .svg .ico .eot .otf .ttf .atom .json
 
 	if databaseFile, ok := reader.(*DatabaseFile); ok {
 		// If file is a DatabaseFile that is gzippable and is not fulltext
