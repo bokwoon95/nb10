@@ -27,7 +27,7 @@ Keys:
   notebrew config port          # (txt) Port that notebrew listens on.
   notebrew config cmsdomain     # (txt) Domain that the CMS is served on.
   notebrew config contentdomain # (txt) Domain that the content is served on.
-  notebrew config cdndomain     # (txt) Content Delivery Network (CDN) domain.
+  notebrew config cdndomain     # (txt) Domain of the Content Delivery Network (CDN), if any.
   notebrew config imgcmd        # (txt) Image preprocessing command.
   notebrew config maxminddb     # (txt) Location of the MaxMind GeoLite2/GeoIP2 mmdb file.
   notebrew config database      # (json) Database configuration.
