@@ -688,7 +688,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.CDNDomain,
+				CDNDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 		})

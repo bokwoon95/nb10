@@ -27,7 +27,7 @@ Keys:
   notebrew config port          # (txt) Port that notebrew listens on.
   notebrew config cmsdomain     # (txt) Domain that the CMS is served on.
   notebrew config contentdomain # (txt) Domain that the content is served on.
-  notebrew config imgdomain     # (txt) Domain that images are served on.
+  notebrew config cdndomain     # (txt) Content Delivery Network (CDN) domain.
   notebrew config imgcmd        # (txt) Image preprocessing command.
   notebrew config maxminddb     # (txt) Location of the MaxMind GeoLite2/GeoIP2 mmdb file.
   notebrew config database      # (json) Database configuration.
@@ -114,8 +114,8 @@ func (cmd *ConfigCmd) Run() error {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "imgdomain":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"))
+		case "cdndomain":
+			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "cdndomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
@@ -428,8 +428,8 @@ func (cmd *ConfigCmd) Run() error {
 		if err != nil {
 			return err
 		}
-	case "imgdomain":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "imgdomain.txt"), []byte(cmd.Value.String), 0644)
+	case "cdndomain":
+		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "cdndomain.txt"), []byte(cmd.Value.String), 0644)
 		if err != nil {
 			return err
 		}

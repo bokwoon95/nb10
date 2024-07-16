@@ -41,7 +41,7 @@ type SiteGenerator struct {
 	sitePrefix         string
 	contentDomain      string
 	contentDomainHTTPS bool
-	imgDomain          string
+	cdnDomain          string
 	port               int
 	markdown           goldmark.Markdown
 	mu                 sync.Mutex
@@ -68,7 +68,7 @@ type SiteGeneratorConfig struct {
 	FS                 FS
 	ContentDomain      string
 	ContentDomainHTTPS bool
-	ImgDomain          string
+	CDNDomain          string
 	SitePrefix         string
 }
 
@@ -78,7 +78,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		sitePrefix:         siteGenConfig.SitePrefix,
 		contentDomain:      siteGenConfig.ContentDomain,
 		contentDomainHTTPS: siteGenConfig.ContentDomainHTTPS,
-		imgDomain:          siteGenConfig.ImgDomain,
+		cdnDomain:          siteGenConfig.CDNDomain,
 		mu:                 sync.Mutex{},
 		templateCache:      make(map[string]*template.Template),
 		templateInProgress: make(map[string]chan struct{}),
@@ -168,7 +168,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 		siteGen.Site.Description = template.HTML(b.String())
 	}
-	if siteGen.imgDomain == "" {
+	if siteGen.cdnDomain == "" {
 		return siteGen, nil
 	}
 	databaseFS, ok := siteGen.fsys.(*DatabaseFS)
@@ -811,7 +811,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		return err
 	}
 	_, isDatabaseFS := siteGen.fsys.(*DatabaseFS)
-	if siteGen.imgDomain != "" && isDatabaseFS {
+	if siteGen.cdnDomain != "" && isDatabaseFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
 		go func() {
@@ -1071,7 +1071,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		return err
 	}
 	_, isDatabaseFS := siteGen.fsys.(*DatabaseFS)
-	if siteGen.imgDomain != "" && isDatabaseFS {
+	if siteGen.cdnDomain != "" && isDatabaseFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
 		go func() {
@@ -1650,7 +1650,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			return err
 		}
 		_, isDatabaseFS := siteGen.fsys.(*DatabaseFS)
-		if siteGen.imgDomain != "" && isDatabaseFS {
+		if siteGen.cdnDomain != "" && isDatabaseFS {
 			pipeReader, pipeWriter := io.Pipe()
 			result := make(chan error, 1)
 			go func() {
@@ -1925,7 +1925,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 						fileType := AllowedFileTypes[path.Ext(uri.Path)]
 						if fileType.Has(AttributeImg) {
 							uri.Scheme = ""
-							uri.Host = siteGen.imgDomain
+							uri.Host = siteGen.cdnDomain
 							if strings.HasPrefix(uri.Path, "/") {
 								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
 								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {

@@ -118,10 +118,6 @@ the admin page needs to:
 
 TODO: download all data from backblaze, delete account, recreate account in EU Amsterdam, reconfigure notebrew objects.
 TODO: wipe all traces of .jpeg hardcoding from the codebase.
-TODO: rename ImgDomain to CDNDomain, change "img" subdomain to "cdn" subdomain.
-    TODO: Add an AttributeCDN which is only for uh, images? including SVG? maybe videos in the future? What about scripts and stylesheets?
-    TODO: maybe just add AttributeVideo and cdndomain will support Img,Video,.css and .js. No! CDNDomain is only for immutable objects! So images and video, and nothing else.
-    TODO: this is important because it determines what fileIDs SiteGenerator fetches in order for rewriteURLs to work. Currently we are only targeting images.
 TODO: createsite.go needs to additionally include site title, preferred timezone offset and site description in the form. If a database is present, preferred timezone offset will be taken from the user's timezone offset.
 TODO: create a sessions table hat lets users manage their sessions. They can also generate new sessions, whereby the session token is shown once and then deleted.
     - profile => sessions => generate session token

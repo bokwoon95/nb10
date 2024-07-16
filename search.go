@@ -38,7 +38,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	type Response struct {
 		ContentBaseURL     string   `json:"contentBaseURL"`
 		SitePrefix         string   `json:"sitePrefix"`
-		ImgDomain          string   `json:"imgDomain"`
+		CDNDomain          string   `json:"cdnDomain"`
 		IsDatabaseFS       bool     `json:"isDatabaseFS"`
 		UserID             ID       `json:"userID"`
 		Username           string   `json:"username"`
@@ -150,7 +150,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 
 	var response Response
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-	response.ImgDomain = nbrew.CDNDomain
+	response.CDNDomain = nbrew.CDNDomain
 	response.IsDatabaseFS = true
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID

@@ -201,7 +201,7 @@ func (nbrew *Notebrew) postlistJSON(w http.ResponseWriter, r *http.Request, user
 			FS:                 nbrew.FS,
 			ContentDomain:      nbrew.ContentDomain,
 			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-			ImgDomain:          nbrew.CDNDomain,
+			CDNDomain:          nbrew.CDNDomain,
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {

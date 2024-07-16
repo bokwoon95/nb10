@@ -373,8 +373,8 @@
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
           {{- if isImg $file }}
-            {{- if and $.ImgDomain $.IsDatabaseFS }}
-            <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
+            {{- if and $.CDNDomain $.IsDatabaseFS }}
+            <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
             {{- else }}
             <img src='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}?raw' class='h3 w3 mr1'>
             {{- end }}
@@ -453,8 +453,8 @@
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
           {{- if isImg $file }}
-            {{- if and $.ImgDomain $.IsDatabaseFS }}
-            <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
+            {{- if and $.CDNDomain $.IsDatabaseFS }}
+            <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1'>
             {{- else }}
             <img src='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}?raw' class='h3 w3 mr1'>
             {{- end }}

@@ -501,7 +501,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.CDNDomain,
+				CDNDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {
@@ -594,7 +594,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.CDNDomain,
+				CDNDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {
@@ -666,7 +666,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						FS:                 nbrew.FS,
 						ContentDomain:      nbrew.ContentDomain,
 						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-						ImgDomain:          nbrew.CDNDomain,
+						CDNDomain:          nbrew.CDNDomain,
 						SitePrefix:         sitePrefix,
 					})
 					if err != nil {
@@ -734,7 +734,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						FS:                 nbrew.FS,
 						ContentDomain:      nbrew.ContentDomain,
 						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-						ImgDomain:          nbrew.CDNDomain,
+						CDNDomain:          nbrew.CDNDomain,
 						SitePrefix:         sitePrefix,
 					})
 					if err != nil {

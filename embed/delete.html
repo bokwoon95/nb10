@@ -38,8 +38,8 @@
     <li class='mv1'>
       <input type='hidden' name='name' value='{{ $file.Name }}'>
       {{- if isImg $file }}
-        {{- if and $.ImgDomain $.IsDatabaseFS }}
-        <img src='//{{ $.ImgDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
+        {{- if and $.CDNDomain $.IsDatabaseFS }}
+        <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
         {{- else }}
         <img src='/{{ join "files" $.SitePrefix $.Parent $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>
         {{- end }}

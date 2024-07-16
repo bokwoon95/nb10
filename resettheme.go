@@ -278,7 +278,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			FS:                 nbrew.FS,
 			ContentDomain:      nbrew.ContentDomain,
 			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-			ImgDomain:          nbrew.CDNDomain,
+			CDNDomain:          nbrew.CDNDomain,
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {

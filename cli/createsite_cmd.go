@@ -207,7 +207,7 @@ func (cmd *CreatesiteCmd) Run() error {
 			FS:                 cmd.Notebrew.FS,
 			ContentDomain:      cmd.Notebrew.ContentDomain,
 			ContentDomainHTTPS: cmd.Notebrew.ContentDomainHTTPS,
-			ImgDomain:          cmd.Notebrew.CDNDomain,
+			CDNDomain:          cmd.Notebrew.CDNDomain,
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {

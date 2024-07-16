@@ -34,7 +34,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	type Response struct {
 		ContentBaseURL        string            `json:"contentBaseURL"`
-		ImgDomain             string            `json:"imgDomain"`
+		CDNDomain             string            `json:"cdnDomain"`
 		IsDatabaseFS          bool              `json:"isDatabaseFS"`
 		SitePrefix            string            `json:"sitePrefix"`
 		UserID                ID                `json:"userID"`
@@ -257,7 +257,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		getLogger(r.Context()).Error(err.Error())
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-	response.ImgDomain = nbrew.CDNDomain
+	response.CDNDomain = nbrew.CDNDomain
 	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID

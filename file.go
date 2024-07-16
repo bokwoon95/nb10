@@ -43,7 +43,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 	}
 	type Response struct {
 		ContentBaseURL    string            `json:"contentBaseURL"`
-		ImgDomain         string            `json:"imgDomain"`
+		CDNDomain         string            `json:"cdnDomain"`
 		IsDatabaseFS      bool              `json:"isDatabaseFS"`
 		SitePrefix        string            `json:"sitePrefix"`
 		UserID            ID                `json:"userID"`
@@ -137,7 +137,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
 		response.Size = fileInfo.Size()
-		response.ImgDomain = nbrew.CDNDomain
+		response.CDNDomain = nbrew.CDNDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 
 		if isEditable {
@@ -1011,7 +1011,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.CDNDomain,
+				CDNDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {
@@ -1035,7 +1035,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.CDNDomain,
+				CDNDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {
@@ -1152,7 +1152,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					FS:                 nbrew.FS,
 					ContentDomain:      nbrew.ContentDomain,
 					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-					ImgDomain:          nbrew.CDNDomain,
+					CDNDomain:          nbrew.CDNDomain,
 					SitePrefix:         sitePrefix,
 				})
 				if err != nil {
