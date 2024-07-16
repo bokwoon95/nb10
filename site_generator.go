@@ -2071,6 +2071,8 @@ var userFuncMap = map[string]any{
 
 func toString(v any) string {
 	switch v := v.(type) {
+	case nil:
+		return ""
 	case string:
 		return v
 	case int:
@@ -2086,6 +2088,8 @@ func toString(v any) string {
 
 func toInt64(v any) int64 {
 	switch v := v.(type) {
+	case nil:
+		return 0
 	case int64:
 		return v
 	case int:

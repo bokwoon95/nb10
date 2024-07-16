@@ -331,7 +331,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		FS:                 nbrew.FS,
 		ContentDomain:      nbrew.ContentDomain,
 		ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-		ImgDomain:          nbrew.ImgDomain,
+		ImgDomain:          nbrew.CDNDomain,
 		SitePrefix:         sitePrefix,
 	})
 	if err != nil {

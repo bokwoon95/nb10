@@ -71,10 +71,10 @@ func (cmd *StatusCmd) Run() error {
 	fmt.Fprintf(cmd.Stdout, "port          = %d\n", cmd.Notebrew.Port)
 	fmt.Fprintf(cmd.Stdout, "cmsdomain     = %s\n", cmd.Notebrew.CMSDomain)
 	fmt.Fprintf(cmd.Stdout, "contentdomain = %s\n", cmd.Notebrew.ContentDomain)
-	if cmd.Notebrew.ImgDomain == "" {
+	if cmd.Notebrew.CDNDomain == "" {
 		fmt.Fprintf(cmd.Stdout, "imgdomain     = <not configured>\n")
 	} else {
-		fmt.Fprintf(cmd.Stdout, "imgdomain     = %s\n", cmd.Notebrew.ImgDomain)
+		fmt.Fprintf(cmd.Stdout, "imgdomain     = %s\n", cmd.Notebrew.CDNDomain)
 	}
 	if cmd.Notebrew.ImgCmd == "" {
 		fmt.Fprintf(cmd.Stdout, "imgcmd        = <not configured>\n")

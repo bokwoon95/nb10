@@ -67,7 +67,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "imgdomain.txt"), err)
 		}
 	} else {
-		nbrew.ImgDomain = string(bytes.TrimSpace(b))
+		nbrew.CDNDomain = string(bytes.TrimSpace(b))
 	}
 
 	// Img cmd.
@@ -886,7 +886,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		FS:                 nbrew.FS,
 		ContentDomain:      nbrew.ContentDomain,
 		ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-		ImgDomain:          nbrew.ImgDomain,
+		ImgDomain:          nbrew.CDNDomain,
 		SitePrefix:         "",
 	})
 	if err != nil {
@@ -1073,8 +1073,8 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	buf.WriteString(";")
 	// img-src
 	buf.WriteString(" img-src 'self' data:")
-	if nbrew.ImgDomain != "" {
-		buf.WriteString(" " + nbrew.ImgDomain)
+	if nbrew.CDNDomain != "" {
+		buf.WriteString(" " + nbrew.CDNDomain)
 	}
 	buf.WriteString(";")
 	// style-src

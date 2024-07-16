@@ -90,7 +90,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 			getLogger(r.Context()).Error(err.Error())
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-		response.ImgDomain = nbrew.ImgDomain
+		response.ImgDomain = nbrew.CDNDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username

@@ -150,7 +150,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 
 	var response Response
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-	response.ImgDomain = nbrew.ImgDomain
+	response.ImgDomain = nbrew.CDNDomain
 	response.IsDatabaseFS = true
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID

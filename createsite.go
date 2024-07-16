@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"path"
 	"runtime/debug"
+	"slices"
 	"strings"
 	texttemplate "text/template"
 
@@ -233,12 +234,11 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 
-		switch response.SiteName {
-		case "":
+		if response.SiteName == "" {
 			response.FormErrors.Add("siteName", "required")
-		case "www", "img", "video", "cdn", "storage":
+		} else if slices.Contains(ReservedSubdomains, response.SiteName) {
 			response.FormErrors.Add("siteName", "unavailable")
-		default:
+		} else {
 			hasForbiddenCharacters := false
 			digitCount := 0
 			for _, char := range response.SiteName {
@@ -421,7 +421,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			FS:                 nbrew.FS,
 			ContentDomain:      nbrew.ContentDomain,
 			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-			ImgDomain:          nbrew.ImgDomain,
+			ImgDomain:          nbrew.CDNDomain,
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {

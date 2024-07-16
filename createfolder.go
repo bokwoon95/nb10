@@ -276,7 +276,7 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.ImgDomain,
+				ImgDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {

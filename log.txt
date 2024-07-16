@@ -102,6 +102,9 @@ Immediately need to pick a plan. The sign up flow has to be rewritten from immed
 
 moderator.notebrew.com/ => package moderator
 
+cdn.nbrew.net pulls from storage.nbrew.net
+videocdn.nbrew.net pulls from videostorage.nbrew.net
+
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites
     - doesn't even have to be bad sites. it can fetch all unchecked sites in general. once a site is checked to be safe, it goes into the moderation database so that it doesn't have to be checked again.

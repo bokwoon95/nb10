@@ -66,6 +66,8 @@ var (
 	commonPasswords = make(map[string]struct{})
 
 	CountryCodes map[string]string
+
+	ReservedSubdomains = []string{"www", "cdn", "storage", "videocdn", "videostorage"}
 )
 
 func init() {
@@ -141,7 +143,7 @@ type Notebrew struct {
 
 	ContentDomainHTTPS bool
 
-	ImgDomain string
+	CDNDomain string
 
 	ImgCmd string
 
@@ -231,9 +233,9 @@ func (nbrew *Notebrew) Close() error {
 }
 
 type User struct {
-	UserID              ID
-	Username            string
-	Email               string
+	UserID                ID
+	Username              string
+	Email                 string
 	TimezoneOffsetSeconds int
 	// func accountDisabled(): "you may not perform that action as your account has been disabled for the following reason: {{ $disableReason }}"
 	DisableReason string

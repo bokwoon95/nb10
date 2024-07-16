@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"path"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	texttemplate "text/template"
@@ -405,10 +406,9 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return
 		}
 		if response.SiteName != "" {
-			switch response.SiteName {
-			case "www", "img", "video", "cdn", "storage":
+			if slices.Contains(ReservedSubdomains, response.SiteName) {
 				response.FormErrors.Add("siteName", "unavailable")
-			default:
+			} else {
 				for _, char := range response.SiteName {
 					if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
 						response.FormErrors.Add("siteName", fmt.Sprintf("cannot include character %q", string(char)))
@@ -601,7 +601,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			FS:                 nbrew.FS,
 			ContentDomain:      nbrew.ContentDomain,
 			ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-			ImgDomain:          nbrew.ImgDomain,
+			ImgDomain:          nbrew.CDNDomain,
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {

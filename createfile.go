@@ -810,7 +810,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.ImgDomain,
+				ImgDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {
@@ -834,7 +834,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.ImgDomain,
+				ImgDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {
@@ -943,7 +943,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					FS:                 nbrew.FS,
 					ContentDomain:      nbrew.ContentDomain,
 					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-					ImgDomain:          nbrew.ImgDomain,
+					ImgDomain:          nbrew.CDNDomain,
 					SitePrefix:         sitePrefix,
 				})
 				if err != nil {

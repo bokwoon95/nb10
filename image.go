@@ -74,7 +74,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
-		response.ImgDomain = nbrew.ImgDomain
+		response.ImgDomain = nbrew.CDNDomain
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -374,7 +374,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.ImgDomain,
+				ImgDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {

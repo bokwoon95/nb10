@@ -102,7 +102,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			getLogger(r.Context()).Error(err.Error())
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-		response.ImgDomain = nbrew.ImgDomain
+		response.ImgDomain = nbrew.CDNDomain
 		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
 		response.UserID = user.UserID
 		response.Username = user.Username
@@ -729,7 +729,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
 				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				ImgDomain:          nbrew.ImgDomain,
+				ImgDomain:          nbrew.CDNDomain,
 				SitePrefix:         sitePrefix,
 			})
 			if err != nil {

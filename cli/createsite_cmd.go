@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	texttemplate "text/template"
 
@@ -60,11 +61,11 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 				return nil, err
 			}
 			cmd.SiteName = strings.TrimSpace(text)
-			switch cmd.SiteName {
-			case "":
+			if cmd.SiteName == "" {
 				fmt.Println("site name cannot be empty")
 				continue
-			case "www", "img", "video", "cdn", "storage":
+			}
+			if slices.Contains(nb10.ReservedSubdomains, cmd.SiteName) {
 				fmt.Println("site name not allowed")
 				continue
 			}
@@ -117,10 +118,10 @@ func (cmd *CreatesiteCmd) Run() error {
 	if cmd.Stdout == nil {
 		cmd.Stdout = os.Stdout
 	}
-	switch cmd.SiteName {
-	case "":
+	if cmd.SiteName == "" {
 		return fmt.Errorf("site name cannot be empty")
-	case "www", "img", "video", "cdn", "storage":
+	}
+	if slices.Contains(nb10.ReservedSubdomains, cmd.SiteName) {
 		return fmt.Errorf("site name not allowed")
 	}
 	for _, char := range cmd.SiteName {
@@ -206,7 +207,7 @@ func (cmd *CreatesiteCmd) Run() error {
 			FS:                 cmd.Notebrew.FS,
 			ContentDomain:      cmd.Notebrew.ContentDomain,
 			ContentDomainHTTPS: cmd.Notebrew.ContentDomainHTTPS,
-			ImgDomain:          cmd.Notebrew.ImgDomain,
+			ImgDomain:          cmd.Notebrew.CDNDomain,
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {

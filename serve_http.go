@@ -463,7 +463,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var subdomain string
 	if certmagic.MatchWildcard(r.Host, "*."+nbrew.ContentDomain) {
 		subdomain = strings.TrimSuffix(r.Host, "."+nbrew.ContentDomain)
-		if subdomain == "img" || subdomain == "storage" {
+		if subdomain == "cdn" || subdomain == "storage" {
 			databaseFS, ok := nbrew.FS.(*DatabaseFS)
 			if !ok {
 				http.Error(w, "404 Not Found", http.StatusNotFound)
