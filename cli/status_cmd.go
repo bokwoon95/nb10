@@ -203,7 +203,7 @@ func (cmd *StatusCmd) Run() error {
 					}
 					fmt.Fprintf(cmd.Stdout, "objects       = %s\n", filePath)
 				} else {
-					fmt.Fprintf(cmd.Stdout, "objects       = %s/%s\n", objectsConfig.Endpoint, objectsConfig.Bucket)
+					fmt.Fprintf(cmd.Stdout, "objects       = %s/%s\n", strings.TrimSuffix(objectsConfig.Endpoint, "/"), objectsConfig.Bucket)
 				}
 			}
 		}
