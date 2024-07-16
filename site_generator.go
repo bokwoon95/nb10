@@ -2053,7 +2053,7 @@ var userFuncMap = map[string]any{
 		return b
 	},
 	"nullif": func(a, b any) any {
-		if a == b {
+		if toString(a) == toString(b) {
 			return ""
 		}
 		return a
