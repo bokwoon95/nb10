@@ -179,15 +179,18 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		response.ExcludeTerms = append(response.ExcludeTerms, quoteReplacer.Replace(exludeTerm))
 	}
 	// Allowed file types.
+	response.AvailableFileTypes = make([]string, 0, len(editableExts)+len(imgExts)+2)
 	availableFileTypes := make(map[string]struct{})
-	for _, fileType := range AllowedFileTypes {
-		if fileType.Has(AttributeEditable) || fileType.Has(AttributeImg) || fileType.Has(AttributeVideo) || fileType.Ext == ".json" {
-			response.AvailableFileTypes = append(response.AvailableFileTypes, fileType.Ext)
-			availableFileTypes[fileType.Ext] = struct{}{}
-		}
+	for _, ext := range editableExts {
+		response.AvailableFileTypes = append(response.AvailableFileTypes, ext)
+		availableFileTypes[ext] = struct{}{}
 	}
-	slices.Sort(response.AvailableFileTypes)
-	response.AvailableFileTypes = append(response.AvailableFileTypes, "folder")
+	for _, ext := range imgExts {
+		response.AvailableFileTypes = append(response.AvailableFileTypes, ext)
+		availableFileTypes[ext] = struct{}{}
+	}
+	response.AvailableFileTypes = append(response.AvailableFileTypes, ".json", "folder")
+	availableFileTypes["json"] = struct{}{}
 	availableFileTypes["folder"] = struct{}{}
 	// File types.
 	if len(request.FileTypes) > 0 {

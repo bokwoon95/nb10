@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"io/fs"
+	"slices"
 	"sync"
 )
 
@@ -191,3 +192,25 @@ var AllowedFileTypes = map[string]FileType{
 		Attribute:   AttributeObject | AttributeAttachment,
 	},
 }
+
+var (
+	editableExts []string // do not modify! only read
+	imgExts      []string // do not modify! only read
+	fontExts     []string // do not modify! only read
+	populateExts = sync.OnceFunc(func() {
+		for _, fileType := range AllowedFileTypes {
+			if fileType.Has(AttributeEditable) {
+				editableExts = append(editableExts, fileType.Ext)
+			}
+			if fileType.Has(AttributeImg) {
+				imgExts = append(imgExts, fileType.Ext)
+			}
+			if fileType.Has(AttributeFont) {
+				fontExts = append(fontExts, fileType.Ext)
+			}
+		}
+		slices.Sort(editableExts)
+		slices.Sort(imgExts)
+		slices.Sort(fontExts)
+	})
+)

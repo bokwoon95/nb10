@@ -207,6 +207,7 @@ type Notebrew struct {
 }
 
 func New() *Notebrew {
+	populateExts()
 	ctx, cancel := context.WithCancel(context.Background())
 	nbrew := &Notebrew{
 		ctx:    ctx,

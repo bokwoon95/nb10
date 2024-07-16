@@ -151,43 +151,25 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		switch head {
 		case "notes":
 			response.Ext = ".txt"
-			for _, fileType := range AllowedFileTypes {
-				if fileType.Has(AttributeEditable) {
-					response.FileExts = append(response.FileExts, fileType.Ext)
-				}
-			}
+			response.FileExts = editableExts
 		case "pages":
 			response.Ext = ".html"
 			response.FileExts = []string{".html"}
-			for _, fileType := range AllowedFileTypes {
-				if fileType.Has(AttributeImg) || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
-					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
-				}
-			}
+			response.UploadableExts = make([]string, 0, len(imgExts)+3)
+			response.UploadableExts = append(response.UploadableExts, imgExts...)
+			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
 		case "posts":
 			response.Ext = ".md"
 			response.FileExts = []string{".md"}
-			for _, fileType := range AllowedFileTypes {
-				if fileType.Has(AttributeImg) {
-					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
-				}
-			}
+			response.UploadableExts = imgExts
 		case "output":
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "themes" {
 				response.Ext = ".html"
-				for _, fileType := range AllowedFileTypes {
-					if fileType.Has(AttributeEditable) {
-						response.FileExts = append(response.FileExts, fileType.Ext)
-					}
-				}
+				response.FileExts = editableExts
 			} else {
 				response.Ext = ".js"
-				for _, fileType := range AllowedFileTypes {
-					if fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
-						response.FileExts = append(response.FileExts, fileType.Ext)
-					}
-				}
+				response.FileExts = []string{".css", ".js", ".md"}
 			}
 		default:
 			response.Error = "InvalidParent"

@@ -416,12 +416,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	case "posts":
 		response.UploadableExts = []string{".md"}
 	default:
-		for _, fileType := range AllowedFileTypes {
-			if fileType.Has(AttributeEditable) || fileType.Has(AttributeImg) || fileType.Has(AttributeFont) {
-				response.UploadableExts = append(response.UploadableExts, fileType.Ext)
-			}
-		}
-		slices.Sort(response.UploadableExts)
+		response.UploadableExts = make([]string, 0, len(editableExts)+len(imgExts)+len(fontExts))
+		response.UploadableExts = append(response.UploadableExts, editableExts...)
+		response.UploadableExts = append(response.UploadableExts, imgExts...)
+		response.UploadableExts = append(response.UploadableExts, fontExts...)
 	}
 
 	databaseFS, ok := nbrew.FS.(*DatabaseFS)

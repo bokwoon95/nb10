@@ -161,11 +161,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(tail, ".html") + "/")
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
-			for _, fileType := range AllowedFileTypes {
-				if fileType.Has(AttributeImg) || fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md" {
-					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
-				}
-			}
+			response.UploadableExts = make([]string, 0, len(imgExts)+3)
+			response.UploadableExts = append(response.UploadableExts, imgExts...)
+			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
 			extFilter := sq.Expr("1 = 1")
 			if len(response.UploadableExts) > 0 {
 				slices.Sort(response.UploadableExts)
@@ -313,11 +311,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		case "posts":
 			response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
-			for _, fileType := range AllowedFileTypes {
-				if fileType.Has(AttributeImg) {
-					response.UploadableExts = append(response.UploadableExts, fileType.Ext)
-				}
-			}
+			response.UploadableExts = imgExts
 			extFilter := sq.Expr("1 = 1")
 			if len(response.UploadableExts) > 0 {
 				slices.Sort(response.UploadableExts)
