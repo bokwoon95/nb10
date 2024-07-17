@@ -155,7 +155,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 				return
 			}
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
-			fmt.Printf("got here!\n")
 			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
 		var response Response
