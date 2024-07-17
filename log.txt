@@ -116,6 +116,7 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
+TODO: site.json is crashing/panicking for bokwoon.com. Find out why.
 TODO: download all data from backblaze, delete account, recreate account in EU Amsterdam, reconfigure notebrew objects.
 TODO: createsite.go needs to additionally include site title, preferred timezone offset and site description in the form. If a database is present, preferred timezone offset will be taken from the user's timezone offset.
 TODO: create a sessions table hat lets users manage their sessions. They can also generate new sessions, whereby the session token is shown once and then deleted.
