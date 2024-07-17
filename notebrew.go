@@ -572,15 +572,6 @@ func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, t
 		return
 	}
 
-	var b2 strings.Builder
-	err = tmpl.Execute(&b2, data)
-	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-		nbrew.InternalServerError(w, r, err)
-		return
-	}
-	fmt.Printf("got here! %s\n", b2.String())
-
 	var b [blake2b.Size256]byte
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Encoding", "gzip")
