@@ -461,15 +461,14 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				case "output":
 					if !isDir {
 						next, _, _ := strings.Cut(tail, "/")
+						fileType := AllowedFileTypes[path.Ext(name)]
 						if next == "posts" {
-							switch path.Ext(name) {
-							case ".jpeg", ".jpg", ".png", ".webp", ".gif":
+							if fileType.Has(AttributeImg) {
 								parentPost := tail + ".md"
 								regenerateParentPost.Store(&parentPost)
 							}
 						} else if next != "themes" {
-							switch path.Ext(name) {
-							case ".jpeg", ".jpg", ".png", ".webp", ".gif", ".md":
+							if fileType.Has(AttributeImg) || fileType.Ext == ".md" {
 								var parentPage string
 								if tail == "" {
 									parentPage = "pages/index.html"

@@ -178,7 +178,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	extFilter := sq.Expr("1 = 1")
 	if len(imgExts) > 0 {
 		var b strings.Builder
-		var args []any
+		args := make([]any, 0, len(imgExts))
 		b.WriteString("(")
 		for i, ext := range imgExts {
 			if i > 0 {
@@ -497,7 +497,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		markdownMu := sync.Mutex{}
 		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 			var b strings.Builder
-			var args []any
+			args := make([]any, 0, len(imgExts)+1)
 			b.WriteString("(file_path LIKE '%.md'")
 			for _, ext := range imgExts {
 				b.WriteString(" OR file_path LIKE {}")
@@ -955,7 +955,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		extFilter := sq.Expr("1 = 1")
 		if len(imgExts) > 0 {
 			var b strings.Builder
-			var args []any
+			args := make([]any, 0, len(imgExts))
 			b.WriteString("(")
 			for i, ext := range imgExts {
 				if i > 0 {

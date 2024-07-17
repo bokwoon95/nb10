@@ -1128,24 +1128,29 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
 	}
 	pattern := wildcardReplacer.Replace(name) + "/%"
+	extFilter := sq.Expr("1 <> 1")
+	if len(imgExts) > 0 {
+		var b strings.Builder
+		args := make([]any, 0, len(imgExts)+1)
+		b.WriteString("(file_path LIKE '%.tgz'")
+		for _, ext := range imgExts {
+			b.WriteString(" OR file_path LIKE {}")
+			args = append(args, "%"+wildcardReplacer.Replace(ext))
+		}
+		b.WriteString(")")
+		extFilter = sq.Expr(b.String(), args...)
+	}
 	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
 			" WHERE (file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\')" +
 			" AND NOT is_dir" +
-			" AND (" +
-			// AttributeObject
-			"file_path LIKE '%.jpeg'" +
-			" OR file_path LIKE '%.jpg'" +
-			" OR file_path LIKE '%.png'" +
-			" OR file_path LIKE '%.webp'" +
-			" OR file_path LIKE '%.gif'" +
-			" OR file_path LIKE '%.tgz'" +
-			")",
+			" AND {extFilter}",
 		Values: []any{
 			sq.StringParam("name", name),
 			sq.StringParam("pattern", pattern),
+			sq.Param("extFilter", extFilter),
 		},
 	}, func(row *sq.Row) (file struct {
 		fileID   ID

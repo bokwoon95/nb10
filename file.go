@@ -166,9 +166,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
 			extFilter := sq.Expr("1 = 1")
 			if len(response.UploadableExts) > 0 {
-				slices.Sort(response.UploadableExts)
 				var b strings.Builder
-				var args []any
+				args := make([]any, 0, len(response.UploadableExts))
 				b.WriteString("(")
 				for i, ext := range response.UploadableExts {
 					if i > 0 {
@@ -316,7 +315,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if len(response.UploadableExts) > 0 {
 				slices.Sort(response.UploadableExts)
 				var b strings.Builder
-				var args []any
+				args := make([]any, 0, len(response.UploadableExts))
 				b.WriteString("(")
 				for i, ext := range response.UploadableExts {
 					if i > 0 {
