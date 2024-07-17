@@ -157,7 +157,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
 			nbrew.ExecuteTemplate(w, r, tmpl, &response)
 		}
-		fmt.Printf("got here!\n")
 		var response Response
 		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
@@ -192,6 +191,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		response.TimezoneOffset = request.TimezoneOffset
 		response.Description = request.Description
 		response.NavigationLinks = request.NavigationLinks
+		fmt.Printf("got here!\n")
 		writeResponse(w, r, response)
 	case "POST":
 		if user.DisableReason != "" {
