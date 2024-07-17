@@ -496,24 +496,26 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}()
 		markdownMu := sync.Mutex{}
 		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+			var b strings.Builder
+			var args []any
+			b.WriteString("(file_path LIKE '%.md'")
+			for _, ext := range imgExts {
+				b.WriteString(" OR file_path LIKE {}")
+				args = append(args, "%"+wildcardReplacer.Replace(ext))
+			}
+			b.WriteString(")")
+			extFilter := sq.Expr(b.String(), args...)
 			cursor, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
 					" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {outputDir})" +
 					" AND NOT is_dir" +
-					" AND (" +
-					"file_path LIKE '%.jpeg'" +
-					" OR file_path LIKE '%.jpg'" +
-					" OR file_path LIKE '%.png'" +
-					" OR file_path LIKE '%.webp'" +
-					" OR file_path LIKE '%.gif'" +
-					" OR file_path LIKE '%.svg'" +
-					" OR file_path LIKE '%.md'" +
-					") " +
+					" AND {extFilter}" +
 					" ORDER BY file_path",
 				Values: []any{
 					sq.StringParam("outputDir", outputDir),
+					sq.Param("extFilter", extFilter),
 				},
 			}, func(row *sq.Row) (result struct {
 				FilePath string
@@ -950,23 +952,32 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	}
 	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+		extFilter := sq.Expr("1 = 1")
+		if len(imgExts) > 0 {
+			var b strings.Builder
+			var args []any
+			b.WriteString("(")
+			for i, ext := range imgExts {
+				if i > 0 {
+					b.WriteString(" OR ")
+				}
+				b.WriteString("file_path LIKE {}")
+				args = append(args, "%"+wildcardReplacer.Replace(ext))
+			}
+			b.WriteString(")")
+			extFilter = sq.Expr(b.String(), args...)
+		}
 		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
 				" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {outputDir})" +
 				" AND NOT is_dir" +
-				" AND (" +
-				"file_path LIKE '%.jpeg'" +
-				" OR file_path LIKE '%.jpg'" +
-				" OR file_path LIKE '%.png'" +
-				" OR file_path LIKE '%.webp'" +
-				" OR file_path LIKE '%.gif'" +
-				" OR file_path LIKE '%.svg'" +
-				") " +
+				" AND {extFilter} " +
 				" ORDER BY file_path",
 			Values: []any{
 				sq.StringParam("outputDir", outputDir),
+				sq.Param("extFilter", extFilter),
 			},
 		}, func(row *sq.Row) (result struct {
 			FilePath string
