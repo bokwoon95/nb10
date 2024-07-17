@@ -175,21 +175,30 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	if !ok {
 		return siteGen, nil
 	}
+	extFilter := sq.Expr("1 = 1")
+	if len(imgExts) > 0 {
+		var b strings.Builder
+		var args []any
+		b.WriteString("(")
+		for i, ext := range imgExts {
+			if i > 0 {
+				b.WriteString(" OR ")
+			}
+			b.WriteString("file_path LIKE {}")
+			args = append(args, "%"+wildcardReplacer.Replace(ext))
+		}
+		b.WriteString(")")
+		extFilter = sq.Expr(b.String(), args...)
+	}
 	cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
 			" WHERE file_path LIKE {pattern}" +
-			" AND (" +
-			"file_path LIKE '%.jpeg'" +
-			" OR file_path LIKE '%.jpg'" +
-			" OR file_path LIKE '%.png'" +
-			" OR file_path LIKE '%.webp'" +
-			" OR file_path LIKE '%.gif'" +
-			" OR file_path LIKE '%.svg'" +
-			") ",
+			" AND {imgFilter}",
 		Values: []any{
 			sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(siteGen.sitePrefix, "output"))+"/%"),
+			sq.Param("extFilter", extFilter),
 		},
 	}, func(row *sq.Row) (result struct {
 		FileID   ID
