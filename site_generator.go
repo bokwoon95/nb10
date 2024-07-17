@@ -195,7 +195,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		Format: "SELECT {*}" +
 			" FROM files" +
 			" WHERE file_path LIKE {pattern}" +
-			" AND {imgFilter}",
+			" AND {extFilter}",
 		Values: []any{
 			sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(siteGen.sitePrefix, "output"))+"/%"),
 			sq.Param("extFilter", extFilter),
