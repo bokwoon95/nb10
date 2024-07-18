@@ -16,6 +16,7 @@ import (
 	"math"
 	"net/url"
 	"path"
+	"reflect"
 	"runtime/debug"
 	"slices"
 	"strconv"
@@ -26,6 +27,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/extension"
@@ -44,7 +46,7 @@ type SiteGenerator struct {
 	cdnDomain          string
 	port               int
 	markdown           goldmark.Markdown
-	mu                 sync.Mutex
+	mutex              sync.RWMutex
 	templateCache      map[string]*template.Template
 	templateInProgress map[string]chan struct{}
 	imgFileIDs         map[string]ID
@@ -79,7 +81,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		contentDomain:      siteGenConfig.ContentDomain,
 		contentDomainHTTPS: siteGenConfig.ContentDomainHTTPS,
 		cdnDomain:          siteGenConfig.CDNDomain,
-		mu:                 sync.Mutex{},
+		mutex:              sync.RWMutex{},
 		templateCache:      make(map[string]*template.Template),
 		templateInProgress: make(map[string]chan struct{}),
 	}
@@ -308,9 +310,9 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 
 			// If a template is currently being parsed, wait for it to finish
 			// before checking the templateCache for the result.
-			siteGen.mu.Lock()
+			siteGen.mutex.RLock()
 			wait := siteGen.templateInProgress[externalName]
-			siteGen.mu.Unlock()
+			siteGen.mutex.RUnlock()
 			if wait != nil {
 				select {
 				case <-groupctx.Done():
@@ -319,9 +321,9 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 					break
 				}
 			}
-			siteGen.mu.Lock()
+			siteGen.mutex.RLock()
 			cachedTemplate, ok := siteGen.templateCache[externalName]
-			siteGen.mu.Unlock()
+			siteGen.mutex.RUnlock()
 			if ok {
 				// We found the template; add it to the slice and exit. Note
 				// that the cachedTemplate may be nil, if parsing that template
@@ -340,16 +342,16 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			// closed by the defer function below (which is once this goroutine
 			// exits).
 			wait = make(chan struct{})
-			siteGen.mu.Lock()
+			siteGen.mutex.Lock()
 			siteGen.templateCache[externalName] = nil
 			siteGen.templateInProgress[externalName] = wait
-			siteGen.mu.Unlock()
+			siteGen.mutex.Unlock()
 			defer func() {
-				siteGen.mu.Lock()
+				siteGen.mutex.Lock()
 				siteGen.templateCache[externalName] = cachedTemplate
 				delete(siteGen.templateInProgress, externalName)
 				close(wait)
-				siteGen.mu.Unlock()
+				siteGen.mutex.Unlock()
 			}()
 
 			file, err := siteGen.fsys.WithContext(groupctx).Open(path.Join(siteGen.sitePrefix, "output", externalName))
@@ -2018,6 +2020,13 @@ var userFuncMap = map[string]any{
 	"trimSpace": func(s any) string {
 		return strings.TrimSpace(toString(s))
 	},
+	"joinStrings": func(elems []any, sep any) string {
+		strs := make([]string, len(elems))
+		for i := range elems {
+			strs[i] = toString(elems[i])
+		}
+		return strings.Join(strs, toString(sep))
+	},
 	"humanReadableFileSize": func(size any) string {
 		return HumanReadableFileSize(toInt64(size))
 	},
@@ -2045,47 +2054,61 @@ var userFuncMap = map[string]any{
 			return nil, fmt.Errorf("odd number of arguments passed in")
 		}
 		for i := 0; i+1 < len(dict); i += 2 {
-			dict[toString(v[i])] = v[i+1]
+			key, ok := v[i].(string)
+			if !ok {
+				return nil, fmt.Errorf("key is not a string: %#v", v[i])
+			}
+			dict[key] = v[i+1]
 		}
 		return dict, nil
 	},
 	"dump": func(v any) template.HTML {
-		b, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			return template.HTML("<pre style='white-space:pre-wrap;'>" + err.Error() + "</pre>")
-		}
-		return template.HTML("<pre style='white-space:pre-wrap;'>" + string(b) + "</pre>")
+		return template.HTML("<pre style='white-space:pre-wrap;'>" + spew.Sdump(v) + "</pre>")
 	},
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
 	},
-	"iif": func(cond, a, b any) any {
-		if cond, ok := cond.(bool); ok {
-			if cond {
-				return a
-			}
-			return b
-		}
-		parsedCond, _ := strconv.ParseBool(toString(cond))
-		if parsedCond {
-			return a
-		}
-		return b
-	},
-	"nullif": func(a, b any) any {
-		if toString(a) == toString(b) {
-			return ""
-		}
-		return a
-	},
 	"coalesce": func(elem ...any) any {
 		for _, elem := range elem {
-			if elem == nil || toString(elem) == "" {
+			if elem == nil {
+				continue
+			}
+			if reflect.ValueOf(elem).IsZero() {
 				continue
 			}
 			return elem
 		}
 		return ""
+	},
+	"case": func(expr any, elem ...any) any {
+		var fallback any
+		if len(elem)%2 == 0 {
+			fallback = ""
+		} else {
+			fallback = elem[len(elem)-1]
+			elem = elem[:len(elem)-1]
+		}
+		for i := 0; i+1 < len(elem); i += 2 {
+			if reflect.DeepEqual(expr, elem[i]) {
+				return elem[i+1]
+			}
+		}
+		return fallback
+	},
+	"casewhen": func(elem ...any) any {
+		var fallback any
+		if len(elem)%2 == 0 {
+			fallback = ""
+		} else {
+			fallback = elem[len(elem)-1]
+			elem = elem[:len(elem)-1]
+		}
+		for i := 0; i+1 < len(elem); i += 2 {
+			if truth, _ := template.IsTrue(elem[i]); truth {
+				return elem[i+1]
+			}
+		}
+		return fallback
 	},
 }
 
