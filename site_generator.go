@@ -2063,7 +2063,7 @@ var userFuncMap = map[string]any{
 		return dict, nil
 	},
 	"dump": func(v any) template.HTML {
-		return template.HTML("<pre style='white-space:pre-wrap;'>" + spew.Sdump(v) + "</pre>")
+		return template.HTML("<pre style='white-space:pre-wrap;'>" + template.HTMLEscapeString(spew.Sdump(v)) + "</pre>")
 	},
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
