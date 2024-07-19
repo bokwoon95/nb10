@@ -1887,7 +1887,6 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	tokenizer := html.NewTokenizer(reader)
 	for {
 		tokenType := tokenizer.Next()
-		fmt.Println(tokenType.String() + ": len=" + strconv.Itoa(len(tokenizer.Raw())) + ": " + string(tokenizer.Raw()))
 		switch tokenType {
 		case html.ErrorToken:
 			err := tokenizer.Err()
@@ -2064,8 +2063,7 @@ var userFuncMap = map[string]any{
 		return dict, nil
 	},
 	"dump": func(v any) template.HTML {
-		s := template.HTMLEscapeString(spew.Sdump(v))
-		return template.HTML("<pre style='white-space:pre-wrap;'>" + s + "</pre>")
+		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(v)) + "</pre>")
 	},
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
