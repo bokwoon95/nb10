@@ -1887,7 +1887,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	tokenizer := html.NewTokenizer(reader)
 	for {
 		tokenType := tokenizer.Next()
-		fmt.Println("raw (len=" + strconv.Itoa(len(tokenizer.Raw())) + "): " + string(tokenizer.Raw()))
+		fmt.Println(tokenType.String() + ": len=" + strconv.Itoa(len(tokenizer.Raw())) + ": " + string(tokenizer.Raw()))
 		switch tokenType {
 		case html.ErrorToken:
 			err := tokenizer.Err()
@@ -1896,7 +1896,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			}
 			return err
 		case html.TextToken:
-			_, err := writer.Write(tokenizer.Text())
+			_, err := writer.Write(tokenizer.Raw())
 			if err != nil {
 				return err
 			}
