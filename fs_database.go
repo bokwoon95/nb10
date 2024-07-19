@@ -1701,28 +1701,34 @@ func IsForeignKeyViolation(dialect string, errorCode string) bool {
 }
 
 func IsFulltextIndexed(filePath string) bool {
-	ext := path.Ext(filePath)
+	fileType, ok := AllowedFileTypes[path.Ext(filePath)]
+	if !ok {
+		return false
+	}
 	head, tail, _ := strings.Cut(filePath, "/")
 	if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 		head, tail, _ = strings.Cut(tail, "/")
 	}
 	switch head {
 	case "notes":
-		return ext == ".html" || ext == ".css" || ext == ".js" || ext == ".md" || ext == ".txt"
+		return fileType.Has(AttributeEditable)
 	case "pages":
-		return ext == ".html"
+		return fileType.Ext == ".html"
 	case "posts":
+		if fileType.Ext == ".md" {
+			return true
+		}
 		name := path.Base(filePath)
-		return name == "post.html" || name == "postlist.html" || ext == ".md"
+		return name == "post.html" || name == "postlist.html"
 	case "output":
 		next, _, _ := strings.Cut(tail, "/")
 		switch next {
 		case "posts":
 			return false
 		case "themes":
-			return ext == ".html" || ext == ".css" || ext == ".js" || ext == ".md" || ext == ".txt"
+			return fileType.Has(AttributeEditable)
 		default:
-			return ext == ".css" || ext == ".js" || ext == ".md"
+			return fileType.Ext == ".css" || fileType.Ext == ".js" || fileType.Ext == ".md"
 		}
 	}
 	return false
