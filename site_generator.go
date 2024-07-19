@@ -2068,7 +2068,7 @@ var userFuncMap = map[string]any{
 		}
 		s := string(b)
 		fmt.Println(s)
-		return template.HTML("<pre>" + s + "</pre>")
+		return template.HTML(s)
 	},
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
