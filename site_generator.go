@@ -835,7 +835,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}()
 			result <- siteGen.rewriteURLs(writer, pipeReader, urlPath)
 		}()
-		err = tmpl.Execute(pipeWriter, &pageData)
+		err = tmpl.Execute(pipeWriter, pageData)
 		if err != nil {
 			return NewTemplateError(err)
 		}
@@ -845,7 +845,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			return err
 		}
 	} else {
-		err = tmpl.Execute(writer, &pageData)
+		err = tmpl.Execute(writer, pageData)
 		if err != nil {
 			return NewTemplateError(err)
 		}
@@ -1104,7 +1104,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			}()
 			result <- siteGen.rewriteURLs(writer, pipeReader, urlPath)
 		}()
-		err = tmpl.Execute(pipeWriter, &postData)
+		err = tmpl.Execute(pipeWriter, postData)
 		if err != nil {
 			return NewTemplateError(err)
 		}
@@ -1114,7 +1114,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			return err
 		}
 	} else {
-		err = tmpl.Execute(writer, &postData)
+		err = tmpl.Execute(writer, postData)
 		if err != nil {
 			return NewTemplateError(err)
 		}
@@ -1683,7 +1683,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}()
 				result <- siteGen.rewriteURLs(writer, pipeReader, "")
 			}()
-			err = tmpl.Execute(pipeWriter, &postListData)
+			err = tmpl.Execute(pipeWriter, postListData)
 			if err != nil {
 				return NewTemplateError(err)
 			}
@@ -1693,7 +1693,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				return err
 			}
 		} else {
-			err = tmpl.Execute(writer, &postListData)
+			err = tmpl.Execute(writer, postListData)
 			if err != nil {
 				return NewTemplateError(err)
 			}

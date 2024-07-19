@@ -1081,23 +1081,6 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	}
 
 	if databaseFile, ok := reader.(*DatabaseFile); ok {
-		if name == "index.html" {
-			w.Header().Set("Content-Type", fileType.ContentType)
-			w.Header().Set("Cache-Control", cacheControl)
-			var b strings.Builder
-			_, err := io.Copy(&b, reader)
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-				return
-			}
-			fmt.Println(b.String())
-			_, err = io.Copy(w, strings.NewReader(b.String()))
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-			}
-			return
-		}
 		// If file is a DatabaseFile that is gzippable and is not fulltext
 		// indexed, its contents are already gzipped. We can reach directly
 		// into its buffer and skip the gzipping step.
