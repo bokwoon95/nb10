@@ -887,8 +887,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		Category:         path.Dir(strings.TrimPrefix(urlPath, "posts/")),
 		Name:             path.Base(strings.TrimPrefix(urlPath, "posts/")),
 		Images:           []Image{},
-		CreationTime:     creationTime,
-		ModificationTime: time.Now().UTC(),
+		CreationTime:     creationTime.UTC(),
+		ModificationTime: modTime.UTC(),
 	}
 	if strings.Contains(postData.Category, "/") {
 		return fmt.Errorf("invalid post category")
