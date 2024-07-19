@@ -2063,7 +2063,7 @@ var userFuncMap = map[string]any{
 		return dict, nil
 	},
 	"dump": func(v any) string {
-		s := template.HTMLEscapeString(spew.Sdump(v))
+		s := spew.Sdump(v)
 		fmt.Println(s)
 		return s
 	},
