@@ -2070,18 +2070,6 @@ var userFuncMap = map[string]any{
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
 	},
-	"coalesce": func(elem ...any) any {
-		for _, elem := range elem {
-			if elem == nil {
-				continue
-			}
-			if reflect.ValueOf(elem).IsZero() {
-				continue
-			}
-			return elem
-		}
-		return ""
-	},
 	"case": func(expr any, elem ...any) any {
 		var fallback any
 		if len(elem)%2 == 0 {
