@@ -870,7 +870,7 @@ type PostData struct {
 	ModificationTime time.Time
 }
 
-func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text string, creationTime time.Time, tmpl *template.Template) error {
+func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text string, modTime, creationTime time.Time, tmpl *template.Template) error {
 	timestampPrefix, _, _ := strings.Cut(path.Base(filePath), "-")
 	if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
 		b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
@@ -1133,6 +1133,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 		type File struct {
 			FilePath     string
 			Text         string
+			ModTime      time.Time
 			CreationTime time.Time
 		}
 		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
@@ -1149,6 +1150,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 			return File{
 				FilePath:     row.String("file_path"),
 				Text:         row.String("text"),
+				ModTime:      row.Time("mod_time"),
 				CreationTime: row.Time("creation_time"),
 			}
 		})
@@ -1172,7 +1174,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 				if siteGen.sitePrefix != "" {
 					_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 				}
-				err = siteGen.GeneratePost(groupctx, file.FilePath, file.Text, file.CreationTime, tmpl)
+				err = siteGen.GeneratePost(groupctx, file.FilePath, file.Text, file.ModTime, file.CreationTime, tmpl)
 				if err != nil {
 					return err
 				}
@@ -1230,7 +1232,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 				absolutePath = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category, name)
 			}
 			creationTime := CreationTime(absolutePath, fileInfo)
-			err = siteGen.GeneratePost(groupctx, path.Join("posts", category, name), b.String(), creationTime, tmpl)
+			err = siteGen.GeneratePost(groupctx, path.Join("posts", category, name), b.String(), fileInfo.ModTime(), creationTime, tmpl)
 			if err != nil {
 				return err
 			}

@@ -1105,7 +1105,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.CreationTime, tmpl)
+				err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.ModTime, response.CreationTime, tmpl)
 				response.RegenerationStats.Count = 1
 				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 				if err != nil {

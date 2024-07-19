@@ -328,8 +328,8 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					return err
 				}
-				now := time.Now()
-				err = siteGen.GeneratePage(groupctx, filePath, text, now, now)
+				creationTime := time.Now()
+				err = siteGen.GeneratePage(groupctx, filePath, text, creationTime, creationTime)
 				if err != nil {
 					var templateErr TemplateError
 					if !errors.As(err, &templateErr) {
@@ -387,7 +387,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					return err
 				}
-				err = siteGen.GeneratePost(groupctx, filePath, text, creationTime, postTemplate)
+				err = siteGen.GeneratePost(groupctx, filePath, text, creationTime, creationTime, postTemplate)
 				if err != nil {
 					var templateErr TemplateError
 					if !errors.As(err, &templateErr) {

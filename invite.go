@@ -667,8 +667,8 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			now := time.Now()
-			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), now, now)
+			creationTime := time.Now()
+			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), creationTime, creationTime)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil
@@ -702,8 +702,8 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			now := time.Now()
-			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), now, now)
+			creationTime := time.Now()
+			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), creationTime, creationTime)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil

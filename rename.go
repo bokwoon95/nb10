@@ -699,7 +699,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
-					err = siteGen.GeneratePost(r.Context(), parentPost, b.String(), creationTime, tmpl)
+					err = siteGen.GeneratePost(r.Context(), parentPost, b.String(), startedAt, creationTime, tmpl)
 					if err != nil {
 						if errors.As(err, &response.RegenerationStats.TemplateError) {
 							writeResponse(w, r, response)

@@ -459,7 +459,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				err = siteGen.GeneratePost(r.Context(), response.BelongsTo, text, creationTime, tmpl)
+				err = siteGen.GeneratePost(r.Context(), response.BelongsTo, text, time.Now(), creationTime, tmpl)
 				if err != nil {
 					if errors.As(err, &response.RegenerationStats.TemplateError) {
 						writeResponse(w, r, response)

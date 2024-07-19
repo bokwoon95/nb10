@@ -862,7 +862,8 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					return err
 				}
 				filePath := path.Join(response.Parent, response.Name+response.Ext)
-				err = siteGen.GeneratePost(groupctx, filePath, response.Content, time.Now(), tmpl)
+				creationTime := time.Now()
+				err = siteGen.GeneratePost(groupctx, filePath, response.Content, creationTime, creationTime, tmpl)
 				if err != nil {
 					if errors.As(err, &templateErr) {
 						templateErrPtr.CompareAndSwap(nil, &templateErr)

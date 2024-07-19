@@ -314,8 +314,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					return err
 				}
-				now := time.Now()
-				err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), now, now)
+				creationTime := time.Now()
+				err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), creationTime, creationTime)
 				if err != nil {
 					var templateErr TemplateError
 					if errors.As(err, &templateErr) {
@@ -352,8 +352,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					return err
 				}
-				now := time.Now()
-				err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), now, now)
+				creationTime := time.Now()
+				err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), creationTime, creationTime)
 				if err != nil {
 					var templateErr TemplateError
 					if errors.As(err, &templateErr) {

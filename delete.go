@@ -741,8 +741,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			groupD, groupctxD := errgroup.WithContext(r.Context())
 			if restoreAndRegenerateIndexHTML.Load() {
 				groupD.Go(func() error {
-					now := time.Now()
-					err := siteGen.GeneratePage(groupctxD, "pages/index.html", indexHTML, now, now)
+					creationTime := time.Now()
+					err := siteGen.GeneratePage(groupctxD, "pages/index.html", indexHTML, creationTime, creationTime)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
@@ -757,8 +757,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			if restoreAndRegenerate404HTML.Load() {
 				groupD.Go(func() error {
-					now := time.Now()
-					err := siteGen.GeneratePage(groupctxD, "pages/404.html", x404HTML, now, now)
+					creationTime := time.Now()
+					err := siteGen.GeneratePage(groupctxD, "pages/404.html", x404HTML, creationTime, creationTime)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
@@ -842,8 +842,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 					if err != nil {
 						return err
 					}
-					now := time.Now()
-					err = siteGen.GeneratePage(groupctxD, filePath, b.String(), now, now)
+					creationTime := time.Now()
+					err = siteGen.GeneratePage(groupctxD, filePath, b.String(), creationTime, creationTime)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
@@ -900,7 +900,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
-					err = siteGen.GeneratePost(groupctxD, filePath, b.String(), creationTime, tmpl)
+					err = siteGen.GeneratePost(groupctxD, filePath, b.String(), time.Now(), creationTime, tmpl)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {

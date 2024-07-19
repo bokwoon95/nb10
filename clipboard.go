@@ -806,7 +806,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						}
 						return err
 					}
-					err = siteGen.GeneratePost(groupctxB, filePath, text, creationTime, tmpl)
+					err = siteGen.GeneratePost(groupctxB, filePath, text, time.Now(), creationTime, tmpl)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
@@ -880,7 +880,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						}
 						return err
 					}
-					err = siteGen.GeneratePost(groupctxB, filePath, text, creationTime, tmpl)
+					err = siteGen.GeneratePost(groupctxB, filePath, text, time.Now(), creationTime, tmpl)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {

@@ -494,6 +494,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				return File{
 					FilePath:     row.String("file_path"),
 					Text:         row.String("text"),
+					ModTime:      row.Time("mod_time"),
 					CreationTime: row.Time("creation_time"),
 				}
 			})
@@ -519,7 +520,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					if postTemplate == nil {
 						return nil
 					}
-					err = siteGen.GeneratePost(subctxB, file.FilePath, file.Text, file.CreationTime, postTemplate)
+					err = siteGen.GeneratePost(subctxB, file.FilePath, file.Text, file.ModTime, file.CreationTime, postTemplate)
 					if err != nil {
 						return err
 					}
@@ -707,7 +708,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
-				err = siteGen.GeneratePost(subctxB, filePath, b.String(), creationTime, postTemplate)
+				err = siteGen.GeneratePost(subctxB, filePath, b.String(), fileInfo.ModTime(), creationTime, postTemplate)
 				if err != nil {
 					return err
 				}

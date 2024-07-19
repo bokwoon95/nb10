@@ -412,10 +412,11 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		fileType = AllowedFileTypes[ext]
 	}
 	now := time.Now().UTC()
-	modTime, creationTime := now, now
+	modTime := now
 	if !fsys.modTime.IsZero() {
 		modTime = fsys.modTime
 	}
+	creationTime := now
 	if !fsys.creationTime.IsZero() {
 		creationTime = fsys.creationTime
 	}
@@ -827,10 +828,11 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 		return nil
 	}
 	now := time.Now().UTC()
-	modTime, creationTime := now, now
+	modTime := now
 	if !fsys.modTime.IsZero() {
 		modTime = fsys.modTime
 	}
+	creationTime := now
 	if !fsys.creationTime.IsZero() {
 		creationTime = fsys.creationTime
 	}
@@ -918,10 +920,11 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 
 	// Insert the top level directory (no parent), ignoring duplicates.
 	now := time.Now().UTC()
-	modTime, creationTime := now, now
+	modTime := now
 	if !fsys.modTime.IsZero() {
 		modTime = fsys.modTime
 	}
+	creationTime := now
 	if !fsys.creationTime.IsZero() {
 		creationTime = fsys.creationTime
 	}
