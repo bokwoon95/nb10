@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/extension"
@@ -1886,6 +1887,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	tokenizer := html.NewTokenizer(reader)
 	for {
 		tokenType := tokenizer.Next()
+		fmt.Println("raw: " + string(tokenizer.Raw()))
 		switch tokenType {
 		case html.ErrorToken:
 			err := tokenizer.Err()
@@ -2062,13 +2064,9 @@ var userFuncMap = map[string]any{
 		return dict, nil
 	},
 	"dump": func(v any) template.HTML {
-		b, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			return template.HTML("<pre>" + err.Error() + "</pre>")
-		}
-		s := string(b)
+		s := template.HTMLEscapeString(spew.Sdump(v))
 		fmt.Println(s)
-		return template.HTML(s)
+		return template.HTML("<pre style='white-space:pre-wrap;'>" + s + "</pre>")
 	},
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
