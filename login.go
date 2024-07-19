@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/mileusna/useragent"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/blake2b"
 )
@@ -481,7 +482,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		checksum := blake2b.Sum256(sessionToken[8:])
 		copy(sessionTokenHash[:8], sessionToken[:8])
 		copy(sessionTokenHash[8:], checksum[:])
-		var label sql.NullString
+		var b strings.Builder
 		if nbrew.MaxMindDBReader != nil {
 			addr := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs)
 			if addr.IsValid() {
@@ -490,21 +491,49 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				if err == nil {
 					country, ok := CountryCodes[record.Country.ISOCode]
 					if ok {
-						label.String = country
-						label.Valid = true
+						b.WriteString(country)
 					}
 				}
 			}
 		}
-		userAgent := r.UserAgent()
-		i := strings.Index(userAgent, "(")
-		j := strings.Index(userAgent, ")")
-		if i > 0 && j > i {
-			if label.String != "" {
-				label.String += " "
+		userAgent := useragent.Parse(r.UserAgent())
+		if userAgent.Name != "" {
+			if userAgent.Mobile {
+				if b.Len() > 0 {
+					b.WriteString(" ")
+				}
+				b.WriteString("mobile")
+			} else if userAgent.Desktop {
+				if b.Len() > 0 {
+					b.WriteString(" ")
+				}
+				b.WriteString("desktop")
+			} else if userAgent.Tablet {
+				if b.Len() > 0 {
+					b.WriteString(" ")
+				}
+				b.WriteString("tablet")
 			}
-			label.String += userAgent[i+1 : j]
-			label.Valid = true
+			if userAgent.Device != "" {
+				if b.Len() > 0 {
+					b.WriteString(" ")
+				}
+				b.WriteString(userAgent.Device)
+			}
+			if userAgent.OS != "" {
+				if b.Len() > 0 {
+					b.WriteString(" ")
+				}
+				b.WriteString(userAgent.OS)
+			}
+			if b.Len() > 0 {
+				b.WriteString(" ")
+			}
+			b.WriteString(userAgent.Name)
+		}
+		label := sql.NullString{
+			String: b.String(),
+			Valid:  b.Len() > 0,
 		}
 		if email != "" {
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{

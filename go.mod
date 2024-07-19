@@ -55,6 +55,7 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mholt/acmez v1.2.0 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
+	github.com/mileusna/useragent v1.3.4 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
