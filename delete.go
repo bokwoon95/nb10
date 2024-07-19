@@ -741,7 +741,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			groupD, groupctxD := errgroup.WithContext(r.Context())
 			if restoreAndRegenerateIndexHTML.Load() {
 				groupD.Go(func() error {
-					err := siteGen.GeneratePage(groupctxD, "pages/index.html", indexHTML)
+					now := time.Now()
+					err := siteGen.GeneratePage(groupctxD, "pages/index.html", indexHTML, now, now)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
@@ -756,7 +757,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			if restoreAndRegenerate404HTML.Load() {
 				groupD.Go(func() error {
-					err := siteGen.GeneratePage(groupctxD, "pages/404.html", x404HTML)
+					now := time.Now()
+					err := siteGen.GeneratePage(groupctxD, "pages/404.html", x404HTML, now, now)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
@@ -840,7 +842,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 					if err != nil {
 						return err
 					}
-					err = siteGen.GeneratePage(groupctxD, filePath, b.String())
+					now := time.Now()
+					err = siteGen.GeneratePage(groupctxD, filePath, b.String(), now, now)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {

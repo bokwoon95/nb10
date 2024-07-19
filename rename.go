@@ -473,7 +473,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			} else {
 				parentPage = response.Parent + ".html"
 			}
-			file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPage))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					writeResponse(w, r, response)
@@ -509,8 +509,18 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
+			var creationTime time.Time
+			if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+				creationTime = fileInfo.CreationTime
+			} else {
+				var absolutePath string
+				if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
+				}
+				creationTime = CreationTime(absolutePath, fileInfo)
+			}
 			startedAt := time.Now()
-			err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+			err = siteGen.GeneratePage(r.Context(), parentPage, b.String(), fileInfo.ModTime(), creationTime)
 			if err != nil {
 				if errors.As(err, &response.RegenerationStats.TemplateError) {
 					writeResponse(w, r, response)
@@ -742,8 +752,18 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = fileInfo.CreationTime
+					} else {
+						var absolutePath string
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
+					}
 					startedAt := time.Now()
-					err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+					err = siteGen.GeneratePage(r.Context(), parentPage, b.String(), fileInfo.ModTime(), creationTime)
 					if err != nil {
 						if errors.As(err, &response.RegenerationStats.TemplateError) {
 							writeResponse(w, r, response)

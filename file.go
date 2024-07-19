@@ -676,7 +676,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			SitePrefix:     sitePrefix,
 			FilePath:       filePath,
 			IsDir:          fileInfo.IsDir(),
-			ModTime:        fileInfo.ModTime(),
+			ModTime:        time.Now(),
 			Content:        request.Content,
 		}
 		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
@@ -1019,7 +1019,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return
 			}
 			startedAt := time.Now()
-			err = siteGen.GeneratePage(r.Context(), filePath, response.Content)
+			err = siteGen.GeneratePage(r.Context(), filePath, response.Content, response.ModTime, response.CreationTime)
 			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			if err != nil {
 				if !errors.As(err, &response.RegenerationStats.TemplateError) {
@@ -1139,6 +1139,16 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
+				var creationTime time.Time
+				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+					creationTime = fileInfo.CreationTime
+				} else {
+					var absolutePath string
+					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
+					}
+					creationTime = CreationTime(absolutePath, fileInfo)
+				}
 				var b strings.Builder
 				b.Grow(int(fileInfo.Size()))
 				_, err = io.Copy(&b, file)
@@ -1160,7 +1170,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 				startedAt := time.Now()
-				err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+				err = siteGen.GeneratePage(r.Context(), parentPage, b.String(), fileInfo.ModTime(), creationTime)
 				if err != nil {
 					if errors.As(err, &response.RegenerationStats.TemplateError) {
 						writeResponse(w, r, response)

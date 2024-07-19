@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
@@ -313,7 +314,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					return err
 				}
-				err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
+				now := time.Now()
+				err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), now, now)
 				if err != nil {
 					var templateErr TemplateError
 					if errors.As(err, &templateErr) {
@@ -350,7 +352,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					return err
 				}
-				err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
+				now := time.Now()
+				err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), now, now)
 				if err != nil {
 					var templateErr TemplateError
 					if errors.As(err, &templateErr) {

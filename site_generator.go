@@ -440,6 +440,7 @@ type PageData struct {
 	Markdown         map[string]template.HTML
 	Images           []Image
 	ModificationTime time.Time
+	CreationTime     time.Time
 }
 
 type Page struct {
@@ -455,7 +456,7 @@ type Image struct {
 	Caption template.HTML
 }
 
-func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text string) error {
+func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text string, modTime, creationTime time.Time) error {
 	urlPath := strings.TrimPrefix(filePath, "pages/")
 	if urlPath == "index.html" {
 		urlPath = ""
@@ -470,7 +471,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		ChildPages:       []Page{},
 		Markdown:         make(map[string]template.HTML),
 		Images:           []Image{},
-		ModificationTime: time.Now().UTC(),
+		ModificationTime: modTime.UTC(),
+		CreationTime:     creationTime.UTC(),
 	}
 	if pageData.Parent == "." {
 		pageData.Parent = ""

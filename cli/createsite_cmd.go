@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
@@ -282,7 +283,8 @@ func (cmd *CreatesiteCmd) Run() error {
 			if err != nil {
 				return err
 			}
-			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
+			now := time.Now()
+			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), now, now)
 			if err != nil {
 				return err
 			}
@@ -306,7 +308,8 @@ func (cmd *CreatesiteCmd) Run() error {
 			if err != nil {
 				return err
 			}
-			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
+			now := time.Now()
+			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), now, now)
 			if err != nil {
 				return err
 			}

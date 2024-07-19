@@ -819,7 +819,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			startedAt := time.Now()
-			err = siteGen.GeneratePage(r.Context(), path.Join(response.Parent, response.Name+response.Ext), response.Content)
+			err = siteGen.GeneratePage(r.Context(), path.Join(response.Parent, response.Name+response.Ext), response.Content, startedAt, startedAt)
 			if err != nil {
 				if !errors.As(err, &response.RegenerationStats.TemplateError) {
 					getLogger(r.Context()).Error(err.Error())
@@ -952,7 +952,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					return
 				}
 				startedAt := time.Now()
-				err = siteGen.GeneratePage(r.Context(), parentPage, b.String())
+				err = siteGen.GeneratePage(r.Context(), parentPage, b.String(), startedAt, startedAt)
 				if err != nil {
 					if errors.As(err, &response.RegenerationStats.TemplateError) {
 						writeResponse(w, r, response)

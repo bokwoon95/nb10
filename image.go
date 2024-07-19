@@ -473,22 +473,33 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			} else if next != "themes" {
 				var text string
+				var modTime, creationTime time.Time
 				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
 				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-					text, err = sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
+					result, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
 						Values: []any{
 							sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),
 						},
-					}, func(row *sq.Row) string {
-						return row.String("text")
+					}, func(row *sq.Row) (result struct {
+						Text         string
+						ModTime      time.Time
+						CreationTime time.Time
+					}) {
+						result.Text = row.String("text")
+						result.ModTime = row.Time("mod_time")
+						result.CreationTime = row.Time("creation_time")
+						return result
 					})
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
+					text = result.Text
+					modTime = result.ModTime
+					creationTime = result.CreationTime
 				} else {
 					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, response.BelongsTo))
 					if err != nil {
@@ -512,9 +523,15 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						return
 					}
 					text = b.String()
+					modTime = fileInfo.ModTime()
+					var absolutePath string
+					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
+					}
+					creationTime = CreationTime(absolutePath, fileInfo)
 				}
 				startedAt := time.Now()
-				err = siteGen.GeneratePage(r.Context(), response.BelongsTo, text)
+				err = siteGen.GeneratePage(r.Context(), response.BelongsTo, text, modTime, creationTime)
 				if err != nil {
 					if errors.As(err, &response.RegenerationStats.TemplateError) {
 						writeResponse(w, r, response)

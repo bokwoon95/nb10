@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strings"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/caddyserver/certmagic"
@@ -486,7 +487,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b))
+			now := time.Now()
+			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), now, now)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil
@@ -520,7 +522,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				getLogger(groupctx).Error(err.Error())
 				return nil
 			}
-			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b))
+			now := time.Now()
+			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), now, now)
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
 				return nil

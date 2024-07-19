@@ -361,6 +361,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		type File struct {
 			FilePath     string
 			Text         string
+			ModTime      time.Time
 			CreationTime time.Time
 		}
 		group, groupctx := errgroup.WithContext(ctx)
@@ -382,8 +383,10 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				},
 			}, func(row *sq.Row) File {
 				return File{
-					FilePath: row.String("file_path"),
-					Text:     row.String("text"),
+					FilePath:     row.String("file_path"),
+					Text:         row.String("text"),
+					ModTime:      row.Time("mod_time"),
+					CreationTime: row.Time("creation_time"),
 				}
 			})
 			if err != nil {
@@ -405,7 +408,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					if sitePrefix != "" {
 						_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 					}
-					err = siteGen.GeneratePage(subctx, file.FilePath, file.Text)
+					err = siteGen.GeneratePage(subctx, file.FilePath, file.Text, file.ModTime, file.CreationTime)
 					if err != nil {
 						return err
 					}
@@ -597,7 +600,12 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				if sitePrefix != "" {
 					_, filePath, _ = strings.Cut(filePath, "/")
 				}
-				err = siteGen.GeneratePage(subctx, filePath, b.String())
+				var absolutePath string
+				if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				}
+				creationTime := CreationTime(absolutePath, fileInfo)
+				err = siteGen.GeneratePage(subctx, filePath, b.String(), fileInfo.ModTime(), creationTime)
 				if err != nil {
 					return err
 				}

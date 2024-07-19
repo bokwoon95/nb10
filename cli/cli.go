@@ -914,7 +914,8 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = siteGen.GeneratePage(context.Background(), "pages/index.html", string(b))
+		now := time.Now()
+		err = siteGen.GeneratePage(context.Background(), "pages/index.html", string(b), now, now)
 		if err != nil {
 			return nil, err
 		}
@@ -941,7 +942,8 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = siteGen.GeneratePage(context.Background(), "pages/404.html", string(b))
+		now := time.Now()
+		err = siteGen.GeneratePage(context.Background(), "pages/404.html", string(b), now, now)
 		if err != nil {
 			return nil, err
 		}
