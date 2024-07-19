@@ -502,17 +502,17 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				if b.Len() > 0 {
 					b.WriteString(" ")
 				}
-				b.WriteString("mobile")
+				b.WriteString("Mobile")
 			} else if userAgent.Desktop {
 				if b.Len() > 0 {
 					b.WriteString(" ")
 				}
-				b.WriteString("desktop")
+				b.WriteString("Desktop")
 			} else if userAgent.Tablet {
 				if b.Len() > 0 {
 					b.WriteString(" ")
 				}
-				b.WriteString("tablet")
+				b.WriteString("Tablet")
 			}
 			if userAgent.Device != "" {
 				if b.Len() > 0 {
