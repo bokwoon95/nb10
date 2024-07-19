@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/extension"
@@ -2062,13 +2061,29 @@ var userFuncMap = map[string]any{
 		}
 		return dict, nil
 	},
-	"dump": func(v any) string {
-		s := spew.Sdump(v)
+	"dump": func(v any) template.HTML {
+		b, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return template.HTML("<pre style='white-space:pre-wrap;'>" + err.Error() + "</pre>")
+		}
+		s := string(b)
 		fmt.Println(s)
-		return s
+		return template.HTML("<pre style='white-space:pre-wrap;'>" + s + "</pre>")
 	},
 	"throw": func(v any) (string, error) {
 		return "", fmt.Errorf("%v", v)
+	},
+	"coalesce": func(elem ...any) any {
+		for _, elem := range elem {
+			if elem == nil {
+				continue
+			}
+			if reflect.ValueOf(elem).IsZero() {
+				continue
+			}
+			return elem
+		}
+		return ""
 	},
 	"case": func(expr any, elem ...any) any {
 		var fallback any
