@@ -354,14 +354,10 @@
       (eq (ext $.FilePath) ".md"))
   }}
   <div class='mt2'>
-    {{- if eq (head $.FilePath) "pages" }}
+    {{- if eq (head $.FilePath) "pages" "posts" }}
     <div class='b'>upload assets:</div>
     <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
     <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
-    {{- else if eq (head $.FilePath) "posts" }}
-    <div class='b'>upload images:</div>
-    <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
-    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
     {{- end }}
   </div>
   {{- end }}
@@ -411,7 +407,7 @@
   <details class='mv2'>
     <summary class='pointer f6'>how do I include images in my post?</summary>
     <div>
-      <p>First, <strong>upload images</strong> using the form above. Uploaded images are then <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
+      <p>First, <strong>upload images</strong> using the "upload assets" form above. Then, uploaded images will be <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
       <p>You can also <strong>explicitly include</strong> uploaded images with the <code>&lt;img&gt;</code> tag. Example:</p>
       <pre class='pre-wrap break-word'># Here is a picture I took today:
 
