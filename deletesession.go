@@ -241,7 +241,6 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 			lowerBound, upperBound := sessionTokenHashes[i], sessionTokenHashes[i+1]
 			if nbrew.Dialect == "sqlite" || nbrew.Dialect == "postgres" {
 				sessions, err = sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
-					Debug:   true,
 					Dialect: nbrew.Dialect,
 					Format:  "DELETE FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound} RETURNING {*}",
 					Values: []any{
