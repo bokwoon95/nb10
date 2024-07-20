@@ -796,7 +796,7 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	}
 	dirEntries, err := sq.FetchAll(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
-		Format:  "SELECT {*} FROM files WHERE {condition}",
+		Format:  "SELECT {*} FROM files WHERE {condition} ORDER BY file_path",
 		Values: []any{
 			sq.Param("condition", condition),
 		},
