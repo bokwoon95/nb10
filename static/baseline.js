@@ -204,7 +204,7 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
     xhr.open("POST", dataAjaxUpload.action, true);
     xhr.upload.onprogress = function(event) {
       if (statusElement) {
-        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total) + " (" + (event.loaded / event.total) * 100 + "%)";
+        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total) + " (" + ((event.loaded / event.total) * 100).toFixed(3) + "%)";
       }
     };
     xhr.onload = function() {
