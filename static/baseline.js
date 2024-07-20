@@ -193,7 +193,6 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
     });
   }
   dataAjaxUpload.addEventListener("submit", function(event) {
-    console.log("dataAjaxUpload");
     event.preventDefault();
     if (dataAjaxUpload.classList.contains("submitting")) {
       return;

@@ -221,7 +221,6 @@ globalThis.initializeEditors = function() {
     // On form submit, synchronize the codemirror editor's contents with the
     // textarea it is paired with (before the form is submitted).
     form.addEventListener("submit", function() {
-      console.log("synchronizeEditor");
       if (config.get("scrollIntoView")) {
         // Save the textarea cursor position to localStorage.
         localStorage.setItem(`textareaCursorPosition:${window.location.pathname}:${index}`, textarea.selectionStart.toString());
