@@ -21,9 +21,11 @@ import (
 )
 
 type CreatesiteCmd struct {
-	Notebrew *nb10.Notebrew
-	Stdout   io.Writer
-	SiteName string
+	Notebrew        *nb10.Notebrew
+	Stdout          io.Writer
+	SiteName        string
+	SiteTitle       string
+	SiteDescription string
 }
 
 func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, error) {
@@ -31,18 +33,26 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 		return nil, fmt.Errorf("no database configured: to fix, run `notebrew config database.dialect sqlite` and try again")
 	}
 	var cmd CreatesiteCmd
+	var siteNameProvided bool
 	cmd.Notebrew = nbrew
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
+	flagset.Func("name", "", func(s string) error {
+		siteNameProvided = true
+		cmd.SiteName = strings.TrimSpace(s)
+		return nil
+	})
+	flagset.Func("title", "", func(s string) error {
+		cmd.SiteTitle = strings.TrimSpace(s)
+		return nil
+	})
+	flagset.Func("description", "", func(s string) error {
+		cmd.SiteDescription = strings.TrimSpace(s)
+		return nil
+	})
 	flagset.Usage = func() {
 		fmt.Fprintln(flagset.Output(), `Usage:
   lorem ipsum dolor sit amet
   consectetur adipiscing elit`)
-	}
-	var siteNameProvided bool
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		siteNameProvided = true
-		cmd.SiteName = strings.TrimSpace(args[0])
-		args = args[1:]
 	}
 	err := flagset.Parse(args)
 	if err != nil {
@@ -109,6 +119,18 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 				fmt.Println("site already exists")
 				continue
 			}
+			fmt.Print("Site title: ")
+			text, err = reader.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			cmd.SiteTitle = strings.TrimSpace(text)
+			fmt.Print("Site description: ")
+			text, err = reader.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			cmd.SiteDescription = strings.TrimSpace(text)
 			break
 		}
 	}
@@ -217,7 +239,9 @@ func (cmd *CreatesiteCmd) Run() error {
 		group, groupctx := errgroup.WithContext(context.Background())
 		group.Go(func() error {
 			var home string
-			if cmd.SiteName == "" {
+			if cmd.SiteTitle != "" {
+				home = cmd.SiteTitle
+			} else if cmd.SiteName == "" {
 				home = "home"
 			} else if strings.Contains(cmd.SiteName, ".") {
 				home = cmd.SiteName
@@ -234,7 +258,9 @@ func (cmd *CreatesiteCmd) Run() error {
 			}
 			defer writer.Close()
 			err = tmpl.Execute(writer, map[string]string{
-				"Home": home,
+				"Home":        home,
+				"Title":       cmd.SiteTitle,
+				"Description": cmd.SiteDescription,
 			})
 			if err != nil {
 				return err

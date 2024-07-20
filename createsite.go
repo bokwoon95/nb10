@@ -392,7 +392,9 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			}
 		}
 		var home string
-		if response.SiteName == "" {
+		if response.SiteTitle != "" {
+			home = response.SiteTitle
+		} else if response.SiteName == "" {
 			home = "home"
 		} else if strings.Contains(response.SiteName, ".") {
 			home = response.SiteName
