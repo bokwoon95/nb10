@@ -128,6 +128,7 @@ TODO: for directory.html, for every directory show a new link called 'apply them
         - TODO: the user can also choose between applying the theme for all categories or one specific category.
     - TODO: in site.json, we also need a 'reset theme' option which updates all post.html, postlist.html and index.html to their original format.
         - TODO: /resettheme/: similar to /applytheme/, the user can choose to reset themes for all categories or just one specific category.
+TODO: convert food posts into instagram-like carousell as proof-of-concept.
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
