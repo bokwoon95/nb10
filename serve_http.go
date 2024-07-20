@@ -212,16 +212,18 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Figure out the sitePrefix of the site we are serving.
 		var sitePrefix string
-		tld := path.Ext(head)
 		if strings.HasPrefix(head, "@") {
 			sitePrefix, urlPath = head, tail
 			head, tail, _ = strings.Cut(urlPath, "/")
-		} else if tld != "" {
-			// head is a sitePrefix only if its TLD is not a file extension.
-			_, ok := AllowedFileTypes[tld]
-			if !ok {
-				sitePrefix, urlPath = head, tail
-				head, tail, _ = strings.Cut(urlPath, "/")
+		} else {
+			tld := path.Ext(head)
+			if tld != "" {
+				// head is a sitePrefix only if its TLD is not a file extension.
+				_, ok := AllowedFileTypes[tld]
+				if !ok {
+					sitePrefix, urlPath = head, tail
+					head, tail, _ = strings.Cut(urlPath, "/")
+				}
 			}
 		}
 
