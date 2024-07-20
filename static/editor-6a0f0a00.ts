@@ -235,6 +235,8 @@ globalThis.initializeEditors = function() {
       if (ext == ".html" || ext == ".css" || ext == ".js") {
         textarea.value = editor.state.doc.toString();
       }
+    }, {
+      capture: true,
     });
 
     // Insert the codemirror editor after the textarea.
