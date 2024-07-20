@@ -72,10 +72,9 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     event.preventDefault();
     if (form) {
       form.dispatchEvent(new Event("submit"));
-      if (form.hasAttribute("data-ajax-upload")) {
-        return;
+      if (!config.get("ajaxSubmission")) {
+        form.submit();
       }
-      form.submit();
     }
   });
 
@@ -136,10 +135,9 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
             run: function(_: EditorView): boolean {
               if (form) {
                 form.dispatchEvent(new Event("submit"));
-                if (form.hasAttribute("data-ajax-upload")) {
-                  return true;
+                if (!config.get("ajaxSubmission")) {
+                  form.submit();
                 }
-                form.submit();
               }
               return true;
             },

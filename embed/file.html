@@ -6,7 +6,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<script type='module' src='/files/static/editor-df2c780d.js'></script>
+<script type='module' src='/files/static/editor-d553b407.js'></script>
 <script type='module' src='/files/static/file-a89976ba.js'></script>
 <title>{{ base $.FilePath }}{{ if $.SitePrefix }} - {{ $.SitePrefix }}{{ end }}</title>
 <body class='centered-body'>
@@ -342,7 +342,7 @@
     </label>
     <button type='submit' class='button ba ph3 br2 b--black pv1'>save</button>
   </div>
-  <div data-editor='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap","scrollIntoView":true}'>
+  <div data-editor='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap","scrollIntoView":true,"ajaxSubmission":true}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
   </div>
   {{- if or
