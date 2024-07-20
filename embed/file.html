@@ -356,12 +356,10 @@
   <div class='mt2'>
     {{- if eq (head $.FilePath) "pages" }}
     <div class='b'>upload assets:</div>
-    <div class='f6'>(uploading images may add noticeable delay to form submission, please be patient)</div>
     <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
     <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
     {{- else if eq (head $.FilePath) "posts" }}
     <div class='b'>upload images:</div>
-    <div class='f6'>(uploading images may add noticeable delay to form submission, please be patient)</div>
     <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
     <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
     {{- end }}
