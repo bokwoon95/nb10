@@ -281,15 +281,15 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 	if nbrew.DB == nil {
 		cookie.Value = base64.URLEncoding.EncodeToString(buf.Bytes())
 	} else {
-		var flashToken [8 + 16]byte
-		binary.BigEndian.PutUint64(flashToken[:8], uint64(time.Now().Unix()))
-		_, err := rand.Read(flashToken[8:])
+		var flashTokenBytes [8 + 16]byte
+		binary.BigEndian.PutUint64(flashTokenBytes[:8], uint64(time.Now().Unix()))
+		_, err := rand.Read(flashTokenBytes[8:])
 		if err != nil {
 			return fmt.Errorf("reading rand: %w", err)
 		}
 		var flashTokenHash [8 + blake2b.Size256]byte
-		checksum := blake2b.Sum256(flashToken[8:])
-		copy(flashTokenHash[:8], flashToken[:8])
+		checksum := blake2b.Sum256(flashTokenBytes[8:])
+		copy(flashTokenHash[:8], flashTokenBytes[:8])
 		copy(flashTokenHash[8:], checksum[:])
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
@@ -302,7 +302,7 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 		if err != nil {
 			return fmt.Errorf("flash: %w", err)
 		}
-		cookie.Value = strings.TrimLeft(hex.EncodeToString(flashToken[:]), "0")
+		cookie.Value = strings.TrimLeft(hex.EncodeToString(flashTokenBytes[:]), "0")
 	}
 	http.SetCookie(w, cookie)
 	return nil

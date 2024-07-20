@@ -186,22 +186,22 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		header := r.Header.Get("Authorization")
 		if header != "" {
 			if strings.HasPrefix(header, "Bearer ") {
-				currentSessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Bearer ")))
-				if err == nil && len(currentSessionToken) == 24 {
+				currentSessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", strings.TrimPrefix(header, "Bearer ")))
+				if err == nil && len(currentSessionTokenBytes) == 24 {
 					currentSessionTokenHash = make([]byte, 8+blake2b.Size256)
-					checksum := blake2b.Sum256(currentSessionToken[8:])
-					copy(currentSessionTokenHash[:8], currentSessionToken[:8])
+					checksum := blake2b.Sum256(currentSessionTokenBytes[8:])
+					copy(currentSessionTokenHash[:8], currentSessionTokenBytes[:8])
 					copy(currentSessionTokenHash[8:], checksum[:])
 				}
 			}
 		} else {
 			cookie, _ := r.Cookie("session")
 			if cookie != nil {
-				currentSessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
-				if err == nil && len(currentSessionToken) == 24 {
+				currentSessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+				if err == nil && len(currentSessionTokenBytes) == 24 {
 					currentSessionTokenHash = make([]byte, 8+blake2b.Size256)
-					checksum := blake2b.Sum256(currentSessionToken[8:])
-					copy(currentSessionTokenHash[:8], currentSessionToken[:8])
+					checksum := blake2b.Sum256(currentSessionTokenBytes[8:])
+					copy(currentSessionTokenHash[:8], currentSessionTokenBytes[:8])
 					copy(currentSessionTokenHash[8:], checksum[:])
 				}
 			}

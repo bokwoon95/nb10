@@ -117,15 +117,15 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			writeResponse(w, r, response)
 			return
 		}
-		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		inviteTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
 			response.Error = "InvalidInviteToken"
 			writeResponse(w, r, response)
 			return
 		}
-		checksum := blake2b.Sum256(inviteToken[8:])
+		checksum := blake2b.Sum256(inviteTokenBytes[8:])
 		var inviteTokenHash [8 + blake2b.Size256]byte
-		copy(inviteTokenHash[:8], inviteToken[:8])
+		copy(inviteTokenHash[:8], inviteTokenBytes[:8])
 		copy(inviteTokenHash[8:], checksum[:])
 		validateEmail, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
@@ -274,15 +274,15 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			writeResponse(w, r, response)
 			return
 		}
-		inviteToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		inviteTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
 			response.Error = "InvalidInviteToken"
 			writeResponse(w, r, response)
 			return
 		}
-		checksum := blake2b.Sum256(inviteToken[8:])
+		checksum := blake2b.Sum256(inviteTokenBytes[8:])
 		var inviteTokenHash [8 + blake2b.Size256]byte
-		copy(inviteTokenHash[:8], inviteToken[:8])
+		copy(inviteTokenHash[:8], inviteTokenBytes[:8])
 		copy(inviteTokenHash[8:], checksum[:])
 		result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,

@@ -16,30 +16,30 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}
-	var sessionTokenString string
+	var sessionToken string
 	header := r.Header.Get("Authorization")
 	if header != "" {
 		if strings.HasPrefix(header, "Bearer ") {
-			sessionTokenString = strings.TrimPrefix(header, "Bearer ")
+			sessionToken = strings.TrimPrefix(header, "Bearer ")
 		}
 	} else {
 		cookie, _ := r.Cookie("session")
 		if cookie != nil {
-			sessionTokenString = cookie.Value
+			sessionToken = cookie.Value
 		}
 	}
-	if sessionTokenString == "" {
+	if sessionToken == "" {
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}
-	sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", sessionTokenString))
-	if err != nil || len(sessionToken) != 24 {
+	sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
+	if err != nil || len(sessionTokenBytes) != 24 {
 		http.Redirect(w, r, "/users/login/", http.StatusFound)
 		return
 	}
 	var sessionTokenHash [8 + blake2b.Size256]byte
-	checksum := blake2b.Sum256(sessionToken[8:])
-	copy(sessionTokenHash[:8], sessionToken[:8])
+	checksum := blake2b.Sum256(sessionTokenBytes[8:])
+	copy(sessionTokenHash[:8], sessionTokenBytes[:8])
 	copy(sessionTokenHash[8:], checksum[:])
 	switch r.Method {
 	case "GET", "HEAD":

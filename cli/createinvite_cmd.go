@@ -85,15 +85,15 @@ func (cmd *CreateinviteCmd) Run() error {
 	if !cmd.Notebrew.CMSDomainHTTPS {
 		scheme = "http://"
 	}
-	var inviteToken [8 + 16]byte
-	binary.BigEndian.PutUint64(inviteToken[:8], uint64(time.Now().Unix()))
-	_, err := rand.Read(inviteToken[8:])
+	var inviteTokenBytes [8 + 16]byte
+	binary.BigEndian.PutUint64(inviteTokenBytes[:8], uint64(time.Now().Unix()))
+	_, err := rand.Read(inviteTokenBytes[8:])
 	if err != nil {
 		return err
 	}
-	checksum := blake2b.Sum256(inviteToken[8:])
+	checksum := blake2b.Sum256(inviteTokenBytes[8:])
 	var inviteTokenHash [8 + blake2b.Size256]byte
-	copy(inviteTokenHash[:8], inviteToken[:8])
+	copy(inviteTokenHash[:8], inviteTokenBytes[:8])
 	copy(inviteTokenHash[8:], checksum[:])
 	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
@@ -109,6 +109,6 @@ func (cmd *CreateinviteCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/invite/?token="+strings.TrimLeft(hex.EncodeToString(inviteToken[:]), "0"))
+	fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/invite/?token="+strings.TrimLeft(hex.EncodeToString(inviteTokenBytes[:]), "0"))
 	return nil
 }

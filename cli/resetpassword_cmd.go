@@ -164,15 +164,15 @@ func (cmd *ResetpasswordCmd) Run() error {
 		cmd.Stdout = os.Stdout
 	}
 	if cmd.ResetLink {
-		var resetToken [8 + 16]byte
-		binary.BigEndian.PutUint64(resetToken[:8], uint64(time.Now().Unix()))
-		_, err := rand.Read(resetToken[8:])
+		var resetTokenBytes [8 + 16]byte
+		binary.BigEndian.PutUint64(resetTokenBytes[:8], uint64(time.Now().Unix()))
+		_, err := rand.Read(resetTokenBytes[8:])
 		if err != nil {
 			return err
 		}
-		checksum := blake2b.Sum256(resetToken[8:])
+		checksum := blake2b.Sum256(resetTokenBytes[8:])
 		var resetTokenHash [8 + blake2b.Size256]byte
-		copy(resetTokenHash[:8], resetToken[:8])
+		copy(resetTokenHash[:8], resetTokenBytes[:8])
 		copy(resetTokenHash[8:], checksum[:])
 		if !strings.HasPrefix(cmd.User, "@") && strings.Contains(cmd.User, "@") {
 			email := cmd.User
@@ -204,7 +204,7 @@ func (cmd *ResetpasswordCmd) Run() error {
 		if !cmd.Notebrew.CMSDomainHTTPS {
 			scheme = "http://"
 		}
-		fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/resetpassword/?token="+url.QueryEscape(strings.TrimLeft(hex.EncodeToString(resetToken[:]), "0")))
+		fmt.Fprintln(cmd.Stdout, scheme+cmd.Notebrew.CMSDomain+"/users/resetpassword/?token="+url.QueryEscape(strings.TrimLeft(hex.EncodeToString(resetTokenBytes[:]), "0")))
 		return nil
 	}
 	tx, err := cmd.Notebrew.DB.Begin()

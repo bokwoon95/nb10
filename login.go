@@ -470,17 +470,17 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			return
 		}
 
-		var sessionToken [8 + 16]byte
-		binary.BigEndian.PutUint64(sessionToken[:8], uint64(time.Now().Unix()))
-		_, err = rand.Read(sessionToken[8:])
+		var sessionTokenBytes [8 + 16]byte
+		binary.BigEndian.PutUint64(sessionTokenBytes[:8], uint64(time.Now().Unix()))
+		_, err = rand.Read(sessionTokenBytes[8:])
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		var sessionTokenHash [8 + blake2b.Size256]byte
-		checksum := blake2b.Sum256(sessionToken[8:])
-		copy(sessionTokenHash[:8], sessionToken[:8])
+		checksum := blake2b.Sum256(sessionTokenBytes[8:])
+		copy(sessionTokenHash[:8], sessionTokenBytes[:8])
 		copy(sessionTokenHash[8:], checksum[:])
 		var b strings.Builder
 		if nbrew.MaxMindDBReader != nil {
@@ -582,7 +582,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 				return
 			}
 		}
-		response.SessionToken = strings.TrimLeft(hex.EncodeToString(sessionToken[:]), "0")
+		response.SessionToken = strings.TrimLeft(hex.EncodeToString(sessionTokenBytes[:]), "0")
 		writeResponse(w, r, response)
 	default:
 		nbrew.MethodNotAllowed(w, r)

@@ -93,24 +93,24 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var user User
-		var sessionTokenString string
+		var sessionToken string
 		header := r.Header.Get("Authorization")
 		if header != "" {
 			if strings.HasPrefix(header, "Bearer ") {
-				sessionTokenString = strings.TrimPrefix(header, "Bearer ")
+				sessionToken = strings.TrimPrefix(header, "Bearer ")
 			}
 		} else {
 			cookie, _ := r.Cookie("session")
 			if cookie != nil {
-				sessionTokenString = cookie.Value
+				sessionToken = cookie.Value
 			}
 		}
-		if sessionTokenString != "" {
-			sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", sessionTokenString))
-			if err == nil && len(sessionToken) == 24 {
+		if sessionToken != "" {
+			sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
+			if err == nil && len(sessionTokenBytes) == 24 {
 				var sessionTokenHash [8 + blake2b.Size256]byte
-				checksum := blake2b.Sum256(sessionToken[8:])
-				copy(sessionTokenHash[:8], sessionToken[:8])
+				checksum := blake2b.Sum256(sessionTokenBytes[8:])
+				copy(sessionTokenHash[:8], sessionTokenBytes[:8])
 				copy(sessionTokenHash[8:], checksum[:])
 				user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
@@ -238,19 +238,19 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
-			var sessionTokenString string
+			var sessionToken string
 			header := r.Header.Get("Authorization")
 			if header != "" {
 				if strings.HasPrefix(header, "Bearer ") {
-					sessionTokenString = strings.TrimPrefix(header, "Bearer ")
+					sessionToken = strings.TrimPrefix(header, "Bearer ")
 				}
 			} else {
 				cookie, _ := r.Cookie("session")
 				if cookie != nil {
-					sessionTokenString = cookie.Value
+					sessionToken = cookie.Value
 				}
 			}
-			if sessionTokenString == "" {
+			if sessionToken == "" {
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
 					return
@@ -258,7 +258,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.NotAuthenticated(w, r)
 				return
 			}
-			sessionToken, err := hex.DecodeString(fmt.Sprintf("%048s", sessionTokenString))
+			sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
 			if err != nil {
 				if head == "" {
 					http.Redirect(w, r, "/users/login/?401", http.StatusFound)
@@ -268,8 +268,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			var sessionTokenHash [8 + blake2b.Size256]byte
-			checksum := blake2b.Sum256(sessionToken[8:])
-			copy(sessionTokenHash[:8], sessionToken[:8])
+			checksum := blake2b.Sum256(sessionTokenBytes[8:])
+			copy(sessionTokenHash[:8], sessionTokenBytes[:8])
 			copy(sessionTokenHash[8:], checksum[:])
 			result, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,

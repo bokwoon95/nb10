@@ -87,15 +87,15 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			writeResponse(w, r, response)
 			return
 		}
-		resetToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		resetTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
 			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
-		checksum := blake2b.Sum256(resetToken[8:])
+		checksum := blake2b.Sum256(resetTokenBytes[8:])
 		var resetTokenHash [8 + blake2b.Size256]byte
-		copy(resetTokenHash[:8], resetToken[:8])
+		copy(resetTokenHash[:8], resetTokenBytes[:8])
 		copy(resetTokenHash[8:], checksum[:])
 		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
@@ -205,21 +205,21 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			writeResponse(w, r, response)
 			return
 		}
-		resetToken, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
+		resetTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", response.Token))
 		if err != nil {
 			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
-		creationTime := time.Unix(int64(binary.BigEndian.Uint64(resetToken[:8])), 0)
+		creationTime := time.Unix(int64(binary.BigEndian.Uint64(resetTokenBytes[:8])), 0)
 		if time.Now().Sub(creationTime) > 24*time.Hour {
 			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)
 			return
 		}
-		checksum := blake2b.Sum256(resetToken[8:])
+		checksum := blake2b.Sum256(resetTokenBytes[8:])
 		var resetTokenHash [8 + blake2b.Size256]byte
-		copy(resetTokenHash[:8], resetToken[:8])
+		copy(resetTokenHash[:8], resetTokenBytes[:8])
 		copy(resetTokenHash[8:], checksum[:])
 		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
