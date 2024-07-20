@@ -199,14 +199,9 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
     }
     dataAjaxUpload.classList.add("submitting", "o-70");
     const xhr = new XMLHttpRequest();
-    const abortRequest = function() { xhr.abort() }
+    const abortRequest = function() { xhr.abort() };
     window.addEventListener("beforeunload", abortRequest);
     xhr.open("POST", dataAjaxUpload.action, true);
-    xhr.upload.onloadstart = function(event) {
-      if (statusElement) {
-        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total);
-      }
-    };
     xhr.upload.onprogress = function(event) {
       if (statusElement) {
         statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total);
