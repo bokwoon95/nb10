@@ -62,7 +62,7 @@
   {{- end }}
 </div>
 <figure class='mv2 w-70-l w-80-m w-100 center'>
-  <figcaption class='flex flex-wrap items-center break-word mv2'>
+  <div class='flex flex-wrap items-center break-word mv2'>
     {{- if $.PreviousImageName }}
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
     {{- end }}
@@ -79,12 +79,21 @@
     {{- if $.NextImageName }}
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
     {{- end }}
-  </figcaption>
+  </div>
   {{- if and $.CDNDomain $.IsDatabaseFS }}
   <img src='//{{ $.CDNDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- else }}
   <img src='?raw' alt='{{ $.AltText }}' style='max-height: 100%; max-width: 100%; object-fit: cover;' loading='lazy'>
   {{- end }}
+  <div class='flex flex-wrap items-center break-word mv2'>
+    {{- if $.PreviousImageName }}
+    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.PreviousImageName }}'>&larr; previous</a>
+    {{- end }}
+    <span class='flex-grow-1 mh1'></span>
+    {{- if $.NextImageName }}
+    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) $.NextImageName }}'>next &rarr;</a>
+    {{- end }}
+  </div>
 </figure>
 {{- if $.IsDatabaseFS }}
 <form method='post' class='mv2' data-prevent-double-submit>
