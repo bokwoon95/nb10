@@ -199,8 +199,6 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
     }
     dataAjaxUpload.classList.add("submitting", "o-70");
     const xhr = new XMLHttpRequest();
-    const abortRequest = function() { xhr.abort() };
-    window.addEventListener("beforeunload", abortRequest);
     xhr.open("POST", dataAjaxUpload.action, true);
     xhr.upload.onprogress = function(event) {
       if (statusElement) {
@@ -211,9 +209,7 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       if (statusElement) {
         statusElement.textContent = "";
       }
-      window.removeEventListener("beforeunload", abortRequest);
       dataAjaxUpload.classList.remove("submitting", "o-70");
-      console.log(xhr.response);
       document.open();
       document.write(xhr.response);
       document.close();
