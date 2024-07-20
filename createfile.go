@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
 	"golang.org/x/sync/errgroup"
 )
@@ -198,7 +197,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 			if response.Error != "" {
-				spew.Dump(response)
 				err := nbrew.SetFlashSession(w, r, &response)
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
