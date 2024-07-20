@@ -119,11 +119,6 @@ the admin page needs to:
 ajax:true enables ajax, but wwe also need ajax enabled in order to show progress.
 or maybe we alwways unconditionally show ajax progress as long as ajax is enabled, so even simple form posting will show an indication.
 
-TODO: add javascript that submits multipart forms via AJAX so that upload progress can be monitored client-side.
-    - data-form='{"preventDoubleSubmit":}'
-    - data-prevent-double-submit, data-ajax-submit
-    - data-prevent-double-submit='{"ajaxProgress":true}'
-    - This is for login (due to captcha) and payments.
 TODO: create a sessions table hat lets users manage their sessions. They can also generate new sessions, whereby the session token is shown once and then deleted.
     - profile => sessions => generate session token
     - TODO: /profile/ should show the current user's sessions
