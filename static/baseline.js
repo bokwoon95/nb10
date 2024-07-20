@@ -176,23 +176,23 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
   const statusElement = dataAjaxUpload.querySelector("[role=status]");
   for (const fileInput of dataAjaxUpload.querySelectorAll("input[type=file]")) {
     fileInput.addEventListener("input", async function() {
-      await new Promise(function(resolve, reject) {
-        const formData = new FormData(dataAjaxUpload);
-        let size = 0;
-        for (const [_, value] of formData.entries()) {
-          if (value instanceof Blob) {
-            size += value.size;
-          }
-        }
-        if (statusElement) {
-          if (size == 0) {
-            statusElement.textContent = "";
-          } else {
-            statusElement.textContent = humanReadableFileSize(size);
-          }
-        }
-        resolve();
-      });
+      // await new Promise(function(resolve, reject) {
+      //   const formData = new FormData(dataAjaxUpload);
+      //   let size = 0;
+      //   for (const [_, value] of formData.entries()) {
+      //     if (value instanceof Blob) {
+      //       size += value.size;
+      //     }
+      //   }
+      //   if (statusElement) {
+      //     if (size == 0) {
+      //       statusElement.textContent = "";
+      //     } else {
+      //       statusElement.textContent = humanReadableFileSize(size);
+      //     }
+      //   }
+      //   resolve();
+      // });
     });
   }
   dataAjaxUpload.addEventListener("submit", function(event) {
