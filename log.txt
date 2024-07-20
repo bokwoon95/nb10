@@ -119,7 +119,7 @@ the admin page needs to:
 ajax:true enables ajax, but wwe also need ajax enabled in order to show progress.
 or maybe we alwways unconditionally show ajax progress as long as ajax is enabled, so even simple form posting will show an indication.
 
-TODO: createsite.go needs to additionally include site title, preferred timezone offset and site description in the form. If a database is present, preferred timezone offset will be taken from the user's timezone offset.
+TODO: add a lang field to site.json | invite | createsite | createsite_cmd
 TODO: add javascript that submits multipart forms via AJAX so that upload progress can be monitored client-side.
     - data-form='{"preventDoubleSubmit":}'
     - data-prevent-double-submit, data-ajax-submit
@@ -142,7 +142,6 @@ TODO: signup.go
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
 TODO: add a hash to the response headers so that clients can do a GET to synchronize their local copy with remote
 TODO: tests
-TODO: why is notebrew so hopelessly broken on macOS? test it on macOS
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 TODO: include handwritten API documentation, involving POST-ing to /login/.
     TODO: make sure to warn them if they get the password request wrong three times it will activate the captcha after which bots will likely break, this can be cleared by the user grabbing the

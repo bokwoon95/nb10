@@ -412,10 +412,19 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		defer writer.Close()
+		seconds := user.TimezoneOffsetSeconds
+		sign := "+"
+		if seconds < 0 {
+			seconds = -seconds
+			sign = "-"
+		}
+		hours := seconds / 3600
+		minutes := (seconds % 3600) / 60
 		err = tmpl.Execute(writer, map[string]string{
-			"Home":        home,
-			"Title":       response.SiteTitle,
-			"Description": response.SiteDescription,
+			"Home":           home,
+			"Title":          response.SiteTitle,
+			"Description":    response.SiteDescription,
+			"TimezoneOffset": fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())

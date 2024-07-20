@@ -232,7 +232,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// If the users database is present, check if the user is authorized to
 		// access the files for this site.
-		var user User
+		user := User{
+			SiteLimit:    -1,
+			StorageLimit: -1,
+		}
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
 			var sessionTokenString string
