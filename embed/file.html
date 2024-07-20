@@ -379,7 +379,7 @@
   {{- if eq (head $.FilePath) "pages" }}
   <details class='mv2'>
     <summary class='pointer f6'>how do I include assets in my page?</summary>
-    <p>You can <strong>upload assets</strong> using the form above or with the <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ if eq $.FilePath "pages/index.html" }}output{{ else }}{{ join "output" (trimSuffix (tail $.FilePath) ".html") }}{{ end }}'>create file</a> link below. Assets can then be directly included in the page by their file name.</p>
+    <p>Upload assets using the "<strong>upload assets</strong>" field and save, or use the <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ if eq $.FilePath "pages/index.html" }}output{{ else }}{{ join "output" (trimSuffix (tail $.FilePath) ".html") }}{{ end }}'>create file</a> link to create a new asset file. Uploaded assets can then be directly included in the page by their file name</p>
     <ul class='list-style-disc ph3'>
       <li>
         <p>Include images with the <code>&lt;img&gt;</code> tag.</p>
@@ -411,15 +411,14 @@
   <details class='mv2'>
     <summary class='pointer f6'>how do I include images in my post?</summary>
     <div>
-      <p>First, upload images using the "<strong>upload images</strong>" field above. Then, save the post as usual. The uploaded images will be <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
-      <p>You can also <strong>explicitly include</strong> uploaded images with the <code>&lt;img&gt;</code> tag. Example:</p>
+      <p>Upload images using the "<strong>upload images</strong>" field and save. The uploaded images will then be <strong>implicitly included</strong> at the end of the post. They are shown in alphabetical order, which you can control by renaming the files.</p>
+      <p>If you wish to explicitly control where an image appears in a post, you can <strong>explicitly include</strong> uploaded images with the <code>&lt;img&gt;</code> tag. Once an image has been explicitly included in the post body, it will not be implicitly included at the end of the post body. Example:</p>
       <pre class='pre-wrap break-word'># Here is a picture I took today:
 
 &lt;img src='my-file-name.jpg' alt='a cat' width='500' height='500'&gt;
 &lt;!-- display my-file-name.jpg using 500 by 500 pixels--&gt;
 
 It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
-      <p>Explicitly included images will not be included again at the end of the post.</p>
     </div>
   </details>
   <div class='pb2 flex flex-wrap bb'>
