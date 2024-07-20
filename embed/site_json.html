@@ -60,6 +60,14 @@
     <button type='submit' class='button ba ph3 pv1 br2 b--black'>save</button>
   </div>
   <div class='mv3'>
+    <div><label for='lang' class='b'>Lang:</label></div>
+    <select id='lang' name='lang' class='br2'>
+      {{- range $languageCode, $_ := languageCodes }}
+      <option value='{{ $languageCode }}'{{ if eq $.Lang $languageCode }} selected{{ end }}>{{ $languageCode }} {{ getLanguageName $languageCode }}</option>
+      {{- end }}
+    </select>
+  </div>
+  <div class='mv3'>
     <div><label for='title' class='b'>Title:</label></div>
     <input id='title' name='title' value='{{ $.Title }}' class='pv1 ph2 br2 ba w-100' required>
   </div>
@@ -74,7 +82,7 @@
   <div class='mv3'>
     <div><label for='codeStyle' class='b'>Code Style (<a href='/files/static/chroma-style-gallery-2030e4e0.html'>Chroma Style Gallery</a>):</label></div>
     <select id='codeStyle' name='codeStyle' class='br2'>
-      {{- range $codeStyle, $true := chromaStyles }}
+      {{- range $codeStyle, $_ := chromaStyles }}
       <option value='{{ $codeStyle }}'{{ if eq $.CodeStyle $codeStyle }} selected{{ end }}>{{ $codeStyle }}</option>
       {{- end }}
     </select>
