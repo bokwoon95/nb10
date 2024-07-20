@@ -213,6 +213,7 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       }
       window.removeEventListener("beforeunload", abortRequest);
       dataAjaxUpload.classList.remove("submitting", "o-70");
+      console.log(xhr.response);
       document.open();
       document.write(xhr.response);
       document.close();
