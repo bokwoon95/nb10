@@ -14,7 +14,7 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 )
 
-func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user User) {
+func (nbrew *Notebrew) updateprofile(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		Username              string `json:"username"`
 		TimezoneOffsetSeconds int    `json:"timezoneOffsetSeconds"`
@@ -56,7 +56,7 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				"baselineJS": func() template.JS { return template.JS(BaselineJS) },
 				"referer":    func() string { return referer },
 			}
-			tmpl, err := template.New("editprofile.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/editprofile.html")
+			tmpl, err := template.New("updateprofile.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/updateprofile.html")
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -108,12 +108,12 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				http.Redirect(w, r, "/users/editprofile/", http.StatusFound)
+				http.Redirect(w, r, "/users/updateprofile/", http.StatusFound)
 				return
 			}
 			err := nbrew.SetFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
-					"from": "editprofile",
+					"from": "updateprofile",
 				},
 			})
 			if err != nil {

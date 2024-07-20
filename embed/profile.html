@@ -15,7 +15,7 @@
   <a href='/users/logout/' class='ma2 white'>logout</a>
   {{- end }}
 </nav>
-{{- if eq (index $.PostRedirectGet "from") "editprofile" }}
+{{- if eq (index $.PostRedirectGet "from") "updateprofile" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   <div class='pv1'>updated profile</div>
   <div class='flex-grow-1'></div>
@@ -29,7 +29,14 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
-{{- if eq (index $.PostRedirectGet "from") "editprofile" }}
+{{- if eq (index $.PostRedirectGet "from") "updateemail" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  <div class='pv1'>updated email</div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
+{{- if eq (index $.PostRedirectGet "from") "updateprofile" }}
 <div><a href='/files/'>&larr; back</a></div>
 {{- else if referer }}
 <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
@@ -42,7 +49,7 @@
 {{- end }}
 <h2 class='mb0 mh2 underline'>Profile</h2>
 <div class='ma2'>
-  <a href='/users/editprofile/'>edit profile</a>
+  <a href='/users/updateprofile/'>update profile</a>
 </div>
 <div class='ma2'>
   <div class='b'>Username:</div>

@@ -21,7 +21,7 @@
 <div><a href='/users/profile/'>&larr; back</a></div>
 {{- end }}
 <form method='post' data-prevent-double-submit>
-  <h2 class='ma0 b'>Change password</h2>
+  <h2 class='ma0 b'>Update email</h2>
   <div><span class='dark-red'>*&nbsp;</span><em>required</em></div>
   {{- if eq $.Error "FormErrorsPresent" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
@@ -29,7 +29,7 @@
   </div>
   {{- end }}
   <div class='mv3'>
-    <div><span class='dark-red'>*&nbsp;</span><label for='password' class='b'>Password:</label></div>
+    <div><span class='dark-red'>*&nbsp;</span><label for='password' class='b'>Existing password:</label></div>
     <input type='password' id='password' name='password' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "password" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "password" }}
@@ -46,6 +46,6 @@
       {{- end }}
     </ul>
   </div>
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>change email</button>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>update email</button>
   <div role='status'></div>
 </form>

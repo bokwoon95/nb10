@@ -166,8 +166,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "profile":
 			nbrew.profile(w, r, user)
 			return
-		case "editprofile":
-			nbrew.editprofile(w, r, user)
+		case "updateprofile":
+			nbrew.updateprofile(w, r, user)
 			return
 		case "updateemail":
 			nbrew.updateemail(w, r, user)
