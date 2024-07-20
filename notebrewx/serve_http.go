@@ -25,7 +25,7 @@ func (nbrew *Notebrewx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		slog.String("url", scheme+r.Host+r.URL.RequestURI()),
 	)
 	loggerCtx := context.WithValue(r.Context(), loggerKey, logger)
-	_ = r.WithContext(loggerCtx) // 
+	_ = r.WithContext(loggerCtx) //
 	urlPath := strings.Trim(r.URL.Path, "/")
 	if urlPath == "users/signup" {
 	} else if strings.HasPrefix(urlPath, "users/signup/") {

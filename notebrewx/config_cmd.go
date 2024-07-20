@@ -137,7 +137,8 @@ func (cmd *ConfigxCmd) Run() error {
 				io.WriteString(cmd.Stdout, smtpConfig.Host+"\n")
 			case "port":
 				io.WriteString(cmd.Stdout, smtpConfig.Port+"\n")
-			default: io.WriteString(cmd.Stderr, smtpHelp)
+			default:
+				io.WriteString(cmd.Stderr, smtpHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		default:
