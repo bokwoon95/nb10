@@ -128,6 +128,7 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
       setTimeout(function() { dataPaste.value = "" }, 800);
     }
     input.files = dataTransfer.files;
+    input.dispatchEvent(new Event("input"));
   });
 }
 
@@ -169,4 +170,74 @@ for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leade
       dataCheckboxFollower.checked = dataCheckboxLeader.checked;
     }
   });
+}
+
+for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
+  const statusElement = dataAjaxUpload.querySelector("[role=status]");
+  for (const fileInput of dataAjaxUpload.querySelectorAll("input[type=file]")) {
+    fileInput.addEventListener("input", function() {
+      const formData = new FormData(dataAjaxUpload);
+      let size = 0;
+      for (const [_, value] of formData.entries()) {
+        if (value instanceof Blob) {
+          size += value.size;
+        }
+      }
+      if (statusElement) {
+        if (size == 0) {
+          statusElement.textContent = "";
+        } else {
+          statusElement.textContent = humanReadableFileSize(size);
+        }
+      }
+    });
+  }
+  dataAjaxUpload.addEventListener("submit", function(event) {
+    event.preventDefault();
+    if (dataAjaxUpload.classList.contains("submitting")) {
+      return;
+    }
+    dataAjaxUpload.classList.add("submitting", "o-70");
+    const xhr = new XMLHttpRequest();
+    const abortRequest = function() { xhr.abort() }
+    window.addEventListener("beforeunload", abortRequest);
+    xhr.open("POST", dataAjaxUpload.action, true);
+    xhr.upload.onloadstart = function(event) {
+      if (statusElement) {
+        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total);
+      }
+    };
+    xhr.upload.onprogress = function(event) {
+      if (statusElement) {
+        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total);
+      }
+    };
+    xhr.onload = function() {
+      if (statusElement) {
+        statusElement.textContent = "";
+      }
+      window.removeEventListener("beforeunload", abortRequest);
+      dataAjaxUpload.classList.remove("submitting", "o-70");
+      document.documentElement.innerHTML = xhr.response;
+      history.pushState({}, "", xhr.responseURL);
+    }
+    xhr.send(new FormData(dataAjaxUpload));
+  });
+}
+
+function humanReadableFileSize(size) {
+  if (size < 0) {
+    return "";
+  }
+  const unit = 1000;
+  if (size < unit) {
+    return size.toString() + " B";
+  }
+  let div = unit;
+  let exp = 0;
+  for (let n = size / unit; n >= unit; n /= unit) {
+    div *= unit;
+    exp++;
+  }
+  return (size / div).toFixed(1) + " " + ["kB", "MB", "GB", "TB", "PB", "EB"][exp];
 }

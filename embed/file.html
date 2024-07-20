@@ -313,7 +313,7 @@
     <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create file</a>
   {{- end }}
 </div>
-<form method='post' enctype='multipart/form-data' class='mv2' data-prevent-double-submit>
+<form method='post' enctype='multipart/form-data' class='mv2' data-ajax-upload>
   {{- if $.RegenerationStats.TemplateError.ErrorMessage }}
   <div class='mv2 invalid-red'>
     <span class='b'>template error: </span>

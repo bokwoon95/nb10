@@ -28,7 +28,7 @@
   <div class='mv3 b tc'>Can't create a file here.</div>
 </div>
 {{- else }}
-<form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "createfile" }}/' class='mv2' data-prevent-double-submit>
+<form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "createfile" }}/' class='mv2' data-ajax-upload>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}
