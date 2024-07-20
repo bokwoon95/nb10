@@ -36,6 +36,13 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+{{- if eq (index $.PostRedirectGet "from") "deletesession" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  <div class='pv1'>deleted session(s)</div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if eq (index $.PostRedirectGet "from") "updateprofile" }}
 <div><a href='/files/'>&larr; back</a></div>
 {{- else if referer }}
@@ -125,13 +132,13 @@
     <tbody>
       {{- range $session := $.Sessions }}
       <tr class='bb tc'>
-        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='session' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</th>
+        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='sessionTokenPrefix' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</th>
         <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPrefix }}&hellip;</td>
         <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
         <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
         <td class='pa2{{ if $session.Current}} b{{ end }}'>
           {{- if not $session.Current }}
-          <button type='submit' formmethod='get' formaction='/users/deletesession/' name='session' value='{{ $session.SessionTokenPrefix }}' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
+          <button type='submit' formmethod='get' formaction='/users/deletesession/' name='sessionTokenPrefix' value='{{ $session.SessionTokenPrefix }}' class='button-danger ba br2 b--dark-red ph2 pv1'>delete</button>
           {{- else }}
           <em>current session</em>
           {{- end }}

@@ -172,6 +172,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "updateemail":
 			nbrew.updateemail(w, r, user)
 			return
+		case "deletesession":
+			nbrew.deletesession(w, r, user)
+			return
 		default:
 			nbrew.NotFound(w, r)
 			return
