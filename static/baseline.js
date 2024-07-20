@@ -153,7 +153,6 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     }
     dataPreventDoubleSubmit.submit();
   });
-  return;
 }
 
 for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
