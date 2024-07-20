@@ -193,6 +193,7 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
     });
   }
   dataAjaxUpload.addEventListener("submit", function(event) {
+    console.log("dataAjaxUpload");
     event.preventDefault();
     if (dataAjaxUpload.classList.contains("submitting")) {
       return;
@@ -210,10 +211,13 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
         statusElement.textContent = "";
       }
       dataAjaxUpload.classList.remove("submitting", "o-70");
+      history.pushState({}, "", xhr.responseURL);
       document.open();
       document.write(xhr.response);
       document.close();
-      history.pushState({}, "", xhr.responseURL);
+      if (typeof globalThis.initializeEditors == "function") {
+        globalThis.initializeEditors();
+      }
     }
     xhr.send(new FormData(dataAjaxUpload));
   });

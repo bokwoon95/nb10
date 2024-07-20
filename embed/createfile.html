@@ -4,8 +4,8 @@
 <meta name='viewport' content='width=device-width, initial-scale=1'>
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
-<script type='module'>{{ baselineJS }}</script>
 <script type='module' src='/files/static/editor-d553b407.js'></script>
+<script type='module'>{{ baselineJS }}</script>
 <title>Create file</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -28,7 +28,7 @@
   <div class='mv3 b tc'>Can't create a file here.</div>
 </div>
 {{- else }}
-<form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "createfile" }}/' class='mv2' data-ajax-upload>
+<form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "createfile" }}/' class='mv2'{{ if $.UploadableExts }} data-ajax-upload{{ else }} data-prevent-double-submit{{ end }}>
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- else }}
@@ -90,7 +90,7 @@
       {{- end }}
     </ul>
   </div>
-  <div data-editor='{"extElementName":"ext","wordwrapCheckboxID":"wordwrap","ajaxSubmission":true}'>
+  <div data-editor='{"extElementName":"ext","wordwrapCheckboxID":"wordwrap","ajaxSubmission":{{ gt (len $.UploadableExts) 0 }}}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
   </div>
   {{- if $.UploadableExts }}
