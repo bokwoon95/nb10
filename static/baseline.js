@@ -218,7 +218,9 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       }
       window.removeEventListener("beforeunload", abortRequest);
       dataAjaxUpload.classList.remove("submitting", "o-70");
-      document.documentElement.innerHTML = xhr.response;
+      document.open();
+      document.write(xhr.response);
+      document.close();
       history.pushState({}, "", xhr.responseURL);
     }
     xhr.send(new FormData(dataAjaxUpload));
