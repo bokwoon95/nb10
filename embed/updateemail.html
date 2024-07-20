@@ -29,35 +29,23 @@
   </div>
   {{- end }}
   <div class='mv3'>
-    <div><span class='dark-red'>*&nbsp;</span><label for='oldPassword' class='b'>Old password:</label></div>
-    <input type='password' id='oldPassword' name='oldPassword' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "oldPassword" }} b--invalid-red{{ end }}' required>
+    <div><span class='dark-red'>*&nbsp;</span><label for='password' class='b'>Password:</label></div>
+    <input type='password' id='password' name='password' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "password" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "oldPassword" }}
+      {{- range $error := index $.FormErrors "password" }}
       <li>{{ $error }}</li>
       {{- end }}
     </ul>
   </div>
   <div class='mv3'>
-    <div><span class='dark-red'>*&nbsp;</span><label for='newPassword' class='b'>New password:</label></div>
-    <ul class='list-style-disc ph3 f6 mid-gray'>
-      <li>at least 8 characters</li>
-    </ul>
-    <input type='password' id='newPassword' name='newPassword' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "newPassword" }} b--invalid-red{{ end }}' required>
+    <div><span class='dark-red'>*&nbsp;</span><label for='email' class='b'>Email:</label></div>
+    <input type='email' id='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' required>
     <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "newPassword" }}
+      {{- range $error := index $.FormErrors "email" }}
       <li>{{ $error }}</li>
       {{- end }}
     </ul>
   </div>
-  <div class='mv3'>
-    <div><span class='dark-red'>*&nbsp;</span><label for='confirmPassword' class='b'>Confirm password:</label></div>
-    <input type='password' id='confirmPassword' name='confirmPassword' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "confirmPassword" }} b--invalid-red{{ end }}' required>
-    <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "confirmPassword" }}
-      <li>{{ $error }}</li>
-      {{- end }}
-    </ul>
-  </div>
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>change password</button>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>change email</button>
   <div role='status'></div>
 </form>

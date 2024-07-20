@@ -5,7 +5,6 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<script type='module' src='/files/static/editor-153f9bcd.js'></script>
 <title>editprofile{{ if $.Username }} - {{ $.Username }}{{ end }}</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -42,15 +41,6 @@
     {{- end }}
     <ul class='list-style-disc ph3 f6 invalid-red'>
       {{- range $error := index $.FormErrors "username" }}
-      <li>{{ $error }}</li>
-      {{- end }}
-    </ul>
-  </div>
-  <div class='mv3'>
-    <div><span class='dark-red'>*&nbsp;</span><label for='email' class='b'>Email:</label></div>
-    <input type='email' id='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' required>
-    <ul class='list-style-disc ph3 f6 invalid-red'>
-      {{- range $error := index $.FormErrors "email" }}
       <li>{{ $error }}</li>
       {{- end }}
     </ul>

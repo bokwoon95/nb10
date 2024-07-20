@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"mime"
 	"net/http"
-	"net/mail"
 	"net/url"
 	"path"
 	"strconv"
@@ -18,14 +17,12 @@ import (
 func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		Username              string `json:"username"`
-		Email                 string `json:"email"`
 		TimezoneOffsetSeconds int    `json:"timezoneOffsetSeconds"`
 	}
 	type Response struct {
 		UserID                ID         `json:"userID"`
 		Username              string     `json:"username"`
 		DisableReason         string     `json:"disableReason"`
-		Email                 string     `json:"email"`
 		TimezoneOffsetSeconds int        `json:"timezoneOffsetSeconds"`
 		Error                 string     `json:"error"`
 		FormErrors            url.Values `json:"formErrors"`
@@ -77,7 +74,6 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
-		response.Email = user.Email
 		response.TimezoneOffsetSeconds = user.TimezoneOffsetSeconds
 		if response.Error != "" {
 			writeResponse(w, r, response)
@@ -153,7 +149,6 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				}
 			}
 			request.Username = r.Form.Get("username")
-			request.Email = r.Form.Get("email")
 			if s := r.Form.Get("timezoneOffsetSeconds"); s != "" {
 				timezoneOffsetSeconds, err := strconv.Atoi(s)
 				if err != nil {
@@ -170,7 +165,6 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		response := Response{
 			UserID:                user.UserID,
 			Username:              strings.TrimSpace(request.Username),
-			Email:                 strings.TrimSpace(request.Email),
 			TimezoneOffsetSeconds: request.TimezoneOffsetSeconds,
 			FormErrors:            url.Values{},
 		}
@@ -215,32 +209,6 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 				response.FormErrors.Add("username", "username already used by an existing user account")
 			}
 		}
-		// email
-		if response.Email == "" {
-			response.FormErrors.Add("email", "required")
-		} else {
-			_, err := mail.ParseAddress(response.Email)
-			if err != nil {
-				response.FormErrors.Add("email", "invalid email address")
-			}
-		}
-		if !response.FormErrors.Has("email") && user.Email != response.Email {
-			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "SELECT 1 FROM users WHERE email = {email}",
-				Values: []any{
-					sq.StringParam("email", response.Email),
-				},
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			if exists {
-				response.FormErrors.Add("email", "email already used by an existing user account")
-			}
-		}
 		if len(response.FormErrors) > 0 {
 			response.Error = "FormErrorsPresent"
 			writeResponse(w, r, response)
@@ -249,9 +217,6 @@ func (nbrew *Notebrew) editprofile(w http.ResponseWriter, r *http.Request, user 
 		var assignments []sq.Expression
 		if response.Username != user.Username {
 			assignments = append(assignments, sq.Expr("username = {}", response.Username))
-		}
-		if response.Email != user.Email {
-			assignments = append(assignments, sq.Expr("email = {}", response.Email))
 		}
 		if response.TimezoneOffsetSeconds != user.TimezoneOffsetSeconds {
 			assignments = append(assignments, sq.Expr("timezone_offset_seconds = {}", response.TimezoneOffsetSeconds))
