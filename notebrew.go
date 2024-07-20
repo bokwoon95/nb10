@@ -237,11 +237,9 @@ type User struct {
 	Username              string
 	Email                 string
 	TimezoneOffsetSeconds int
-	// func accountDisabled(): "you may not perform that action as your account has been disabled for the following reason: {{ $disableReason }}"
-	DisableReason string
-	SiteLimit     int64
-	// func storageLimitExceeded(): "you have exceeded your storage limit of {{ $storageLimit }} (current: {{ $currentStorage }})"
-	StorageLimit int64
+	DisableReason         string
+	SiteLimit             int64
+	StorageLimit          int64
 }
 
 type contextKey struct{}

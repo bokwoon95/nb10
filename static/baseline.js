@@ -71,7 +71,6 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
     console.error(e);
     continue;
   }
-
   let form = null;
   let element = dataPaste.parentElement;
   while (element != null) {
@@ -88,7 +87,6 @@ for (const dataPaste of document.querySelectorAll("[data-paste]")) {
   if (!(input instanceof HTMLInputElement) || input.type != "file") {
     continue;
   }
-
   dataPaste.addEventListener("paste", function(event) {
     event.preventDefault();
     if (event.clipboardData.files.length == 0) {
@@ -142,7 +140,7 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
   for (const [key, value] of Object.entries(obj)) {
     config.set(key, value);
   }
-  const statusText = config.get("statusText");
+  const statusText = config.get("statusText") || "submitting...";
   dataPreventDoubleSubmit.addEventListener("submit", function(event) {
     event.preventDefault();
     if (dataPreventDoubleSubmit.classList.contains("submitting")) {
@@ -151,14 +149,11 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     dataPreventDoubleSubmit.classList.add("submitting", "o-70");
     const statusElement = dataPreventDoubleSubmit.querySelector("[role=status]");
     if (statusElement) {
-      if (statusText) {
-        statusElement.textContent = statusText;
-      } else {
-        statusElement.textContent = "submitting...";
-      }
+      statusElement.textContent = statusText;
     }
     dataPreventDoubleSubmit.submit();
   });
+  return;
 }
 
 for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {

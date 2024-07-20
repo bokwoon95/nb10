@@ -26,7 +26,9 @@ import (
 
 func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
-		SiteName string `json:"siteName"`
+		SiteName        string `json:"siteName"`
+		SiteTitle       string `json:"siteTitle"`
+		SiteDescription string `json:"siteDescription"`
 	}
 	type Response struct {
 		CMSDomain            string     `json:"cmsDomain"`
@@ -37,8 +39,10 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		Username             string     `json:"username"`
 		DisableReason        string     `json:"disableReason"`
 		SiteLimit            int64      `json:"siteLimit"`
-		SiteName             string     `json:"siteName"`
 		UserSiteNames        []string   `json:"userSiteNames"`
+		SiteName             string     `json:"siteName"`
+		SiteTitle            string     `json:"siteTitle"`
+		SiteDescription      string     `json:"siteDescription"`
 		Error                string     `json:"error"`
 		FormErrors           url.Values `json:"formErrors"`
 	}
@@ -212,6 +216,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				}
 			}
 			request.SiteName = r.Form.Get("siteName")
+			request.SiteTitle = r.Form.Get("siteTitle")
+			request.SiteDescription = r.Form.Get("siteDescription")
 		default:
 			nbrew.UnsupportedContentType(w, r)
 			return
@@ -219,8 +225,10 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 
 		var err error
 		response := Response{
-			SiteName:   request.SiteName,
-			FormErrors: url.Values{},
+			SiteName:        request.SiteName,
+			SiteTitle:       request.SiteTitle,
+			SiteDescription: request.SiteDescription,
+			FormErrors:      url.Values{},
 		}
 		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
@@ -405,7 +413,9 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		defer writer.Close()
 		err = tmpl.Execute(writer, map[string]string{
-			"Home": home,
+			"Home":        home,
+			"Title":       response.SiteTitle,
+			"Description": response.SiteDescription,
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
