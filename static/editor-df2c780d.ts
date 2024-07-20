@@ -1,7 +1,7 @@
 // To build this file:
 // - Navigate to the project root where package.json is located.
 // - Run npm install
-// - Run ./node_modules/.bin/esbuild ./static/codemirror-xxxxxxxx.ts --outfile=./static/codemirror-xxxxxxxx.js --bundle --minify
+// - Run ./node_modules/.bin/esbuild ./static/editor-xxxxxxxx.ts --outfile=./static/editor-xxxxxxxx.js --bundle --minify
 // - Replace xxxxxxxx with the first 8 characters of the SHA256 hash of the file contents (normalize all \r\n to \n)
 import { EditorState, Prec, Compartment } from '@codemirror/state';
 import { EditorView, lineNumbers, keymap } from '@codemirror/view';
@@ -72,6 +72,9 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
     event.preventDefault();
     if (form) {
       form.dispatchEvent(new Event("submit"));
+      if (form.hasAttribute("data-ajax-upload")) {
+        return;
+      }
       form.submit();
     }
   });
@@ -132,11 +135,10 @@ for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-
             key: "Mod-s",
             run: function(_: EditorView): boolean {
               if (form) {
-                // Trigger all submit events on the form, so that the
-                // codemirror instances have a chance to sychronize
-                // with the textarea instances.
                 form.dispatchEvent(new Event("submit"));
-                // Actually submit the form.
+                if (form.hasAttribute("data-ajax-upload")) {
+                  return true;
+                }
                 form.submit();
               }
               return true;
