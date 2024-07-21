@@ -289,7 +289,7 @@
     {{- end }}
     {{- if eq (base $.FilePath) "postlist.html" }}
     <span>&boxv;</span>
-    view: <a href='{{ $.URL }}'>postlist</a>
+    view: <a href='{{ $.URL }}'>posts</a>
     {{- else if not (eq (base $.FilePath) "post.html") }}
     <span>&boxv;</span>
     view: <a href='{{ $.URL }}'>post</a>
