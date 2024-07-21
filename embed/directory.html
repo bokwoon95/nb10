@@ -214,6 +214,15 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
+{{- if eq (index $.PostRedirectGet "from") "applytheme" }}
+<div role='alert' class='alert mv2 pa2 br2 flex items-start'>
+  <div class='pv1'>
+    {{ if $.RegenerationStats.Count }}applied theme (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ else }}no files to reset (regenerated 0 files){{ end }}
+  </div>
+  <div class='flex-grow-1'></div>
+  <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
+</div>
+{{- end }}
 {{- if len $clipboard }}
 {{- $srcParent := $clipboard.Get "parent" }}
 {{- $names := index $clipboard "name" }}
@@ -246,9 +255,13 @@
 <div class='mv2 flex flex-wrap items-center'>
   <div class='flex-grow-1'></div>
   {{- if eq (head $.FilePath) "posts" }}
-  <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/'>view posts</a></div>
+  <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/' class='ma2'>view posts</a></div>
   {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") }}
-  <div><a href='/{{ join "files" $.SitePrefix "resettheme" }}/'>reset theme</a></div>
+  <div>
+    <a href='/{{ join "files" $.SitePrefix "applytheme" }}/?parent={{ $.FilePath }}' class='ma2'>apply theme</a>
+    &bull;
+    <a href='/{{ join "files" $.SitePrefix "resettheme" }}/' class='ma2'>reset theme</a>
+  </div>
   {{- end }}
   <div class='flex items-center'>
     <details class='relative ml2' data-autoclose-details>

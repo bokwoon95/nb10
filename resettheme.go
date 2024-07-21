@@ -23,29 +23,29 @@ import (
 
 func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Request struct {
-		ResetIndexHTML     bool   `json:"resetIndexHTML"`
-		Reset404HTML       bool   `json:"reset404HTML"`
-		ResetAllCategories bool   `json:"resetAllCategories"`
-		ResetCategory      string `json:"resetCategory"`
-		ResetPostHTML      bool   `json:"resetPostHTML"`
-		ResetPostListHTML  bool   `json:"resetPostListHTML"`
+		ResetIndexHTML    bool   `json:"resetIndexHTML"`
+		Reset404HTML      bool   `json:"reset404HTML"`
+		ResetPostHTML     bool   `json:"resetPostHTML"`
+		ResetPostListHTML bool   `json:"resetPostListHTML"`
+		ForAllCategories  bool   `json:"forAllCategories"`
+		ForCategory       string `json:"forCategory"`
 	}
 	type Response struct {
-		ContentBaseURL     string            `json:"contentBaseURL"`
-		IsDatabaseFS       bool              `json:"isDatabaseFS"`
-		SitePrefix         string            `json:"sitePrefix"`
-		UserID             ID                `json:"userID"`
-		Username           string            `json:"username"`
-		DisableReason      string            `json:"disableReason"`
-		Categories         []string          `json:"categories"`
-		ResetIndexHTML     bool              `json:"resetIndexHTML"`
-		Reset404HTML       bool              `json:"reset404HTML"`
-		ResetAllCategories bool              `json:"resetAllCategories"`
-		ResetCategory      string            `json:"resetCategory"`
-		ResetPostHTML      bool              `json:"resetPostHTML"`
-		ResetPostListHTML  bool              `json:"resetPostListHTML"`
-		Error              string            `json:"error"`
-		RegenerationStats  RegenerationStats `json:"regenerationStats"`
+		ContentBaseURL    string            `json:"contentBaseURL"`
+		IsDatabaseFS      bool              `json:"isDatabaseFS"`
+		SitePrefix        string            `json:"sitePrefix"`
+		UserID            ID                `json:"userID"`
+		Username          string            `json:"username"`
+		DisableReason     string            `json:"disableReason"`
+		Categories        []string          `json:"categories"`
+		ResetIndexHTML    bool              `json:"resetIndexHTML"`
+		Reset404HTML      bool              `json:"reset404HTML"`
+		ResetPostHTML     bool              `json:"resetPostHTML"`
+		ResetPostListHTML bool              `json:"resetPostListHTML"`
+		ForAllCategories  bool              `json:"forAllCategories"`
+		ForCategory       string            `json:"forCategory"`
+		Error             string            `json:"error"`
+		RegenerationStats RegenerationStats `json:"regenerationStats"`
 	}
 
 	switch r.Method {
@@ -198,10 +198,11 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				}
 			}
 			request.ResetIndexHTML, _ = strconv.ParseBool(r.Form.Get("resetIndexHTML"))
-			request.ResetAllCategories, _ = strconv.ParseBool(r.Form.Get("resetAllCategories"))
-			request.ResetCategory = r.Form.Get("resetCategory")
+			request.Reset404HTML, _ = strconv.ParseBool(r.Form.Get("reset404HTML"))
 			request.ResetPostHTML, _ = strconv.ParseBool(r.Form.Get("resetPostHTML"))
 			request.ResetPostListHTML, _ = strconv.ParseBool(r.Form.Get("resetPostListHTML"))
+			request.ForAllCategories, _ = strconv.ParseBool(r.Form.Get("forAllCategories"))
+			request.ForCategory = r.Form.Get("forCategory")
 		default:
 			nbrew.UnsupportedContentType(w, r)
 			return
@@ -217,8 +218,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
-		if request.ResetAllCategories {
-			response.ResetAllCategories = true
+		if request.ForAllCategories {
+			response.ForAllCategories = true
 			response.Categories = []string{""}
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 				categories, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
@@ -256,13 +257,13 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				}
 			}
 		} else {
-			category := filepath.ToSlash(request.ResetCategory)
+			category := filepath.ToSlash(request.ForCategory)
 			if strings.Contains(category, "/") {
 				response.Error = "InvalidCategory"
 				writeResponse(w, r, response)
 				return
 			}
-			_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", request.ResetCategory))
+			_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts", request.ForCategory))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					response.Error = "InvalidCategory"
@@ -273,7 +274,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			response.ResetCategory = category
+			response.ForCategory = category
 		}
 		siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
 			FS:                 nbrew.FS,
@@ -407,7 +408,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				regenerationCount.Add(n)
 				return nil
 			}
-			if response.ResetAllCategories {
+			if response.ForAllCategories {
 				for _, category := range response.Categories {
 					category := category
 					group.Go(func() (err error) {
@@ -426,7 +427,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					return resetPostHTML(groupctx, response.ResetCategory)
+					return resetPostHTML(groupctx, response.ForCategory)
 				})
 			}
 		}
@@ -470,7 +471,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				regenerationCount.Add(n)
 				return nil
 			}
-			if response.ResetAllCategories {
+			if response.ForAllCategories {
 				for _, category := range response.Categories {
 					category := category
 					group.Go(func() (err error) {
@@ -489,7 +490,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					return resetPostListHTML(groupctx, response.ResetCategory)
+					return resetPostListHTML(groupctx, response.ForCategory)
 				})
 			}
 		}

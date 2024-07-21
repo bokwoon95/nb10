@@ -120,6 +120,9 @@ ul { margin: 0; padding: 0; list-style: none; }
 .button { background-color: #e2e2e2; }
 .button:hover, .button:focus { background-color: #eaeaea; }
 .button:active { background-color: #fafafa; }
+.button:disabled { background-color: #e2e2e2; opacity: 0.7; }
+.button:hover:disabled { background-color: #e2e2e2; opacity: 0.7; }
+.button:active:disabled { background-color: #e2e2e2; opacity: 0.7; }
 details[open] summary.button { background-color: white; }
 
 /* button danger */
