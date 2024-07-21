@@ -289,6 +289,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		}
 		var regenerationCount atomic.Int64
 		var templateErrPtr atomic.Pointer[TemplateError]
+		startedAt := time.Now()
 		group, groupctx := errgroup.WithContext(r.Context())
 		if response.ResetIndexHTML {
 			group.Go(func() (err error) {
@@ -497,6 +498,11 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			getLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
+		}
+		response.RegenerationStats.Count = regenerationCount.Load()
+		response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+		if ptr := templateErrPtr.Load(); ptr != nil {
+			response.RegenerationStats.TemplateError = *ptr
 		}
 		writeResponse(w, r, response)
 	default:
