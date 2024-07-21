@@ -89,9 +89,9 @@
         <span class='ml2'>for all categories</span>
       </label>
       <label class='flex flex-wrap items-center pointer mv2'>
-        <input type='radio' name='forAllCategories' value='false' class='pointer'>
+        <input id='notForAllCategories' type='radio' name='forAllCategories' value='false' class='pointer'>
         <span class='ml2'>for category</span>
-        <select name='forCategory' class='ml2'>
+        <select name='forCategory' class='ml2' data-check-on-focus='#notForAllCategories'>
           {{- range $category := $.Categories }}
           <option value='{{ $category }}'>{{ if $category }}{{ $category }}{{ else }}&lt;default&gt;{{ end }}</option>
           {{- end }}

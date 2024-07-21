@@ -1,3 +1,20 @@
+function humanReadableFileSize(size) {
+  if (size < 0) {
+    return "";
+  }
+  const unit = 1000;
+  if (size < unit) {
+    return size.toString() + " B";
+  }
+  let div = unit;
+  let exp = 0;
+  for (let n = size / unit; n >= unit; n /= unit) {
+    div *= unit;
+    exp++;
+  }
+  return (size / div).toFixed(1) + " " + ["kB", "MB", "GB", "TB", "PB", "EB"][exp];
+}
+
 document.body.parentElement.addEventListener("click", (event) => {
   let activeDetails = null;
   let element = event.target;
@@ -222,19 +239,10 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
   });
 }
 
-function humanReadableFileSize(size) {
-  if (size < 0) {
-    return "";
-  }
-  const unit = 1000;
-  if (size < unit) {
-    return size.toString() + " B";
-  }
-  let div = unit;
-  let exp = 0;
-  for (let n = size / unit; n >= unit; n /= unit) {
-    div *= unit;
-    exp++;
-  }
-  return (size / div).toFixed(1) + " " + ["kB", "MB", "GB", "TB", "PB", "EB"][exp];
+for (const dataCheckOnFocus of document.querySelectorAll("[data-check-on-focus]")) {
+  dataCheckOnFocus.addEventListener("focus", function() {
+    for (const element of document.querySelectorAll(dataCheckOnFocus.getAttribute("data-check-on-focus"))) {
+      element.checked = true;
+    }
+  });
 }
