@@ -298,7 +298,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			http.Redirect(w, r, urlReplacer.Replace("/"+path.Join("files", sitePrefix, "output/themes")), http.StatusFound)
+			http.Redirect(w, r, urlReplacer.Replace("/"+path.Join("files", sitePrefix, response.Parent)), http.StatusFound)
 		}
 
 		var request Request
