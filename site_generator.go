@@ -955,6 +955,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			}
 		}
 	}
+	// Images.
 	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 		extFilter := sq.Expr("1 = 1")
 		if len(imgExts) > 0 {
@@ -1254,11 +1255,10 @@ type Post struct {
 	Preview          string
 	HasMore          bool
 	Content          template.HTML
+	Images           []Image
 	CreationTime     time.Time
 	ModificationTime time.Time
-	// A nil []byte slice indicates a lack of a value, a non-nil but empty byte
-	// slice indicates an empty value.
-	text []byte
+	text             []byte // nil slice == no value, empty slice == empty value
 }
 
 type PostListData struct {
@@ -1570,7 +1570,12 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 	groupA, groupctxA := errgroup.WithContext(ctx)
 	for i := range posts {
 		i := i
-		groupA.Go(func() error {
+		groupA.Go(func() (err error) {
+			defer func() {
+				if v := recover(); v != nil {
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
+				}
+			}()
 			if posts[i].text != nil {
 				defer func() {
 					if len(posts[i].text) <= maxPoolableBufferCapacity {
@@ -1622,11 +1627,131 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				posts[i].Title = posts[i].Name
 			}
 			var b strings.Builder
-			err := siteGen.markdown.Convert(posts[i].text, &b)
+			err = siteGen.markdown.Convert(posts[i].text, &b)
 			if err != nil {
 				return err
 			}
 			posts[i].Content = template.HTML(b.String())
+			return nil
+		})
+		groupA.Go(func() (err error) {
+			defer func() {
+				if v := recover(); v != nil {
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
+				}
+			}()
+			outputDir := path.Join(siteGen.sitePrefix, "output/posts", posts[i].Category, posts[i].Name)
+			if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+				extFilter := sq.Expr("1 = 1")
+				if len(imgExts) > 0 {
+					var b strings.Builder
+					args := make([]any, 0, len(imgExts))
+					b.WriteString("(")
+					for i, ext := range imgExts {
+						if i > 0 {
+							b.WriteString(" OR ")
+						}
+						b.WriteString("file_path LIKE {}")
+						args = append(args, "%"+wildcardReplacer.Replace(ext))
+					}
+					b.WriteString(")")
+					extFilter = sq.Expr(b.String(), args...)
+				}
+				cursor, err := sq.FetchCursor(groupctxA, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "SELECT {*}" +
+						" FROM files" +
+						" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {outputDir})" +
+						" AND NOT is_dir" +
+						" AND {extFilter} " +
+						" ORDER BY file_path",
+					Values: []any{
+						sq.StringParam("outputDir", outputDir),
+						sq.Param("extFilter", extFilter),
+					},
+				}, func(row *sq.Row) (result struct {
+					FilePath string
+					Text     []byte
+				}) {
+					result.FilePath = row.String("file_path")
+					result.Text = row.Bytes(bufPool.Get().(*bytes.Buffer).Bytes(), "text")
+					return result
+				})
+				if err != nil {
+					return err
+				}
+				defer cursor.Close()
+				subgroup, subctx := errgroup.WithContext(groupctxA)
+				for cursor.Next() {
+					result, err := cursor.Result()
+					if err != nil {
+						return err
+					}
+					posts[i].Images = append(posts[i].Images, Image{
+						Parent: path.Join("posts", posts[i].Category, posts[i].Name),
+						Name:   path.Base(result.FilePath),
+					})
+					j := len(posts[i].Images) - 1
+					subgroup.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						defer func() {
+							if len(result.Text) <= maxPoolableBufferCapacity {
+								result.Text = result.Text[:0]
+								bufPool.Put(bytes.NewBuffer(result.Text))
+							}
+						}()
+						err = subctx.Err()
+						if err != nil {
+							return err
+						}
+						var altText []byte
+						result.Text = bytes.TrimSpace(result.Text)
+						if bytes.HasPrefix(result.Text, []byte("!alt ")) {
+							altText, result.Text, _ = bytes.Cut(result.Text, []byte("\n"))
+							altText = bytes.TrimSpace(bytes.TrimPrefix(altText, []byte("!alt ")))
+							result.Text = bytes.TrimSpace(result.Text)
+						}
+						var b strings.Builder
+						err = siteGen.markdown.Convert(result.Text, &b)
+						if err != nil {
+							return err
+						}
+						posts[i].Images[j].AltText = string(altText)
+						posts[i].Images[j].Caption = template.HTML(b.String())
+						return nil
+					})
+				}
+				err = cursor.Close()
+				if err != nil {
+					return err
+				}
+				err = subgroup.Wait()
+				if err != nil {
+					return err
+				}
+			} else {
+				dirEntries, err := siteGen.fsys.WithContext(groupctxA).ReadDir(outputDir)
+				if err != nil && !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+				for _, dirEntry := range dirEntries {
+					name := dirEntry.Name()
+					if dirEntry.IsDir() {
+						continue
+					}
+					fileType := AllowedFileTypes[path.Ext(name)]
+					if fileType.Has(AttributeImg) {
+						posts[i].Images = append(posts[i].Images, Image{
+							Parent: path.Join("posts", posts[i].Category, posts[i].Name),
+							Name:   name,
+						})
+					}
+				}
+			}
 			return nil
 		})
 	}
@@ -1774,12 +1899,15 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				Entry: make([]AtomEntry, len(postListData.Posts)),
 			}
 			for i, post := range postListData.Posts {
-				// ID: tag:bokwoon.nbrew.io,yyyy-mm-dd:1jjdz28
 				var postID string
 				timestampPrefix, _, _ := strings.Cut(post.Name, "-")
 				if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
 					b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
 					if len(b) == 5 && err == nil {
+						// If we can figure out when a post was created, we can
+						// use Tag URIs to create Atom Post IDs that are
+						// resistant to URL changes (https://www.taguri.org/).
+						// Example: tag:bokwoon.nbrew.net,2006-01-02:1jjdz28
 						var timestamp [8]byte
 						copy(timestamp[len(timestamp)-5:], b)
 						post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
