@@ -254,15 +254,6 @@
 
 <div class='mv2 flex flex-wrap items-center'>
   <div class='flex-grow-1'></div>
-  {{- if eq (head $.FilePath) "posts" }}
-  <div><a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/' class='ma2'>view posts</a></div>
-  {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") }}
-  <div>
-    <a href='/{{ join "files" $.SitePrefix "applytheme" }}/?parent={{ $.FilePath }}' class='ma2'>apply theme</a>
-    &bull;
-    <a href='/{{ join "files" $.SitePrefix "resettheme" }}/' class='ma2'>reset theme</a>
-  </div>
-  {{- end }}
   <div class='flex items-center'>
     <details class='relative ml2' data-autoclose-details>
       <summary role='button' title='Sort' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
@@ -338,6 +329,19 @@
   </div>
   {{- end }}
 </div>
+{{- if eq (head $.FilePath) "posts" }}
+<div class='flex flex-wrap items-center'>
+  <div class='flex-grow-1'></div>
+  <a href='{{ $.ContentBaseURL }}/{{ $.FilePath }}/'>view posts</a>
+</div>
+{{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") }}
+<div class='flex flex-wrap items-center'>
+  <div class='flex-grow-1'></div>
+  <a href='/{{ join "files" $.SitePrefix "applytheme" }}/?parent={{ $.FilePath }}' class='mr2'>apply theme</a>
+  &bull;
+  <a href='/{{ join "files" $.SitePrefix "resettheme" }}/' class='ml2'>reset theme</a>
+</div>
+{{- end }}
 {{- if $.RegenerationStats.TemplateError.ErrorMessage }}
 <div class='mv2 invalid-red'>
   <span class='b'>template error: </span>
