@@ -43,7 +43,7 @@
       <label class='flex flex-wrap items-center pointer mv2'>
         {{- if $.HasIndexHTML }}
         <input type='checkbox' name='applyIndexHTML' value='true' class='pointer' checked>
-        <span class='ml2'>apply index.html</span>
+        <span class='ml2'>apply <a href='/{{ join "files" $.SitePrefix $.Parent }}/index.html'>index.html</a></span>
         {{- else }}
         <input type='checkbox' disabled>
         <s class='ml2'>apply index.html</s>
@@ -53,7 +53,7 @@
       <label class='flex flex-wrap items-center pointer mv2'>
         {{- if $.Has404HTML }}
         <input type='checkbox' name='apply404HTML' value='true' class='pointer' checked>
-        <span class='ml2'>apply 404.html</span>
+        <span class='ml2'>apply <a href='/{{ join "files" $.SitePrefix $.Parent }}/404.html'>404.html</a></span>
         {{- else }}
         <input type='checkbox' disabled>
         <s class='ml2'>apply 404.html</s>
@@ -66,7 +66,7 @@
       <label class='flex flex-wrap items-center pointer mv2'>
         {{- if $.HasPostHTML }}
         <input type='checkbox' name='applyPostHTML' value='true' class='pointer' checked>
-        <span class='ml2'>apply post.html</span>
+        <span class='ml2'>apply <a href='/{{ join "files" $.SitePrefix $.Parent }}/post.html'>post.html</a></span>
         {{- else }}
         <input type='checkbox' disabled>
         <s class='ml2'>apply post.html</s>
@@ -76,7 +76,7 @@
       <label class='flex flex-wrap items-center pointer mv2'>
         {{- if $.HasPostListHTML }}
         <input type='checkbox' name='applyPostListHTML' value='true' class='pointer' checked>
-        <span class='ml2'>apply postlist.html</span>
+        <span class='ml2'>apply <a href='/{{ join "files" $.SitePrefix $.Parent }}/postlist.html'>postlist.html</a></span>
         {{- else }}
         <input type='checkbox' disabled>
         <s class='ml2'>apply postlist.html</s>

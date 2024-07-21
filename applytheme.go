@@ -349,8 +349,8 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 			writeResponse(w, r, response)
 			return
 		}
-		next, _, _ := strings.Cut(tail, "/")
-		if next != "themes" {
+		nextHead, nextTail, _ := strings.Cut(tail, "/")
+		if nextHead != "themes" {
 			response.Error = "InvalidParent"
 			writeResponse(w, r, response)
 			return
@@ -482,7 +482,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return err
 				}
 				defer writer.Close()
-				_, err = io.Copy(writer, strings.NewReader(text))
+				_, err = io.Copy(writer, strings.NewReader("{{ "+strconv.Quote("/"+path.Join("themes", nextTail)+"/index.html")+" }}"))
 				if err != nil {
 					return err
 				}
@@ -537,7 +537,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return err
 				}
 				defer writer.Close()
-				_, err = io.Copy(writer, strings.NewReader(text))
+				_, err = io.Copy(writer, strings.NewReader("{{ "+strconv.Quote("/"+path.Join("themes", nextTail)+"/404.html")+" }}"))
 				if err != nil {
 					return err
 				}
@@ -587,7 +587,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return err
 				}
 				defer writer.Close()
-				_, err = io.Copy(writer, strings.NewReader(text))
+				_, err = io.Copy(writer, strings.NewReader("{{ "+strconv.Quote("/"+path.Join("themes", nextTail)+"/post.html")+" }}"))
 				if err != nil {
 					return err
 				}
@@ -667,7 +667,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return err
 				}
 				defer writer.Close()
-				_, err = io.Copy(writer, strings.NewReader(text))
+				_, err = io.Copy(writer, strings.NewReader("{{ "+strconv.Quote("/"+path.Join("themes", nextTail)+"/postlist.html")+" }}"))
 				if err != nil {
 					return err
 				}
