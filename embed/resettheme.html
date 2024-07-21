@@ -40,6 +40,14 @@
   </fieldset>
   <fieldset>
     <legend><h2 class='mv0 mh2'>posts</h2></legend>
+    <label for='resetPostHTML' class='flex flex-wrap items-center pointer mv2'>
+      <input id='resetPostHTML' type='checkbox' name='resetPostHTML' value='true' class='pointer' checked>
+      <span class='ml2'>reset post.html</span>
+    </label>
+    <label for='resetPostListHTML' class='flex flex-wrap items-center pointer mv2'>
+      <input id='resetPostListHTML' type='checkbox' name='resetPostListHTML' value='true' class='pointer' checked>
+      <span class='ml2'>reset postlist.html</span>
+    </label>
     <label for='resetAllCategories:true' class='flex flex-wrap items-center pointer mv2'>
       <input id='resetAllCategories:true' type='radio' name='resetAllCategories' value='true' class='pointer' checked>
       <span class='ml2'>for all categories</span>
@@ -52,14 +60,6 @@
         <option value='{{ $category }}'>{{ if $category }}{{ $category }}{{ else }}&lt;default&gt;{{ end }}</option>
         {{- end }}
       </select>
-    </label>
-    <label for='resetPostHTML' class='flex flex-wrap items-center pointer mv2'>
-      <input id='resetPostHTML' type='checkbox' name='resetPostHTML' value='true' class='pointer' checked>
-      <span class='ml2'>reset post.html</span>
-    </label>
-    <label for='resetPostListHTML' class='flex flex-wrap items-center pointer mv2'>
-      <input id='resetPostListHTML' type='checkbox' name='resetPostListHTML' value='true' class='pointer' checked>
-      <span class='ml2'>reset postlist.html</span>
     </label>
   </fieldset>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>reset theme</button>
