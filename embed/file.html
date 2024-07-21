@@ -287,7 +287,10 @@
     <span>&boxv;</span>
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
     {{- end }}
-    {{- if not (eq (base $.FilePath) "post.html" "postlist.html") }}
+    {{- if eq (base $.FilePath) "postlist.html" }}
+    <span>&boxv;</span>
+    view: <a href='{{ $.URL }}'>postlist</a>
+    {{- else if not (eq (base $.FilePath) "post.html") }}
     <span>&boxv;</span>
     view: <a href='{{ $.URL }}'>post</a>
     {{- end }}

@@ -308,7 +308,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 		case "posts":
-			response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
+			if strings.HasSuffix(filePath, "/postlist.html") {
+				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, "/postlist.html") + "/")
+			} else if strings.HasSuffix(filePath, ".md") {
+				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
+			}
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
 			response.UploadableExts = imgExts
 			extFilter := sq.Expr("1 = 1")
