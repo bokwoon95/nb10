@@ -115,7 +115,6 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 		for i := 0; i+1 < len(sessionTokenHashes); i += 2 {
 			lowerBound, upperBound := sessionTokenHashes[i], sessionTokenHashes[i+1]
 			sessions, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
-				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format:  "SELECT {*} FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound}",
 				Values: []any{
@@ -261,7 +260,6 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 				response.Sessions = append(response.Sessions, sessions...)
 			} else {
 				sessions, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
-					Debug:   true,
 					Dialect: nbrew.Dialect,
 					Format:  "SELECT {*} FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound}",
 					Values: []any{
@@ -281,7 +279,6 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 				}
 				response.Sessions = append(response.Sessions, sessions...)
 				_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-					Debug:   true,
 					Dialect: nbrew.Dialect,
 					Format:  "DELETE FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound}",
 					Values: []any{
