@@ -36,6 +36,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		CreationTime      time.Time         `json:"creationTime"`
 		Content           string            `json:"content"`
 		AltText           string            `json:"altText"`
+		URL               template.URL      `json:"url"`
 		BelongsTo         string            `json:"belongsTo"`
 		PreviousImageID   ID                `json:"previousImageID"`
 		PreviousImageName string            `json:"previousImageName"`
@@ -238,9 +239,17 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		if head == "output" {
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "posts" {
+				response.URL = template.URL(response.ContentBaseURL + "/" + path.Dir(tail) + "/")
 				response.BelongsTo = path.Dir(tail) + ".md"
 			} else if next != "themes" {
-				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
+				dir := path.Dir(tail)
+				if dir == "." {
+					response.URL = template.URL(response.ContentBaseURL)
+					response.BelongsTo = "pages/index.html"
+				} else {
+					response.URL = template.URL(response.ContentBaseURL + "/" + path.Join("pages", dir) + "/")
+					response.BelongsTo = path.Join("pages", dir+".html")
+				}
 			}
 		}
 		if r.Form.Has("api") {
