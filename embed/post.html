@@ -40,7 +40,7 @@ p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
 <div>
   {{ range $image := $.Images }}
   <div class='w-80-l w-90-m w-100 mx-auto'>
-    <img src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto' loading='lazy'>
+    <img id='{{ $image.Name }}' src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto' loading='lazy'>
     <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
   </div>
   <div class='my-4'>{{ $image.Caption }}</div>
