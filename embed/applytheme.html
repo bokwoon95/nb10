@@ -30,7 +30,7 @@
   {{- else }}
   <div><a href='/files/'>&larr; back</a></div>
   {{- end }}
-  <h2 class='ma0 b'>Apply theme</h2>
+  <h2 class='ma0 b'>Apply theme <a href='/{{ join "files" $.SitePrefix $.Parent }}/'>{{ base $.Parent }}</a></h2>
   {{- if $.Error }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
     <div>{{ $.Error }}</div>
