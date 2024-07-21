@@ -175,6 +175,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "deletesession":
 			nbrew.deletesession(w, r, user)
 			return
+		case "createsession":
+			nbrew.createsession(w, r, user)
+			return
 		default:
 			nbrew.NotFound(w, r)
 			return
