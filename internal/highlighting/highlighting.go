@@ -2,7 +2,6 @@ package highlighting
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -227,7 +226,6 @@ func (o *withStyle) SetHighlightingOption(c *Config) {
 
 // WithStyle is a functional option that changes highlighting style.
 func WithStyle(style string) Option {
-	fmt.Println(styles.Names())
 	return &withStyle{style}
 }
 
