@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log/slog"
 	"mime"
-	"net"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -139,21 +137,6 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				response.Error = "InvalidInviteToken"
-				logger := getLogger(r.Context())
-				logger = logger.With(slog.String("token", response.Token))
-				addr := RealClientIP(r, nbrew.ProxyConfig.RealIPHeaders, nbrew.ProxyConfig.ProxyIPs)
-				if addr.IsValid() {
-					logger = logger.With(slog.String("ip", addr.String()))
-					var record MaxMindDBRecord
-					err := nbrew.MaxMindDBReader.Lookup(net.IP(addr.AsSlice()), &record)
-					if err == nil {
-						country, ok := CountryCodes[record.Country.ISOCode]
-						if ok {
-							logger = logger.With(slog.String("country", country))
-						}
-					}
-				}
-				logger.Warn("attempted entry via invite")
 				writeResponse(w, r, response)
 				return
 			}
