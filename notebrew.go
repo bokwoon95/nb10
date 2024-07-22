@@ -413,14 +413,17 @@ func stripMarkdownStyles(markdown goldmark.Markdown, src []byte) string {
 	}
 	for len(nodes) > 0 {
 		node, nodes = nodes[len(nodes)-1], nodes[:len(nodes)-1]
-		if node == nil {
-			continue
-		}
 		switch node := node.(type) {
+		case nil:
+			continue
+		case *ast.Image, *ast.CodeBlock, *ast.FencedCodeBlock, *ast.HTMLBlock:
+			nodes = append(nodes, node.NextSibling())
 		case *ast.Text:
 			buf.Write(node.Text(src))
+			nodes = append(nodes, node.NextSibling(), node.FirstChild())
+		default:
+			nodes = append(nodes, node.NextSibling(), node.FirstChild())
 		}
-		nodes = append(nodes, node.NextSibling(), node.FirstChild())
 	}
 	// Manually escape backslashes (goldmark may be able to do this,
 	// investigate).
