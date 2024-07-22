@@ -12,7 +12,7 @@
 </nav>
 <form method='post' class='w-80 w-70-m w-60-l center' data-prevent-double-submit>
   {{- if referer }}
-  <div><a href="{{ referer }}" class="linktext" data-go-back>&larr; back</a></div>
+  <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
   <h3 class='f4 mv2 b tc'>Are you sure you wish to log out?</h3>
   <button type='submit' class='button ba br2 b--black pa2 w-100'>log out</button>

@@ -7,7 +7,25 @@
 <script type='module'>{{ baselineJS }}</script>
 <script type="module" src="/admin/static/login.js"></script>
 <title>Signup</title>
-<body>
+<body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
-  <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
+  <a href='/' class='ma2 white'>🖋️☕ notebrew</a>
 </nav>
+{{- if referer }}
+<div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
+{{- end }}
+<form method='post' class='w-80 w-70-m w-60-l center' data-login-validation data-prevent-double-submit>
+  <h1 class='f3 mv3 b tc'>Sign up</h1>
+  <p>Enter your email address to receive an invite link.</p>
+  <div class='mv3'>
+    <div><label for='email' class='b'>Email:</label></div>
+    <input id='email' type='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' autocomplete='on' required autofocus>
+    <ul>
+      {{- range $i, $error := index $.FormErrors "email" }}
+      <li class='f6 invalid-red list-style-disc'>{{ $error.Message }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  <div class='invalid-red'></div>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>sign up</button>
+</form>

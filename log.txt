@@ -66,6 +66,10 @@ notebrew/open_browser.go
 /users/billing/ => user can view their current plan as well as other plans (no payment form yet)
 /users/updatebilling/ => user can change their plan, which kicks in the next year (payment form present)
 
+/signup/
+/users/profile/
+/users/billing/
+
 FLOW 1: signup is free, log in via email response, free users get 1 free site and 10 MB of storage.
 FLOW 2: signup is free, log in via email response, free users get 0 sites and 0 GB of storage.
 
