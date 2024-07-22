@@ -26,10 +26,10 @@ import (
 	"text/template/parse"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/highlighting"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
-	highlighting "github.com/yuin/goldmark-highlighting"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"

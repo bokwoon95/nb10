@@ -933,7 +933,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				} else {
 					parentPage = path.Join("pages", tail+".html")
 				}
-				file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+				file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPage))
 				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
