@@ -1,5 +1,5 @@
 {
-  "lang": "{{ if $.Lang }}{{ $.Lang }}{{ else }}en{{ end }}",
+  "languageCode": "{{ if $.LanguageCode }}{{ $.LanguageCode }}{{ else }}en{{ end }}",
   "title": "{{ if $.Title }}{{ $.Title }}{{ else }}My Blog{{ end }}",
   "emoji": "{{ if $.Emoji }}{{ $.Emoji }}{{ else }}☕{{ end }}",
   "favicon": "",

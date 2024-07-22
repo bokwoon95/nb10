@@ -28,7 +28,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		URL  template.URL `json:"url"`
 	}
 	type Request struct {
-		Lang            string           `json:"lang"`
+		LanguageCode    string           `json:"languageCode"`
 		Title           string           `json:"title"`
 		Emoji           string           `json:"emoji"`
 		Favicon         string           `json:"favicon"`
@@ -44,7 +44,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		UserID            ID                `json:"userID"`
 		Username          string            `json:"username"`
 		DisableReason     string            `json:"disableReason"`
-		Lang              string            `json:"lang"`
+		LanguageCode      string            `json:"languageCode"`
 		Title             string            `json:"title"`
 		Emoji             string            `json:"emoji"`
 		Favicon           string            `json:"favicon"`
@@ -56,8 +56,8 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		PostRedirectGet   map[string]any    `json:"postRedirectGet"`
 	}
 	normalizeRequest := func(request Request) Request {
-		if !languageCodes[request.Lang] {
-			request.Lang = "en"
+		if !languageCodes[request.LanguageCode] {
+			request.LanguageCode = "en"
 		}
 		if request.Title == "" {
 			request.Title = "My Blog"
@@ -165,7 +165,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			}
 		}
 		request = normalizeRequest(request)
-		response.Lang = request.Lang
+		response.LanguageCode = request.LanguageCode
 		response.Title = request.Title
 		response.Emoji = request.Emoji
 		response.Favicon = request.Favicon
@@ -229,7 +229,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 					return
 				}
 			}
-			request.Lang = r.Form.Get("lang")
+			request.LanguageCode = r.Form.Get("languageCode")
 			request.Title = r.Form.Get("title")
 			request.Emoji = r.Form.Get("emoji")
 			request.Favicon = r.Form.Get("favicon")
@@ -289,7 +289,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			UserID:            user.UserID,
 			Username:          user.Username,
 			SitePrefix:        sitePrefix,
-			Lang:              request.Lang,
+			LanguageCode:      request.LanguageCode,
 			Title:             request.Title,
 			Emoji:             request.Emoji,
 			Favicon:           request.Favicon,

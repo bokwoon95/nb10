@@ -58,7 +58,7 @@ type NavigationLink struct {
 }
 
 type Site struct {
-	Lang                  string
+	LanguageCode          string
 	Title                 string
 	Favicon               template.URL
 	TimezoneOffsetSeconds int
@@ -86,7 +86,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		templateInProgress: make(map[string]chan struct{}),
 	}
 	var config struct {
-		Lang            string
+		LanguageCode    string
 		Title           string
 		Emoji           string
 		Favicon         string
@@ -105,7 +105,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			return nil, err
 		}
 	} else {
-		config.Lang = "en"
+		config.LanguageCode = "en"
 		config.Emoji = "☕"
 		config.CodeStyle = "onedark"
 		var home string
@@ -156,7 +156,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 	}
 	siteGen.Site = Site{
-		Lang:                  config.Lang,
+		LanguageCode:          config.LanguageCode,
 		Title:                 config.Title,
 		Favicon:               template.URL(config.Favicon),
 		TimezoneOffsetSeconds: timezoneOffsetSeconds,
@@ -817,7 +817,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	defer writer.Close()
 	_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
-		"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+		"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 		"<meta charset='utf-8'>\n"+
 		"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
@@ -1090,7 +1090,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	}
 	defer writer.Close()
 	_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
-		"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+		"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 		"<meta charset='utf-8'>\n"+
 		"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
@@ -1794,7 +1794,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		defer writer.Close()
 		atomPath := "/" + path.Join("posts", category) + "/index.atom"
 		_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
-			"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+			"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 			"<meta charset='utf-8'>\n"+
 			"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 			"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n"+
@@ -1856,7 +1856,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			defer writer.Close()
 			urlPath := "/" + path.Join("posts", category) + "/"
 			_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
-				"<html lang='"+template.HTMLEscapeString(siteGen.Site.Lang)+"'>\n"+
+				"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 				"<meta charset='utf-8'>\n"+
 				"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 				"<meta http-equiv='refresh' content='0; url="+template.HTMLEscapeString(urlPath)+"'>\n"+

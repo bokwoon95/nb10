@@ -60,10 +60,10 @@
     <button type='submit' class='button ba ph3 pv1 br2 b--black'>save</button>
   </div>
   <div class='mv3'>
-    <div><label for='lang' class='b'>Lang:</label></div>
-    <select id='lang' name='lang' class='br2'>
+    <div><label for='languageCode' class='b'>Content language:</label></div>
+    <select id='languageCode' name='languageCode' class='br2'>
       {{- range $languageCode, $_ := languageCodes }}
-      <option value='{{ $languageCode }}'{{ if eq $.Lang $languageCode }} selected{{ end }}>{{ $languageCode }} {{ getLanguageName $languageCode }}</option>
+      <option value='{{ $languageCode }}'{{ if eq $.LanguageCode $languageCode }} selected{{ end }}>{{ $languageCode }} {{ getLanguageName $languageCode }}</option>
       {{- end }}
     </select>
   </div>
