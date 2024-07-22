@@ -15,8 +15,8 @@ import (
 )
 
 const configxHelp = `Keys:
-  notebrew configx stripe # (json) Database configuration.
-  notebrew configx smtp   # (json) File system configuration.
+  notebrew configx stripe # (json) Stripe configuration.
+  notebrew configx smtp   # (json) SMTP configuration.
 `
 
 type ConfigxCmd struct {
