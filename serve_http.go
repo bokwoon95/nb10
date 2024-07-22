@@ -67,7 +67,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		logger = slog.Default()
 	}
 	logger = logger.With(
-		slog.String("revision", Revision),
 		slog.String("method", r.Method),
 		slog.String("url", scheme+r.Host+r.URL.RequestURI()),
 	)
