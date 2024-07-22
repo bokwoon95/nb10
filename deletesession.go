@@ -116,8 +116,13 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 			lowerBound, upperBound := sessionTokenHashes[i], sessionTokenHashes[i+1]
 			sessions, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format:  "SELECT {*} FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound}",
+				Format: "SELECT {*}" +
+					" FROM session" +
+					" WHERE user_id = {userID}" +
+					" AND session_token_hash >= {lowerBound}" +
+					" AND session_token_hash <= {upperBound}",
 				Values: []any{
+					sq.UUIDParam("userID", user.UserID),
 					sq.BytesParam("lowerBound", lowerBound[:]),
 					sq.BytesParam("upperBound", upperBound[:]),
 				},
@@ -241,8 +246,13 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 			if nbrew.Dialect == "sqlite" || nbrew.Dialect == "postgres" {
 				sessions, err = sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
-					Format:  "DELETE FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound} RETURNING {*}",
+					Format: "DELETE FROM session" +
+						" WHERE user_id = {userID}" +
+						" AND session_token_hash >= {lowerBound}" +
+						" AND session_token_hash <= {upperBound}" +
+						" RETURNING {*}",
 					Values: []any{
+						sq.UUIDParam("userID", user.UserID),
 						sq.BytesParam("lowerBound", lowerBound[:]),
 						sq.BytesParam("upperBound", upperBound[:]),
 					},
@@ -261,8 +271,13 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 			} else {
 				sessions, err := sq.FetchAll(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
-					Format:  "SELECT {*} FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound}",
+					Format: "SELECT {*}" +
+						" FROM session" +
+						" WHERE user_id = {userID}" +
+						" AND session_token_hash >= {lowerBound}" +
+						" AND session_token_hash <= {upperBound}",
 					Values: []any{
+						sq.UUIDParam("userID", user.UserID),
 						sq.BytesParam("lowerBound", lowerBound[:]),
 						sq.BytesParam("upperBound", upperBound[:]),
 					},
@@ -280,8 +295,12 @@ func (nbrew *Notebrew) deletesession(w http.ResponseWriter, r *http.Request, use
 				response.Sessions = append(response.Sessions, sessions...)
 				_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
-					Format:  "DELETE FROM session WHERE session_token_hash >= {lowerBound} AND session_token_hash <= {upperBound}",
+					Format: "DELETE FROM session" +
+						" WHERE user_id = {userID}" +
+						" AND session_token_hash >= {lowerBound}" +
+						" AND session_token_hash <= {upperBound}",
 					Values: []any{
+						sq.UUIDParam("userID", user.UserID),
 						sq.BytesParam("lowerBound", lowerBound[:]),
 						sq.BytesParam("upperBound", upperBound[:]),
 					},
