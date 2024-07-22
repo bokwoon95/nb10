@@ -30,7 +30,6 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/net/html"
@@ -132,7 +131,6 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	siteGen.markdown = goldmark.New(
 		goldmark.WithParserOptions(parser.WithAttribute()),
 		goldmark.WithExtensions(
-			extension.Table,
 			highlighting.NewHighlighting(highlighting.WithStyle(config.CodeStyle)),
 		),
 		goldmark.WithRendererOptions(
