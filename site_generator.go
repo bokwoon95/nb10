@@ -905,11 +905,10 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		if line == "" {
 			continue
 		}
-		title := markdownTextOnly(siteGen.markdown, []byte(line))
-		if title == "" {
+		postData.Title = markdownTextOnly(siteGen.markdown, []byte(line))
+		if postData.Title == "" {
 			continue
 		}
-		postData.Title = title
 		break
 	}
 	if postData.Title == "" {

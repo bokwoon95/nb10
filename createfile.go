@@ -345,6 +345,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 						} else {
 							response.Name = filenameSafe(line)
 						}
+						if response.Name == "" {
+							continue
+						}
 						break
 					}
 				}
@@ -401,6 +404,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			if request.Name != "" {
 				response.Name = urlSafe(request.Name)
 			} else {
+				markdown := goldmark.New(
+					goldmark.WithParserOptions(parser.WithAttribute()),
+				)
 				remainder := response.Content
 				for remainder != "" {
 					response.Name, remainder, _ = strings.Cut(remainder, "\n")
@@ -408,10 +414,10 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					if response.Name == "" {
 						continue
 					}
-					markdown := goldmark.New(
-						goldmark.WithParserOptions(parser.WithAttribute()),
-					)
 					response.Name = urlSafe(markdownTextOnly(markdown, []byte(response.Name)))
+					if response.Name == "" {
+						continue
+					}
 					break
 				}
 			}
