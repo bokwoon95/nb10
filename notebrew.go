@@ -399,7 +399,7 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 
 var base32Encoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)
 
-func stripMarkdownStyles(markdown goldmark.Markdown, src []byte) string {
+func markdownTextOnly(markdown goldmark.Markdown, src []byte) string {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {

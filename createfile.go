@@ -25,6 +25,7 @@ import (
 
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/parser"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -337,7 +338,10 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 							continue
 						}
 						if response.Ext == ".md" {
-							response.Name = filenameSafe(stripMarkdownStyles(goldmark.New(), []byte(line)))
+							markdown := goldmark.New(
+								goldmark.WithParserOptions(parser.WithAttribute()),
+							)
+							response.Name = filenameSafe(markdownTextOnly(markdown, []byte(line)))
 						} else {
 							response.Name = filenameSafe(line)
 						}
@@ -404,7 +408,10 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					if response.Name == "" {
 						continue
 					}
-					response.Name = urlSafe(stripMarkdownStyles(goldmark.New(), []byte(response.Name)))
+					markdown := goldmark.New(
+						goldmark.WithParserOptions(parser.WithAttribute()),
+					)
+					response.Name = urlSafe(markdownTextOnly(markdown, []byte(response.Name)))
 					break
 				}
 			}
