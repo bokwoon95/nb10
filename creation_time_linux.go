@@ -21,5 +21,5 @@ func CreationTime(absolutePath string, fileInfo fs.FileInfo) time.Time {
 	if statx.Mask&unix.STATX_BTIME != unix.STATX_BTIME {
 		return time.Time{}
 	}
-	return time.Unix(statx.Btime.Sec, int64(statx.Btime.Nsec))
+	return time.Unix(statx.Btime.Sec, int64(statx.Btime.Nsec)).UTC()
 }

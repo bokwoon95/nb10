@@ -367,7 +367,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			text := b.String()
 			now := time.Now()
 			monotonicCounter.CompareAndSwap(0, now.Unix())
-			creationTime := time.Unix(max(now.Unix(), monotonicCounter.Add(1)), 0)
+			creationTime := time.Unix(max(now.Unix(), monotonicCounter.Add(1)), 0).UTC()
 			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {

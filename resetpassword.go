@@ -211,7 +211,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			writeResponse(w, r, response)
 			return
 		}
-		creationTime := time.Unix(int64(binary.BigEndian.Uint64(resetTokenBytes[:8])), 0)
+		creationTime := time.Unix(int64(binary.BigEndian.Uint64(resetTokenBytes[:8])), 0).UTC()
 		if time.Now().Sub(creationTime) > 24*time.Hour {
 			response.Error = "InvalidResetToken"
 			writeResponse(w, r, response)

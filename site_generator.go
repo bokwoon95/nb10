@@ -877,7 +877,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		if len(b) == 5 && err == nil {
 			var timestamp [8]byte
 			copy(timestamp[len(timestamp)-5:], b)
-			creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+			creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0).UTC()
 		}
 	}
 	urlPath := strings.TrimSuffix(filePath, path.Ext(filePath))
@@ -1395,7 +1395,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				if len(b) == 5 && err == nil {
 					var timestamp [8]byte
 					copy(timestamp[len(timestamp)-5:], b)
-					post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+					post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0).UTC()
 				}
 			}
 			batch = append(batch, post)
@@ -1519,7 +1519,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			if len(b) == 5 && err == nil {
 				var timestamp [8]byte
 				copy(timestamp[len(timestamp)-5:], b)
-				creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+				creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0).UTC()
 			}
 		}
 		batch = append(batch, Post{
@@ -1910,7 +1910,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 						// Example: tag:bokwoon.nbrew.net,2006-01-02:1jjdz28
 						var timestamp [8]byte
 						copy(timestamp[len(timestamp)-5:], b)
-						post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0)
+						post.CreationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0).UTC()
 						postID = "tag:" + contentDomain + "," + post.CreationTime.UTC().Format("2006-01-02") + ":" + timestampPrefix
 					}
 				}

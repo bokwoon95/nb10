@@ -336,7 +336,7 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 		if err != nil {
 			return false, nil
 		}
-		creationTime := time.Unix(int64(binary.BigEndian.Uint64(flashToken[:8])), 0)
+		creationTime := time.Unix(int64(binary.BigEndian.Uint64(flashToken[:8])), 0).UTC()
 		if time.Now().Sub(creationTime) > 5*time.Minute {
 			return false, nil
 		}

@@ -155,9 +155,9 @@ func (ts *Timestamp) Scan(value any) error {
 		// large to be a reasonable timestamp in seconds.
 		if value > 1e12 || value < -1e12 {
 			value *= int64(time.Millisecond) // convert ms to nsec
-			ts.Time = time.Unix(0, value)
+			ts.Time = time.Unix(0, value).UTC()
 		} else {
-			ts.Time = time.Unix(value, 0)
+			ts.Time = time.Unix(value, 0).UTC()
 		}
 		ts.Valid = true
 		return nil

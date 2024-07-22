@@ -13,5 +13,5 @@ func CreationTime(absolutePath string, fileInfo fs.FileInfo) time.Time {
 	if !ok {
 		return time.Time{}
 	}
-	return time.Unix(0, fileAttributeData.CreationTime.Nanoseconds())
+	return time.Unix(0, fileAttributeData.CreationTime.Nanoseconds()).UTC()
 }
