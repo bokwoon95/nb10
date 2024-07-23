@@ -26,6 +26,7 @@ import (
 	"text/template/parse"
 	"time"
 
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/bokwoon95/nb10/internal/highlighting"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/davecgh/go-spew/spew"
@@ -131,7 +132,10 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	siteGen.markdown = goldmark.New(
 		goldmark.WithParserOptions(parser.WithAttribute()),
 		goldmark.WithExtensions(
-			highlighting.NewHighlighting(highlighting.WithStyle(config.CodeStyle)),
+			highlighting.NewHighlighting(
+				highlighting.WithStyle(config.CodeStyle),
+				highlighting.WithFormatOptions(chromahtml.TabWidth(4)),
+			),
 		),
 		goldmark.WithRendererOptions(
 			goldmarkhtml.WithHardWraps(),
