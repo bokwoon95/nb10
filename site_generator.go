@@ -806,6 +806,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	if err != nil {
 		return err
 	}
+	if pageData.ChildPages == nil {
+		pageData.ChildPages = []Page{}
+	}
 	writer, err := siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
