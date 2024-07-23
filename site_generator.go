@@ -2126,13 +2126,13 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 
 const functionsDocs = `functions
 
-  prints the list of available functions
+  Prints the list of available functions.
 
   {{ functions }}
 
 dump x
 
-  dumps the variable into a human readable format
+  Dumps the variable into a human readable format
 
   {{ dump "foo" }} => (string) (len=3) "foo"
   {{ dump $ }}     => <dumps the $ variable>
@@ -2251,6 +2251,14 @@ var userFuncMap = map[string]any{
 		}
 		return path.Join(s...)
 	},
+	"head": func(s any) string {
+		head, _, _ := strings.Cut(toString(s), "/")
+		return head
+	},
+	"tail": func(s any) string {
+		_, tail, _ := strings.Cut(toString(s), "/")
+		return tail
+	},
 	"base": func(s any) string {
 		return path.Base(toString(s))
 	},
@@ -2271,14 +2279,6 @@ var userFuncMap = map[string]any{
 	},
 	"trimSpace": func(s any) string {
 		return strings.TrimSpace(toString(s))
-	},
-	"head": func(s any) string {
-		head, _, _ := strings.Cut(toString(s), "/")
-		return head
-	},
-	"tail": func(s any) string {
-		_, tail, _ := strings.Cut(toString(s), "/")
-		return tail
 	},
 }
 
