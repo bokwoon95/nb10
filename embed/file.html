@@ -369,6 +369,13 @@
   </div>
   {{- end }}
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
+  {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") (ne (dir $.FilePath) "pages") }}
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save and regenerate parent page</button>
+  {{- else if and (eq (head $.FilePath) "posts") (eq (ext $.FilePath) ".md") }}
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save and regenerate post list</button>
+  {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save and regenerate site</button>
+  {{- end }}
   <div role='status'></div>
 </form>
 {{- if or
