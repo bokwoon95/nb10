@@ -462,11 +462,16 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		case "output":
 			if isEditable {
 				next, _, _ := strings.Cut(tail, "/")
-				if next != "posts" && next != "themes" {
+				if next == "posts" {
+					response.URL = template.URL(response.ContentBaseURL + "/" + path.Dir(tail) + "/")
+					response.BelongsTo = path.Dir(tail) + ".md"
+				} else if next != "themes" {
 					dir := path.Dir(tail)
 					if dir == "." {
+						response.URL = template.URL(response.ContentBaseURL)
 						response.BelongsTo = "pages/index.html"
 					} else {
+						response.URL = template.URL(response.ContentBaseURL + "/" + path.Join("pages", dir) + "/")
 						response.BelongsTo = path.Join("pages", dir+".html")
 					}
 				}
@@ -1126,10 +1131,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			next, _, _ := strings.Cut(tail, "/")
 			if next != "posts" && next != "themes" && fileType.Ext == ".md" {
 				var parentPage string
-				if tail == "" {
+				dir := path.Dir(tail)
+				if dir == "." {
 					parentPage = "pages/index.html"
 				} else {
-					parentPage = path.Join("pages", path.Dir(tail)+".html")
+					parentPage = path.Join("pages", dir+".html")
 				}
 				file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPage))
 				if err != nil {
