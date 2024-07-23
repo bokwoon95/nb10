@@ -120,6 +120,7 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
+TODO: instead of making functions a printable documentation func, simply include the cheatsheet for every html page.
 TODO: add seq function, remove pagination.Numbers field
 TODO: child page names should not have .html behind it
 TODO: populate the url for file.go when editing a file that belongs to a page. 
