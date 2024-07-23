@@ -681,19 +681,18 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {pageDir})" +
 					" AND NOT is_dir" +
 					" AND file_path LIKE '%.html'" +
+					" AND file_path NOT IN ({indexPage}, {notFoundPage})" +
 					" ORDER BY file_path",
 				Values: []any{
 					sq.StringParam("pageDir", pageDir),
+					sq.StringParam("indexPage", path.Join(pageDir, "index.html")),
+					sq.StringParam("notFoundPage", path.Join(pageDir, "404.html")),
 				},
 			}, func(row *sq.Row) Page {
 				page := Page{
 					Parent: urlPath,
 					Name:   strings.TrimSuffix(path.Base(row.String("file_path")), ".html"),
 				}
-				// NOTE: oh my god we do title detection here but what if the
-				// user wants to use 1. set a custom lang or 2. use a custom
-				// favicon? Then <!DOCTYPE> has to come first :/ and we can't
-				// use <!-- #title --> anymore
 				line := strings.TrimSpace(row.String("{}", sq.DialectExpression{
 					Default: sq.Expr("substr(text, 1, instr(text, char(10))-1)"),
 					Cases: []sq.DialectCase{{
@@ -743,6 +742,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					if dirEntry.IsDir() || !strings.HasSuffix(name, ".html") {
 						return nil
 					}
+					if urlPath == "" {
+						if name == "index.html" || name == "404.html" {
+							return nil
+						}
+					}
 					pageData.ChildPages[i].Parent = urlPath
 					pageData.ChildPages[i].Name = strings.TrimSuffix(name, ".html")
 					file, err := siteGen.fsys.WithContext(subctx).Open(path.Join(pageDir, name))
@@ -789,7 +793,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 			n := 0
 			for _, childPage := range pageData.ChildPages {
-				if childPage != (Page{}) && childPage.Name != "index" {
+				if childPage != (Page{}) {
 					pageData.ChildPages[n] = childPage
 					n++
 				}
