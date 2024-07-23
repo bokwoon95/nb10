@@ -343,11 +343,35 @@
       <input id='wordwrap' type='checkbox' class='pointer'>
       <span class='ml1'>word wrap</span>
     </label>
-    <button type='submit' class='button ba ph3 br2 b--black pv1'>save</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2'>save</button>
+    {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") (ne $.FilePath "pages/index.html") }}
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
+    {{- else if and (eq (head $.FilePath) "posts") (eq (ext $.FilePath) ".md") }}
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+    {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
+    {{- end }}
   </div>
   <div data-editor='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap","scrollIntoView":true,"ajaxSubmission":{{ eq (head $.FilePath) "pages" "posts" }}}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
   </div>
+  {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") }}
+  <div class='mt2'>
+    <a href=''>template reference</a>
+    <span class='mh1'>&bull;</span>
+    <a href=''>definitive guide</a>
+  </div>
+  {{- else if and (eq (head $.FilePath) "posts") (eq (ext $.FilePath) ".md") }}
+  <div class='mt2'>
+    <a href=''>markdown reference</a>
+  </div>
+  {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
+  <div class='mt2'>
+    <a href=''>template reference</a>
+    <span class='mh1'>&bull;</span>
+    <a href=''>definitive guide</a>
+  </div>
+  {{- end }}
   {{- if or
     (and
       (eq (head $.FilePath) "pages")
@@ -370,11 +394,11 @@
   {{- end }}
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
   {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") (ne $.FilePath "pages/index.html") }}
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100' name='regenerateParent' value='true'>save and regenerate parent page</button>
+  <button type='submit' class='button ba br2 pa2 mv3 w-100 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
   {{- else if and (eq (head $.FilePath) "posts") (eq (ext $.FilePath) ".md") }}
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100' name='regeneratePostList' value='true'>save and regenerate post list</button>
+  <button type='submit' class='button ba br2 pa2 mv3 w-100 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
   {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100' name='regenerateSite' value='true'>save and regenerate site</button>
+  <button type='submit' class='button ba br2 pa2 mv3 w-100 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
   {{- end }}
   <div role='status'></div>
 </form>
