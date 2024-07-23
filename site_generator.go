@@ -2166,37 +2166,80 @@ hasPrefix str prefix
 
   hasPrefix returns whether the string begins with the prefix.
 
-  {{ hasPrefix "foobarbaz" "foo" }} => true
-  {{ hasPrefix "foobarbaz" "bar" }} => false
-  {{ hasPrefix "foobarbaz" "" }}    => true
+  {{ hasPrefix "singapore" "sing" }} => true
+  {{ hasPrefix "singapore" "wing" }} => false
+  {{ hasPrefix "singapore" "" }}     => true
 
 hasSuffix str suffix
 
   hasSuffix returns whether the string ends with the suffix.
 
-  {{ hasSuffix "foobarbaz" "baz" }} => true
-  {{ hasSuffix "foobarbaz" "bar" }} => false
-  {{ hasSuffix "foobarbaz" "" }}    => true
+  {{ hasSuffix "singapore" "pore" }} => true
+  {{ hasSuffix "singapore" "more" }} => false
+  {{ hasSuffix "singapore" "" }}     => true
 `
 
 var userFuncMap = map[string]any{
 	"functions": func() template.HTML {
 		return template.HTML("<pre>" + template.HTMLEscapeString(functionsDocs) + "</pre>")
 	},
-	"dump": func(v any) template.HTML {
-		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(v)) + "</pre>")
+	"dump": func(x any) template.HTML {
+		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(x)) + "</pre>")
 	},
-	"humanReadableFileSize": func(size any) string {
-		return HumanReadableFileSize(toInt64(size))
+	"list": func(elem ...any) []any { return elem },
+	"dict": func(keyvalue ...any) (map[string]any, error) {
+		dict := make(map[string]any)
+		if len(dict)%2 != 0 {
+			return nil, fmt.Errorf("odd number of arguments passed in")
+		}
+		for i := 0; i+1 < len(keyvalue); i += 2 {
+			key, ok := keyvalue[i].(string)
+			if !ok {
+				return nil, fmt.Errorf("key is not a string: %#v", keyvalue[i])
+			}
+			dict[key] = keyvalue[i+1]
+		}
+		return dict, nil
 	},
-	"safeHTML": func(s any) template.HTML {
-		return template.HTML(toString(s))
+	"humanReadableFileSize": func(size any) (string, error) {
+		switch size := size.(type) {
+		case int:
+			return HumanReadableFileSize(int64(size)), nil
+		case int64:
+			return HumanReadableFileSize(size), nil
+		case float64:
+			return HumanReadableFileSize(int64(size)), nil
+		default:
+			return "", fmt.Errorf("not a number: %#v", size)
+		}
+	},
+	"safeHTML": func(x any) template.HTML {
+		switch x := x.(type) {
+		case nil:
+			return ""
+		case string:
+			return template.HTML(x)
+		default:
+			return template.HTML(fmt.Sprint(x))
+		}
 	},
 	"formatTime": func(t, layout, offset any) string {
 		if t, ok := t.(time.Time); ok {
-			return t.In(time.FixedZone("", int(toInt64(offset)))).Format(toString(layout))
+			if layout, ok := layout.(string); ok {
+				switch offset := offset.(type) {
+				case int:
+					return t.In(time.FixedZone("", offset)).Format(toString(layout))
+				case int64:
+					return t.In(time.FixedZone("", int(offset))).Format(toString(layout))
+				case float64:
+					return t.In(time.FixedZone("", int(offset))).Format(toString(layout))
+				default:
+					return fmt.Sprintf("not a number: %#v", offset)
+				}
+			}
+			return fmt.Sprintf("not a string: %#v", layout)
 		}
-		return fmt.Sprintf("not a time: %v", t)
+		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
 	"case": func(expr any, elem ...any) any {
 		var fallback any
@@ -2228,57 +2271,91 @@ var userFuncMap = map[string]any{
 		}
 		return fallback
 	},
-	"list": func(v ...any) []any { return v },
-	"dict": func(v ...any) (map[string]any, error) {
-		dict := make(map[string]any)
-		if len(dict)%2 != 0 {
-			return nil, fmt.Errorf("odd number of arguments passed in")
-		}
-		for i := 0; i+1 < len(v); i += 2 {
-			key, ok := v[i].(string)
-			if !ok {
-				return nil, fmt.Errorf("key is not a string: %#v", v[i])
-			}
-			dict[key] = v[i+1]
-		}
-		fmt.Printf("%#v, %#v\n", v, dict)
-		return dict, nil
-	},
-	"join": func(elem ...any) string {
+	"join": func(elem ...any) (string, error) {
 		s := make([]string, len(elem))
 		for i, v := range elem {
-			s[i] = toString(v)
+			switch v := v.(type) {
+			case string:
+				s[i] = v
+			case int:
+				s[i] = strconv.Itoa(v)
+			case int64:
+				s[i] = strconv.FormatInt(v, 10)
+			case float64:
+				s[i] = strconv.Itoa(int(v))
+			default:
+				return "", fmt.Errorf("not a string or number: %#v", v)
+			}
 		}
-		return path.Join(s...)
+		return path.Join(s...), nil
 	},
-	"head": func(s any) string {
-		head, _, _ := strings.Cut(toString(s), "/")
-		return head
+	"head": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			head, _, _ := strings.Cut(x, "/")
+			return head, nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
 	},
-	"tail": func(s any) string {
-		_, tail, _ := strings.Cut(toString(s), "/")
-		return tail
+	"tail": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			_, tail, _ := strings.Cut(x, "/")
+			return tail, nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
 	},
-	"base": func(s any) string {
-		return path.Base(toString(s))
+	"base": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			return path.Base(x), nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
 	},
-	"ext": func(s any) string {
-		return path.Ext(toString(s))
+	"ext": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			return path.Ext(x), nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
 	},
-	"hasPrefix": func(s, prefix any) bool {
-		return strings.HasPrefix(toString(s), toString(prefix))
+	"hasPrefix": func(str, prefix any) (bool, error) {
+		if str, ok := str.(string); ok {
+			if prefix, ok := prefix.(string); ok {
+				return strings.HasPrefix(str, prefix), nil
+			}
+			return false, fmt.Errorf("not a string: %#v", prefix)
+		}
+		return false, fmt.Errorf("not a string: %#v", str)
 	},
-	"hasSuffix": func(s, suffix any) bool {
-		return strings.HasSuffix(toString(s), toString(suffix))
+	"hasSuffix": func(str, suffix any) (bool, error) {
+		if str, ok := str.(string); ok {
+			if suffix, ok := suffix.(string); ok {
+				return strings.HasSuffix(str, suffix), nil
+			}
+			return false, fmt.Errorf("not a string: %#v", suffix)
+		}
+		return false, fmt.Errorf("not a string: %#v", str)
 	},
-	"trimPrefix": func(s, prefix any) string {
-		return strings.TrimPrefix(toString(s), toString(prefix))
+	"trimPrefix": func(str, prefix any) (string, error) {
+		if str, ok := str.(string); ok {
+			if prefix, ok := prefix.(string); ok {
+				return strings.TrimPrefix(str, prefix), nil
+			}
+			return "", fmt.Errorf("not a string: %#v", prefix)
+		}
+		return "", fmt.Errorf("not a string: %#v", str)
 	},
-	"trimSuffix": func(s, suffix any) string {
-		return strings.TrimSuffix(toString(s), toString(suffix))
+	"trimSuffix": func(str, suffix any) (string, error) {
+		if str, ok := str.(string); ok {
+			if suffix, ok := suffix.(string); ok {
+				return strings.TrimSuffix(str, suffix), nil
+			}
+			return "", fmt.Errorf("not a string: %#v", suffix)
+		}
+		return "", fmt.Errorf("not a string: %#v", str)
 	},
-	"trimSpace": func(s any) string {
-		return strings.TrimSpace(toString(s))
+	"trimSpace": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			return strings.TrimSpace(x), nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
 	},
 }
 
@@ -2296,29 +2373,6 @@ func toString(v any) string {
 		return strconv.FormatFloat(v, 'f', -1, 64)
 	default:
 		return fmt.Sprint(v)
-	}
-}
-
-func toInt64(v any) int64 {
-	switch v := v.(type) {
-	case nil:
-		return 0
-	case int64:
-		return v
-	case int:
-		return int64(v)
-	case string:
-		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return 0
-		}
-		return i
-	default:
-		i, err := strconv.ParseInt(toString(v), 10, 64)
-		if err != nil {
-			return 0
-		}
-		return i
 	}
 }
 
