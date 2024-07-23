@@ -2124,41 +2124,67 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	}
 }
 
+const functionsDocs = `functions
+
+  prints the list of available functions
+
+  {{ functions }}
+
+dump x
+
+  dumps the variable into a human readable format
+
+  {{ dump "foo" }} => (string) (len=3) "foo"
+  {{ dump $ }}     => <dumps the $ variable>
+
+join x y z...
+
+  Join one or more elements into a path. Empty elements are ignored.
+
+  {{ join "foo" }}             => foo
+  {{ join "foo" "bar" "baz" }} => foo/bar/baz
+  {{ join "foo" "" "" "bar" }} => foo/bar
+
+base x
+
+  base returns the last element of a path. Trailing slashes are removed before
+  extracting the last element.
+
+  {{ base "foo/bar/baz" }}  => baz
+  {{ base "foo/bar/baz/" }} => baz
+
+ext x
+
+  ext returns the file name extension used by path. The extension is the suffix
+  beginning at the final dot in the final slash-separated element of path; it
+  is empty if there is no dot.
+
+  {{ ext "foo/bar/baz.html" }} => .html
+  {{ ext "foo/bar/baz" }}      => <empty>
+
+hasPrefix str prefix
+
+  hasPrefix returns whether the string begins with the prefix.
+
+  {{ hasPrefix "foobarbaz" "foo" }} => true
+  {{ hasPrefix "foobarbaz" "bar" }} => false
+  {{ hasPrefix "foobarbaz" "" }}    => true
+
+hasSuffix str suffix
+
+  hasSuffix returns whether the string ends with the suffix.
+
+  {{ hasSuffix "foobarbaz" "baz" }} => true
+  {{ hasSuffix "foobarbaz" "bar" }} => false
+  {{ hasSuffix "foobarbaz" "" }}    => true
+`
+
 var userFuncMap = map[string]any{
-	"join": func(elem ...any) string {
-		s := make([]string, len(elem))
-		for i, v := range elem {
-			s[i] = toString(v)
-		}
-		return path.Join(s...)
+	"functions": func() template.HTML {
+		return template.HTML("<pre>" + template.HTMLEscapeString(functionsDocs) + "</pre>")
 	},
-	"base": func(s any) string {
-		return path.Base(toString(s))
-	},
-	"ext": func(s any) string {
-		return path.Ext(toString(s))
-	},
-	"hasPrefix": func(s, prefix any) bool {
-		return strings.HasPrefix(toString(s), toString(prefix))
-	},
-	"hasSuffix": func(s, suffix any) bool {
-		return strings.HasSuffix(toString(s), toString(suffix))
-	},
-	"trimPrefix": func(s, prefix any) string {
-		return strings.TrimPrefix(toString(s), toString(prefix))
-	},
-	"trimSuffix": func(s, suffix any) string {
-		return strings.TrimSuffix(toString(s), toString(suffix))
-	},
-	"trimSpace": func(s any) string {
-		return strings.TrimSpace(toString(s))
-	},
-	"joinStrings": func(elems []any, sep any) string {
-		strs := make([]string, len(elems))
-		for i := range elems {
-			strs[i] = toString(elems[i])
-		}
-		return strings.Join(strs, toString(sep))
+	"dump": func(v any) template.HTML {
+		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(v)) + "</pre>")
 	},
 	"humanReadableFileSize": func(size any) string {
 		return HumanReadableFileSize(toInt64(size))
@@ -2171,47 +2197,6 @@ var userFuncMap = map[string]any{
 			return t.In(time.FixedZone("", int(toInt64(offset)))).Format(toString(layout))
 		}
 		return fmt.Sprintf("not a time: %v", t)
-	},
-	"head": func(s any) string {
-		head, _, _ := strings.Cut(toString(s), "/")
-		return head
-	},
-	"tail": func(s any) string {
-		_, tail, _ := strings.Cut(toString(s), "/")
-		return tail
-	},
-	"list": func(v ...any) []any { return v },
-	"dict": func(v ...any) (map[string]any, error) {
-		dict := make(map[string]any)
-		if len(dict)%2 != 0 {
-			return nil, fmt.Errorf("odd number of arguments passed in")
-		}
-		for i := 0; i+1 < len(dict); i += 2 {
-			key, ok := v[i].(string)
-			if !ok {
-				return nil, fmt.Errorf("key is not a string: %#v", v[i])
-			}
-			dict[key] = v[i+1]
-		}
-		return dict, nil
-	},
-	"dump": func(v any) template.HTML {
-		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(v)) + "</pre>")
-	},
-	"throw": func(v any) (string, error) {
-		return "", fmt.Errorf("%v", v)
-	},
-	"coalesce": func(elem ...any) any {
-		for _, elem := range elem {
-			if elem == nil {
-				continue
-			}
-			if reflect.ValueOf(elem).IsZero() {
-				continue
-			}
-			return elem
-		}
-		return ""
 	},
 	"case": func(expr any, elem ...any) any {
 		var fallback any
@@ -2242,6 +2227,58 @@ var userFuncMap = map[string]any{
 			}
 		}
 		return fallback
+	},
+	"list": func(v ...any) []any { return v },
+	"dict": func(v ...any) (map[string]any, error) {
+		dict := make(map[string]any)
+		if len(dict)%2 != 0 {
+			return nil, fmt.Errorf("odd number of arguments passed in")
+		}
+		for i := 0; i+1 < len(v); i += 2 {
+			key, ok := v[i].(string)
+			if !ok {
+				return nil, fmt.Errorf("key is not a string: %#v", v[i])
+			}
+			dict[key] = v[i+1]
+		}
+		fmt.Printf("%#v, %#v\n", v, dict)
+		return dict, nil
+	},
+	"join": func(elem ...any) string {
+		s := make([]string, len(elem))
+		for i, v := range elem {
+			s[i] = toString(v)
+		}
+		return path.Join(s...)
+	},
+	"base": func(s any) string {
+		return path.Base(toString(s))
+	},
+	"ext": func(s any) string {
+		return path.Ext(toString(s))
+	},
+	"hasPrefix": func(s, prefix any) bool {
+		return strings.HasPrefix(toString(s), toString(prefix))
+	},
+	"hasSuffix": func(s, suffix any) bool {
+		return strings.HasSuffix(toString(s), toString(suffix))
+	},
+	"trimPrefix": func(s, prefix any) string {
+		return strings.TrimPrefix(toString(s), toString(prefix))
+	},
+	"trimSuffix": func(s, suffix any) string {
+		return strings.TrimSuffix(toString(s), toString(suffix))
+	},
+	"trimSpace": func(s any) string {
+		return strings.TrimSpace(toString(s))
+	},
+	"head": func(s any) string {
+		head, _, _ := strings.Cut(toString(s), "/")
+		return head
+	},
+	"tail": func(s any) string {
+		_, tail, _ := strings.Cut(toString(s), "/")
+		return tail
 	},
 }
 
