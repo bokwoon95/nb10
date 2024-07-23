@@ -716,9 +716,6 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					return page
 				}
 				page.Title = strings.TrimSpace(strings.TrimSuffix(line, "-->"))
-				if page.Name == "index.html" {
-					page.Name = ""
-				}
 				return page
 			})
 			if err != nil {
@@ -743,7 +740,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						}
 					}()
 					name := dirEntry.Name()
-					if dirEntry.IsDir() || !strings.HasSuffix(name, ".html") || name == "index.html" {
+					if dirEntry.IsDir() || !strings.HasSuffix(name, ".html") {
 						return nil
 					}
 					pageData.ChildPages[i].Parent = urlPath
@@ -792,7 +789,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 			n := 0
 			for _, childPage := range pageData.ChildPages {
-				if childPage != (Page{}) {
+				if childPage != (Page{}) && childPage.Name != "index" {
 					pageData.ChildPages[n] = childPage
 					n++
 				}
