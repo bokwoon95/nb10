@@ -112,6 +112,11 @@
       <span class='ml1'>word wrap</span>
     </label>
     <button type='submit' class='button ba ph3 br2 b--black pv1'>save</button>
+    {{- if eq (head $.BelongsTo) "pages" }}
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
+    {{- else if eq (head $.BelongsTo) "posts" }}
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+    {{- end }}
   </div>
   <div data-editor='{"ext":".md","wordwrapCheckboxID":"wordwrap"}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
@@ -125,6 +130,11 @@ And this is the the caption.</pre>
     </div>
   </details>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
+  {{- if eq (head $.BelongsTo) "pages" }}
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
+  {{- else if eq (head $.BelongsTo) "posts" }}
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+  {{- end }}
   <div role='status'></div>
 </form>
 {{- end }}
