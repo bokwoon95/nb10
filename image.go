@@ -483,7 +483,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			} else if next != "themes" {
 				var text string
 				var modTime, creationTime time.Time
-				response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
+				dir := path.Dir(tail)
+				if dir == "." {
+					response.BelongsTo = "pages/index.html"
+				} else {
+					response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
+				}
 				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 					result, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,

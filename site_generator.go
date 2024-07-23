@@ -475,6 +475,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	if pageData.Parent == "." {
 		pageData.Parent = ""
 	}
+	if pageData.Name == "." {
+		pageData.Name = ""
+	}
 	var err error
 	var tmpl *template.Template
 	group, groupctx := errgroup.WithContext(ctx)
@@ -685,7 +688,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}, func(row *sq.Row) Page {
 				page := Page{
 					Parent: urlPath,
-					Name:   path.Base(row.String("file_path")),
+					Name:   strings.TrimSuffix(path.Base(row.String("file_path")), ".html"),
 				}
 				// NOTE: oh my god we do title detection here but what if the
 				// user wants to use 1. set a custom lang or 2. use a custom
@@ -713,6 +716,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					return page
 				}
 				page.Title = strings.TrimSpace(strings.TrimSuffix(line, "-->"))
+				if page.Name == "index.html" {
+					page.Name = ""
+				}
 				return page
 			})
 			if err != nil {
@@ -737,11 +743,11 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						}
 					}()
 					name := dirEntry.Name()
-					if dirEntry.IsDir() || !strings.HasSuffix(name, ".html") {
+					if dirEntry.IsDir() || !strings.HasSuffix(name, ".html") || name == "index.html" {
 						return nil
 					}
 					pageData.ChildPages[i].Parent = urlPath
-					pageData.ChildPages[i].Name = name
+					pageData.ChildPages[i].Name = strings.TrimSuffix(name, ".html")
 					file, err := siteGen.fsys.WithContext(subctx).Open(path.Join(pageDir, name))
 					if err != nil {
 						return err
@@ -2180,13 +2186,10 @@ hasSuffix str suffix
 `
 
 var userFuncMap = map[string]any{
-	"functions": func() template.HTML {
-		return template.HTML("<pre>" + template.HTMLEscapeString(functionsDocs) + "</pre>")
-	},
 	"dump": func(x any) template.HTML {
 		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(x)) + "</pre>")
 	},
-	"list": func(elem ...any) []any { return elem },
+	"list": func(args ...any) []any { return args },
 	"dict": func(keyvalue ...any) (map[string]any, error) {
 		dict := make(map[string]any)
 		if len(dict)%2 != 0 {
@@ -2241,39 +2244,39 @@ var userFuncMap = map[string]any{
 		}
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
-	"case": func(expr any, elem ...any) any {
+	"case": func(expr any, args ...any) any {
 		var fallback any
-		if len(elem)%2 == 0 {
+		if len(args)%2 == 0 {
 			fallback = ""
 		} else {
-			fallback = elem[len(elem)-1]
-			elem = elem[:len(elem)-1]
+			fallback = args[len(args)-1]
+			args = args[:len(args)-1]
 		}
-		for i := 0; i+1 < len(elem); i += 2 {
-			if reflect.DeepEqual(expr, elem[i]) {
-				return elem[i+1]
+		for i := 0; i+1 < len(args); i += 2 {
+			if reflect.DeepEqual(expr, args[i]) {
+				return args[i+1]
 			}
 		}
 		return fallback
 	},
-	"casewhen": func(elem ...any) any {
+	"casewhen": func(args ...any) any {
 		var fallback any
-		if len(elem)%2 == 0 {
+		if len(args)%2 == 0 {
 			fallback = ""
 		} else {
-			fallback = elem[len(elem)-1]
-			elem = elem[:len(elem)-1]
+			fallback = args[len(args)-1]
+			args = args[:len(args)-1]
 		}
-		for i := 0; i+1 < len(elem); i += 2 {
-			if truth, _ := template.IsTrue(elem[i]); truth {
-				return elem[i+1]
+		for i := 0; i+1 < len(args); i += 2 {
+			if truth, _ := template.IsTrue(args[i]); truth {
+				return args[i+1]
 			}
 		}
 		return fallback
 	},
-	"join": func(elem ...any) (string, error) {
-		s := make([]string, len(elem))
-		for i, v := range elem {
+	"join": func(args ...any) (string, error) {
+		s := make([]string, len(args))
+		for i, v := range args {
 			switch v := v.(type) {
 			case string:
 				s[i] = v
@@ -2356,6 +2359,96 @@ var userFuncMap = map[string]any{
 			return strings.TrimSpace(x), nil
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
+	},
+	"seq": func(args ...any) ([]int, error) {
+		first, increment, last := 1, 1, 1
+		switch len(args) {
+		case 0:
+			return nil, fmt.Errorf("need at least one argument")
+		case 1:
+			switch n := args[0].(type) {
+			case int:
+				last = n
+			case int64:
+				last = int(n)
+			case float64:
+				last = int(n)
+			default:
+				return nil, fmt.Errorf("not a number: %#v", args[0])
+			}
+		case 2:
+			switch n := args[0].(type) {
+			case int:
+				first = n
+			case int64:
+				first = int(n)
+			case float64:
+				first = int(n)
+			default:
+				return nil, fmt.Errorf("not a number: %#v", args[0])
+			}
+			switch n := args[1].(type) {
+			case int:
+				last = n
+			case int64:
+				last = int(n)
+			case float64:
+				last = int(n)
+			default:
+				return nil, fmt.Errorf("not a number: %#v", args[1])
+			}
+		case 3:
+			switch n := args[0].(type) {
+			case int:
+				first = n
+			case int64:
+				first = int(n)
+			case float64:
+				first = int(n)
+			default:
+				return nil, fmt.Errorf("not a number: %#v", args[0])
+			}
+			switch n := args[1].(type) {
+			case int:
+				increment = n
+			case int64:
+				increment = int(n)
+			case float64:
+				increment = int(n)
+			default:
+				return nil, fmt.Errorf("not a number: %#v", args[1])
+			}
+			switch n := args[2].(type) {
+			case int:
+				last = n
+			case int64:
+				last = int(n)
+			case float64:
+				last = int(n)
+			default:
+				return nil, fmt.Errorf("not a number: %#v", args[2])
+			}
+		default:
+			return nil, fmt.Errorf("too many arguments (max 3)")
+		}
+		if first == last || increment == 0 {
+			return []int{first}, nil
+		}
+		if first < last && increment < 0 || first > last && increment > 0 {
+			return nil, fmt.Errorf("infinite sequence")
+		}
+		length := ((last - first + 1) / increment) + 1
+		if length < 0 {
+			length = -length
+		}
+		nums := make([]int, 0, length)
+		for num := first; num <= last; num += increment {
+			if len(nums) > 2000 {
+				return nums, nil
+			}
+			nums = append(nums, num)
+		}
+		return nums, nil
 	},
 }
 
