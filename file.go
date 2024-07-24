@@ -1054,6 +1054,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
+			var count atomic.Int64
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
 			startedAt := time.Now()
@@ -1072,6 +1073,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					}
 					return err
 				}
+				count.Add(1)
 				return nil
 			})
 			if request.RegenerateParent {
@@ -1090,7 +1092,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			response.RegenerationStats.Count = 1
+			response.RegenerationStats.Count = count.Load()
 			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
 			if ptr := templateErrPtr.Load(); ptr != nil {
 				response.RegenerationStats.TemplateError = *ptr
