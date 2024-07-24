@@ -237,7 +237,7 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       }
     }
     const formData = new FormData(dataAjaxUpload);
-    if (event.submitter.name) {
+    if (event.submitter && event.submitter.name) {
       formData.append(event.submitter.name, event.submitter.value);
     }
     xhr.send(formData);
