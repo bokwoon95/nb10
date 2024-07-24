@@ -61,7 +61,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 	type exportAction int
 	const (
-		exportFiles       exportAction = 0 << 1
+		exportFiles       exportAction = 1 << 0
 		exportDirectories exportAction = 1 << 1
 	)
 
