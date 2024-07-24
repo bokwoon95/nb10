@@ -219,7 +219,8 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
     xhr.open("POST", dataAjaxUpload.action, true);
     xhr.upload.onprogress = function(event) {
       if (statusElement) {
-        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total) + " (" + ((event.loaded / event.total) * 100).toFixed(3) + "%)";
+        const percentage = event.loaded == event.total ? "100%" : ((event.loaded / event.total) * 100).toFixed(3) + "%";
+        statusElement.textContent = humanReadableFileSize(event.loaded) + " / " + humanReadableFileSize(event.total) + " (" + percentage + ")";
       }
     };
     xhr.onload = function() {
@@ -235,7 +236,11 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
         globalThis.initializeEditors();
       }
     }
-    xhr.send(new FormData(dataAjaxUpload));
+    const formData = new FormData(dataAjaxUpload);
+    if (event.submitter.name) {
+      formData.append(event.submitter.name, event.submitter.value);
+    }
+    xhr.send(formData);
   });
 }
 

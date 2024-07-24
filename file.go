@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -620,7 +621,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		var request struct {
-			Content string
+			Content            string
+			RegenerateParent   bool
+			RegeneratePostList bool
+			RegenerateSite     bool
 		}
 		var err error
 		var reader *multipart.Reader
@@ -643,6 +647,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return
 			}
 			request.Content = r.Form.Get("content")
+			request.RegenerateParent, _ = strconv.ParseBool(r.Form.Get("regenerateParent"))
+			request.RegeneratePostList, _ = strconv.ParseBool(r.Form.Get("regeneratePostList"))
+			request.RegenerateSite, _ = strconv.ParseBool(r.Form.Get("regenerateSite"))
 		case "multipart/form-data":
 			reader, err = r.MultipartReader()
 			if err != nil {
@@ -672,6 +679,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return
 			}
 			formName := part.FormName()
+			fmt.Println(formName)
 			if formName == "content" {
 				request.Content = b.String()
 			}
@@ -838,7 +846,28 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 				formName := part.FormName()
+				fmt.Println(formName)
 				if formName != "file" {
+					var maxBytesErr *http.MaxBytesError
+					var b strings.Builder
+					_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
+					if err != nil {
+						if errors.As(err, &maxBytesErr) {
+							nbrew.BadRequest(w, r, err)
+							return
+						}
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					switch formName {
+					case "regenerateParent":
+						request.RegenerateParent, _ = strconv.ParseBool(b.String())
+					case "regeneratePostList":
+						request.RegeneratePostList, _ = strconv.ParseBool(b.String())
+					case "regenerateSite":
+						request.RegenerateSite, _ = strconv.ParseBool(b.String())
+					}
 					continue
 				}
 				_, params, err := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
@@ -1012,6 +1041,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.UploadCount = uploadCount.Load()
 			response.UploadSize = uploadSize.Load()
 		}
+
+		fmt.Printf("%#v\n", request)
 
 		switch head {
 		case "pages":

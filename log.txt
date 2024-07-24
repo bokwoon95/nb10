@@ -122,7 +122,6 @@ the admin page needs to:
 
 TODO: add a "save and regenerate site" to all html files in thrmes so that if the user knows they are editing a regeneration-worthy template, they can skip the extra step of having to find a post.html or postlist.html in order to trigger a regeneration. it just sparks joy, you know?
     TODO: add a "save and regenerate post list" to post.md files
-    TODO: make sure these buttons are included at the top of the form also.
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
