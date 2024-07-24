@@ -270,6 +270,7 @@ type SMTPConfig struct {
 	Password string `json:"password"`
 	Host     string `json:"host"`
 	Port     string `json:"port"`
+	MailFrom string `json:"mailFrom"`
 }
 
 const smtpHelp = `# == smtp keys == #
@@ -277,4 +278,5 @@ const smtpHelp = `# == smtp keys == #
 # password - SMTP password.
 # host     - SMTP host.
 # port     - SMTP port.
+# mailFrom - SMTP MAIL FROM address
 `

@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/smtp"
 	"os"
 	"path/filepath"
 
 	"github.com/bokwoon95/nb10"
+	"golang.org/x/time/rate"
 )
 
 var (
@@ -36,6 +38,10 @@ type Notebrewx struct {
 		Host     string
 		Port     string
 	}
+
+	SMTPLimiter *rate.Limiter
+
+	SMTPClient *smtp.Client
 }
 
 func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
@@ -90,4 +96,7 @@ func getLogger(ctx context.Context) *slog.Logger {
 		return logger
 	}
 	return slog.Default()
+}
+
+func (nbrew *Notebrewx) Send() {
 }
