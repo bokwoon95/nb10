@@ -711,6 +711,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
+					fmt.Println("a", srcCategory)
 					return err
 				}
 				n, err := siteGen.GeneratePostList(groupctxB, srcCategory, srcTemplate)
@@ -720,6 +721,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
+					fmt.Println("a", srcCategory)
 					return
 				}
 				count.Add(n)
@@ -731,6 +733,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
+					fmt.Println("c", destCategory)
 					return err
 				}
 				n, err = siteGen.GeneratePostList(groupctxB, destCategory, destTemplate)
@@ -740,6 +743,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
+					fmt.Println("d", destCategory)
 					return err
 				}
 				count.Add(n)
@@ -804,6 +808,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
+						fmt.Println("f", category)
 						return err
 					}
 					err = siteGen.GeneratePost(groupctxB, filePath, text, time.Now(), creationTime, tmpl)
@@ -813,6 +818,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
+						fmt.Println("g", path.Dir(strings.TrimPrefix(strings.TrimSuffix(filePath, path.Ext(filePath)), "posts/")))
 						return err
 					}
 					count.Add(1)
@@ -878,6 +884,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
+						fmt.Println("h", category)
 						return err
 					}
 					err = siteGen.GeneratePost(groupctxB, filePath, text, time.Now(), creationTime, tmpl)
@@ -887,6 +894,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
+						fmt.Println("h", filePath, path.Dir(strings.TrimPrefix(strings.TrimSuffix(filePath, path.Ext(filePath)), "posts/")))
 						return err
 					}
 					count.Add(1)
