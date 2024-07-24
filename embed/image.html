@@ -104,7 +104,7 @@
 </figure>
 {{- if $.IsDatabaseFS }}
 <form method='post' class='mv2' data-prevent-double-submit>
-  <div class='flex flex-wrap mv2'>
+  <div class='flex flex-wrap mv2 gap-4px'>
     <label for='content' class='b'>Caption</label>
     <div class='flex-grow-1'></div>
     <label for='wordwrap' class='pointer flex items-center mh2'>
@@ -113,9 +113,9 @@
     </label>
     <button type='submit' class='button ba ph3 br2 b--black pv1'>save</button>
     {{- if eq (head $.BelongsTo) "pages" }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
     {{- else if eq (head $.BelongsTo) "posts" }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
     {{- end }}
   </div>
   <div data-editor='{"ext":".md","wordwrapCheckboxID":"wordwrap"}'>

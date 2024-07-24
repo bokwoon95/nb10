@@ -110,6 +110,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .justify-between { justify-content: space-between; }
 .justify-center { justify-content: center; }
 .flex-wrap { flex-wrap: wrap; }
+.gap-4px { gap: 4px; }
 
 /* grid */
 .grid { display: grid; }

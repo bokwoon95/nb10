@@ -338,7 +338,7 @@
     {{- end }}
   </div>
   {{- end }}
-  <div class='flex flex-wrap items-center break-word mv2'>
+  <div class='flex flex-wrap items-center break-word mv2 gap-4px'>
     <label for='content' class='b'>{{ base $.FilePath }}</label>
     {{- if not $.IsDir }}
     <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $.Size }}</span>
@@ -350,13 +350,13 @@
       <input id='wordwrap' type='checkbox' class='pointer'>
       <span class='ml1'>word wrap</span>
     </label>
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2'>save</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1'>save</button>
     {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") (ne $.FilePath "pages/index.html") }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
     {{- else if and (eq (head $.FilePath) "posts") (eq (ext $.FilePath) ".md") }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
     {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml2 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
     {{- end }}
   </div>
   <div data-editor='{"ext":"{{ ext $.FilePath }}","wordwrapCheckboxID":"wordwrap","scrollIntoView":true,"ajaxSubmission":{{ eq (head $.FilePath) "pages" "posts" }}}'>
