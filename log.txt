@@ -130,6 +130,7 @@ if exporting anything under posts/x/y/z, export its counterpart under output/pos
 if exporting anything under pages/x/y/z, export its counterpart under output/x/y/z
 if exporting pages, export everything under output/ *except* for output/posts/ and output/themes/
 
+TODO: move the custom domain warning from below site name to above sitw name field.
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
