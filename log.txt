@@ -125,6 +125,9 @@ noreply@mailer.notebrew.com
 CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 
+if exporting anything under posts/x/y/z, export its counterpart under output/posts/x/y/z
+if exporting anything under pages/x/y/z, export its counterpart under output/x/y/z
+
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).

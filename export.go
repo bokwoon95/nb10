@@ -59,6 +59,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		Error          string     `json:"error"`
 		FormErrors     url.Values `json:"formErrors"`
 	}
+	type exportAction int
+	const (
+		exportFiles       exportAction = 0 << 1
+		exportDirectories exportAction = 1 << 1
+	)
 
 	switch r.Method {
 	case "GET", "HEAD":
