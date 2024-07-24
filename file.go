@@ -1054,17 +1054,47 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
+			var templateErrPtr atomic.Pointer[TemplateError]
+			group, groupctx := errgroup.WithContext(r.Context())
 			startedAt := time.Now()
-			err = siteGen.GeneratePage(r.Context(), filePath, response.Content, response.ModTime, response.CreationTime)
-			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
-			if err != nil {
-				if !errors.As(err, &response.RegenerationStats.TemplateError) {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				err = siteGen.GeneratePage(groupctx, filePath, response.Content, response.ModTime, response.CreationTime)
+				if err != nil {
+					var templateErr TemplateError
+					if errors.As(err, &templateErr) {
+						templateErrPtr.CompareAndSwap(nil, &templateErr)
+						return nil
+					}
+					return err
 				}
+				return nil
+			})
+			if request.RegenerateParent {
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					return nil
+				})
+			}
+			err = group.Wait()
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
 			}
 			response.RegenerationStats.Count = 1
+			response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+			if ptr := templateErrPtr.Load(); ptr != nil {
+				response.RegenerationStats.TemplateError = *ptr
+			}
 		case "posts":
 			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
 				FS:                 nbrew.FS,
