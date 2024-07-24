@@ -679,7 +679,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				return
 			}
 			formName := part.FormName()
-			fmt.Println(formName)
 			if formName == "content" {
 				request.Content = b.String()
 			}
@@ -846,7 +845,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 				formName := part.FormName()
-				fmt.Println(formName)
 				if formName != "file" {
 					var maxBytesErr *http.MaxBytesError
 					var b strings.Builder
@@ -1041,8 +1039,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.UploadCount = uploadCount.Load()
 			response.UploadSize = uploadSize.Load()
 		}
-
-		fmt.Printf("%#v\n", request)
 
 		switch head {
 		case "pages":
