@@ -84,7 +84,7 @@
     {{- if $.FilesTooBig }}
     <br>
     <div>
-      The following files were not uploaded because they are too big (max 10 MB per file):
+      The following files were not uploaded because they are too big (max 10 MB for media, 1 MB for text):
       <ul class='list-style-disc ph3'>
         {{- range $name := $.FilesTooBig }}
         <li>{{ $name }}</li>

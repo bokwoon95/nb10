@@ -620,14 +620,39 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			return
 		}
 
+		var err error
+		var reader *multipart.Reader
+		var storageRemaining *atomic.Int64
+		var uploadCount, uploadSize atomic.Int64
+		var filesExist, filesTooBig []string
 		var request struct {
 			Content            string
 			RegenerateParent   bool
 			RegeneratePostList bool
 			RegenerateSite     bool
 		}
-		var err error
-		var reader *multipart.Reader
+		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
+		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
+			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "SELECT {*}" +
+					" FROM site" +
+					" JOIN site_owner ON site_owner.site_id = site.site_id" +
+					" WHERE site_owner.user_id = {userID}",
+				Values: []any{
+					sq.UUIDParam("userID", user.UserID),
+				},
+			}, func(row *sq.Row) int64 {
+				return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
+			})
+			if err != nil {
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			storageRemaining = &atomic.Int64{}
+			storageRemaining.Store(user.StorageLimit - storageUsed)
+		}
 		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 		switch contentType {
 		case "application/json":
@@ -657,122 +682,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			part, err := reader.NextPart()
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			var maxBytesErr *http.MaxBytesError
-			var b strings.Builder
-			_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
-			if err != nil {
-				if errors.As(err, &maxBytesErr) {
-					nbrew.BadRequest(w, r, err)
-					return
-				}
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			formName := part.FormName()
-			if formName == "content" {
-				request.Content = b.String()
-			}
-		default:
-			nbrew.UnsupportedContentType(w, r)
-			return
-		}
-
-		response := Response{
-			ContentBaseURL: nbrew.ContentBaseURL(sitePrefix),
-			SitePrefix:     sitePrefix,
-			FilePath:       filePath,
-			IsDir:          fileInfo.IsDir(),
-			ModTime:        time.Now(),
-			Content:        request.Content,
-		}
-		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-			response.CreationTime = fileInfo.CreationTime
-		} else {
-			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.FilePath)
-			}
-			response.CreationTime = CreationTime(absolutePath, fileInfo)
-		}
-
-		var storageRemaining *atomic.Int64
-		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
-		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
-			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format: "SELECT {*}" +
-					" FROM site" +
-					" JOIN site_owner ON site_owner.site_id = site.site_id" +
-					" WHERE site_owner.user_id = {userID}",
-				Values: []any{
-					sq.UUIDParam("userID", user.UserID),
-				},
-			}, func(row *sq.Row) int64 {
-				return row.Int64("sum(CASE WHEN site.storage_used IS NOT NULL AND site.storage_used > 0 THEN site.storage_used ELSE 0 END)")
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			storageRemaining = &atomic.Int64{}
-			storageRemaining.Store(user.StorageLimit - storageUsed)
-		}
-
-		writerCtx, cancelWriter := context.WithCancel(r.Context())
-		defer cancelWriter()
-		writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(path.Join(sitePrefix, filePath), 0644)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
-		}
-		defer func() {
-			cancelWriter()
-			writer.Close()
-		}()
-		var n int64
-		if storageRemaining != nil {
-			limitedWriter := &LimitedWriter{
-				W:   writer,
-				N:   storageRemaining.Load(),
-				Err: ErrStorageLimitExceeded,
-			}
-			n, err = io.Copy(limitedWriter, strings.NewReader(response.Content))
-			storageRemaining.Add(-n)
-		} else {
-			n, err = io.Copy(writer, strings.NewReader(response.Content))
-		}
-		if err != nil {
-			if errors.Is(err, ErrStorageLimitExceeded) {
-				nbrew.StorageLimitExceeded(w, r)
-				return
-			}
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
-		}
-		err = writer.Close()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
-		}
-
-		head, tail, _ := strings.Cut(filePath, "/")
-		if contentType == "multipart/form-data" {
-			switch head {
-			case "pages", "posts":
+			if head == "pages" || head == "posts" {
 				var outputDir string
 				if head == "posts" {
 					outputDir = path.Join(sitePrefix, "output/posts", strings.TrimSuffix(tail, ".md"))
@@ -789,7 +699,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				var uploadCount, uploadSize atomic.Int64
 				writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
 					writerCtx, cancelWriter := context.WithCancel(ctx)
 					defer cancelWriter()
@@ -861,10 +770,14 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						switch formName {
+						case "content":
+							request.Content = b.String()
 						case "regenerateParent":
 							request.RegenerateParent, _ = strconv.ParseBool(b.String())
 						case "regeneratePostList":
 							request.RegeneratePostList, _ = strconv.ParseBool(b.String())
+						case "regenerateSite":
+							request.RegenerateSite, _ = strconv.ParseBool(b.String())
 						}
 						continue
 					}
@@ -898,12 +811,23 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							fileName = "image-" + timestampSuffix + fileType.Ext
 						}
 						filePath := path.Join(outputDir, fileName)
+						_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), filePath)
+						if err != nil {
+							if !errors.Is(err, fs.ErrNotExist) {
+								getLogger(r.Context()).Error(err.Error())
+								nbrew.InternalServerError(w, r, err)
+								return
+							}
+						} else {
+							filesExist = append(filesExist, fileName)
+							continue
+						}
 						if !fileType.Has(AttributeObject) {
 							err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
 							if err != nil {
 								var maxBytesErr *http.MaxBytesError
 								if errors.As(err, &maxBytesErr) {
-									response.FilesTooBig = append(response.FilesTooBig, fileName)
+									filesTooBig = append(filesTooBig, fileName)
 									continue
 								}
 								if errors.Is(err, ErrStorageLimitExceeded) {
@@ -920,7 +844,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 								if err != nil {
 									var maxBytesErr *http.MaxBytesError
 									if errors.As(err, &maxBytesErr) {
-										response.FilesTooBig = append(response.FilesTooBig, fileName)
+										filesTooBig = append(filesTooBig, fileName)
 										continue
 									}
 									if errors.Is(err, ErrStorageLimitExceeded) {
@@ -966,7 +890,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 									os.Remove(inputPath)
 									var maxBytesErr *http.MaxBytesError
 									if errors.As(err, &maxBytesErr) {
-										response.FilesTooBig = append(response.FilesTooBig, fileName)
+										filesTooBig = append(filesTooBig, fileName)
 										continue
 									}
 									getLogger(r.Context()).Error(err.Error())
@@ -1009,11 +933,22 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 					} else {
 						filePath := path.Join(outputDir, fileName)
-						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+						_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), filePath)
+						if err != nil {
+							if !errors.Is(err, fs.ErrNotExist) {
+								getLogger(r.Context()).Error(err.Error())
+								nbrew.InternalServerError(w, r, err)
+								return
+							}
+						} else {
+							filesExist = append(filesExist, fileName)
+							continue
+						}
+						err = writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
 						if err != nil {
 							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
-								response.FilesTooBig = append(response.FilesTooBig, fileName)
+								filesTooBig = append(filesTooBig, fileName)
 								continue
 							}
 							if errors.Is(err, ErrStorageLimitExceeded) {
@@ -1036,42 +971,108 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				response.UploadCount = uploadCount.Load()
-				response.UploadSize = uploadSize.Load()
-			case "output":
-				next, _, _ := strings.Cut(tail, "/")
-				if next == "themes" {
-					for {
-						part, err := reader.NextPart()
-						if err != nil {
-							if err == io.EOF {
-								break
-							}
-							getLogger(r.Context()).Error(err.Error())
-							nbrew.InternalServerError(w, r, err)
+			} else {
+				for {
+					part, err := reader.NextPart()
+					if err != nil {
+						if err == io.EOF {
+							break
+						}
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					formName := part.FormName()
+					var maxBytesErr *http.MaxBytesError
+					var b strings.Builder
+					_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
+					if err != nil {
+						if errors.As(err, &maxBytesErr) {
+							nbrew.BadRequest(w, r, err)
 							return
 						}
-						formName := part.FormName()
-						var maxBytesErr *http.MaxBytesError
-						var b strings.Builder
-						_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
-						if err != nil {
-							if errors.As(err, &maxBytesErr) {
-								nbrew.BadRequest(w, r, err)
-								return
-							}
-							getLogger(r.Context()).Error(err.Error())
-							nbrew.InternalServerError(w, r, err)
-							return
-						}
-						if formName == "regenerateSite" {
-							request.RegenerateSite, _ = strconv.ParseBool(b.String())
-						}
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					switch formName {
+					case "content":
+						request.Content = b.String()
+					case "regenerateParent":
+						request.RegenerateParent, _ = strconv.ParseBool(b.String())
+					case "regeneratePostList":
+						request.RegeneratePostList, _ = strconv.ParseBool(b.String())
+					case "regenerateSite":
+						request.RegenerateSite, _ = strconv.ParseBool(b.String())
 					}
 				}
 			}
+		default:
+			nbrew.UnsupportedContentType(w, r)
+			return
 		}
 
+		response := Response{
+			ContentBaseURL: nbrew.ContentBaseURL(sitePrefix),
+			SitePrefix:     sitePrefix,
+			FilePath:       filePath,
+			IsDir:          fileInfo.IsDir(),
+			ModTime:        time.Now(),
+			Content:        request.Content,
+			UploadCount:    uploadCount.Load(),
+			UploadSize:     uploadSize.Load(),
+			FilesExist:     filesExist,
+			FilesTooBig:    filesTooBig,
+		}
+		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+			response.CreationTime = fileInfo.CreationTime
+		} else {
+			var absolutePath string
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.FilePath)
+			}
+			response.CreationTime = CreationTime(absolutePath, fileInfo)
+		}
+
+		writerCtx, cancelWriter := context.WithCancel(r.Context())
+		defer cancelWriter()
+		writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(path.Join(sitePrefix, filePath), 0644)
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		defer func() {
+			cancelWriter()
+			writer.Close()
+		}()
+		var n int64
+		if storageRemaining != nil {
+			limitedWriter := &LimitedWriter{
+				W:   writer,
+				N:   storageRemaining.Load(),
+				Err: ErrStorageLimitExceeded,
+			}
+			n, err = io.Copy(limitedWriter, strings.NewReader(response.Content))
+			storageRemaining.Add(-n)
+		} else {
+			n, err = io.Copy(writer, strings.NewReader(response.Content))
+		}
+		if err != nil {
+			if errors.Is(err, ErrStorageLimitExceeded) {
+				nbrew.StorageLimitExceeded(w, r)
+				return
+			}
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		err = writer.Close()
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
 		switch head {
 		case "pages":
 			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
