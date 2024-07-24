@@ -127,6 +127,7 @@ CREATE TABLE signup_error <-- for signup errors
 
 if exporting anything under posts/x/y/z, export its counterpart under output/posts/x/y/z
 if exporting anything under pages/x/y/z, export its counterpart under output/x/y/z
+if exporting pages, export everything under output/ *except* for output/posts/ and output/themes/
 
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
