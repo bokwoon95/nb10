@@ -818,7 +818,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
-						fmt.Println("g", path.Dir(strings.TrimPrefix(strings.TrimSuffix(filePath, path.Ext(filePath)), "posts/")))
+						fmt.Println("g", filePath, path.Dir(strings.TrimPrefix(strings.TrimSuffix(filePath, path.Ext(filePath)), "posts/")))
 						return err
 					}
 					count.Add(1)
