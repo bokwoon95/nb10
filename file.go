@@ -770,152 +770,135 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		}
 
 		head, tail, _ := strings.Cut(filePath, "/")
-		if (head == "pages" || head == "posts") && contentType == "multipart/form-data" {
-			var outputDir string
-			if head == "posts" {
-				outputDir = path.Join(sitePrefix, "output/posts", strings.TrimSuffix(tail, ".md"))
-			} else {
-				if filePath == "pages/index.html" {
-					outputDir = path.Join(sitePrefix, "output")
+		if contentType == "multipart/form-data" {
+			switch head {
+			case "pages", "posts":
+				var outputDir string
+				if head == "posts" {
+					outputDir = path.Join(sitePrefix, "output/posts", strings.TrimSuffix(tail, ".md"))
 				} else {
-					outputDir = path.Join(sitePrefix, "output", strings.TrimSuffix(tail, ".html"))
+					if filePath == "pages/index.html" {
+						outputDir = path.Join(sitePrefix, "output")
+					} else {
+						outputDir = path.Join(sitePrefix, "output", strings.TrimSuffix(tail, ".html"))
+					}
 				}
-			}
-			tempDir, err := filepath.Abs(filepath.Join(os.TempDir(), "notebrew-temp"))
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			var uploadCount, uploadSize atomic.Int64
-			writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
-				writerCtx, cancelWriter := context.WithCancel(ctx)
-				defer cancelWriter()
-				writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
+				tempDir, err := filepath.Abs(filepath.Join(os.TempDir(), "notebrew-temp"))
 				if err != nil {
-					if !errors.Is(err, fs.ErrNotExist) {
-						return err
-					}
-					err := nbrew.FS.WithContext(writerCtx).MkdirAll(path.Dir(filePath), 0755)
-					if err != nil {
-						return err
-					}
-					writer, err = nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
-					if err != nil {
-						return err
-					}
-				}
-				defer func() {
-					cancelWriter()
-					writer.Close()
-				}()
-				var n int64
-				if storageRemaining != nil {
-					limitedWriter := &LimitedWriter{
-						W:   writer,
-						N:   storageRemaining.Load(),
-						Err: ErrStorageLimitExceeded,
-					}
-					n, err = io.Copy(limitedWriter, reader)
-					storageRemaining.Add(-n)
-				} else {
-					n, err = io.Copy(writer, reader)
-				}
-				if err != nil {
-					return err
-				}
-				err = writer.Close()
-				if err != nil {
-					return err
-				}
-				uploadCount.Add(1)
-				uploadSize.Add(n)
-				return nil
-			}
-			var monotonicCounter atomic.Int64
-			group, groupctx := errgroup.WithContext(r.Context())
-			for {
-				part, err := reader.NextPart()
-				if err != nil {
-					if err == io.EOF {
-						break
-					}
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				formName := part.FormName()
-				if formName != "file" {
-					var maxBytesErr *http.MaxBytesError
-					var b strings.Builder
-					_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
+				var uploadCount, uploadSize atomic.Int64
+				writeFile := func(ctx context.Context, filePath string, reader io.Reader) error {
+					writerCtx, cancelWriter := context.WithCancel(ctx)
+					defer cancelWriter()
+					writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
 					if err != nil {
-						if errors.As(err, &maxBytesErr) {
-							nbrew.BadRequest(w, r, err)
-							return
+						if !errors.Is(err, fs.ErrNotExist) {
+							return err
+						}
+						err := nbrew.FS.WithContext(writerCtx).MkdirAll(path.Dir(filePath), 0755)
+						if err != nil {
+							return err
+						}
+						writer, err = nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
+						if err != nil {
+							return err
+						}
+					}
+					defer func() {
+						cancelWriter()
+						writer.Close()
+					}()
+					var n int64
+					if storageRemaining != nil {
+						limitedWriter := &LimitedWriter{
+							W:   writer,
+							N:   storageRemaining.Load(),
+							Err: ErrStorageLimitExceeded,
+						}
+						n, err = io.Copy(limitedWriter, reader)
+						storageRemaining.Add(-n)
+					} else {
+						n, err = io.Copy(writer, reader)
+					}
+					if err != nil {
+						return err
+					}
+					err = writer.Close()
+					if err != nil {
+						return err
+					}
+					uploadCount.Add(1)
+					uploadSize.Add(n)
+					return nil
+				}
+				var monotonicCounter atomic.Int64
+				group, groupctx := errgroup.WithContext(r.Context())
+				for {
+					part, err := reader.NextPart()
+					if err != nil {
+						if err == io.EOF {
+							break
 						}
 						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
-					switch formName {
-					case "regenerateParent":
-						request.RegenerateParent, _ = strconv.ParseBool(b.String())
-					case "regeneratePostList":
-						request.RegeneratePostList, _ = strconv.ParseBool(b.String())
-					case "regenerateSite":
-						request.RegenerateSite, _ = strconv.ParseBool(b.String())
-					}
-					continue
-				}
-				_, params, err := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
-				if err != nil {
-					continue
-				}
-				fileName := params["filename"]
-				if fileName == "" || strings.Contains(fileName, "/") {
-					continue
-				}
-				fileName = filenameSafe(fileName)
-				fileType := AllowedFileTypes[path.Ext(fileName)]
-				switch head {
-				case "pages":
-					if !fileType.Has(AttributeImg) && fileType.Ext != ".css" && fileType.Ext != ".js" && fileType.Ext != ".md" {
-						continue
-					}
-				case "posts":
-					if !fileType.Has(AttributeImg) {
-						continue
-					}
-				}
-				if fileType.Has(AttributeImg) {
-					if strings.TrimSuffix(fileName, fileType.Ext) == "image" {
-						var timestamp [8]byte
-						now := time.Now()
-						monotonicCounter.CompareAndSwap(0, now.Unix())
-						binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), monotonicCounter.Add(1))))
-						timestampSuffix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
-						fileName = "image-" + timestampSuffix + fileType.Ext
-					}
-					filePath := path.Join(outputDir, fileName)
-					if !fileType.Has(AttributeObject) {
-						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+					formName := part.FormName()
+					if formName != "file" {
+						var maxBytesErr *http.MaxBytesError
+						var b strings.Builder
+						_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
 						if err != nil {
-							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
-								response.FilesTooBig = append(response.FilesTooBig, fileName)
-								continue
-							}
-							if errors.Is(err, ErrStorageLimitExceeded) {
-								nbrew.StorageLimitExceeded(w, r)
+								nbrew.BadRequest(w, r, err)
 								return
 							}
 							getLogger(r.Context()).Error(err.Error())
 							nbrew.InternalServerError(w, r, err)
 							return
 						}
-					} else {
-						if nbrew.ImgCmd == "" {
+						switch formName {
+						case "regenerateParent":
+							request.RegenerateParent, _ = strconv.ParseBool(b.String())
+						case "regeneratePostList":
+							request.RegeneratePostList, _ = strconv.ParseBool(b.String())
+						}
+						continue
+					}
+					_, params, err := mime.ParseMediaType(part.Header.Get("Content-Disposition"))
+					if err != nil {
+						continue
+					}
+					fileName := params["filename"]
+					if fileName == "" || strings.Contains(fileName, "/") {
+						continue
+					}
+					fileName = filenameSafe(fileName)
+					fileType := AllowedFileTypes[path.Ext(fileName)]
+					switch head {
+					case "pages":
+						if !fileType.Has(AttributeImg) && fileType.Ext != ".css" && fileType.Ext != ".js" && fileType.Ext != ".md" {
+							continue
+						}
+					case "posts":
+						if !fileType.Has(AttributeImg) {
+							continue
+						}
+					}
+					if fileType.Has(AttributeImg) {
+						if strings.TrimSuffix(fileName, fileType.Ext) == "image" {
+							var timestamp [8]byte
+							now := time.Now()
+							monotonicCounter.CompareAndSwap(0, now.Unix())
+							binary.BigEndian.PutUint64(timestamp[:], uint64(max(now.Unix(), monotonicCounter.Add(1))))
+							timestampSuffix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
+							fileName = "image-" + timestampSuffix + fileType.Ext
+						}
+						filePath := path.Join(outputDir, fileName)
+						if !fileType.Has(AttributeObject) {
 							err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
 							if err != nil {
 								var maxBytesErr *http.MaxBytesError
@@ -932,112 +915,161 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 								return
 							}
 						} else {
-							cmdPath, err := exec.LookPath(nbrew.ImgCmd)
-							if err != nil {
-								getLogger(r.Context()).Error(err.Error())
-								nbrew.InternalServerError(w, r, err)
-								return
-							}
-							id := NewID()
-							inputPath := path.Join(tempDir, id.String()+"-input"+fileType.Ext)
-							outputPath := path.Join(tempDir, id.String()+"-output"+fileType.Ext)
-							input, err := os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-							if err != nil {
-								if !errors.Is(err, fs.ErrNotExist) {
-									getLogger(r.Context()).Error(err.Error())
-									nbrew.InternalServerError(w, r, err)
-									return
-								}
-								err := os.MkdirAll(filepath.Dir(inputPath), 0755)
+							if nbrew.ImgCmd == "" {
+								err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
 								if err != nil {
-									getLogger(r.Context()).Error(err.Error())
-									nbrew.InternalServerError(w, r, err)
-									return
-								}
-								input, err = os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-								if err != nil {
-									getLogger(r.Context()).Error(err.Error())
-									nbrew.InternalServerError(w, r, err)
-									return
-								}
-							}
-							_, err = io.Copy(input, http.MaxBytesReader(nil, part, fileType.Limit))
-							if err != nil {
-								os.Remove(inputPath)
-								var maxBytesErr *http.MaxBytesError
-								if errors.As(err, &maxBytesErr) {
-									response.FilesTooBig = append(response.FilesTooBig, fileName)
-									continue
-								}
-								getLogger(r.Context()).Error(err.Error())
-								nbrew.InternalServerError(w, r, err)
-								return
-							}
-							err = input.Close()
-							if err != nil {
-								getLogger(r.Context()).Error(err.Error())
-								nbrew.InternalServerError(w, r, err)
-								return
-							}
-							group.Go(func() (err error) {
-								defer func() {
-									if v := recover(); v != nil {
-										err = fmt.Errorf("panic: " + string(debug.Stack()))
+									var maxBytesErr *http.MaxBytesError
+									if errors.As(err, &maxBytesErr) {
+										response.FilesTooBig = append(response.FilesTooBig, fileName)
+										continue
 									}
-								}()
-								defer os.Remove(inputPath)
-								defer os.Remove(outputPath)
-								cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
-								cmd.Stdout = os.Stdout
-								cmd.Stderr = os.Stderr
-								err = cmd.Run()
-								if err != nil {
-									return err
+									if errors.Is(err, ErrStorageLimitExceeded) {
+										nbrew.StorageLimitExceeded(w, r)
+										return
+									}
+									getLogger(r.Context()).Error(err.Error())
+									nbrew.InternalServerError(w, r, err)
+									return
 								}
-								output, err := os.Open(outputPath)
+							} else {
+								cmdPath, err := exec.LookPath(nbrew.ImgCmd)
 								if err != nil {
-									return err
+									getLogger(r.Context()).Error(err.Error())
+									nbrew.InternalServerError(w, r, err)
+									return
 								}
-								defer output.Close()
-								err = writeFile(groupctx, filePath, output)
+								id := NewID()
+								inputPath := path.Join(tempDir, id.String()+"-input"+fileType.Ext)
+								outputPath := path.Join(tempDir, id.String()+"-output"+fileType.Ext)
+								input, err := os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 								if err != nil {
-									return err
+									if !errors.Is(err, fs.ErrNotExist) {
+										getLogger(r.Context()).Error(err.Error())
+										nbrew.InternalServerError(w, r, err)
+										return
+									}
+									err := os.MkdirAll(filepath.Dir(inputPath), 0755)
+									if err != nil {
+										getLogger(r.Context()).Error(err.Error())
+										nbrew.InternalServerError(w, r, err)
+										return
+									}
+									input, err = os.OpenFile(inputPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+									if err != nil {
+										getLogger(r.Context()).Error(err.Error())
+										nbrew.InternalServerError(w, r, err)
+										return
+									}
 								}
-								return nil
-							})
+								_, err = io.Copy(input, http.MaxBytesReader(nil, part, fileType.Limit))
+								if err != nil {
+									os.Remove(inputPath)
+									var maxBytesErr *http.MaxBytesError
+									if errors.As(err, &maxBytesErr) {
+										response.FilesTooBig = append(response.FilesTooBig, fileName)
+										continue
+									}
+									getLogger(r.Context()).Error(err.Error())
+									nbrew.InternalServerError(w, r, err)
+									return
+								}
+								err = input.Close()
+								if err != nil {
+									getLogger(r.Context()).Error(err.Error())
+									nbrew.InternalServerError(w, r, err)
+									return
+								}
+								group.Go(func() (err error) {
+									defer func() {
+										if v := recover(); v != nil {
+											err = fmt.Errorf("panic: " + string(debug.Stack()))
+										}
+									}()
+									defer os.Remove(inputPath)
+									defer os.Remove(outputPath)
+									cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
+									cmd.Stdout = os.Stdout
+									cmd.Stderr = os.Stderr
+									err = cmd.Run()
+									if err != nil {
+										return err
+									}
+									output, err := os.Open(outputPath)
+									if err != nil {
+										return err
+									}
+									defer output.Close()
+									err = writeFile(groupctx, filePath, output)
+									if err != nil {
+										return err
+									}
+									return nil
+								})
+							}
 						}
-					}
-				} else {
-					filePath := path.Join(outputDir, fileName)
-					err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
-					if err != nil {
-						var maxBytesErr *http.MaxBytesError
-						if errors.As(err, &maxBytesErr) {
-							response.FilesTooBig = append(response.FilesTooBig, fileName)
-							continue
-						}
-						if errors.Is(err, ErrStorageLimitExceeded) {
-							nbrew.StorageLimitExceeded(w, r)
+					} else {
+						filePath := path.Join(outputDir, fileName)
+						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+						if err != nil {
+							var maxBytesErr *http.MaxBytesError
+							if errors.As(err, &maxBytesErr) {
+								response.FilesTooBig = append(response.FilesTooBig, fileName)
+								continue
+							}
+							if errors.Is(err, ErrStorageLimitExceeded) {
+								nbrew.StorageLimitExceeded(w, r)
+								return
+							}
+							getLogger(r.Context()).Error(err.Error())
+							nbrew.InternalServerError(w, r, err)
 							return
 						}
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
+					}
+				}
+				err = group.Wait()
+				if err != nil {
+					if errors.Is(err, ErrStorageLimitExceeded) {
+						nbrew.StorageLimitExceeded(w, r)
 						return
+					}
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				}
+				response.UploadCount = uploadCount.Load()
+				response.UploadSize = uploadSize.Load()
+			case "output":
+				next, _, _ := strings.Cut(tail, "/")
+				if next == "themes" {
+					for {
+						part, err := reader.NextPart()
+						if err != nil {
+							if err == io.EOF {
+								break
+							}
+							getLogger(r.Context()).Error(err.Error())
+							nbrew.InternalServerError(w, r, err)
+							return
+						}
+						formName := part.FormName()
+						var maxBytesErr *http.MaxBytesError
+						var b strings.Builder
+						_, err = io.Copy(&b, http.MaxBytesReader(nil, part, 1<<20 /* 1 MB */))
+						if err != nil {
+							if errors.As(err, &maxBytesErr) {
+								nbrew.BadRequest(w, r, err)
+								return
+							}
+							getLogger(r.Context()).Error(err.Error())
+							nbrew.InternalServerError(w, r, err)
+							return
+						}
+						if formName == "regenerateSite" {
+							request.RegenerateSite, _ = strconv.ParseBool(b.String())
+						}
 					}
 				}
 			}
-			err = group.Wait()
-			if err != nil {
-				if errors.Is(err, ErrStorageLimitExceeded) {
-					nbrew.StorageLimitExceeded(w, r)
-					return
-				}
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			response.UploadCount = uploadCount.Load()
-			response.UploadSize = uploadSize.Load()
 		}
 
 		switch head {
@@ -1083,6 +1115,48 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
+					var parentPage string
+					dir := path.Dir(filePath)
+					if dir == "pages" {
+						parentPage = "pages/index.html"
+					} else {
+						parentPage = dir + ".html"
+					}
+					file, err := nbrew.FS.WithContext(groupctx).Open(path.Join(sitePrefix, parentPage))
+					if err != nil {
+						return err
+					}
+					fileInfo, err := file.Stat()
+					if err != nil {
+						return err
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						return err
+					}
+					content := b.String()
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = fileInfo.CreationTime
+					} else {
+						var absolutePath string
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
+					}
+					err = siteGen.GeneratePage(groupctx, parentPage, content, fileInfo.ModTime(), creationTime)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(1)
 					return nil
 				})
 			}
@@ -1162,95 +1236,156 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return
 				}
 			} else if strings.HasSuffix(name, ".md") {
+				var count atomic.Int64
+				var templateErrPtr atomic.Pointer[TemplateError]
+				group, groupctx := errgroup.WithContext(r.Context())
 				startedAt := time.Now()
-				tmpl, err := siteGen.PostTemplate(r.Context(), category)
-				if err != nil {
-					if errors.As(err, &response.RegenerationStats.TemplateError) {
-						writeResponse(w, r, response)
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					tmpl, err := siteGen.PostTemplate(groupctx, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.ModTime, response.CreationTime, tmpl)
+					if err != nil {
+						if errors.As(err, &response.RegenerationStats.TemplateError) {
+							writeResponse(w, r, response)
+							return
+						}
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
 						return
 					}
+					count.Add(1)
+					return nil
+				})
+				if request.RegeneratePostList {
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						tmpl, err := siteGen.PostListTemplate(groupctx, category)
+						if err != nil {
+							var templateErr TemplateError
+							if errors.As(err, &templateErr) {
+								templateErrPtr.CompareAndSwap(nil, &templateErr)
+								return nil
+							}
+							return err
+						}
+						n, err := siteGen.GeneratePostList(groupctx, category, tmpl)
+						if err != nil {
+							var templateErr TemplateError
+							if errors.As(err, &templateErr) {
+								templateErrPtr.CompareAndSwap(nil, &templateErr)
+								return nil
+							}
+							return err
+						}
+						count.Add(n)
+						return nil
+					})
+				}
+				err := group.Wait()
+				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.ModTime, response.CreationTime, tmpl)
-				response.RegenerationStats.Count = 1
+				response.RegenerationStats.Count = count.Load()
 				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
-				if err != nil {
-					if errors.As(err, &response.RegenerationStats.TemplateError) {
-						writeResponse(w, r, response)
-						return
-					}
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
+				if ptr := templateErrPtr.Load(); ptr != nil {
+					response.RegenerationStats.TemplateError = *ptr
 				}
 			}
 		case "output":
 			next, _, _ := strings.Cut(tail, "/")
-			if next != "posts" && next != "themes" && fileType.Ext == ".md" {
-				var parentPage string
-				dir := path.Dir(tail)
-				if dir == "." {
-					parentPage = "pages/index.html"
-				} else {
-					parentPage = path.Join("pages", dir+".html")
-				}
-				file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPage))
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
-				}
-				fileInfo, err := file.Stat()
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
-				}
-				var creationTime time.Time
-				if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-					creationTime = fileInfo.CreationTime
-				} else {
-					var absolutePath string
-					if dirFS, ok := nbrew.FS.(*DirFS); ok {
-						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
-					}
-					creationTime = CreationTime(absolutePath, fileInfo)
-				}
-				var b strings.Builder
-				b.Grow(int(fileInfo.Size()))
-				_, err = io.Copy(&b, file)
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
-				}
-				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
-					FS:                 nbrew.FS,
-					ContentDomain:      nbrew.ContentDomain,
-					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-					CDNDomain:          nbrew.CDNDomain,
-					SitePrefix:         sitePrefix,
-				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
-				}
-				startedAt := time.Now()
-				err = siteGen.GeneratePage(r.Context(), parentPage, b.String(), fileInfo.ModTime(), creationTime)
-				if err != nil {
-					if errors.As(err, &response.RegenerationStats.TemplateError) {
-						writeResponse(w, r, response)
+			if next == "themes" {
+				if request.RegenerateSite {
+					regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
 						return
 					}
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
+					response.RegenerationStats = regenerationStats
 				}
-				response.RegenerationStats.Count = 1
-				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+			} else if next != "posts" {
+				if fileType.Ext == ".md" {
+					var parentPage string
+					dir := path.Dir(tail)
+					if dir == "." {
+						parentPage = "pages/index.html"
+					} else {
+						parentPage = path.Join("pages", dir+".html")
+					}
+					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPage))
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					fileInfo, err := file.Stat()
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					var creationTime time.Time
+					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = fileInfo.CreationTime
+					} else {
+						var absolutePath string
+						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
+						}
+						creationTime = CreationTime(absolutePath, fileInfo)
+					}
+					var b strings.Builder
+					b.Grow(int(fileInfo.Size()))
+					_, err = io.Copy(&b, file)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+						FS:                 nbrew.FS,
+						ContentDomain:      nbrew.ContentDomain,
+						ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+						CDNDomain:          nbrew.CDNDomain,
+						SitePrefix:         sitePrefix,
+					})
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					startedAt := time.Now()
+					err = siteGen.GeneratePage(r.Context(), parentPage, b.String(), fileInfo.ModTime(), creationTime)
+					if err != nil {
+						if errors.As(err, &response.RegenerationStats.TemplateError) {
+							writeResponse(w, r, response)
+							return
+						}
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					response.RegenerationStats.Count = 1
+					response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+				}
 			}
 		}
 		writeResponse(w, r, response)

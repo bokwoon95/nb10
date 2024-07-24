@@ -354,7 +354,7 @@
     {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") (ne $.FilePath "pages/index.html") }}
     <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
     {{- else if and (eq (head $.FilePath) "posts") (eq (ext $.FilePath) ".md") }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regeneratePostList' value='abc'>save and regenerate post list</button>
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
     {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
     <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
     {{- end }}

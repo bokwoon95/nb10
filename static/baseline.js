@@ -169,23 +169,14 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     if (statusElement) {
       statusElement.textContent = statusText;
     }
-    dataPreventDoubleSubmit.submit();
-  });
-}
-
-for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
-  if (dataCheckboxLeader.tagName != "INPUT" || dataCheckboxLeader.getAttribute("type") != "checkbox") {
-    continue;
-  }
-  const leaderGroup = dataCheckboxLeader.getAttribute("data-checkbox-leader");
-  dataCheckboxLeader.addEventListener("change", function() {
-    for (const dataCheckboxFollower of document.querySelectorAll("[data-checkbox-follower]")) {
-      const followerGroup = dataCheckboxFollower.getAttribute("data-checkbox-follower");
-      if (followerGroup != leaderGroup) {
-        return;
-      }
-      dataCheckboxFollower.checked = dataCheckboxLeader.checked;
+    if (event.submitter && event.submitter.name) {
+      const input = document.createElement("input");
+      input.setAttribute("type", "hidden");
+      input.setAttribute("name", event.submitter.name);
+      input.setAttribute("value", event.submitter.value);
+      dataPreventDoubleSubmit.appendChild(input);
     }
+    dataPreventDoubleSubmit.submit();
   });
 }
 
@@ -241,6 +232,22 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       formData.append(event.submitter.name, event.submitter.value);
     }
     xhr.send(formData);
+  });
+}
+
+for (const dataCheckboxLeader of document.querySelectorAll("[data-checkbox-leader]")) {
+  if (dataCheckboxLeader.tagName != "INPUT" || dataCheckboxLeader.getAttribute("type") != "checkbox") {
+    continue;
+  }
+  const leaderGroup = dataCheckboxLeader.getAttribute("data-checkbox-leader");
+  dataCheckboxLeader.addEventListener("change", function() {
+    for (const dataCheckboxFollower of document.querySelectorAll("[data-checkbox-follower]")) {
+      const followerGroup = dataCheckboxFollower.getAttribute("data-checkbox-follower");
+      if (followerGroup != leaderGroup) {
+        return;
+      }
+      dataCheckboxFollower.checked = dataCheckboxLeader.checked;
+    }
   });
 }
 
