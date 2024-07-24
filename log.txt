@@ -122,6 +122,7 @@ the admin page needs to:
 
 noreply@mailer.notebrew.com
 
+CREATE TABLE mail_queue ();
 CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 
