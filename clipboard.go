@@ -711,7 +711,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					fmt.Println("a", srcCategory)
 					return err
 				}
 				n, err := siteGen.GeneratePostList(groupctxB, srcCategory, srcTemplate)
@@ -721,7 +720,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					fmt.Println("a", srcCategory)
 					return
 				}
 				count.Add(n)
@@ -733,7 +731,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					fmt.Println("c", destCategory)
 					return err
 				}
 				n, err = siteGen.GeneratePostList(groupctxB, destCategory, destTemplate)
@@ -743,7 +740,6 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					fmt.Println("d", destCategory)
 					return err
 				}
 				count.Add(n)
@@ -771,8 +767,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					if err != nil {
 						return err
 					}
-					filePath := path.Join(sitePrefix, "posts", category, name+".md")
-					file, err := nbrew.FS.WithContext(groupctxB).Open(filePath)
+					file, err := nbrew.FS.WithContext(groupctxB).Open(path.Join(sitePrefix, "posts", category, name+".md"))
 					if err != nil {
 						if errors.Is(err, fs.ErrNotExist) {
 							return nil
@@ -790,7 +785,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					} else {
 						var absolutePath string
 						if dirFS, ok := nbrew.FS.(*DirFS); ok {
-							absolutePath = path.Join(dirFS.RootDir, filePath)
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
@@ -808,17 +803,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
-						fmt.Println("f", category)
 						return err
 					}
-					err = siteGen.GeneratePost(groupctxB, filePath, text, time.Now(), creationTime, tmpl)
+					err = siteGen.GeneratePost(groupctxB, path.Join("posts", category, name+".md"), text, time.Now(), creationTime, tmpl)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
-						fmt.Println("g", filePath, path.Dir(strings.TrimPrefix(strings.TrimSuffix(filePath, path.Ext(filePath)), "posts/")))
 						return err
 					}
 					count.Add(1)
@@ -847,8 +840,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					if err != nil {
 						return err
 					}
-					filePath := path.Join(sitePrefix, "posts", category, name+".md")
-					file, err := nbrew.FS.WithContext(groupctxB).Open(filePath)
+					file, err := nbrew.FS.WithContext(groupctxB).Open(path.Join(sitePrefix, "posts", category, name+".md"))
 					if err != nil {
 						if errors.Is(err, fs.ErrNotExist) {
 							return nil
@@ -866,7 +858,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					} else {
 						var absolutePath string
 						if dirFS, ok := nbrew.FS.(*DirFS); ok {
-							absolutePath = path.Join(dirFS.RootDir, filePath)
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
@@ -884,17 +876,15 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
-						fmt.Println("h", category)
 						return err
 					}
-					err = siteGen.GeneratePost(groupctxB, filePath, text, time.Now(), creationTime, tmpl)
+					err = siteGen.GeneratePost(groupctxB, path.Join("posts", category, name+".md"), text, time.Now(), creationTime, tmpl)
 					if err != nil {
 						var templateErr TemplateError
 						if errors.As(err, &templateErr) {
 							templateErrPtr.CompareAndSwap(nil, &templateErr)
 							return nil
 						}
-						fmt.Println("h", filePath, path.Dir(strings.TrimPrefix(strings.TrimSuffix(filePath, path.Ext(filePath)), "posts/")))
 						return err
 					}
 					count.Add(1)
