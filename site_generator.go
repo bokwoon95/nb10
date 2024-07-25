@@ -2498,7 +2498,9 @@ func tocHeaders(reader io.Reader) ([]Header, error) {
 	var headerLevel int
 	var headerID string
 	var headerTitle bytes.Buffer
-	var parents [1 + 6]*Header // root + <h1> to <h6>
+	// parents[1] to parents[6] correspond to the latest h1 - h6 parents.
+	// parents[0] is the root parent i.e. h0.
+	var parents [1 + 6]*Header
 	parents[0] = &Header{}
 	fallbackParent := parents[0]
 	tokenizer := html.NewTokenizer(reader)
