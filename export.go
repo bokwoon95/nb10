@@ -436,78 +436,169 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-						n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
-							Dialect: databaseFS.Dialect,
-							Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\'",
-							Values: []any{
-								sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent, name))+"/%"),
-							},
-						}, func(row *sq.Row) int64 {
-							return row.Int64("sum(coalesce(size, 0))")
-						})
+					if file.IsDir {
+						storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(sitePrefix, response.Parent, name))
 						if err != nil {
 							return err
 						}
-						totalBytes.Add(n)
+						totalBytes.Add(storageUsed)
 					} else {
-						err := fs.WalkDir(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name), func(filePath string, dirEntry fs.DirEntry, err error) error {
-							if err != nil {
-								if errors.Is(err, fs.ErrNotExist) {
-									return nil
-								}
-								return err
-							}
-							if dirEntry.IsDir() {
-								return nil
-							}
-							fileInfo, err := dirEntry.Info()
-							if err != nil {
-								return err
-							}
-							totalBytes.Add(fileInfo.Size())
-							return nil
-						})
-						if err != nil {
-							return err
-						}
+						totalBytes.Add(file.Size)
 					}
 					return nil
 				})
 			}
 			for outputDir, exportAction := range outputDirsToExport {
 				outputDir, exportAction := outputDir, exportAction
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, outputDir))
+				if err != nil {
+					if !errors.Is(err, fs.ErrNotExist) {
+						continue
+					}
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				} else {
+					if !fileInfo.IsDir() {
+						continue
+					}
+				}
 				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					if exportAction&exportFiles != 0 && exportAction&exportDirectories != 0 {
-						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-							n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
-								Dialect: databaseFS.Dialect,
-								Format:  "SELECT {*} FROM files WHERE file_path LIKE {outputDirPrefix} ESCAPE '\\'",
-								Values: []any{
-									sq.Param("outputDirPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%"),
-								},
-							}, func(row *sq.Row) int64 {
-								return row.Int64("sum(coalesce(size, 0))")
-							})
-							if err != nil {
-								return err
-							}
-							totalBytes.Add(n)
-						} else {
-							// walk the filesystem
-						}
+					if exportAction == 0 {
 						return nil
 					}
-					if exportAction&exportFiles != 0 {
+					head, tail, _ := strings.Cut(outputDir, "/")
+					if head != "output" {
+						getLogger(groupctx).Error(fmt.Sprintf("programmer error: attempted to export output directory %s (which is not an output directory)", outputDir))
 						return nil
+					}
+					if exportAction&exportFiles != 0 && exportAction&exportDirectories != 0 {
+						storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+						if err != nil {
+							return err
+						}
+						totalBytes.Add(storageUsed)
+						return nil
+					}
+					nextHead, nextTail, _ := strings.Cut(tail, "/")
+					if exportAction&exportFiles != 0 {
+						if nextTail != "" {
+							var counterpart string
+							if nextHead == "posts" {
+								counterpart = path.Join(sitePrefix, "posts", nextTail)
+							} else {
+								counterpart = path.Join(sitePrefix, "pages", nextTail)
+							}
+							fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), counterpart)
+							if err != nil {
+								if errors.Is(err, fs.ErrNotExist) {
+									storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									if err != nil {
+										return err
+									}
+									totalBytes.Add(storageUsed)
+									return nil
+								} else {
+									return err
+								}
+							} else {
+								if !fileInfo.IsDir() {
+									storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									if err != nil {
+										return err
+									}
+									totalBytes.Add(storageUsed)
+									return nil
+								}
+							}
+						}
+						dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(path.Join(sitePrefix, outputDir))
+						if err != nil {
+							return err
+						}
+						subgroup, subctx := errgroup.WithContext(groupctx)
+						for _, dirEntry := range dirEntries {
+							if dirEntry.IsDir() {
+								continue
+							}
+							name := dirEntry.Name()
+							subgroup.Go(func() (err error) {
+								defer func() {
+									if v := recover(); v != nil {
+										err = fmt.Errorf("panic: " + string(debug.Stack()))
+									}
+								}()
+								storageUsed, err := calculateStorageUsed(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name))
+								if err != nil {
+									return err
+								}
+								totalBytes.Add(storageUsed)
+								return nil
+							})
+						}
+						return subgroup.Wait()
 					}
 					if exportAction&exportDirectories != 0 {
-						return nil
+						if tail != "" {
+							var counterpart string
+							if head == "posts" {
+								counterpart = path.Join(sitePrefix, "posts", tail+".md")
+							} else {
+								counterpart = path.Join(sitePrefix, "pages", tail+".html")
+							}
+							fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), counterpart)
+							if err != nil {
+								if errors.Is(err, fs.ErrNotExist) {
+									storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									if err != nil {
+										return err
+									}
+									totalBytes.Add(storageUsed)
+									return nil
+								} else {
+									return err
+								}
+							} else {
+								if fileInfo.IsDir() {
+									storageUsed, err := calculateStorageUsed(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									if err != nil {
+										return err
+									}
+									totalBytes.Add(storageUsed)
+									return nil
+								}
+							}
+						}
+						dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(path.Join(sitePrefix, outputDir))
+						if err != nil {
+							return err
+						}
+						subgroup, subctx := errgroup.WithContext(groupctx)
+						for _, dirEntry := range dirEntries {
+							if !dirEntry.IsDir() {
+								continue
+							}
+							name := dirEntry.Name()
+							subgroup.Go(func() (err error) {
+								defer func() {
+									if v := recover(); v != nil {
+										err = fmt.Errorf("panic: " + string(debug.Stack()))
+									}
+								}()
+								storageUsed, err := calculateStorageUsed(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name))
+								if err != nil {
+									return err
+								}
+								totalBytes.Add(storageUsed)
+								return nil
+							})
+						}
+						return subgroup.Wait()
 					}
 					return nil
 				})
