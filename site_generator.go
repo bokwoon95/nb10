@@ -31,6 +31,7 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/net/html"
@@ -130,12 +131,16 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		config.Favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>" + emoji + "</text></svg>"
 	}
 	siteGen.markdown = goldmark.New(
-		goldmark.WithParserOptions(parser.WithAttribute()),
+		goldmark.WithParserOptions(
+			parser.WithAttribute(),
+		),
 		goldmark.WithExtensions(
 			highlighting.NewHighlighting(
 				highlighting.WithStyle(config.CodeStyle),
 				highlighting.WithFormatOptions(chromahtml.TabWidth(4)),
 			),
+			extension.Footnote,
+			extension.CJK,
 		),
 		goldmark.WithRendererOptions(
 			goldmarkhtml.WithHardWraps(),

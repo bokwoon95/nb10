@@ -24,12 +24,13 @@ require (
 	github.com/mileusna/useragent v1.3.4
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/stripe/stripe-go/v79 v79.2.0
-	github.com/yuin/goldmark v1.4.13
+	github.com/yuin/goldmark v1.7.4
 	golang.org/x/crypto v0.18.0
 	golang.org/x/net v0.20.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/sys v0.21.0
 	golang.org/x/term v0.16.0
+	golang.org/x/time v0.5.0
 	modernc.org/sqlite v1.29.2
 )
 
@@ -63,7 +64,6 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.17.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.41.0 // indirect
