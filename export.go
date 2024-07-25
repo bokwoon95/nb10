@@ -904,7 +904,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
 		exportJobID := NewID()
 		if nbrew.DB == nil {
-			err := nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, fileName, storageRemaining)
+			err := nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, nil, fileName, storageRemaining)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -946,7 +946,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, fileName, storageRemaining)
+				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, nil, fileName, storageRemaining)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("exportJobID", exportJobID.String()),
