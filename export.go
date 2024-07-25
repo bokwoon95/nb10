@@ -795,9 +795,19 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			totalBytes.Add(fileInfo.Size())
 			return nil
 		}
+		// TODO: need to handle the deviant use case where parent == "." &&
+		// names = []string{"pages"}, because its outputDirToExport is actually
+		// like, multiple directories and not just one.
 		group, groupctx := errgroup.WithContext(r.Context())
 		for _, name := range names {
 			name := name
+			// TODO: we need to check if name is a file or directory bc we can
+			// then either use fileInfo.Size() or calculateStorageUsed. We will
+			// no longer need the temporary walkDirFunc function above.
+			//
+			// TODO: for each name, figure out the output directories that we
+			// need to export and (sigh) apply the same counterpart logic as
+			// above in finding out the totalBytes.
 			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
@@ -994,7 +1004,7 @@ func (w *exportProgressWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, fileName string, storageRemaining *atomic.Int64) error {
+func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, outputDirsToExport map[string]exportAction, fileName string, storageRemaining *atomic.Int64) error {
 	success := false
 	defer func() {
 		if nbrew.DB == nil {
@@ -1316,6 +1326,9 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 			}
 		}
 	}
+	// TODO: loop over outputDirsToExport in a sorted key manner and apply the
+	// same counterpart logic as above in figuring out what outputDirs to
+	// export.
 	err = tarWriter.Close()
 	if err != nil {
 		return err
