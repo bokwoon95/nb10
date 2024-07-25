@@ -123,6 +123,32 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		head, tail, _ := strings.Cut(response.Parent, "/")
 		switch head {
+		case "notes":
+			response.Ext = ".txt"
+			response.FileExts = editableExts
+		case "pages":
+			response.Ext = ".html"
+			response.FileExts = []string{".html"}
+			response.UploadableExts = make([]string, 0, len(imgExts)+3)
+			response.UploadableExts = append(response.UploadableExts, imgExts...)
+			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
+		case "posts":
+			response.Ext = ".md"
+			response.FileExts = []string{".md"}
+			response.UploadableExts = imgExts
+		case "output":
+			next, _, _ := strings.Cut(tail, "/")
+			if next == "themes" {
+				response.Ext = ".html"
+				response.FileExts = editableExts
+			} else {
+				response.Ext = ".md"
+				response.FileExts = []string{".css", ".js", ".md"}
+			}
+		default:
+			response.Error = "InvalidParent"
+			writeResponse(w, r, response)
+			return
 		}
 		if response.Error != "" {
 			writeResponse(w, r, response)
@@ -145,34 +171,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				response.Error = "InvalidParent"
 				writeResponse(w, r, response)
 				return
-			}
-		default:
-			response.Error = "InvalidParent"
-			writeResponse(w, r, response)
-			return
-		}
-		switch head {
-		case "notes":
-			response.Ext = ".txt"
-			response.FileExts = editableExts
-		case "pages":
-			response.Ext = ".html"
-			response.FileExts = []string{".html"}
-			response.UploadableExts = make([]string, 0, len(imgExts)+3)
-			response.UploadableExts = append(response.UploadableExts, imgExts...)
-			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
-		case "posts":
-			response.Ext = ".md"
-			response.FileExts = []string{".md"}
-			response.UploadableExts = imgExts
-		case "output":
-			next, _, _ := strings.Cut(tail, "/")
-			if next == "themes" {
-				response.Ext = ".html"
-				response.FileExts = editableExts
-			} else {
-				response.Ext = ".md"
-				response.FileExts = []string{".css", ".js", ".md"}
 			}
 		default:
 			response.Error = "InvalidParent"
