@@ -28,6 +28,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type exportAction int
+
+const (
+	exportFiles       exportAction = 1 << 0
+	exportDirectories exportAction = 1 << 1
+)
+
 func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
@@ -59,11 +66,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		Error          string     `json:"error"`
 		FormErrors     url.Values `json:"formErrors"`
 	}
-	type exportAction int
-	const (
-		exportFiles       exportAction = 1 << 0
-		exportDirectories exportAction = 1 << 1
-	)
 
 	switch r.Method {
 	case "GET", "HEAD":
