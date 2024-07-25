@@ -2538,7 +2538,6 @@ func tocHeaders(reader io.Reader) ([]Header, error) {
 				if string(key) == "id" {
 					headerID = string(val)
 					headerLevel = level
-					fmt.Println("id", headerID, "level", headerLevel)
 					break
 				}
 			}
