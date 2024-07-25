@@ -2252,6 +2252,9 @@ var userFuncMap = map[string]any{
 		}
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
+	"tocHeaders": func(x any) ([]Header, error) {
+		return nil, nil
+	},
 	"case": func(expr any, args ...any) any {
 		var fallback any
 		if len(args)%2 == 0 {
@@ -2474,6 +2477,108 @@ func toString(v any) string {
 		return strconv.FormatFloat(v, 'f', -1, 64)
 	default:
 		return fmt.Sprint(v)
+	}
+}
+
+type Header struct {
+	HeaderID   string
+	Title      string
+	Level      int
+	Subheaders []Header
+}
+
+func tocHeaders(reader io.Reader) ([]Header, error) {
+	var headerLevel int
+	var headerID string
+	var headerTitle bytes.Buffer
+	var parents [1 + 6]*Header // root + <h1> to <h6>
+	parents[0] = &Header{}
+	fallbackParent := parents[0]
+	tokenizer := html.NewTokenizer(reader)
+	for {
+		tokenType := tokenizer.Next()
+		switch tokenType {
+		case html.ErrorToken:
+			err := tokenizer.Err()
+			if err == io.EOF {
+				return parents[0].Subheaders, nil
+			}
+			return nil, err
+		case html.StartTagToken:
+			var level int
+			name, moreAttr := tokenizer.TagName()
+			switch string(name) {
+			case "h1":
+				level = 1
+			case "h2":
+				level = 2
+			case "h3":
+				level = 3
+			case "h4":
+				level = 4
+			case "h5":
+				level = 5
+			case "h6":
+				level = 6
+			default:
+				continue
+			}
+			var key, val []byte
+			for moreAttr {
+				key, val, moreAttr = tokenizer.TagAttr()
+				if string(key) == "id" {
+					headerID = string(val)
+					headerLevel = level
+					break
+				}
+			}
+		case html.TextToken:
+			if headerID != "" {
+				headerTitle.Write(tokenizer.Raw())
+			}
+		case html.EndTagToken:
+			var level int
+			name, _ := tokenizer.TagName()
+			switch string(name) {
+			case "h1":
+				level = 1
+			case "h2":
+				level = 2
+			case "h3":
+				level = 3
+			case "h4":
+				level = 4
+			case "h5":
+				level = 5
+			case "h6":
+				level = 6
+			default:
+				continue
+			}
+			header := Header{
+				Title:    headerTitle.String(),
+				HeaderID: headerID,
+				Level:    headerLevel,
+			}
+			headerTitle.Reset()
+			headerID = ""
+			headerLevel = 0
+			if level != headerLevel {
+				continue
+			}
+			if parent := parents[header.Level-1]; parent != nil {
+				parent.Subheaders = append(parent.Subheaders, header)
+				n := len(parent.Subheaders) - 1
+				parents[header.Level] = &parent.Subheaders[n]
+			} else {
+				fallbackParent.Subheaders = append(fallbackParent.Subheaders, header)
+				n := len(fallbackParent.Subheaders) - 1
+				parents[header.Level] = &fallbackParent.Subheaders[n]
+			}
+			if header.Level == fallbackParent.Level+1 {
+				fallbackParent = parents[header.Level]
+			}
+		}
 	}
 }
 
