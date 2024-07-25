@@ -856,7 +856,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}()
 		err = tmpl.Execute(pipeWriter, pageData)
 		if err != nil {
-			return NewTemplateError(err)
+			templateErr := NewTemplateError(err)
+			io.WriteString(pipeWriter, templateErr.Error())
+			return templateErr
 		}
 		pipeWriter.Close()
 		err = <-result
@@ -866,7 +868,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	} else {
 		err = tmpl.Execute(writer, pageData)
 		if err != nil {
-			return NewTemplateError(err)
+			templateErr := NewTemplateError(err)
+			io.WriteString(writer, templateErr.Error())
+			return templateErr
 		}
 	}
 	err = writer.Close()
@@ -1129,7 +1133,9 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}()
 		err = tmpl.Execute(pipeWriter, postData)
 		if err != nil {
-			return NewTemplateError(err)
+			templateErr := NewTemplateError(err)
+			io.WriteString(pipeWriter, templateErr.Error())
+			return templateErr
 		}
 		pipeWriter.Close()
 		err = <-result
@@ -1139,7 +1145,9 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	} else {
 		err = tmpl.Execute(writer, postData)
 		if err != nil {
-			return NewTemplateError(err)
+			templateErr := NewTemplateError(err)
+			io.WriteString(writer, templateErr.Error())
+			return templateErr
 		}
 	}
 	err = writer.Close()
@@ -1834,7 +1842,9 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			}()
 			err = tmpl.Execute(pipeWriter, postListData)
 			if err != nil {
-				return NewTemplateError(err)
+				templateErr := NewTemplateError(err)
+				io.WriteString(pipeWriter, templateErr.Error())
+				return templateErr
 			}
 			pipeWriter.Close()
 			err = <-result
@@ -1844,7 +1854,9 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		} else {
 			err = tmpl.Execute(writer, postListData)
 			if err != nil {
-				return NewTemplateError(err)
+				templateErr := NewTemplateError(err)
+				io.WriteString(writer, templateErr.Error())
+				return templateErr
 			}
 		}
 		err = writer.Close()
