@@ -2488,7 +2488,7 @@ func toString(v any) string {
 }
 
 type Header struct {
-	HeaderID   string
+	ID         string
 	Title      string
 	Level      int
 	Subheaders []Header
@@ -2538,6 +2538,7 @@ func tocHeaders(reader io.Reader) ([]Header, error) {
 				if string(key) == "id" {
 					headerID = string(val)
 					headerLevel = level
+					fmt.Println("id", headerID, "level", headerLevel)
 					break
 				}
 			}
@@ -2564,16 +2565,13 @@ func tocHeaders(reader io.Reader) ([]Header, error) {
 			default:
 				continue
 			}
-			header := Header{
-				Title:    headerTitle.String(),
-				HeaderID: headerID,
-				Level:    headerLevel,
-			}
-			headerTitle.Reset()
-			headerID = ""
-			headerLevel = 0
 			if level != headerLevel {
 				continue
+			}
+			header := Header{
+				Title: headerTitle.String(),
+				ID:    headerID,
+				Level: headerLevel,
 			}
 			if parent := parents[header.Level-1]; parent != nil {
 				parent.Subheaders = append(parent.Subheaders, header)
@@ -2587,6 +2585,9 @@ func tocHeaders(reader io.Reader) ([]Header, error) {
 			if header.Level == fallbackParent.Level+1 {
 				fallbackParent = parents[header.Level]
 			}
+			headerTitle.Reset()
+			headerID = ""
+			headerLevel = 0
 		}
 	}
 }
