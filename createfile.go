@@ -169,7 +169,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				response.Ext = ".html"
 				response.FileExts = editableExts
 			} else {
-				response.Ext = ".js"
+				response.Ext = ".md"
 				response.FileExts = []string{".css", ".js", ".md"}
 			}
 		default:
