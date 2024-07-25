@@ -857,7 +857,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		err = tmpl.Execute(pipeWriter, pageData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(pipeWriter, templateErr.Error())
+			io.WriteString(pipeWriter, html.EscapeString(templateErr.Error()))
 			return templateErr
 		}
 		pipeWriter.Close()
@@ -869,7 +869,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		err = tmpl.Execute(writer, pageData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(writer, templateErr.Error())
+			io.WriteString(writer, html.EscapeString(templateErr.Error()))
 			return templateErr
 		}
 	}
@@ -1134,7 +1134,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		err = tmpl.Execute(pipeWriter, postData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(pipeWriter, templateErr.Error())
+			io.WriteString(pipeWriter, html.EscapeString(templateErr.Error()))
 			return templateErr
 		}
 		pipeWriter.Close()
@@ -1146,7 +1146,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		err = tmpl.Execute(writer, postData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(writer, templateErr.Error())
+			io.WriteString(writer, html.EscapeString(templateErr.Error()))
 			return templateErr
 		}
 	}
@@ -1843,7 +1843,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			err = tmpl.Execute(pipeWriter, postListData)
 			if err != nil {
 				templateErr := NewTemplateError(err)
-				io.WriteString(pipeWriter, templateErr.Error())
+				io.WriteString(pipeWriter, html.EscapeString(templateErr.Error()))
 				return templateErr
 			}
 			pipeWriter.Close()
@@ -1855,7 +1855,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			err = tmpl.Execute(writer, postListData)
 			if err != nil {
 				templateErr := NewTemplateError(err)
-				io.WriteString(writer, templateErr.Error())
+				io.WriteString(writer, html.EscapeString(templateErr.Error()))
 				return templateErr
 			}
 		}
