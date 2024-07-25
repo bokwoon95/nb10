@@ -174,7 +174,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					if i > 0 {
 						b.WriteString(" OR ")
 					}
-					b.WriteString("files.file_path LIKE {}")
+					b.WriteString("files.file_path LIKE {} ESCAPE '\\'")
 					args = append(args, "%"+wildcardReplacer.Replace(ext))
 				}
 				b.WriteString(")")
@@ -326,7 +326,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					if i > 0 {
 						b.WriteString(" OR ")
 					}
-					b.WriteString("files.file_path LIKE {}")
+					b.WriteString("files.file_path LIKE {} ESCAPE '\\'")
 					args = append(args, "%"+wildcardReplacer.Replace(ext))
 				}
 				b.WriteString(")")

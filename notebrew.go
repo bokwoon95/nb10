@@ -27,6 +27,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -1361,4 +1362,48 @@ type MaxMindDBRecord struct {
 	Country struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"country"`
+}
+
+// https://cs.opensource.google/go/x/xerrors/+/93cc26a9:frame.go
+type CallerError struct {
+	frames [3]uintptr
+	err    error
+}
+
+// TODO: should we capture just the caller, or up to the next 50 frames? See
+// sq's testutil.Callers(). The problem with just capturing the caller is that
+// it's useless if you put it inside a callback function.
+//
+// TODO: instead, WithCaller should capture the start point. Then
+// InternalServerError should recover call stack and stop it at the caller of
+// InternalServerError. So we have a nice call stack starting at the true start
+// and ending at the true end. Should we print it out to the user? Yes, I
+// think. So even end users can help debug by showing the revision, error and
+// call trace.
+func WithCaller(err error) error {
+	e := &CallerError{}
+	runtime.Callers(2, e.frames[:])
+	return e
+}
+
+func (e *CallerError) Error() string {
+	_, file, line := e.Caller()
+	if file == "" {
+		return e.err.Error()
+	}
+	return file + ":" + strconv.Itoa(line) + ": " + e.err.Error()
+}
+
+func (e *CallerError) Unwrap() error { return e.err }
+
+func (e *CallerError) Caller() (function, file string, line int) {
+	frames := runtime.CallersFrames(e.frames[:])
+	if _, ok := frames.Next(); !ok {
+		return "", "", 0
+	}
+	fr, ok := frames.Next()
+	if !ok {
+		return "", "", 0
+	}
+	return fr.Function, fr.File, fr.Line
 }

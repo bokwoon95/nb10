@@ -153,7 +153,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		}, func(row *sq.Row) Site {
 			return Site{
 				Name: row.String("CASE"+
-					" WHEN site.site_name LIKE '%.%' THEN site.site_name"+
+					" WHEN site.site_name LIKE '%.%' ESCAPE '\\' THEN site.site_name"+
 					" WHEN site.site_name <> '' THEN {}"+
 					" ELSE ''"+
 					" END AS site_prefix",
@@ -309,7 +309,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
 					" AND is_dir" +
-					" AND (file_path LIKE '@%' OR file_path LIKE '%.%')" +
+					" AND (file_path LIKE '@%' ESCAPE '\\' OR file_path LIKE '%.%' ESCAPE '\\')" +
 					" AND file_path >= {from}" +
 					" ORDER BY file_path" +
 					" LIMIT {limit} + 1",
@@ -350,7 +350,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
 					" AND is_dir" +
-					" AND (file_path LIKE '@%' OR file_path LIKE '%.%')" +
+					" AND (file_path LIKE '@%' ESCAPE '\\' OR file_path LIKE '%.%')" +
 					" AND file_path < {from}",
 				Values: []any{
 					sq.StringParam("from", response.From),
@@ -395,7 +395,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 					" FROM files" +
 					" WHERE parent_id IS NULL" +
 					" AND is_dir" +
-					" AND (file_path LIKE '@%' OR file_path LIKE '%.%')" +
+					" AND (file_path LIKE '@%' ESCAPE '\\' OR file_path LIKE '%.%' ESCAPE '\\')" +
 					" AND file_path < {before}" +
 					" ORDER BY file_path" +
 					" LIMIT {limit} + 1",
@@ -475,7 +475,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			" FROM files" +
 			" WHERE parent_id IS NULL" +
 			" AND is_dir" +
-			" AND (file_path LIKE '@%' OR file_path LIKE '%.%')" +
+			" AND (file_path LIKE '@%' ESCAPE '\\' OR file_path LIKE '%.%' ESCAPE '\\')" +
 			" ORDER BY file_path" +
 			" LIMIT {limit} + 1",
 		Values: []any{

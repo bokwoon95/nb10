@@ -120,12 +120,12 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		var filter sq.Expression
 		if root == "." {
 			filter = sq.Expr("(" +
-				"files.file_path LIKE 'notes/%'" +
-				" OR files.file_path LIKE 'pages/%'" +
-				" OR files.file_path LIKE 'posts/%'" +
-				" OR files.file_path LIKE 'output/%'" +
-				" OR files.file_path LIKE 'imports/%'" +
-				" OR files.file_path LIKE 'exports/%'" +
+				"files.file_path LIKE 'notes/%' ESCAPE '\\'" +
+				" OR files.file_path LIKE 'pages/%' ESCAPE '\\'" +
+				" OR files.file_path LIKE 'posts/%' ESCAPE '\\'" +
+				" OR files.file_path LIKE 'output/%' ESCAPE '\\'" +
+				" OR files.file_path LIKE 'imports/%' ESCAPE '\\'" +
+				" OR files.file_path LIKE 'exports/%' ESCAPE '\\'" +
 				" OR files.file_path = 'site.json'" +
 				")")
 		} else {

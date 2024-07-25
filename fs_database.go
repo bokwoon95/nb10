@@ -1135,9 +1135,9 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	if len(imgExts) > 0 {
 		var b strings.Builder
 		args := make([]any, 0, len(imgExts)+1)
-		b.WriteString("(file_path LIKE '%.tgz'")
+		b.WriteString("(file_path LIKE '%.tgz' ESCAPE '\\'")
 		for _, ext := range imgExts {
-			b.WriteString(" OR file_path LIKE {}")
+			b.WriteString(" OR file_path LIKE {} ESCAPE '\\'")
 			args = append(args, "%"+wildcardReplacer.Replace(ext))
 		}
 		b.WriteString(")")
@@ -1495,7 +1495,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	}
 	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
-		Format:  "SELECT {*} FROM files WHERE file_path = {srcName} OR file_path LIKE {pattern} ORDER BY file_path",
+		Format:  "SELECT {*} FROM files WHERE file_path = {srcName} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
 		Values: []any{
 			sq.StringParam("srcName", srcName),
 			sq.StringParam("pattern", wildcardReplacer.Replace(srcName)+"/%"),

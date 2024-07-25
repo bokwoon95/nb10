@@ -126,6 +126,11 @@ CREATE TABLE mail_queue ();
 CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 
+if pages/ => output/ EXCLUDE output/posts/, output/themes/
+if pages/xxx => output/xxx
+if posts/ => output/posts/
+if posts/xxx => output/posts/xxx
+
 if exporting anything under posts/x/y/z, export its counterpart under output/posts/x/y/z
 if exporting anything under pages/x/y/z, export its counterpart under output/x/y/z
 if exporting pages, export everything under output/ *except* for output/posts/ and output/themes/

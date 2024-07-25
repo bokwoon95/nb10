@@ -485,15 +485,18 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			groupB.Go(func() error {
 				head, tail, _ := strings.Cut(outputDir, "/")
 				if head != "output" {
-					return fmt.Errorf("runtime bug: notebrew attempted to delete output directory %s (which is not an output directory)", outputDir)
+					getLogger(groupctxB).Error(fmt.Sprintf("attempted to delete output directory %s (which is not an output directory)", outputDir))
+					return nil
 				}
 				nextHead, nextTail, _ := strings.Cut(tail, "/")
 				if nextTail == "" {
 					if nextHead == "posts" {
-						return fmt.Errorf("runtime bug: notebrew attempted to delete output/posts wholesale")
+						getLogger(groupctxB).Error(fmt.Sprintf("attempted to delete output/posts wholesale"))
+						return nil
 					}
 					if nextHead == "themes" {
-						return fmt.Errorf("runtime bug: notebrew attempted to delete output/themes wholesale")
+						getLogger(groupctxB).Error(fmt.Sprintf("attempted to delete output/themes wholesale"))
+						return nil
 					}
 				}
 				if deleteAction&deleteFiles != 0 && deleteAction&deleteDirectories != 0 {

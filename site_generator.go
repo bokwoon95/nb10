@@ -193,7 +193,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			if i > 0 {
 				b.WriteString(" OR ")
 			}
-			b.WriteString("file_path LIKE {}")
+			b.WriteString("file_path LIKE {} ESCAPE '\\'")
 			args = append(args, "%"+wildcardReplacer.Replace(ext))
 		}
 		b.WriteString(")")
@@ -203,7 +203,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
-			" WHERE file_path LIKE {pattern}" +
+			" WHERE file_path LIKE {pattern} ESCAPE '\\'" +
 			" AND {extFilter}",
 		Values: []any{
 			sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(siteGen.sitePrefix, "output"))+"/%"),
@@ -512,9 +512,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
 			var b strings.Builder
 			args := make([]any, 0, len(imgExts)+1)
-			b.WriteString("(file_path LIKE '%.md'")
+			b.WriteString("(file_path LIKE '%.md' ESCAPE '\\'")
 			for _, ext := range imgExts {
-				b.WriteString(" OR file_path LIKE {}")
+				b.WriteString(" OR file_path LIKE {} ESCAPE '\\'")
 				args = append(args, "%"+wildcardReplacer.Replace(ext))
 			}
 			b.WriteString(")")
@@ -689,7 +689,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					" FROM files" +
 					" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {pageDir})" +
 					" AND NOT is_dir" +
-					" AND file_path LIKE '%.html'" +
+					" AND file_path LIKE '%.html' ESCAPE '\\'" +
 					" AND file_path NOT IN ({indexPage}, {notFoundPage})" +
 					" ORDER BY file_path",
 				Values: []any{
@@ -990,7 +990,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 				if i > 0 {
 					b.WriteString(" OR ")
 				}
-				b.WriteString("file_path LIKE {}")
+				b.WriteString("file_path LIKE {} ESCAPE '\\'")
 				args = append(args, "%"+wildcardReplacer.Replace(ext))
 			}
 			b.WriteString(")")
@@ -1171,7 +1171,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 				" FROM files" +
 				" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 				" AND NOT is_dir" +
-				" AND file_path LIKE '%.md'",
+				" AND file_path LIKE '%.md' ESCAPE '\\'",
 			Values: []any{
 				sq.StringParam("parent", path.Join(siteGen.sitePrefix, "posts", category)),
 			},
@@ -1323,7 +1323,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				" FROM files" +
 				" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 				" AND NOT is_dir" +
-				" AND file_path LIKE '%.md'",
+				" AND file_path LIKE '%.md' ESCAPE '\\'",
 			Values: []any{
 				sq.StringParam("parent", path.Join(siteGen.sitePrefix, "posts", category)),
 			},
@@ -1391,7 +1391,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				" FROM files" +
 				" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {parent})" +
 				" AND NOT is_dir" +
-				" AND file_path LIKE '%.md'" +
+				" AND file_path LIKE '%.md' ESCAPE '\\'" +
 				" ORDER BY file_path DESC",
 			Values: []any{
 				sq.StringParam("parent", path.Join(siteGen.sitePrefix, "posts", category)),
@@ -1679,7 +1679,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 						if i > 0 {
 							b.WriteString(" OR ")
 						}
-						b.WriteString("file_path LIKE {}")
+						b.WriteString("file_path LIKE {} ESCAPE '\\'")
 						args = append(args, "%"+wildcardReplacer.Replace(ext))
 					}
 					b.WriteString(")")

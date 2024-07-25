@@ -127,7 +127,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
 		names := r.Form["name"]
 
-		head, _, _ := strings.Cut(response.Parent, "/")
+		head, tail, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case ".":
 			response.ExportParent = true
@@ -193,39 +193,93 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			}
 		}
 
+		var totalBytes atomic.Int64
+		group, groupctx := errgroup.WithContext(r.Context())
 		if response.ExportParent {
+			var outputDir string
+			switch head {
+			case "pages":
+				outputDir = path.Join("output", tail)
+			case "posts":
+				outputDir = path.Join("output/posts", tail)
+			}
 			if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-				var filter sq.Expression
-				if response.Parent == "." {
-					filter = sq.Expr("(file_path LIKE {notesPrefix}"+
-						" OR file_path LIKE {pagesPrefix}"+
-						" OR file_path LIKE {postsPrefix}"+
-						" OR file_path LIKE {outputPrefix}"+
-						" OR file_path = {siteJSON})",
-						sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
-						sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
-						sq.StringParam("postsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
-						sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
-						sq.StringParam("siteJSON", wildcardReplacer.Replace(path.Join(sitePrefix, "site.json"))),
-					)
-				} else {
-					filter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
-				}
-				n, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-					Dialect: databaseFS.Dialect,
-					Format:  "SELECT {*} FROM files WHERE {filter}",
-					Values: []any{
-						sq.Param("filter", filter),
-					},
-				}, func(row *sq.Row) int64 {
-					return row.Int64("sum(coalesce(size, 0))")
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					var filter sq.Expression
+					if response.Parent == "." {
+						filter = sq.Expr("(file_path LIKE {notesPrefix} ESCAPE '\\'"+
+							" OR file_path LIKE {pagesPrefix} ESCAPE '\\'"+
+							" OR file_path LIKE {postsPrefix} ESCAPE '\\'"+
+							" OR file_path LIKE {outputPrefix} ESCAPE '\\'"+
+							" OR file_path = {siteJSON})",
+							sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
+							sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
+							sq.StringParam("postsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
+							sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+							sq.StringParam("siteJSON", wildcardReplacer.Replace(path.Join(sitePrefix, "site.json"))),
+						)
+					} else {
+						filter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent))+"/%")
+					}
+					n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format:  "SELECT {*} FROM files WHERE {filter}",
+						Values: []any{
+							sq.Param("filter", filter),
+						},
+					}, func(row *sq.Row) int64 {
+						return row.Int64("sum(coalesce(size, 0))")
+					})
+					if err != nil {
+						return err
+					}
+					totalBytes.Add(n)
+					return nil
 				})
-				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
+				if outputDir != "" {
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						var filter sq.Expression
+						if outputDir == "output" {
+							filter = sq.Expr("file_path LIKE {outputPrefix} ESCAPE '\\'"+
+								" AND file_path <> {outputPosts}"+
+								" AND file_path <> {outputThemes}"+
+								" AND file_path NOT LIKE {outputPostsPrefix} ESCAPE '\\'"+
+								" AND file_path NOT LIKE {outputThemesPrefix} ESCAPE '\\'",
+								sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+								sq.StringParam("outputPosts", path.Join(sitePrefix, "output/posts")),
+								sq.StringParam("outputThemes", path.Join(sitePrefix, "output/themes")),
+								sq.StringParam("outputPostsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/posts"))+"/%"),
+								sq.StringParam("outputThemesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/themes"))+"/%"),
+							)
+						} else {
+							filter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%")
+						}
+						n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+							Dialect: databaseFS.Dialect,
+							Format:  "SELECT {*} FROM files WHERE {filter}",
+							Values: []any{
+								sq.Param("filter", filter),
+							},
+						}, func(row *sq.Row) int64 {
+							return row.Int64("sum(coalesce(size, 0))")
+						})
+						if err != nil {
+							return err
+						}
+						totalBytes.Add(n)
+						return nil
+					})
 				}
-				response.TotalBytes = n
 			} else {
 				walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
 					if err != nil {
@@ -241,7 +295,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					if err != nil {
 						return err
 					}
-					response.TotalBytes += fileInfo.Size()
+					totalBytes.Add(fileInfo.Size())
 					return nil
 				}
 				if response.Parent == "." {
@@ -252,46 +306,77 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						path.Join(sitePrefix, "output"),
 						path.Join(sitePrefix, "site.json"),
 					} {
-						err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), root, walkDirFunc)
-						if err != nil {
-							getLogger(r.Context()).Error(err.Error())
-							nbrew.InternalServerError(w, r, err)
-							return
-						}
+						root := root
+						group.Go(func() (err error) {
+							defer func() {
+								if v := recover(); v != nil {
+									err = fmt.Errorf("panic: " + string(debug.Stack()))
+								}
+							}()
+							return fs.WalkDir(nbrew.FS.WithContext(groupctx), root, walkDirFunc)
+						})
 					}
 				} else {
-					err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, response.Parent), walkDirFunc)
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
-						return
-					}
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						return fs.WalkDir(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent), walkDirFunc)
+					})
+				}
+				if outputDir != "" {
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						return fs.WalkDir(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, outputDir), func(filePath string, dirEntry fs.DirEntry, err error) error {
+							if err != nil {
+								if errors.Is(err, fs.ErrNotExist) {
+									return nil
+								}
+								return err
+							}
+							if dirEntry.IsDir() {
+								if outputDir == "output" {
+									if filePath == path.Join(sitePrefix, outputDir, "posts") {
+										return fs.SkipDir
+									}
+									if filePath == path.Join(sitePrefix, outputDir, "themes") {
+										return fs.SkipDir
+									}
+								}
+								return nil
+							}
+							fileInfo, err := dirEntry.Info()
+							if err != nil {
+								return err
+							}
+							totalBytes.Add(fileInfo.Size())
+							return nil
+						})
+					})
 				}
 			}
-			writeResponse(w, r, response)
-			return
-		}
-
-		var totalBytes atomic.Int64
-		group, groupctx := errgroup.WithContext(r.Context())
-		response.Files = make([]File, len(names))
-		for i, name := range names {
-			i, name := i, name
-			if name == "" {
-				continue
-			}
-			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+		} else {
+			response.Files = make([]File, len(names))
+			outputDirsToExport := make(map[string]exportAction)
+			for i, name := range names {
+				i, name := i, name
+				if name == "" {
+					continue
+				}
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
-						return nil
+						continue
 					}
-					return err
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
 				}
 				file := File{
 					Name:    fileInfo.Name(),
@@ -310,52 +395,123 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					file.CreationTime = CreationTime(absolutePath, fileInfo)
 				}
 				response.Files[i] = file
-				return nil
-			})
-			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
-				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
-					n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
-						Dialect: databaseFS.Dialect,
-						Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\'",
-						Values: []any{
-							sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent, name))+"/%"),
-						},
-					}, func(row *sq.Row) int64 {
-						return row.Int64("sum(coalesce(size, 0))")
-					})
-					if err != nil {
-						return err
-					}
-					totalBytes.Add(n)
-				} else {
-					err := fs.WalkDir(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name), func(filePath string, dirEntry fs.DirEntry, err error) error {
-						if err != nil {
-							if errors.Is(err, fs.ErrNotExist) {
-								return nil
+				switch head {
+				case "pages":
+					if file.IsDir {
+						outputDir := path.Join("output", tail, name)
+						outputDirsToExport[outputDir] |= exportDirectories
+					} else {
+						if tail == "" {
+							if name == "index.html" {
+								outputDir := "output"
+								outputDirsToExport[outputDir] |= exportFiles
+							} else {
+								outputDir := path.Join("output", strings.TrimSuffix(name, ".html"))
+								outputDirsToExport[outputDir] |= exportFiles
 							}
-							return err
+						} else {
+							outputDir := path.Join("output", tail, strings.TrimSuffix(name, ".html"))
+							outputDirsToExport[outputDir] |= exportFiles
 						}
-						if dirEntry.IsDir() {
-							return nil
+					}
+				case "posts":
+					if file.IsDir {
+						if tail == "" {
+							category := name
+							outputDir := path.Join("output/posts", category)
+							outputDirsToExport[outputDir] |= exportDirectories
 						}
-						fileInfo, err := dirEntry.Info()
-						if err != nil {
-							return err
+					} else {
+						if !strings.Contains(tail, "/") {
+							if strings.HasSuffix(name, ".md") {
+								outputDir := path.Join("output/posts", tail, strings.TrimSuffix(name, ".md"))
+								outputDirsToExport[outputDir] |= exportFiles
+							}
 						}
-						totalBytes.Add(fileInfo.Size())
-						return nil
-					})
-					if err != nil {
-						return err
 					}
 				}
-				return nil
-			})
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+						n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+							Dialect: databaseFS.Dialect,
+							Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\'",
+							Values: []any{
+								sq.StringParam("pattern", wildcardReplacer.Replace(path.Join(sitePrefix, response.Parent, name))+"/%"),
+							},
+						}, func(row *sq.Row) int64 {
+							return row.Int64("sum(coalesce(size, 0))")
+						})
+						if err != nil {
+							return err
+						}
+						totalBytes.Add(n)
+					} else {
+						err := fs.WalkDir(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name), func(filePath string, dirEntry fs.DirEntry, err error) error {
+							if err != nil {
+								if errors.Is(err, fs.ErrNotExist) {
+									return nil
+								}
+								return err
+							}
+							if dirEntry.IsDir() {
+								return nil
+							}
+							fileInfo, err := dirEntry.Info()
+							if err != nil {
+								return err
+							}
+							totalBytes.Add(fileInfo.Size())
+							return nil
+						})
+						if err != nil {
+							return err
+						}
+					}
+					return nil
+				})
+			}
+			for outputDir, exportAction := range outputDirsToExport {
+				outputDir, exportAction := outputDir, exportAction
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					if exportAction&exportFiles != 0 && exportAction&exportDirectories != 0 {
+						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+							n, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+								Dialect: databaseFS.Dialect,
+								Format:  "SELECT {*} FROM files WHERE file_path LIKE {outputDirPrefix} ESCAPE '\\'",
+								Values: []any{
+									sq.Param("outputDirPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%"),
+								},
+							}, func(row *sq.Row) int64 {
+								return row.Int64("sum(coalesce(size, 0))")
+							})
+							if err != nil {
+								return err
+							}
+							totalBytes.Add(n)
+						} else {
+							// walk the filesystem
+						}
+						return nil
+					}
+					if exportAction&exportFiles != 0 {
+						return nil
+					}
+					if exportAction&exportDirectories != 0 {
+						return nil
+					}
+					return nil
+				})
+			}
 		}
 		err = group.Wait()
 		if err != nil {
@@ -558,10 +714,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 					var filter sq.Expression
 					if parent == "." && name == "." {
-						filter = sq.Expr("(file_path LIKE {notesPrefix}"+
-							" OR file_path LIKE {pagesPrefix}"+
-							" OR file_path LIKE {postsPrefix}"+
-							" OR file_path LIKE {outputPrefix}"+
+						filter = sq.Expr("(file_path LIKE {notesPrefix} ESCAPE '\\'"+
+							" OR file_path LIKE {pagesPrefix} ESCAPE '\\'"+
+							" OR file_path LIKE {postsPrefix} ESCAPE '\\'"+
+							" OR file_path LIKE {outputPrefix} ESCAPE '\\'"+
 							" OR file_path = {siteJSON})",
 							sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
 							sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
@@ -853,10 +1009,10 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 		for _, name := range names {
 			var filter sq.Expression
 			if parent == "." && name == "." {
-				filter = sq.Expr("files.file_path = {notes} OR files.file_path LIKE {notesPrefix}"+
-					" OR files.file_path = {pages} OR files.file_path LIKE {pagesPrefix}"+
-					" OR files.file_path = {posts} OR files.file_path LIKE {postsPrefix}"+
-					" OR files.file_path = {output} OR files.file_path LIKE {outputPrefix}"+
+				filter = sq.Expr("files.file_path = {notes} OR files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
+					" OR files.file_path = {pages} OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
+					" OR files.file_path = {posts} OR files.file_path LIKE {postsPrefix} ESCAPE '\\'"+
+					" OR files.file_path = {output} OR files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
 					" OR files.file_path = {siteJSON}",
 					sq.StringParam("notes", path.Join(sitePrefix, "notes")),
 					sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),

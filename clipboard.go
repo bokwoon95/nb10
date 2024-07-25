@@ -376,7 +376,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 							exists, err := sq.FetchExists(groupctxA, databaseFS.DB, sq.Query{
 								Dialect: databaseFS.Dialect,
-								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} AND NOT is_dir AND file_path NOT LIKE '%.html'",
+								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' AND NOT is_dir AND file_path NOT LIKE '%.html' ESCAPE '\\'",
 								Values: []any{
 									sq.StringParam("pattern", wildcardReplacer.Replace(srcFilePath)+"/%"),
 								},
@@ -417,7 +417,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
 							exists, err := sq.FetchExists(groupctxA, databaseFS.DB, sq.Query{
 								Dialect: databaseFS.Dialect,
-								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} AND NOT is_dir AND file_path NOT LIKE '%.md'",
+								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' AND NOT is_dir AND file_path NOT LIKE '%.md' ESCAPE '\\'",
 								Values: []any{
 									sq.StringParam("pattern", wildcardReplacer.Replace(srcFilePath)+"/%"),
 								},

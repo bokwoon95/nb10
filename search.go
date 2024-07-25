@@ -224,10 +224,10 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	parent := path.Join(sitePrefix, response.Parent)
 	if parent == "." {
 		parentFilter = sq.Expr("(" +
-			"files.file_path LIKE 'notes/%'" +
-			" OR files.file_path LIKE 'pages/%'" +
-			" OR files.file_path LIKE 'posts/%'" +
-			" OR files.file_path LIKE 'output/%'" +
+			"files.file_path LIKE 'notes/%' ESCAPE '\\'" +
+			" OR files.file_path LIKE 'pages/%' ESCAPE '\\'" +
+			" OR files.file_path LIKE 'posts/%' ESCAPE '\\'" +
+			" OR files.file_path LIKE 'output/%' ESCAPE '\\'" +
 			")")
 	} else {
 		parentFilter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(parent)+"/%")
@@ -253,14 +253,14 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				if i > 0 {
 					b.WriteString(" OR ")
 				}
-				b.WriteString("files.file_path LIKE {}")
+				b.WriteString("files.file_path LIKE {} ESCAPE '\\'")
 				args = append(args, "%"+wildcardReplacer.Replace(ext))
 			}
 			b.WriteString(")")
 		} else {
 			b.WriteString("(files.is_dir")
 			for _, ext := range exts {
-				b.WriteString(" OR files.file_path LIKE {}")
+				b.WriteString(" OR files.file_path LIKE {} ESCAPE '\\'")
 				args = append(args, "%"+wildcardReplacer.Replace(ext))
 			}
 			b.WriteString(")")
@@ -316,7 +316,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				FileID:       row.UUID("files.file_id"),
 				FilePath:     row.String("files.file_path"),
 				IsDir:        row.Bool("files.is_dir"),
-				Preview:      row.String("CASE WHEN files.file_path LIKE '%.json' THEN '' ELSE substr(files.text, 1, 500) END"),
+				Preview:      row.String("CASE WHEN files.file_path LIKE '%.json' ESCAPE '\\' THEN '' ELSE substr(files.text, 1, 500) END"),
 				ModTime:      row.Time("files.mod_time"),
 				CreationTime: row.Time("files.creation_time"),
 			}
