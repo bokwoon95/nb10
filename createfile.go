@@ -121,11 +121,13 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
 		response.Parent = path.Clean(strings.Trim(r.Form.Get("parent"), "/"))
+		head, tail, _ := strings.Cut(response.Parent, "/")
+		switch head {
+		}
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
 		}
-		head, tail, _ := strings.Cut(response.Parent, "/")
 		switch head {
 		case "notes", "pages", "posts", "output":
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent))
