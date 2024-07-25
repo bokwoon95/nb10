@@ -2253,7 +2253,14 @@ var userFuncMap = map[string]any{
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
 	"tocHeaders": func(x any) ([]Header, error) {
-		return nil, nil
+		switch x := x.(type) {
+		case string:
+			return tocHeaders(strings.NewReader(x))
+		case template.HTML:
+			return tocHeaders(strings.NewReader(string(x)))
+		default:
+			return nil, fmt.Errorf("note a string or template.HTML: %#v", x)
+		}
 	},
 	"case": func(expr any, args ...any) any {
 		var fallback any
