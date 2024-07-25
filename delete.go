@@ -483,17 +483,29 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 		for outputDir, deleteAction := range outputDirsToDelete {
 			outputDir, deleteAction := outputDir, deleteAction
 			groupB.Go(func() error {
+				head, tail, _ := strings.Cut(outputDir, "/")
+				if head != "output" {
+					return fmt.Errorf("runtime bug: notebrew attempted to delete output directory %s (which is not an output directory)", outputDir)
+				}
+				nextHead, nextTail, _ := strings.Cut(tail, "/")
+				if nextTail == "" {
+					if nextHead == "posts" {
+						return fmt.Errorf("runtime bug: notebrew attempted to delete output/posts wholesale")
+					}
+					if nextHead == "themes" {
+						return fmt.Errorf("runtime bug: notebrew attempted to delete output/themes wholesale")
+					}
+				}
 				if deleteAction&deleteFiles != 0 && deleteAction&deleteDirectories != 0 {
 					return nbrew.FS.WithContext(groupctxB).RemoveAll(path.Join(sitePrefix, outputDir))
 				}
-				head, tail, _ := strings.Cut(outputDir, "/")
 				if deleteAction&deleteFiles != 0 {
-					if tail != "" {
+					if nextTail != "" {
 						var counterpart string
-						if head == "posts" {
-							counterpart = path.Join(sitePrefix, "posts", tail)
+						if nextHead == "posts" {
+							counterpart = path.Join(sitePrefix, "posts", nextTail)
 						} else {
-							counterpart = path.Join(sitePrefix, "pages", tail)
+							counterpart = path.Join(sitePrefix, "pages", nextTail)
 						}
 						fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxB), counterpart)
 						if err != nil {

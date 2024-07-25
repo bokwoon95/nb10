@@ -240,6 +240,14 @@ func (nbrew *Notebrew) createfolder(w http.ResponseWriter, r *http.Request, user
 		}
 		switch head {
 		case "pages":
+			if (tail == "" && response.Name == "posts") ||
+				(tail == "" && response.Name == "themes") ||
+				(tail != "" && response.Name == "index") {
+				response.FormErrors.Add("name", "this name is not allowed")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
+			}
 			err := nbrew.FS.MkdirAll(path.Join(sitePrefix, "output", tail, response.Name), 0755)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
