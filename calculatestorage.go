@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"mime"
 	"net/http"
+	"path"
 	"runtime/debug"
 	"strings"
 	"sync/atomic"
@@ -116,18 +117,34 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 }
 
 func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, error) {
+	var sitePrefix string
+	root = strings.Trim(root, "/")
+	if root != "." {
+		head, _, _ := strings.Cut(root, "/")
+		if strings.HasPrefix(head, "@") || strings.Contains(root, ".") {
+			sitePrefix = head
+		}
+	}
 	if databaseFS, ok := fsys.(*DatabaseFS); ok {
 		var filter sq.Expression
-		if root == "." {
-			filter = sq.Expr("(" +
-				"files.file_path LIKE 'notes/%' ESCAPE '\\'" +
-				" OR files.file_path LIKE 'pages/%' ESCAPE '\\'" +
-				" OR files.file_path LIKE 'posts/%' ESCAPE '\\'" +
-				" OR files.file_path LIKE 'output/%' ESCAPE '\\'" +
-				" OR files.file_path LIKE 'imports/%' ESCAPE '\\'" +
-				" OR files.file_path LIKE 'exports/%' ESCAPE '\\'" +
-				" OR files.file_path = 'site.json'" +
-				")")
+		if root == "." || sitePrefix == root {
+			filter = sq.Expr("("+
+				"files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {postsPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {importsPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {exportsPrefix} ESCAPE '\\'"+
+				" OR files.file_path = {siteJSON}"+
+				")",
+				sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
+				sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
+				sq.StringParam("postsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
+				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+				sq.StringParam("importsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "imports"))+"/%"),
+				sq.StringParam("exportsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "exports"))+"/%"),
+				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
+			)
 		} else {
 			filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(root)+"/%")
 		}
@@ -163,9 +180,17 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		storageUsed.Add(fileInfo.Size())
 		return nil
 	}
-	if root == "." {
+	if root == "." || sitePrefix == root {
 		group, groupctx := errgroup.WithContext(ctx)
-		for _, root := range []string{"notes", "pages", "posts", "output", "imports", "exports", "site.json"} {
+		for _, root := range []string{
+			path.Join(sitePrefix, "notes"),
+			path.Join(sitePrefix, "pages"),
+			path.Join(sitePrefix, "posts"),
+			path.Join(sitePrefix, "output"),
+			path.Join(sitePrefix, "imports"),
+			path.Join(sitePrefix, "exports"),
+			path.Join(sitePrefix, "site.json"),
+		} {
 			root := root
 			group.Go(func() (err error) {
 				defer func() {
