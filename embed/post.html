@@ -37,8 +37,7 @@
 <div class='text-sm gray-600'>{{ formatTime $.CreationTime "2006-01-02" $.Site.TimezoneOffsetSeconds }}</div>
 <div><a href='/{{ join "posts" $.Category }}/'>&larr; index</a></div>
 <main>
-{{ $.Content }}
-<div>
+  {{ $.Content }}
   {{ range $image := $.Images }}
   <div class='w-80-l w-90-m w-100 mx-auto'>
     <img id='{{ $image.Name }}' src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto' loading='lazy'>
@@ -46,7 +45,6 @@
   </div>
   <div class='my-4'>{{ $image.Caption }}</div>
   {{ end }}
-</div>
 </main>
 <hr>
 <div class='text-sm gray-600'>last modified {{ formatTime $.ModificationTime "2006-01-02 15:04:05 -07:00" $.Site.TimezoneOffsetSeconds }}</div>
