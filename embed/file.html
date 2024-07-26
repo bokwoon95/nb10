@@ -285,7 +285,7 @@
   <a href='/{{ join "files" $.SitePrefix "posts" }}/'>posts</a>
     {{- if ne (dir $.FilePath) "posts" }}
     <span>&boxv;</span>
-    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
+    category: <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
     {{- end }}
     {{- if eq (base $.FilePath) "postlist.html" }}
     <span>&boxv;</span>
