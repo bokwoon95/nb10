@@ -434,6 +434,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						return nil
 					}
 					nextHead, nextTail, _ := strings.Cut(tail, "/")
+					// TODO: check this logic. I don't think counterpart can be derived from outputDir so easily?
 					if exportAction&exportFiles != 0 {
 						if nextTail != "" {
 							var counterpart string
