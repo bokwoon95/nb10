@@ -1563,7 +1563,10 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 func calculateExportSize(ctx context.Context, fsys FS, filePath string) (int64, error) {
 	fileInfo, err := fs.Stat(fsys.WithContext(ctx), filePath)
 	if err != nil {
-		return 0, nil
+		if errors.Is(err, fs.ErrNotExist) {
+			return 0, nil
+		}
+		return 0, err
 	}
 	if !fileInfo.IsDir() {
 		return fileInfo.Size(), nil
