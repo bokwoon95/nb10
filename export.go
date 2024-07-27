@@ -1580,9 +1580,9 @@ func calculateExportSize(ctx context.Context, fsys FS, filePath string) (int64, 
 		}
 	}
 	if databaseFS, ok := fsys.(*DatabaseFS); ok {
-		var filter sq.Expression
+		var condition sq.Expression
 		if filePath == "." || filePath == sitePrefix {
-			filter = sq.Expr("("+
+			condition = sq.Expr("("+
 				"files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
 				" OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
 				" OR files.file_path LIKE {postsPrefix} ESCAPE '\\'"+
@@ -1596,13 +1596,13 @@ func calculateExportSize(ctx context.Context, fsys FS, filePath string) (int64, 
 				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
 			)
 		} else {
-			filter = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(filePath)+"/%")
+			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(filePath)+"/%")
 		}
 		size, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
-			Format:  "SELECT {*} FROM files WHERE {filter}",
+			Format:  "SELECT {*} FROM files WHERE {condition}",
 			Values: []any{
-				sq.Param("filter", filter),
+				sq.Param("condition", condition),
 			},
 		}, func(row *sq.Row) int64 {
 			return row.Int64("sum(coalesce(size, 0))")
