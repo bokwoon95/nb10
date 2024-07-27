@@ -1602,6 +1602,20 @@ func getExportSize(ctx context.Context, fsys FS, filePath string, action exportA
 	return size.Load(), nil
 }
 
+// exportFileSize => we need it as a function so we can call it twice, once in GET and once in POST
+// exportOutputDirSize => we need it as a function so we can call it twice, once in GET and once in POST
+// exportFile => we need it as a function so we can call it twice, once if nbrew.DB is nil and once if not
+// exportOutputDir => we need as a function so we can call it twice, once if nbrew.DB is nil and once if not
+
+// TODO:
+// size, err = exportDirSize(ctx, fsys, sitePrefix, filePath) # need to handle the special case where filePath == path.Join(sitePrefix, ".")
+// size, err = exportOutputDirSize(ctx, fsys, sitePrefix, outputDirsToExport) # need to handle the special case when outputDir == path.Join(sitePrefix, "output")
+// buf, err = exportDir(ctx, buf, tarWriter, fsys, sitePrefix, filePath) # need to handle the special case wwhere filePath == path.Join(sitePrefix, ".")
+// buf, err = exportOutputDir(ctx, buf, tarWriter, fsys, sitePrefix, outputDirsToExport) # need to handle the special case where outputDir == path.Join(sitePrefix, "output")
+
+func exportDirSize() {
+}
+
 func exportFile(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, root string, action exportAction) error {
 	type File struct {
 		FileID       ID
@@ -1620,6 +1634,13 @@ func exportFile(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, root str
 		if strings.HasPrefix(head, "@") || strings.Contains(root, ".") {
 			sitePrefix = head
 		}
+	}
+	if action == 0 {
+		return nil
+	}
+	if action == exportFiles {
+	}
+	if action == exportDirectories {
 	}
 	if databaseFS, ok := fsys.(*DatabaseFS); ok {
 		buf := bufPool.Get().(*bytes.Buffer).Bytes()
