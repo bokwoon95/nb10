@@ -2485,7 +2485,7 @@ var userFuncMap = map[string]any{
 		}
 		return nums, nil
 	},
-	"add": func(args ...any) (any, error) {
+	"plus": func(args ...any) (any, error) {
 		var intCount, floatCount, stringCount int
 		for _, arg := range args {
 			switch arg.(type) {
@@ -2540,7 +2540,7 @@ var userFuncMap = map[string]any{
 		}
 		return b.String(), nil
 	},
-	"sub": func(args ...any) (any, error) {
+	"minus": func(args ...any) (any, error) {
 		var intCount, floatCount int
 		for _, arg := range args {
 			switch arg.(type) {
