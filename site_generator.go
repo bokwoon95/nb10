@@ -2269,12 +2269,12 @@ var userFuncMap = map[string]any{
 		}
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
-	"tableOfContentsHeaders": func(x any) ([]Header, error) {
+	"tableOfContentsHeadings": func(x any) ([]Heading, error) {
 		switch x := x.(type) {
 		case string:
-			return tableOfContentHeaders(strings.NewReader(x))
+			return tableOfContentsHeadings(strings.NewReader(x))
 		case template.HTML:
-			return tableOfContentHeaders(strings.NewReader(string(x)))
+			return tableOfContentsHeadings(strings.NewReader(string(x)))
 		default:
 			return nil, fmt.Errorf("note a string or template.HTML: %#v", x)
 		}
@@ -2622,21 +2622,21 @@ func toString(v any) string {
 	}
 }
 
-type Header struct {
-	ID         string
-	Title      string
-	Level      int
-	Subheaders []Header
+type Heading struct {
+	ID          string
+	Title       string
+	Level       int
+	Subheadings []Heading
 }
 
-func tableOfContentHeaders(reader io.Reader) ([]Header, error) {
-	var headerLevel int
-	var headerID string
-	var headerTitle bytes.Buffer
+func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
+	var headingLevel int
+	var headingID string
+	var headingTitle bytes.Buffer
 	// parents[1] to parents[6] correspond to the latest h1 - h6 parents.
 	// parents[0] is the root parent i.e. h0.
-	var parents [1 + 6]*Header
-	parents[0] = &Header{}
+	var parents [1 + 6]*Heading
+	parents[0] = &Heading{}
 	fallbackParent := parents[0]
 	tokenizer := html.NewTokenizer(reader)
 	for {
@@ -2645,7 +2645,7 @@ func tableOfContentHeaders(reader io.Reader) ([]Header, error) {
 		case html.ErrorToken:
 			err := tokenizer.Err()
 			if err == io.EOF {
-				return parents[0].Subheaders, nil
+				return parents[0].Subheadings, nil
 			}
 			return nil, err
 		case html.StartTagToken:
@@ -2671,14 +2671,14 @@ func tableOfContentHeaders(reader io.Reader) ([]Header, error) {
 			for moreAttr {
 				key, val, moreAttr = tokenizer.TagAttr()
 				if string(key) == "id" {
-					headerID = string(val)
-					headerLevel = level
+					headingID = string(val)
+					headingLevel = level
 					break
 				}
 			}
 		case html.TextToken:
-			if headerID != "" {
-				headerTitle.Write(tokenizer.Raw())
+			if headingID != "" {
+				headingTitle.Write(tokenizer.Raw())
 			}
 		case html.EndTagToken:
 			var level int
@@ -2699,29 +2699,29 @@ func tableOfContentHeaders(reader io.Reader) ([]Header, error) {
 			default:
 				continue
 			}
-			if level != headerLevel {
+			if level != headingLevel {
 				continue
 			}
-			header := Header{
-				Title: headerTitle.String(),
-				ID:    headerID,
-				Level: headerLevel,
+			heading := Heading{
+				Title: headingTitle.String(),
+				ID:    headingID,
+				Level: headingLevel,
 			}
-			if parent := parents[header.Level-1]; parent != nil {
-				parent.Subheaders = append(parent.Subheaders, header)
-				n := len(parent.Subheaders) - 1
-				parents[header.Level] = &parent.Subheaders[n]
+			if parent := parents[heading.Level-1]; parent != nil {
+				parent.Subheadings = append(parent.Subheadings, heading)
+				n := len(parent.Subheadings) - 1
+				parents[heading.Level] = &parent.Subheadings[n]
 			} else {
-				fallbackParent.Subheaders = append(fallbackParent.Subheaders, header)
-				n := len(fallbackParent.Subheaders) - 1
-				parents[header.Level] = &fallbackParent.Subheaders[n]
+				fallbackParent.Subheadings = append(fallbackParent.Subheadings, heading)
+				n := len(fallbackParent.Subheadings) - 1
+				parents[heading.Level] = &fallbackParent.Subheadings[n]
 			}
-			if header.Level == fallbackParent.Level+1 {
-				fallbackParent = parents[header.Level]
+			if heading.Level == fallbackParent.Level+1 {
+				fallbackParent = parents[heading.Level]
 			}
-			headerTitle.Reset()
-			headerID = ""
-			headerLevel = 0
+			headingTitle.Reset()
+			headingID = ""
+			headingLevel = 0
 		}
 	}
 }
