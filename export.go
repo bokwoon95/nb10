@@ -204,7 +204,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, response.Parent))
+				size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, response.Parent), 0)
 				if err != nil {
 					return err
 				}
@@ -286,7 +286,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 								err = fmt.Errorf("panic: " + string(debug.Stack()))
 							}
 						}()
-						size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, outputDir))
+						size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 						if err != nil {
 							return err
 						}
@@ -301,7 +301,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, "output/posts", tail))
+					size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, "output/posts", tail), 0)
 					if err != nil {
 						return err
 					}
@@ -385,7 +385,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						}
 					}()
 					if file.IsDir {
-						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, response.Parent, name))
+						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, response.Parent, name), 0)
 						if err != nil {
 							return err
 						}
@@ -426,7 +426,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						return nil
 					}
 					if exportAction&exportFiles != 0 && exportAction&exportDirectories != 0 {
-						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 						if err != nil {
 							return err
 						}
@@ -445,7 +445,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), counterpart)
 							if err != nil {
 								if errors.Is(err, fs.ErrNotExist) {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -456,7 +456,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 								}
 							} else {
 								if !fileInfo.IsDir() {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -481,7 +481,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 										err = fmt.Errorf("panic: " + string(debug.Stack()))
 									}
 								}()
-								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name))
+								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name), 0)
 								if err != nil {
 									return err
 								}
@@ -502,7 +502,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), counterpart)
 							if err != nil {
 								if errors.Is(err, fs.ErrNotExist) {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -513,7 +513,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 								}
 							} else {
 								if fileInfo.IsDir() {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -538,7 +538,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 										err = fmt.Errorf("panic: " + string(debug.Stack()))
 									}
 								}()
-								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name))
+								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name), 0)
 								if err != nil {
 									return err
 								}
@@ -724,7 +724,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, response.Parent))
+				size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, response.Parent), 0)
 				if err != nil {
 					return err
 				}
@@ -806,7 +806,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 								err = fmt.Errorf("panic: " + string(debug.Stack()))
 							}
 						}()
-						size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, outputDir))
+						size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 						if err != nil {
 							return err
 						}
@@ -821,7 +821,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, "output/posts", tail))
+					size, err := getExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, "output/posts", tail), 0)
 					if err != nil {
 						return err
 					}
@@ -903,7 +903,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						}
 					}()
 					if file.IsDir {
-						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, response.Parent, name))
+						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, response.Parent, name), 0)
 						if err != nil {
 							return err
 						}
@@ -944,7 +944,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 						return nil
 					}
 					if exportAction&exportFiles != 0 && exportAction&exportDirectories != 0 {
-						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+						size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 						if err != nil {
 							return err
 						}
@@ -963,7 +963,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), counterpart)
 							if err != nil {
 								if errors.Is(err, fs.ErrNotExist) {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -974,7 +974,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 								}
 							} else {
 								if !fileInfo.IsDir() {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -999,7 +999,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 										err = fmt.Errorf("panic: " + string(debug.Stack()))
 									}
 								}()
-								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name))
+								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name), 0)
 								if err != nil {
 									return err
 								}
@@ -1020,7 +1020,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 							fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), counterpart)
 							if err != nil {
 								if errors.Is(err, fs.ErrNotExist) {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -1031,7 +1031,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 								}
 							} else {
 								if fileInfo.IsDir() {
-									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir))
+									size, err := getExportSize(groupctx, nbrew.FS, path.Join(sitePrefix, outputDir), 0)
 									if err != nil {
 										return err
 									}
@@ -1056,7 +1056,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 										err = fmt.Errorf("panic: " + string(debug.Stack()))
 									}
 								}()
-								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name))
+								size, err := getExportSize(subctx, nbrew.FS, path.Join(sitePrefix, outputDir, name), 0)
 								if err != nil {
 									return err
 								}
