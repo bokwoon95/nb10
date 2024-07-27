@@ -237,7 +237,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		startTime := time.Now().UTC()
 		importJobID := NewID()
 		if nbrew.DB == nil {
-			err := nbrew.importTgzFile(r.Context(), importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
+			err := nbrew.importFile(r.Context(), importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -278,7 +278,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.importTgzFile(nbrew.ctx, importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
+				err := nbrew.importFile(nbrew.ctx, importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("importJobID", importJobID.String()),
@@ -328,7 +328,7 @@ func (r *importProgressReader) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (nbrew *Notebrew) importTgzFile(ctx context.Context, importJobID ID, sitePrefix string, fileName string, root string, overwriteExistingFiles bool) error {
+func (nbrew *Notebrew) importFile(ctx context.Context, importJobID ID, sitePrefix string, fileName string, root string, overwriteExistingFiles bool) error {
 	defer func() {
 		if nbrew.DB == nil {
 			return
