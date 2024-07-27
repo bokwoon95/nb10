@@ -2564,6 +2564,9 @@ var userFuncMap = map[string]any{
 					case float64:
 						result = arg
 					}
+					if len(args) == 1 {
+						return -result, nil
+					}
 				} else {
 					switch arg := arg.(type) {
 					case int:
@@ -2585,6 +2588,9 @@ var userFuncMap = map[string]any{
 					result = arg
 				case int64:
 					result = int(arg)
+				}
+				if len(args) == 1 {
+					return -result, nil
 				}
 			} else {
 				switch arg := arg.(type) {
