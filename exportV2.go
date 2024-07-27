@@ -1310,7 +1310,7 @@ func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user Use
 	}
 }
 
-func (nbrew *Notebrew) exportParent(ctx context.Context, exportJobID ID, sitePrefix string, parent string, outputDir string, fileName string, storageRemaining *atomic.Int64) error {
+func (nbrew *Notebrew) exportParent(ctx context.Context, exportJobID ID, sitePrefix string, parent string, fileName string, storageRemaining *atomic.Int64) error {
 	success := false
 	defer func() {
 		if nbrew.DB == nil {
