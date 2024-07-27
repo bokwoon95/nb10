@@ -1578,7 +1578,7 @@ func calculateExportSize(ctx context.Context, fsys FS, filePath string) (int64, 
 	}
 	if databaseFS, ok := fsys.(*DatabaseFS); ok {
 		var filter sq.Expression
-		if filePath == "." || sitePrefix == filePath {
+		if filePath == "." || filePath == sitePrefix {
 			filter = sq.Expr("("+
 				"files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
 				" OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
