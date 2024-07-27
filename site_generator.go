@@ -2501,29 +2501,29 @@ var userFuncMap = map[string]any{
 		}
 		if intCount+floatCount == len(args) {
 			if floatCount > 0 {
-				var sum float64
+				var result float64
 				for _, arg := range args {
 					switch arg := arg.(type) {
 					case int:
-						sum += float64(arg)
+						result += float64(arg)
 					case int64:
-						sum += float64(arg)
+						result += float64(arg)
 					case float64:
-						sum += arg
+						result += arg
 					}
 				}
-				return sum, nil
+				return result, nil
 			}
-			var sum int
+			var result int
 			for _, arg := range args {
 				switch arg := arg.(type) {
 				case int:
-					sum += arg
+					result += arg
 				case int64:
-					sum += int(arg)
+					result += int(arg)
 				}
 			}
-			return sum, nil
+			return result, nil
 		}
 		var b strings.Builder
 		for _, arg := range args {
@@ -2539,6 +2539,63 @@ var userFuncMap = map[string]any{
 			}
 		}
 		return b.String(), nil
+	},
+	"sub": func(args ...any) (any, error) {
+		var intCount, floatCount int
+		for _, arg := range args {
+			switch arg.(type) {
+			case int, int64:
+				intCount++
+			case float64:
+				floatCount++
+			default:
+				return nil, fmt.Errorf("not an int or float: %#v", arg)
+			}
+		}
+		if floatCount > 0 {
+			var result float64
+			for i, arg := range args {
+				if i == 0 {
+					switch arg := arg.(type) {
+					case int:
+						result = float64(arg)
+					case int64:
+						result = float64(arg)
+					case float64:
+						result = arg
+					}
+				} else {
+					switch arg := arg.(type) {
+					case int:
+						result -= float64(arg)
+					case int64:
+						result -= float64(arg)
+					case float64:
+						result -= arg
+					}
+				}
+			}
+			return result, nil
+		}
+		var result int
+		for i, arg := range args {
+			if i == 0 {
+				switch arg := arg.(type) {
+				case int:
+					result = arg
+				case int64:
+					result = int(arg)
+				}
+			} else {
+				switch arg := arg.(type) {
+				case int:
+					result -= arg
+				case int64:
+					result -= int(arg)
+				}
+			}
+		}
+		return result, nil
 	},
 }
 
