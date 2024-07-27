@@ -2495,6 +2495,8 @@ var userFuncMap = map[string]any{
 				floatCount++
 			case string:
 				stringCount++
+			case template.HTML:
+				stringCount++
 			default:
 				return nil, fmt.Errorf("not an int, float or string: %#v", arg)
 			}
@@ -2536,6 +2538,8 @@ var userFuncMap = map[string]any{
 				b.WriteString(strconv.FormatFloat(arg, 'f', -1, 64))
 			case string:
 				b.WriteString(arg)
+			case template.HTML:
+				b.WriteString(string(arg))
 			}
 		}
 		return b.String(), nil
