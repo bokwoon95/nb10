@@ -288,13 +288,14 @@ func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user Use
 					})
 				}
 			case "posts":
+				outputDir := path.Join("output/posts", tail)
 				group.Go(func() (err error) {
 					defer func() {
 						if v := recover(); v != nil {
 							err = fmt.Errorf("panic: " + string(debug.Stack()))
 						}
 					}()
-					size, err := calculateExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, "output/posts", tail))
+					size, err := calculateExportSize(r.Context(), nbrew.FS, path.Join(sitePrefix, outputDir))
 					if err != nil {
 						return err
 					}
