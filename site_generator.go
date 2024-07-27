@@ -2269,14 +2269,14 @@ var userFuncMap = map[string]any{
 		}
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
-	"tableOfContents": func(x any) (TableOfContents, error) {
+	"tableOfContentsHeaders": func(x any) ([]Header, error) {
 		switch x := x.(type) {
 		case string:
 			return tableOfContentHeaders(strings.NewReader(x))
 		case template.HTML:
 			return tableOfContentHeaders(strings.NewReader(string(x)))
 		default:
-			return TableOfContents{}, fmt.Errorf("note a string or template.HTML: %#v", x)
+			return nil, fmt.Errorf("note a string or template.HTML: %#v", x)
 		}
 	},
 	"case": func(expr any, args ...any) any {
@@ -2504,10 +2504,6 @@ func toString(v any) string {
 	}
 }
 
-type TableOfContents struct {
-	Headers []Header
-}
-
 type Header struct {
 	ID         string
 	Title      string
@@ -2515,7 +2511,7 @@ type Header struct {
 	Subheaders []Header
 }
 
-func tableOfContentHeaders(reader io.Reader) (TableOfContents, error) {
+func tableOfContentHeaders(reader io.Reader) ([]Header, error) {
 	var headerLevel int
 	var headerID string
 	var headerTitle bytes.Buffer
@@ -2531,9 +2527,9 @@ func tableOfContentHeaders(reader io.Reader) (TableOfContents, error) {
 		case html.ErrorToken:
 			err := tokenizer.Err()
 			if err == io.EOF {
-				return TableOfContents{Headers: parents[0].Subheaders}, nil
+				return parents[0].Subheaders, nil
 			}
-			return TableOfContents{}, err
+			return nil, err
 		case html.StartTagToken:
 			var level int
 			name, moreAttr := tokenizer.TagName()
