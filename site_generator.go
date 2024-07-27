@@ -2499,21 +2499,7 @@ var userFuncMap = map[string]any{
 				return nil, fmt.Errorf("not an int, float or string: %#v", arg)
 			}
 		}
-		if intCount+floatCount == len(args) {
-			if floatCount > 0 {
-				var result float64
-				for _, arg := range args {
-					switch arg := arg.(type) {
-					case int:
-						result += float64(arg)
-					case int64:
-						result += float64(arg)
-					case float64:
-						result += arg
-					}
-				}
-				return result, nil
-			}
+		if intCount == len(args) {
 			var result int
 			for _, arg := range args {
 				switch arg := arg.(type) {
@@ -2521,6 +2507,20 @@ var userFuncMap = map[string]any{
 					result += arg
 				case int64:
 					result += int(arg)
+				}
+			}
+			return result, nil
+		}
+		if floatCount > 0 && stringCount == 0 {
+			var result float64
+			for _, arg := range args {
+				switch arg := arg.(type) {
+				case int:
+					result += float64(arg)
+				case int64:
+					result += float64(arg)
+				case float64:
+					result += arg
 				}
 			}
 			return result, nil
@@ -2552,17 +2552,15 @@ var userFuncMap = map[string]any{
 				return nil, fmt.Errorf("not an int or float: %#v", arg)
 			}
 		}
-		if floatCount > 0 {
-			var result float64
+		if intCount == len(args) {
+			var result int
 			for i, arg := range args {
 				if i == 0 {
 					switch arg := arg.(type) {
 					case int:
-						result = float64(arg)
-					case int64:
-						result = float64(arg)
-					case float64:
 						result = arg
+					case int64:
+						result = int(arg)
 					}
 					if len(args) == 1 {
 						return -result, nil
@@ -2570,24 +2568,24 @@ var userFuncMap = map[string]any{
 				} else {
 					switch arg := arg.(type) {
 					case int:
-						result -= float64(arg)
-					case int64:
-						result -= float64(arg)
-					case float64:
 						result -= arg
+					case int64:
+						result -= int(arg)
 					}
 				}
 			}
 			return result, nil
 		}
-		var result int
+		var result float64
 		for i, arg := range args {
 			if i == 0 {
 				switch arg := arg.(type) {
 				case int:
-					result = arg
+					result = float64(arg)
 				case int64:
-					result = int(arg)
+					result = float64(arg)
+				case float64:
+					result = arg
 				}
 				if len(args) == 1 {
 					return -result, nil
@@ -2595,9 +2593,11 @@ var userFuncMap = map[string]any{
 			} else {
 				switch arg := arg.(type) {
 				case int:
-					result -= arg
+					result -= float64(arg)
 				case int64:
-					result -= int(arg)
+					result -= float64(arg)
+				case float64:
+					result -= arg
 				}
 			}
 		}
