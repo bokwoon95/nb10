@@ -140,6 +140,9 @@ TODO: figure out how to make a pluggable header image in a theme
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
+TODO: add latex to mathml support in ```math``` code blocks.
+    - https://github.com/gohugoio/hugo/issues/11363 (Convert latex formula to mathml latex2mathml python port)
+    - https://github.com/gohugoio/hugo/issues/10894 (Here is a brief survey on the status quo of different math block support among popular Markdown editors)
 TODO: add a hash to the response headers so that clients can do a GET to synchronize their local copy with remote
 TODO: tests
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
