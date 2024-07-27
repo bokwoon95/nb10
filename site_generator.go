@@ -2485,6 +2485,61 @@ var userFuncMap = map[string]any{
 		}
 		return nums, nil
 	},
+	"add": func(args ...any) (any, error) {
+		var intCount, floatCount, stringCount int
+		for _, arg := range args {
+			switch arg.(type) {
+			case int, int64:
+				intCount++
+			case float64:
+				floatCount++
+			case string:
+				stringCount++
+			default:
+				return nil, fmt.Errorf("not an int, float or string: %#v", arg)
+			}
+		}
+		if intCount+floatCount == len(args) {
+			if floatCount > 0 {
+				var sum float64
+				for _, arg := range args {
+					switch arg := arg.(type) {
+					case int:
+						sum += float64(arg)
+					case int64:
+						sum += float64(arg)
+					case float64:
+						sum += arg
+					}
+				}
+				return sum, nil
+			}
+			var sum int
+			for _, arg := range args {
+				switch arg := arg.(type) {
+				case int:
+					sum += arg
+				case int64:
+					sum += int(arg)
+				}
+			}
+			return sum, nil
+		}
+		var b strings.Builder
+		for _, arg := range args {
+			switch arg := arg.(type) {
+			case int:
+				b.WriteString(strconv.Itoa(arg))
+			case int64:
+				b.WriteString(strconv.FormatInt(arg, 10))
+			case float64:
+				b.WriteString(strconv.FormatFloat(arg, 'f', -1, 64))
+			case string:
+				b.WriteString(arg)
+			}
+		}
+		return b.String(), nil
+	},
 }
 
 func toString(v any) string {
