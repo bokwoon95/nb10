@@ -1639,7 +1639,13 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
 			)
 		} else {
-			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%")
+			condition = sq.Expr("("+
+				"files.file_path = {dir}"+
+				"files.file_path LIKE {dirPrefix} ESCAPE '\\'"+
+				")",
+				sq.StringParam("dir", path.Join(sitePrefix, dir)),
+				sq.StringParam("dirPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%"),
+			)
 		}
 		size, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
@@ -1745,7 +1751,13 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
 			)
 		} else {
-			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%")
+			condition = sq.Expr("("+
+				"files.file_path = {dir}"+
+				"files.file_path LIKE {dirPrefix} ESCAPE '\\'"+
+				")",
+				sq.StringParam("dir", path.Join(sitePrefix, dir)),
+				sq.StringParam("dirPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%"),
+			)
 		}
 		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
@@ -2090,6 +2102,162 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 		return 0, err
 	}
 	return size, nil
+}
+
+func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefix string, outputDir string, action exportAction) error {
+	head, tail, _ := strings.Cut(outputDir, "/")
+	if head != "output" {
+		getLogger(ctx).Error(fmt.Sprintf("programmer error: attempted to export output directory %s (which is not an output directory)", outputDir))
+		return nil
+	}
+	if action == 0 {
+		return nil
+	}
+	nextHead, nextTail, _ := strings.Cut(tail, "/")
+	if action&exportFiles != 0 && action&exportDirectories == 0 {
+		if nextTail != "" {
+			var counterpart string
+			if nextHead == "posts" {
+				counterpart = path.Join(sitePrefix, "posts", nextTail)
+			} else {
+				counterpart = path.Join(sitePrefix, "pages", nextTail)
+			}
+			fileInfo, err := fs.Stat(fsys, counterpart)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+			} else if fileInfo.IsDir() {
+				// TODO: we need to stat the outputDir and write it into the tarHeader as well
+				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
+				if err != nil {
+					return err
+				}
+				for _, dirEntry := range dirEntries {
+					if dirEntry.IsDir() {
+						continue
+					}
+					fileInfo, err := dirEntry.Info()
+					if err != nil {
+						return err
+					}
+					_ = fileInfo // TODO: open the files and write it into tarheader. oh no, but caption will not be preserved?
+				}
+				return nil
+			}
+		}
+	}
+	if action&exportFiles == 0 && action&exportDirectories != 0 {
+		if tail != "" {
+			var counterpart string
+			if head == "posts" {
+				counterpart = path.Join(sitePrefix, "posts", tail+".md")
+			} else {
+				counterpart = path.Join(sitePrefix, "pages", tail+".html")
+			}
+			fileInfo, err := fs.Stat(fsys, counterpart)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+			} else if !fileInfo.IsDir() {
+				// TODO: we need to stat the outputDir and write it into the tarHeader as well
+				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
+				if err != nil {
+					return err
+				}
+				var totalSize atomic.Int64
+				group, groupctx := errgroup.WithContext(ctx)
+				for _, dirEntry := range dirEntries {
+					if !dirEntry.IsDir() {
+						continue
+					}
+					name := dirEntry.Name()
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						size, err := exportOutputDirSize(groupctx, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
+						if err != nil {
+							return err
+						}
+						totalSize.Add(size)
+						return nil
+					})
+				}
+				err = group.Wait()
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+	}
+	if databaseFS, ok := fsys.(*DatabaseFS); ok {
+		var condition sq.Expression
+		if outputDir == "output" {
+			condition = sq.Expr("(files.file_path = {output} OR files.file_path LIKE {outputPrefix} ESCAPE '\\')"+
+				" AND files.file_path <> {outputPosts}"+
+				" AND files.file_path <> {outputThemes}"+
+				" AND files.file_path NOT LIKE {outputPostsPrefix} ESCAPE '\\'"+
+				" AND files.file_path NOT LIKE {outputThemesPrefix} ESCAPE '\\'",
+				sq.StringParam("output", path.Join(sitePrefix, "output")),
+				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+				sq.StringParam("outputPosts", path.Join(sitePrefix, "output/posts")),
+				sq.StringParam("outputThemes", path.Join(sitePrefix, "output/themes")),
+				sq.StringParam("outputPostsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/posts"))+"/%"),
+				sq.StringParam("outputThemesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/themes"))+"/%"),
+			)
+		} else {
+			condition = sq.Expr("(files.file_path = {outputDir} OR files.file_path LIKE {outputDirPrefix} ESCAPE '\\')",
+				sq.StringParam("outputDir", path.Join(sitePrefix, outputDir)),
+				sq.StringParam("outputDirPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%"),
+			)
+		}
+		size, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format:  "SELECT {*} FROM files WHERE {condition}",
+			Values: []any{
+				sq.Param("condition", condition),
+			},
+		}, func(row *sq.Row) int64 {
+			return row.Int64("sum(coalesce(files.size, 0))")
+		})
+		if err != nil {
+			return err
+		}
+		_ = size
+		return nil
+	}
+	var size int64
+	err := fs.WalkDir(fsys, path.Join(sitePrefix, outputDir), func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if dirEntry.IsDir() {
+			if outputDir == "output" {
+				if filePath == path.Join(sitePrefix, "output/posts") || filePath == path.Join(sitePrefix, "output/themes") {
+					return fs.SkipDir
+				}
+			}
+			return nil
+		}
+		fileInfo, err := dirEntry.Info()
+		if err != nil {
+			return err
+		}
+		size += fileInfo.Size()
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func exportFile(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, root string, action exportAction) error {
