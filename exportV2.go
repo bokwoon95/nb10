@@ -1000,104 +1000,118 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			}
 		}
 		return nil
-	}
-	for _, filePath := range filePaths {
-		if filePath == "." {
-			err := exportDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, ".")
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		file, err := nbrew.FS.WithContext(ctx).Open(path.Join(sitePrefix, filePath))
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return nil
-			}
-			return err
-		}
-		fileInfo, err := file.Stat()
-		if err != nil {
-			file.Close()
-			return err
-		}
-		var absolutePath string
-		if dirFS, ok := nbrew.FS.(*DirFS); ok {
-			absolutePath = path.Join(dirFS.RootDir, filePath)
-		}
-		modTime := fileInfo.ModTime()
-		creationTime := CreationTime(absolutePath, fileInfo)
-		tarHeader := &tar.Header{
-			Name:    filePath,
-			ModTime: modTime,
-			Size:    fileInfo.Size(),
-			PAXRecords: map[string]string{
-				"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
-				"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
-			},
-		}
-		if fileInfo.IsDir() {
-			file.Close()
-			tarHeader.Typeflag = tar.TypeDir
-			tarHeader.Mode = 0755
-			err := tarWriter.WriteHeader(tarHeader)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-		_, ok := AllowedFileTypes[path.Ext(filePath)]
-		if !ok {
-			file.Close()
-			continue
-		}
-		tarHeader.Typeflag = tar.TypeReg
-		tarHeader.Mode = 0644
-		err = tarWriter.WriteHeader(tarHeader)
-		if err != nil {
-			file.Close()
-			return err
-		}
-		_, err = io.Copy(tarWriter, file)
-		if err != nil {
-			file.Close()
-			return err
-		}
-		file.Close()
-	}
-	for _, outputDir := range outputDirs {
-		fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), path.Join(sitePrefix, outputDir))
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
+	} else {
+		for _, filePath := range filePaths {
+			if filePath == "." {
+				err := exportDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, ".")
+				if err != nil {
+					return err
+				}
 				continue
 			}
-			return err
+			file, err := nbrew.FS.WithContext(ctx).Open(path.Join(sitePrefix, filePath))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil
+				}
+				return err
+			}
+			fileInfo, err := file.Stat()
+			if err != nil {
+				file.Close()
+				return err
+			}
+			var absolutePath string
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, filePath)
+			}
+			modTime := fileInfo.ModTime()
+			creationTime := CreationTime(absolutePath, fileInfo)
+			tarHeader := &tar.Header{
+				Name:    filePath,
+				ModTime: modTime,
+				Size:    fileInfo.Size(),
+				PAXRecords: map[string]string{
+					"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+				},
+			}
+			if fileInfo.IsDir() {
+				file.Close()
+				tarHeader.Typeflag = tar.TypeDir
+				tarHeader.Mode = 0755
+				err := tarWriter.WriteHeader(tarHeader)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			_, ok := AllowedFileTypes[path.Ext(filePath)]
+			if !ok {
+				file.Close()
+				continue
+			}
+			tarHeader.Typeflag = tar.TypeReg
+			tarHeader.Mode = 0644
+			err = tarWriter.WriteHeader(tarHeader)
+			if err != nil {
+				file.Close()
+				return err
+			}
+			_, err = io.Copy(tarWriter, file)
+			if err != nil {
+				file.Close()
+				return err
+			}
+			file.Close()
 		}
-		var absolutePath string
-		if dirFS, ok := nbrew.FS.(*DirFS); ok {
-			absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
-		}
-		modTime := fileInfo.ModTime()
-		creationTime := CreationTime(absolutePath, fileInfo)
-		err = tarWriter.WriteHeader(&tar.Header{
-			Typeflag: tar.TypeDir,
-			Mode:     0755,
-			Name:     outputDir,
-			ModTime:  modTime,
-			PAXRecords: map[string]string{
-				"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
-				"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
-			},
-		})
-		if err != nil {
-			return err
-		}
-		action := outputDirsToExport[outputDir]
-		err = exportOutputDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, outputDir, action)
-		if err != nil {
-			return err
+		for _, outputDir := range outputDirs {
+			fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), path.Join(sitePrefix, outputDir))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					continue
+				}
+				return err
+			}
+			var absolutePath string
+			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
+			}
+			modTime := fileInfo.ModTime()
+			creationTime := CreationTime(absolutePath, fileInfo)
+			err = tarWriter.WriteHeader(&tar.Header{
+				Typeflag: tar.TypeDir,
+				Mode:     0755,
+				Name:     outputDir,
+				ModTime:  modTime,
+				PAXRecords: map[string]string{
+					"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+				},
+			})
+			if err != nil {
+				return err
+			}
+			action := outputDirsToExport[outputDir]
+			err = exportOutputDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, outputDir, action)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	err = tarWriter.Close()
+	if err != nil {
+		return err
+	}
+	err = gzipWriter.Close()
+	if err != nil {
+		return err
+	}
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+	success = true
 	return nil
 }
 
