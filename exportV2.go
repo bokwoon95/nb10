@@ -29,6 +29,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type exportAction int
+
+const (
+	exportFiles       exportAction = 1 << 0
+	exportDirectories exportAction = 1 << 1
+)
+
 func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type File struct {
 		FileID       ID        `json:"fileID"`
@@ -2121,4 +2128,44 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 		return err
 	}
 	return nil
+}
+
+type exportProgressWriter struct {
+	ctx              context.Context
+	writer           io.Writer
+	preparedExec     *sq.PreparedExec
+	processedBytes   int64
+	storageRemaining *atomic.Int64
+}
+
+func (w *exportProgressWriter) Write(p []byte) (n int, err error) {
+	err = w.ctx.Err()
+	if err != nil {
+		return 0, err
+	}
+	n, err = w.writer.Write(p)
+	if err == nil {
+		if w.storageRemaining != nil {
+			if w.storageRemaining.Add(-int64(n)) < 1 {
+				return n, ErrStorageLimitExceeded
+			}
+		}
+	}
+	if w.preparedExec == nil {
+		return n, err
+	}
+	processedBytes := w.processedBytes + int64(n)
+	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
+		result, err := w.preparedExec.Exec(w.ctx, sq.Int64Param("processedBytes", processedBytes))
+		if err != nil {
+			return n, err
+		}
+		// We weren't able to update the database row, which means it has been
+		// deleted (i.e. job canceled).
+		if result.RowsAffected == 0 {
+			return n, fmt.Errorf("export canceled")
+		}
+	}
+	w.processedBytes = processedBytes
+	return n, err
 }
