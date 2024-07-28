@@ -764,6 +764,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 		return err
 	}
 	defer func() {
+		fmt.Printf("got here: 6\n")
 		cancelWriter()
 		writer.Close()
 	}()
@@ -1106,18 +1107,23 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			}
 		}
 	}
+	fmt.Printf("got here: 1\n")
 	err = tarWriter.Close()
 	if err != nil {
+		fmt.Printf("got here: 2\n")
 		return err
 	}
 	err = gzipWriter.Close()
 	if err != nil {
+		fmt.Printf("got here: 3\n")
 		return err
 	}
 	err = writer.Close()
 	if err != nil {
+		fmt.Printf("got here: 4\n")
 		return err
 	}
+	fmt.Printf("got here: 5\n")
 	success = true
 	return nil
 }

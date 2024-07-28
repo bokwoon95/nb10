@@ -88,7 +88,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 		return fmt.Errorf("%s: invalid filetype %s", key, path.Ext(key))
 	}
 	cleanup := func(uploadId *string) {
-		_, err := storage.Client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
+		_, err := storage.Client.AbortMultipartUpload(context.Background(), &s3.AbortMultipartUploadInput{
 			Bucket:   &storage.Bucket,
 			Key:      aws.String(key),
 			UploadId: uploadId,
