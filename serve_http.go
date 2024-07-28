@@ -444,7 +444,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.importt(w, r, user, sitePrefix)
 			return
 		case "export":
-			nbrew.exportV2(w, r, user, sitePrefix)
+			nbrew.export(w, r, user, sitePrefix)
 			return
 		case "cancelimport":
 			nbrew.cancelimport(w, r, user, sitePrefix)
