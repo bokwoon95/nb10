@@ -647,7 +647,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		_, isDatabaseFS := nbrew.FS.(*DatabaseFS)
 		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
 			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-				Debug:   true,
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
 					" FROM site" +
@@ -851,7 +850,6 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				continue
 			}
 			file, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
-				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
@@ -957,7 +955,6 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 		}
 		for _, outputDir := range outputDirs {
 			file, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
-				Debug:   true,
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
 					" FROM files" +
@@ -1150,7 +1147,6 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%")
 		}
 		size, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE {condition}",
 			Values: []any{
@@ -1263,7 +1259,6 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%")
 		}
 		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
@@ -1564,7 +1559,6 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%")
 		}
 		size, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE {condition}",
 			Values: []any{
@@ -1661,7 +1655,6 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						}
 					}()
 					cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-						Debug:   true,
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
 							" FROM files" +
@@ -1824,7 +1817,6 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				var names []string
 				if databaseFS, ok := fsys.(*DatabaseFS); ok {
 					cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-						Debug:   true,
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
 							" FROM files" +
@@ -1948,7 +1940,6 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%")
 		}
 		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-			Debug:   true,
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
 				" FROM files" +
