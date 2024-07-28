@@ -443,7 +443,6 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				switch databaseFS.Dialect {
 				case "sqlite", "postgres":
 					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
-						Debug:   true,
 						Dialect: databaseFS.Dialect,
 						Format: "INSERT INTO pinned_file (parent_id, file_id)" +
 							" SELECT parent_id, file_id" +
