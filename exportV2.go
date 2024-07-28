@@ -1000,10 +1000,11 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				return err
 			}
 			_, err = io.Copy(tarWriter, file)
-			file.Close()
 			if err != nil {
+				file.Close()
 				return err
 			}
+			file.Close()
 		}
 	}
 	return nil
@@ -1291,19 +1292,59 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 					return err
 				}
 			} else if counterpartFileInfo.IsDir() {
-				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
-				if err != nil {
-					return err
-				}
-				for _, dirEntry := range dirEntries {
-					if dirEntry.IsDir() {
-						continue
-					}
-					fileInfo, err := dirEntry.Info()
+				if databaseFS, ok := fsys.(*DatabaseFS); ok {
+					_ = databaseFS
+				} else {
+					dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 					if err != nil {
 						return err
 					}
-					_ = fileInfo // TODO: open the files and write it into tarheader. oh no, but caption will not be preserved?
+					for _, dirEntry := range dirEntries {
+						if dirEntry.IsDir() {
+							continue
+						}
+						name := dirEntry.Name()
+						_, ok := AllowedFileTypes[path.Ext(name)]
+						if !ok {
+							continue
+						}
+						file, err := fsys.Open(path.Join(sitePrefix, outputDir, name))
+						if err != nil {
+							return err
+						}
+						fileInfo, err := file.Stat()
+						if err != nil {
+							file.Close()
+							return err
+						}
+						var absolutePath string
+						if dirFS, ok := fsys.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+						}
+						modTime := fileInfo.ModTime()
+						creationTime := CreationTime(absolutePath, fileInfo)
+						err = tarWriter.WriteHeader(&tar.Header{
+							Typeflag: tar.TypeReg,
+							Mode:     0644,
+							Name:     path.Join(outputDir, name),
+							ModTime:  modTime,
+							Size:     fileInfo.Size(),
+							PAXRecords: map[string]string{
+								"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+								"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+							},
+						})
+						if err != nil {
+							file.Close()
+							return err
+						}
+						_, err = io.Copy(tarWriter, file)
+						if err != nil {
+							file.Close()
+							return err
+						}
+						file.Close()
+					}
 				}
 				return nil
 			}
@@ -1317,41 +1358,26 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			} else {
 				counterpart = path.Join(sitePrefix, "pages", tail+".html")
 			}
-			fileInfo, err := fs.Stat(fsys, counterpart)
+			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
 					return err
 				}
-			} else if !fileInfo.IsDir() {
-				// TODO: we need to stat the outputDir and write it into the tarHeader as well
+			} else if !counterpartFileInfo.IsDir() {
 				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 				if err != nil {
 					return err
 				}
-				var totalSize atomic.Int64
-				group, groupctx := errgroup.WithContext(ctx)
 				for _, dirEntry := range dirEntries {
 					if !dirEntry.IsDir() {
 						continue
 					}
 					name := dirEntry.Name()
-					group.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
-						size, err := exportOutputDirSize(groupctx, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
-						if err != nil {
-							return err
-						}
-						totalSize.Add(size)
-						return nil
-					})
-				}
-				err = group.Wait()
-				if err != nil {
-					return err
+					// TODO: we need to also write the tarHeader for the directory.
+					err := exportOutputDir(ctx, tarWriter, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
+					if err != nil {
+						return err
+					}
 				}
 				return nil
 			}
@@ -1374,12 +1400,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 		}()
 		var condition sq.Expression
 		if outputDir == "output" {
-			condition = sq.Expr("(files.file_path = {output} OR files.file_path LIKE {outputPrefix} ESCAPE '\\')"+
+			condition = sq.Expr("files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
 				" AND files.file_path <> {outputPosts}"+
 				" AND files.file_path <> {outputThemes}"+
 				" AND files.file_path NOT LIKE {outputPostsPrefix} ESCAPE '\\'"+
 				" AND files.file_path NOT LIKE {outputThemesPrefix} ESCAPE '\\'",
-				sq.StringParam("output", path.Join(sitePrefix, "output")),
 				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
 				sq.StringParam("outputPosts", path.Join(sitePrefix, "output/posts")),
 				sq.StringParam("outputThemes", path.Join(sitePrefix, "output/themes")),
@@ -1387,10 +1412,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				sq.StringParam("outputThemesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/themes"))+"/%"),
 			)
 		} else {
-			condition = sq.Expr("(files.file_path = {outputDir} OR files.file_path LIKE {outputDirPrefix} ESCAPE '\\')",
-				sq.StringParam("outputDir", path.Join(sitePrefix, outputDir)),
-				sq.StringParam("outputDirPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%"),
-			)
+			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%")
 		}
 		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
@@ -1505,7 +1527,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 		}
 		return nil
 	}
-	err := fs.WalkDir(fsys, path.Join(sitePrefix, outputDir), func(filePath string, dirEntry fs.DirEntry, err error) error {
+	root := path.Join(sitePrefix, outputDir)
+	err := fs.WalkDir(fsys, root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if filePath == root {
+			return nil
+		}
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
