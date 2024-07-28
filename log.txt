@@ -138,6 +138,7 @@ if exporting pages, export everything under output/ *except* for output/posts/ a
 
 TODO: change the $.Markdown map from map[string]template.HTML to map[string]string, add a markdownToHTML template function instead.
     - {{ markdownToHTML (index $.Markdown "content.md") }}
+    - TODO: this also means $image.Caption needs to change from template.HTML to the raw markdown string, and users can choose to either display it as plain text or pass it through markdownToHTML.
 TODO: change the create session button to two links: create session token &bull; API documentation. So people know there is API documentation.
 TODO: hunt down all uses of context in exportV2 and investigate why context keeps getting canceled on object_storage.go:97 (*S3ObjectStorage).Put.func1.
 TODO: make all image previews in the CMS use object-fit: cover instead of stretching  to fit the square diemnsions.
