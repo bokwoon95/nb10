@@ -1613,7 +1613,7 @@ func getExportSize(ctx context.Context, fsys FS, filePath string, action exportA
 // buf, err = exportDir(ctx, buf, tarWriter, fsys, sitePrefix, filePath) # need to handle the special case wwhere filePath == path.Join(sitePrefix, ".")
 // buf, err = exportOutputDir(ctx, buf, tarWriter, fsys, sitePrefix, outputDirsToExport) # need to handle the special case where outputDir == path.Join(sitePrefix, "output")
 
-func dirSizeForExport(ctx context.Context, fsys fs.FS, sitePrefix string, dir string) (int64, error) {
+func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir string) (int64, error) {
 	if databaseFS, ok := fsys.(*DatabaseFS); ok {
 		var condition sq.Expression
 		if dir == "." {
@@ -1938,7 +1938,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 	return nil
 }
 
-func outputDirSizeForExport(ctx context.Context, fsys fs.FS, sitePrefix string, outputDir string, action exportAction) (int64, error) {
+func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, outputDir string, action exportAction) (int64, error) {
 	head, tail, _ := strings.Cut(outputDir, "/")
 	if head != "output" {
 		getLogger(ctx).Error(fmt.Sprintf("programmer error: attempted to export output directory %s (which is not an output directory)", outputDir))
@@ -2012,7 +2012,7 @@ func outputDirSizeForExport(ctx context.Context, fsys fs.FS, sitePrefix string, 
 								err = fmt.Errorf("panic: " + string(debug.Stack()))
 							}
 						}()
-						size, err := outputDirSizeForExport(groupctx, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
+						size, err := exportOutputDirSize(groupctx, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
 						if err != nil {
 							return err
 						}
