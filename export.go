@@ -1172,46 +1172,6 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 	}
 }
 
-type exportProgressWriter struct {
-	ctx              context.Context
-	writer           io.Writer
-	preparedExec     *sq.PreparedExec
-	processedBytes   int64
-	storageRemaining *atomic.Int64
-}
-
-func (w *exportProgressWriter) Write(p []byte) (n int, err error) {
-	err = w.ctx.Err()
-	if err != nil {
-		return 0, err
-	}
-	n, err = w.writer.Write(p)
-	if err == nil {
-		if w.storageRemaining != nil {
-			if w.storageRemaining.Add(-int64(n)) < 1 {
-				return n, ErrStorageLimitExceeded
-			}
-		}
-	}
-	if w.preparedExec == nil {
-		return n, err
-	}
-	processedBytes := w.processedBytes + int64(n)
-	if processedBytes%(1<<20) > w.processedBytes%(1<<20) {
-		result, err := w.preparedExec.Exec(w.ctx, sq.Int64Param("processedBytes", processedBytes))
-		if err != nil {
-			return n, err
-		}
-		// We weren't able to update the database row, which means it has been
-		// deleted (i.e. job canceled).
-		if result.RowsAffected == 0 {
-			return n, fmt.Errorf("export canceled")
-		}
-	}
-	w.processedBytes = processedBytes
-	return n, err
-}
-
 func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix string, parent string, names []string, outputDirsToExport map[string]exportAction, fileName string, storageRemaining *atomic.Int64) error {
 	success := false
 	defer func() {
