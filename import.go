@@ -434,7 +434,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				return err
 			}
 		}
-		head, _, _ := strings.Cut(filePath, "/")
+		head, _, _ := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(filePath, sitePrefix), "/"), "/")
 		if head == "posts" {
 			regenerateSite = true
 		}
@@ -443,6 +443,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				switch databaseFS.Dialect {
 				case "sqlite", "postgres":
 					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+						Debug:   true,
 						Dialect: databaseFS.Dialect,
 						Format: "INSERT INTO pinned_file (parent_id, file_id)" +
 							" SELECT parent_id, file_id" +
@@ -515,7 +516,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 		if err != nil {
 			return err
 		}
-		head, _, _ := strings.Cut(filePath, "/")
+		head, _, _ := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(filePath, sitePrefix), "/"), "/")
 		if head == "pages" || head == "posts" {
 			regenerateSite = true
 		}
@@ -571,9 +572,13 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			continue
 		}
 		head, tail, _ := strings.Cut(header.Name, "/")
-		fileType, ok := AllowedFileTypes[path.Ext(header.Name)]
-		if !ok {
-			continue
+		var fileType FileType
+		var ok bool
+		if header.Typeflag == tar.TypeReg {
+			fileType, ok = AllowedFileTypes[path.Ext(header.Name)]
+			if !ok {
+				continue
+			}
 		}
 		modTime := header.ModTime
 		if s, ok := header.PAXRecords["NOTEBREW.file.modTime"]; ok {
