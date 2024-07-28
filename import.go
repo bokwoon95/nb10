@@ -26,7 +26,7 @@ import (
 
 func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Request struct {
-		FileName               string `json:"fileName"`
+		TgzFileName            string `json:"tgzFileName"`
 		Root                   string `json:"root"`
 		OverwriteExistingFiles bool   `json:"overwriteExistingFiles"`
 	}
@@ -38,7 +38,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		UserID                 ID     `json:"userID"`
 		Username               string `json:"username"`
 		DisableReason          string `json:"disableReason"`
-		FileName               string `json:"fileName"`
+		TgzFileName            string `json:"tgzFileName"`
 		Root                   string `json:"root"`
 		OverwriteExistingFiles bool   `json:"overwriteExistingFiles"`
 		Size                   int64  `json:"size"`
@@ -96,13 +96,13 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
-		response.FileName = r.Form.Get("fileName")
-		if !strings.HasSuffix(response.FileName, ".tgz") {
+		response.TgzFileName = r.Form.Get("tgzFileName")
+		if !strings.HasSuffix(response.TgzFileName, ".tgz") {
 			response.Error = "InvalidFileType"
 			writeResponse(w, r, response)
 			return
 		}
-		fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "imports", response.FileName))
+		fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "imports", response.TgzFileName))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				response.Error = "FileNotExist"
@@ -163,13 +163,13 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "import")+"/?fileName="+url.QueryEscape(response.FileName), http.StatusFound)
+				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, "import")+"/?tgzFileName="+url.QueryEscape(response.TgzFileName), http.StatusFound)
 				return
 			}
 			err := nbrew.SetFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":     "import",
-					"fileName": response.FileName,
+					"from":        "import",
+					"tgzFileName": response.TgzFileName,
 				},
 			})
 			if err != nil {
@@ -204,7 +204,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 					return
 				}
 			}
-			request.FileName = r.Form.Get("fileName")
+			request.TgzFileName = r.Form.Get("tgzFileName")
 			request.Root = r.Form.Get("root")
 			request.OverwriteExistingFiles = r.Form.Has("overwriteExistingFiles")
 		default:
@@ -213,11 +213,11 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		}
 
 		response := Response{
-			FileName:               request.FileName,
+			TgzFileName:            request.TgzFileName,
 			Root:                   path.Clean(strings.Trim(request.Root, "/")),
 			OverwriteExistingFiles: request.OverwriteExistingFiles,
 		}
-		fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "imports", response.FileName))
+		fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "imports", response.TgzFileName))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				response.Error = "FileNotExist"
@@ -237,7 +237,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		startTime := time.Now().UTC()
 		importJobID := NewID()
 		if nbrew.DB == nil {
-			err := nbrew.importTgz(r.Context(), importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
+			err := nbrew.importTgz(r.Context(), importJobID, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -251,7 +251,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				Values: []any{
 					sq.UUIDParam("importJobID", importJobID),
 					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-					sq.StringParam("fileName", response.FileName),
+					sq.StringParam("tgzFileName", response.TgzFileName),
 					sq.TimeParam("startTime", startTime),
 					sq.Int64Param("size", response.Size),
 				},
@@ -278,12 +278,12 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.importTgz(nbrew.ctx, importJobID, sitePrefix, response.FileName, response.Root, response.OverwriteExistingFiles)
+				err := nbrew.importTgz(nbrew.ctx, importJobID, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("importJobID", importJobID.String()),
 						slog.String("sitePrefix", sitePrefix),
-						slog.String("fileName", response.FileName),
+						slog.String("tgzFileName", response.TgzFileName),
 						slog.String("root", response.Root),
 						slog.Bool("overwriteExistingFiles", response.OverwriteExistingFiles),
 					)
@@ -328,7 +328,7 @@ func (r *importProgressReader) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix string, fileName string, root string, overwriteExistingFiles bool) error {
+func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix string, tgzFileName string, root string, overwriteExistingFiles bool) error {
 	defer func() {
 		if nbrew.DB == nil {
 			return
@@ -344,7 +344,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			nbrew.Logger.Error(err.Error())
 		}
 	}()
-	file, err := nbrew.FS.WithContext(nbrew.ctx).Open(path.Join(sitePrefix, "imports", fileName))
+	file, err := nbrew.FS.WithContext(nbrew.ctx).Open(path.Join(sitePrefix, "imports", tgzFileName))
 	if err != nil {
 		return err
 	}
@@ -630,7 +630,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				if fileType.Ext != ".html" {
 					continue
 				}
-				if tail == "" && (fileName == "posts.html" || fileName == "themes.html") {
+				if tail == "" && (tgzFileName == "posts.html" || tgzFileName == "themes.html") {
 					continue
 				}
 				err := writeFile(path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))

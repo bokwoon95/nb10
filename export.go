@@ -1559,3 +1559,109 @@ func (nbrew *Notebrew) doExport(ctx context.Context, exportJobID ID, sitePrefix 
 	success = true
 	return nil
 }
+
+func getExportSize(ctx context.Context, fsys FS, filePath string, action exportAction) (int64, error) {
+	fileInfo, err := fs.Stat(fsys.WithContext(ctx), filePath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	if !fileInfo.IsDir() {
+		return fileInfo.Size(), nil
+	}
+	var sitePrefix string
+	filePath = strings.Trim(filePath, "/")
+	if filePath != "." {
+		head, _, _ := strings.Cut(filePath, "/")
+		if strings.HasPrefix(head, "@") || strings.Contains(filePath, ".") {
+			sitePrefix = head
+		}
+	}
+	if databaseFS, ok := fsys.(*DatabaseFS); ok {
+		var condition sq.Expression
+		if filePath == "." || filePath == sitePrefix {
+			condition = sq.Expr("("+
+				"files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {postsPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
+				" OR files.file_path = {siteJSON}"+
+				")",
+				sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
+				sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
+				sq.StringParam("postsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
+				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
+			)
+		} else {
+			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(filePath)+"/%")
+		}
+		size, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format:  "SELECT {*} FROM files WHERE {condition}",
+			Values: []any{
+				sq.Param("condition", condition),
+			},
+		}, func(row *sq.Row) int64 {
+			return row.Int64("sum(coalesce(size, 0))")
+		})
+		if err != nil {
+			return 0, err
+		}
+		return size, nil
+	}
+	var size atomic.Int64
+	walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if dirEntry.IsDir() {
+			return nil
+		}
+		fileInfo, err := dirEntry.Info()
+		if err != nil {
+			return err
+		}
+		size.Add(fileInfo.Size())
+		return nil
+	}
+	if filePath == "." || sitePrefix == filePath {
+		group, groupctx := errgroup.WithContext(ctx)
+		for _, root := range []string{
+			path.Join(sitePrefix, "notes"),
+			path.Join(sitePrefix, "pages"),
+			path.Join(sitePrefix, "posts"),
+			path.Join(sitePrefix, "output"),
+			path.Join(sitePrefix, "site.json"),
+		} {
+			root := root
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				err = fs.WalkDir(fsys.WithContext(groupctx), root, walkDirFunc)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
+		err := group.Wait()
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		err := fs.WalkDir(fsys.WithContext(ctx), filePath, walkDirFunc)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return size.Load(), nil
+}

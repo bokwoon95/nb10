@@ -38,7 +38,7 @@
   {{- if referer }}
   <div><a href='{{ referer }}' data-go-back>&larr; back</a></div>
   {{- end }}
-  <h3 class='mv3 b'>Import <a href='/{{ join "files" $.SitePrefix "imports" $.FileName }}'>{{ $.FileName }}</a>? ({{ humanReadableFileSize $.Size }})</h3>
+  <h3 class='mv3 b'>Import <a href='/{{ join "files" $.SitePrefix "imports" $.TgzFileName }}'>{{ $.TgzFileName }}</a>? ({{ humanReadableFileSize $.Size }})</h3>
   <div class='mv3 flex items-center'>
     <input id='root:output/themes' type='radio' name='root' value='output/themes' class='pointer' checked>
     <label for='root:output/themes' class='pointer ml2'>import only themes</label>
