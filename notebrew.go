@@ -486,8 +486,8 @@ func urlSafe(s string) string {
 
 // https://stackoverflow.com/a/31976060
 var filenameReplacementChars = [...]rune{
-	'<':  '❮', // U+276E, HEAVY LEFT-POINTING ANGLE QUOTATION MARK ORNAMENT
-	'>':  '❯', // U+276F, HEAVY RIGHT-POINTING ANGLE QUOTATION MARK ORNAMENT
+	'<':  '＜', // U+FF1C, FULLWIDTH LESS-THAN SIGN
+	'>':  '＞', // U+FF1E, FULLWIDTH GREATER-THAN SIGN
 	':':  '꞉', // U+A789, MODIFIER LETTER COLON
 	'"':  '″', // U+2033, DOUBLE PRIME
 	'/':  '／', // U+FF0F, FULLWIDTH SOLIDUS
