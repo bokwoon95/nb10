@@ -19,6 +19,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -662,15 +663,15 @@ func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user Use
 		// 1. prepare the row to be inserted
 		// 2. attempt to acquire a slot (insert the row)
 		// 3. if insertion fails with KeyViolation, then report to user that a job is already running
-		exportJobID := NewID()
 		if nbrew.DB == nil {
-			err := nbrew.exportTgz(r.Context(), exportJobID, sitePrefix, filePaths, outputDirsToExport, tgzFileName, storageRemaining)
+			err := nbrew.exportTgz(r.Context(), ID{}, sitePrefix, filePaths, outputDirsToExport, tgzFileName, storageRemaining)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		} else {
+			exportJobID := NewID()
 			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "INSERT INTO export_job (export_job_id, site_id, file_name, start_time, total_bytes)" +
@@ -803,17 +804,22 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 	}
 	tarWriter := tar.NewWriter(dest)
 	defer tarWriter.Close()
-	type File struct {
-		FileID       ID
-		FilePath     string
-		IsDir        bool
-		Size         int64
-		ModTime      time.Time
-		CreationTime time.Time
-		Bytes        []byte
-		IsPinned     bool
+	outputDirs := make([]string, 0, len(outputDirsToExport))
+	for outputDir := range outputDirsToExport {
+		outputDirs = append(outputDirs, outputDir)
 	}
+	slices.Sort(outputDirs)
 	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+		type File struct {
+			FileID       ID
+			FilePath     string
+			IsDir        bool
+			Size         int64
+			ModTime      time.Time
+			CreationTime time.Time
+			Bytes        []byte
+			IsPinned     bool
+		}
 		buf := bufPool.Get().(*bytes.Buffer).Bytes()
 		defer func() {
 			if cap(buf) <= maxPoolableBufferCapacity {
@@ -834,6 +840,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				if err != nil {
 					return err
 				}
+				continue
 			}
 			file, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
@@ -847,16 +854,13 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			}, func(row *sq.Row) (file File) {
 				buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
 				file.FileID = row.UUID("files.file_id")
-				file.FilePath = row.String("files.file_path")
+				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(row.String("files.file_path"), sitePrefix), "/")
 				file.IsDir = row.Bool("files.is_dir")
 				file.Size = row.Int64("files.size")
 				file.Bytes = buf
 				file.ModTime = row.Time("files.mod_time")
 				file.CreationTime = row.Time("files.creation_time")
 				file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
-				if sitePrefix != "" {
-					file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
-				}
 				return file
 			})
 			if err != nil {
@@ -942,252 +946,80 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				}
 			}
 		}
-	} else {
-		for _, filePath := range filePaths {
-			if filePath == "." {
-				err := exportDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, ".")
-				if err != nil {
-					return err
-				}
-			}
-			file, err := nbrew.FS.WithContext(ctx).Open(path.Join(sitePrefix, filePath))
+		for _, outputDir := range outputDirs {
+			file, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
+				Dialect: databaseFS.Dialect,
+				Format: "SELECT {*}" +
+					" FROM files" +
+					" LEFT JOIN pinned_file ON pinned_file.parent_id = files.parent_id AND pinned_file.file_id = files.file_id" +
+					" WHERE file_path = {outputDir}" +
+					" AND is_dir",
+				Values: []any{
+					sq.Param("outputDir", path.Join(sitePrefix, outputDir)),
+				},
+			}, func(row *sq.Row) (file File) {
+				file.FileID = row.UUID("files.file_id")
+				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(row.String("files.file_path"), sitePrefix), "/")
+				file.IsDir = row.Bool("files.is_dir")
+				file.Size = row.Int64("files.size")
+				file.ModTime = row.Time("files.mod_time")
+				file.CreationTime = row.Time("files.creation_time")
+				file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
+				return file
+			})
 			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					return nil
+				if errors.Is(err, sql.ErrNoRows) {
+					continue
 				}
 				return err
 			}
-			fileInfo, err := file.Stat()
-			if err != nil {
-				file.Close()
-				return err
-			}
-			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
-				absolutePath = path.Join(dirFS.RootDir, filePath)
-			}
-			modTime := fileInfo.ModTime()
-			creationTime := CreationTime(absolutePath, fileInfo)
 			tarHeader := &tar.Header{
-				Name:    filePath,
-				ModTime: modTime,
-				Size:    fileInfo.Size(),
+				Typeflag: tar.TypeDir,
+				Mode:     0755,
+				Name:     file.FilePath,
+				ModTime:  file.ModTime,
 				PAXRecords: map[string]string{
-					"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
-					"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+					"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
+					"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
 				},
 			}
-			if fileInfo.IsDir() {
-				file.Close()
-				tarHeader.Typeflag = tar.TypeDir
-				tarHeader.Mode = 0755
-				err := tarWriter.WriteHeader(tarHeader)
-				if err != nil {
-					return err
-				}
-				continue
+			if file.IsPinned {
+				tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
 			}
-			_, ok := AllowedFileTypes[path.Ext(filePath)]
-			if !ok {
-				file.Close()
-				continue
-			}
-			tarHeader.Typeflag = tar.TypeReg
-			tarHeader.Mode = 0644
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				file.Close()
 				return err
 			}
-			_, err = io.Copy(tarWriter, file)
+			action := outputDirsToExport[outputDir]
+			err = exportOutputDir(ctx, tarWriter, databaseFS.WithContext(ctx), sitePrefix, outputDir, action)
 			if err != nil {
-				file.Close()
 				return err
 			}
+		}
+		return nil
+	}
+	for _, filePath := range filePaths {
+		if filePath == "." {
+			err := exportDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, ".")
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		file, err := nbrew.FS.WithContext(ctx).Open(path.Join(sitePrefix, filePath))
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		fileInfo, err := file.Stat()
+		if err != nil {
 			file.Close()
-		}
-	}
-	return nil
-}
-
-func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefix string, dir string) error {
-	type File struct {
-		FileID       ID
-		FilePath     string
-		IsDir        bool
-		Size         int64
-		ModTime      time.Time
-		CreationTime time.Time
-		Bytes        []byte
-		IsPinned     bool
-	}
-	if databaseFS, ok := fsys.(*DatabaseFS); ok {
-		buf := bufPool.Get().(*bytes.Buffer).Bytes()
-		defer func() {
-			if cap(buf) <= maxPoolableBufferCapacity {
-				buf = buf[:0]
-				bufPool.Put(bytes.NewBuffer(buf))
-			}
-		}()
-		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
-		defer func() {
-			if gzipReader != nil {
-				gzipReader.Reset(empty)
-				gzipReaderPool.Put(gzipReader)
-			}
-		}()
-		var condition sq.Expression
-		if dir == "." {
-			condition = sq.Expr("("+
-				"files.file_path = {notes}"+
-				" OR files.file_path = {pages}"+
-				" OR files.file_path = {posts}"+
-				" OR files.file_path = {output}"+
-				" OR files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
-				" OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
-				" OR files.file_path LIKE {postsPrefix} ESCAPE '\\'"+
-				" OR files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
-				" OR files.file_path = {siteJSON}"+
-				")",
-				sq.StringParam("notes", path.Join(sitePrefix, "notes")),
-				sq.StringParam("pages", path.Join(sitePrefix, "pages")),
-				sq.StringParam("posts", path.Join(sitePrefix, "posts")),
-				sq.StringParam("output", path.Join(sitePrefix, "output")),
-				sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
-				sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
-				sq.StringParam("postsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
-				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
-				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
-			)
-		} else {
-			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%")
-		}
-		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-			Dialect: databaseFS.Dialect,
-			Format: "SELECT {*}" +
-				" FROM files" +
-				" LEFT JOIN pinned_file ON pinned_file.parent_id = files.parent_id AND pinned_file.file_id = files.file_id" +
-				" WHERE {condition}" +
-				" ORDER BY file_path",
-			Values: []any{
-				sq.Param("condition", condition),
-			},
-		}, func(row *sq.Row) (file File) {
-			buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
-			file.FileID = row.UUID("files.file_id")
-			file.FilePath = row.String("files.file_path")
-			file.IsDir = row.Bool("files.is_dir")
-			file.Size = row.Int64("files.size")
-			file.Bytes = buf
-			file.ModTime = row.Time("files.mod_time")
-			file.CreationTime = row.Time("files.creation_time")
-			file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
-			if sitePrefix != "" {
-				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
-			}
-			return file
-		})
-		if err != nil {
-			return err
-		}
-		defer cursor.Close()
-		for cursor.Next() {
-			file, err := cursor.Result()
-			if err != nil {
-				return err
-			}
-			tarHeader := &tar.Header{
-				Name:    file.FilePath,
-				ModTime: file.ModTime,
-				Size:    file.Size,
-				PAXRecords: map[string]string{
-					"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
-					"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
-				},
-			}
-			if file.IsPinned {
-				tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
-			}
-			if file.IsDir {
-				tarHeader.Typeflag = tar.TypeDir
-				tarHeader.Mode = 0755
-				err = tarWriter.WriteHeader(tarHeader)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
-			if !ok {
-				continue
-			}
-			if fileType.Has(AttributeImg) && len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
-				tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
-			}
-			tarHeader.Typeflag = tar.TypeReg
-			tarHeader.Mode = 0644
-			err = tarWriter.WriteHeader(tarHeader)
-			if err != nil {
-				return err
-			}
-			if fileType.Has(AttributeObject) {
-				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
-				if err != nil {
-					return err
-				}
-				_, err = io.Copy(tarWriter, reader)
-				if err != nil {
-					reader.Close()
-					return err
-				}
-				err = reader.Close()
-				if err != nil {
-					return err
-				}
-			} else {
-				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
-					if gzipReader == nil {
-						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
-						if err != nil {
-							return err
-						}
-					} else {
-						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
-						if err != nil {
-							return err
-						}
-					}
-					_, err = io.Copy(tarWriter, gzipReader)
-					if err != nil {
-						return err
-					}
-				} else {
-					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-		err = cursor.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return nil
-			}
-			return err
-		}
-		fileInfo, err := dirEntry.Info()
-		if err != nil {
 			return err
 		}
 		var absolutePath string
-		if dirFS, ok := fsys.(*DirFS); ok {
+		if dirFS, ok := nbrew.FS.(*DirFS); ok {
 			absolutePath = path.Join(dirFS.RootDir, filePath)
 		}
 		modTime := fileInfo.ModTime()
@@ -1201,399 +1033,67 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 				"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
 			},
 		}
-		if dirEntry.IsDir() {
+		if fileInfo.IsDir() {
+			file.Close()
 			tarHeader.Typeflag = tar.TypeDir
 			tarHeader.Mode = 0755
-			err = tarWriter.WriteHeader(tarHeader)
+			err := tarWriter.WriteHeader(tarHeader)
 			if err != nil {
 				return err
 			}
-			return nil
+			continue
 		}
 		_, ok := AllowedFileTypes[path.Ext(filePath)]
 		if !ok {
-			return nil
+			file.Close()
+			continue
 		}
 		tarHeader.Typeflag = tar.TypeReg
 		tarHeader.Mode = 0644
 		err = tarWriter.WriteHeader(tarHeader)
 		if err != nil {
+			file.Close()
 			return err
 		}
-		file, err := fsys.Open(filePath)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
 		_, err = io.Copy(tarWriter, file)
 		if err != nil {
+			file.Close()
 			return err
 		}
-		return nil
+		file.Close()
 	}
-	if dir == "." {
-		for _, root := range []string{
-			path.Join(sitePrefix, "notes"),
-			path.Join(sitePrefix, "pages"),
-			path.Join(sitePrefix, "posts"),
-			path.Join(sitePrefix, "output"),
-			path.Join(sitePrefix, "site.json"),
-		} {
-			err := fs.WalkDir(fsys, root, walkDirFunc)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		root := path.Join(sitePrefix, dir)
-		err := fs.WalkDir(fsys, root, func(filePath string, dirEntry fs.DirEntry, err error) error {
-			if filePath == root {
-				return nil
-			}
-			return walkDirFunc(filePath, dirEntry, err)
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefix string, outputDir string, action exportAction) error {
-	type File struct {
-		FileID       ID
-		FilePath     string
-		IsDir        bool
-		Size         int64
-		ModTime      time.Time
-		CreationTime time.Time
-		Bytes        []byte
-		IsPinned     bool
-	}
-	head, tail, _ := strings.Cut(outputDir, "/")
-	if head != "output" {
-		return fmt.Errorf("programmer error: attempted to export output directory %s (which is not an output directory)", outputDir)
-	}
-	if action == 0 {
-		return nil
-	}
-	nextHead, nextTail, _ := strings.Cut(tail, "/")
-	if action&exportFiles != 0 && action&exportDirectories == 0 {
-		if nextTail != "" {
-			var counterpart string
-			if nextHead == "posts" {
-				counterpart = path.Join(sitePrefix, "posts", nextTail)
-			} else {
-				counterpart = path.Join(sitePrefix, "pages", nextTail)
-			}
-			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					return err
-				}
-			} else if counterpartFileInfo.IsDir() {
-				if databaseFS, ok := fsys.(*DatabaseFS); ok {
-					_ = databaseFS
-				} else {
-					dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
-					if err != nil {
-						return err
-					}
-					for _, dirEntry := range dirEntries {
-						if dirEntry.IsDir() {
-							continue
-						}
-						name := dirEntry.Name()
-						_, ok := AllowedFileTypes[path.Ext(name)]
-						if !ok {
-							continue
-						}
-						file, err := fsys.Open(path.Join(sitePrefix, outputDir, name))
-						if err != nil {
-							return err
-						}
-						fileInfo, err := file.Stat()
-						if err != nil {
-							file.Close()
-							return err
-						}
-						var absolutePath string
-						if dirFS, ok := fsys.(*DirFS); ok {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
-						}
-						modTime := fileInfo.ModTime()
-						creationTime := CreationTime(absolutePath, fileInfo)
-						err = tarWriter.WriteHeader(&tar.Header{
-							Typeflag: tar.TypeReg,
-							Mode:     0644,
-							Name:     path.Join(outputDir, name),
-							ModTime:  modTime,
-							Size:     fileInfo.Size(),
-							PAXRecords: map[string]string{
-								"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
-								"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
-							},
-						})
-						if err != nil {
-							file.Close()
-							return err
-						}
-						_, err = io.Copy(tarWriter, file)
-						if err != nil {
-							file.Close()
-							return err
-						}
-						file.Close()
-					}
-				}
-				return nil
-			}
-		}
-	}
-	if action&exportFiles == 0 && action&exportDirectories != 0 {
-		if tail != "" {
-			var counterpart string
-			if head == "posts" {
-				counterpart = path.Join(sitePrefix, "posts", tail+".md")
-			} else {
-				counterpart = path.Join(sitePrefix, "pages", tail+".html")
-			}
-			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					return err
-				}
-			} else if !counterpartFileInfo.IsDir() {
-				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
-				if err != nil {
-					return err
-				}
-				for _, dirEntry := range dirEntries {
-					if !dirEntry.IsDir() {
-						continue
-					}
-					name := dirEntry.Name()
-					// TODO: we need to also write the tarHeader for the directory.
-					err := exportOutputDir(ctx, tarWriter, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
-					if err != nil {
-						return err
-					}
-				}
-				return nil
-			}
-		}
-	}
-	if databaseFS, ok := fsys.(*DatabaseFS); ok {
-		buf := bufPool.Get().(*bytes.Buffer).Bytes()
-		defer func() {
-			if cap(buf) <= maxPoolableBufferCapacity {
-				buf = buf[:0]
-				bufPool.Put(bytes.NewBuffer(buf))
-			}
-		}()
-		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
-		defer func() {
-			if gzipReader != nil {
-				gzipReader.Reset(empty)
-				gzipReaderPool.Put(gzipReader)
-			}
-		}()
-		var condition sq.Expression
-		if outputDir == "output" {
-			condition = sq.Expr("files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
-				" AND files.file_path <> {outputPosts}"+
-				" AND files.file_path <> {outputThemes}"+
-				" AND files.file_path NOT LIKE {outputPostsPrefix} ESCAPE '\\'"+
-				" AND files.file_path NOT LIKE {outputThemesPrefix} ESCAPE '\\'",
-				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
-				sq.StringParam("outputPosts", path.Join(sitePrefix, "output/posts")),
-				sq.StringParam("outputThemes", path.Join(sitePrefix, "output/themes")),
-				sq.StringParam("outputPostsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/posts"))+"/%"),
-				sq.StringParam("outputThemesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/themes"))+"/%"),
-			)
-		} else {
-			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%")
-		}
-		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-			Dialect: databaseFS.Dialect,
-			Format: "SELECT {*}" +
-				" FROM files" +
-				" LEFT JOIN pinned_file ON pinned_file.parent_id = files.parent_id AND pinned_file.file_id = files.file_id" +
-				" WHERE {condition}" +
-				" ORDER BY file_path",
-			Values: []any{
-				sq.Param("condition", condition),
-			},
-		}, func(row *sq.Row) (file File) {
-			buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
-			file.FileID = row.UUID("files.file_id")
-			file.FilePath = row.String("files.file_path")
-			file.IsDir = row.Bool("files.is_dir")
-			file.Size = row.Int64("files.size")
-			file.Bytes = buf
-			file.ModTime = row.Time("files.mod_time")
-			file.CreationTime = row.Time("files.creation_time")
-			file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
-			if sitePrefix != "" {
-				file.FilePath = strings.TrimPrefix(strings.TrimPrefix(file.FilePath, sitePrefix), "/")
-			}
-			return file
-		})
-		if err != nil {
-			return err
-		}
-		defer cursor.Close()
-		for cursor.Next() {
-			file, err := cursor.Result()
-			if err != nil {
-				return err
-			}
-			tarHeader := &tar.Header{
-				Name:    file.FilePath,
-				ModTime: file.ModTime,
-				Size:    file.Size,
-				PAXRecords: map[string]string{
-					"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
-					"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
-				},
-			}
-			if file.IsPinned {
-				tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
-			}
-			if file.IsDir {
-				tarHeader.Typeflag = tar.TypeDir
-				tarHeader.Mode = 0755
-				err = tarWriter.WriteHeader(tarHeader)
-				if err != nil {
-					return err
-				}
-				continue
-			}
-			fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
-			if !ok {
-				continue
-			}
-			if fileType.Has(AttributeImg) && len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
-				tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
-			}
-			tarHeader.Typeflag = tar.TypeReg
-			tarHeader.Mode = 0644
-			err = tarWriter.WriteHeader(tarHeader)
-			if err != nil {
-				return err
-			}
-			if fileType.Has(AttributeObject) {
-				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
-				if err != nil {
-					return err
-				}
-				_, err = io.Copy(tarWriter, reader)
-				if err != nil {
-					reader.Close()
-					return err
-				}
-				err = reader.Close()
-				if err != nil {
-					return err
-				}
-			} else {
-				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
-					if gzipReader == nil {
-						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
-						if err != nil {
-							return err
-						}
-					} else {
-						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
-						if err != nil {
-							return err
-						}
-					}
-					_, err = io.Copy(tarWriter, gzipReader)
-					if err != nil {
-						return err
-					}
-				} else {
-					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
-					if err != nil {
-						return err
-					}
-				}
-			}
-		}
-		err = cursor.Close()
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-	root := path.Join(sitePrefix, outputDir)
-	err := fs.WalkDir(fsys, root, func(filePath string, dirEntry fs.DirEntry, err error) error {
-		if filePath == root {
-			return nil
-		}
+	for _, outputDir := range outputDirs {
+		fileInfo, err := fs.Stat(nbrew.FS.WithContext(ctx), path.Join(sitePrefix, outputDir))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				return nil
+				continue
 			}
-			return err
-		}
-		fileInfo, err := dirEntry.Info()
-		if err != nil {
 			return err
 		}
 		var absolutePath string
-		if dirFS, ok := fsys.(*DirFS); ok {
-			absolutePath = path.Join(dirFS.RootDir, filePath)
+		if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
 		}
 		modTime := fileInfo.ModTime()
 		creationTime := CreationTime(absolutePath, fileInfo)
-		tarHeader := &tar.Header{
-			Name:    filePath,
-			ModTime: modTime,
-			Size:    fileInfo.Size(),
+		err = tarWriter.WriteHeader(&tar.Header{
+			Typeflag: tar.TypeDir,
+			Mode:     0755,
+			Name:     outputDir,
+			ModTime:  modTime,
 			PAXRecords: map[string]string{
 				"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
 				"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
 			},
-		}
-		if dirEntry.IsDir() {
-			if outputDir == "output" {
-				if filePath == path.Join(sitePrefix, "output/posts") || filePath == path.Join(sitePrefix, "output/themes") {
-					return fs.SkipDir
-				}
-			}
-			tarHeader.Typeflag = tar.TypeDir
-			tarHeader.Mode = 0755
-			err = tarWriter.WriteHeader(tarHeader)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-		_, ok := AllowedFileTypes[path.Ext(filePath)]
-		if !ok {
-			return nil
-		}
-		tarHeader.Typeflag = tar.TypeReg
-		tarHeader.Mode = 0644
-		err = tarWriter.WriteHeader(tarHeader)
+		})
 		if err != nil {
 			return err
 		}
-		file, err := fsys.Open(filePath)
+		action := outputDirsToExport[outputDir]
+		err = exportOutputDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, outputDir, action)
 		if err != nil {
 			return err
 		}
-		defer file.Close()
-		_, err = io.Copy(tarWriter, file)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 	return nil
 }
@@ -1684,6 +1184,252 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 		}
 	}
 	return size, nil
+}
+
+func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefix string, dir string) error {
+	if databaseFS, ok := fsys.(*DatabaseFS); ok {
+		type File struct {
+			FileID       ID
+			FilePath     string
+			IsDir        bool
+			Size         int64
+			ModTime      time.Time
+			CreationTime time.Time
+			Bytes        []byte
+			IsPinned     bool
+		}
+		buf := bufPool.Get().(*bytes.Buffer).Bytes()
+		defer func() {
+			if cap(buf) <= maxPoolableBufferCapacity {
+				buf = buf[:0]
+				bufPool.Put(bytes.NewBuffer(buf))
+			}
+		}()
+		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
+		defer func() {
+			if gzipReader != nil {
+				gzipReader.Reset(empty)
+				gzipReaderPool.Put(gzipReader)
+			}
+		}()
+		var condition sq.Expression
+		if dir == "." {
+			condition = sq.Expr("("+
+				"files.file_path = {notes}"+
+				" OR files.file_path = {pages}"+
+				" OR files.file_path = {posts}"+
+				" OR files.file_path = {output}"+
+				" OR files.file_path LIKE {notesPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {pagesPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {postsPrefix} ESCAPE '\\'"+
+				" OR files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
+				" OR files.file_path = {siteJSON}"+
+				")",
+				sq.StringParam("notes", path.Join(sitePrefix, "notes")),
+				sq.StringParam("pages", path.Join(sitePrefix, "pages")),
+				sq.StringParam("posts", path.Join(sitePrefix, "posts")),
+				sq.StringParam("output", path.Join(sitePrefix, "output")),
+				sq.StringParam("notesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "notes"))+"/%"),
+				sq.StringParam("pagesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "pages"))+"/%"),
+				sq.StringParam("postsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "posts"))+"/%"),
+				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+				sq.StringParam("siteJSON", path.Join(sitePrefix, "site.json")),
+			)
+		} else {
+			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, dir))+"/%")
+		}
+		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format: "SELECT {*}" +
+				" FROM files" +
+				" LEFT JOIN pinned_file ON pinned_file.parent_id = files.parent_id AND pinned_file.file_id = files.file_id" +
+				" WHERE {condition}" +
+				" ORDER BY file_path",
+			Values: []any{
+				sq.Param("condition", condition),
+			},
+		}, func(row *sq.Row) (file File) {
+			buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
+			file.FileID = row.UUID("files.file_id")
+			file.FilePath = strings.TrimPrefix(strings.TrimPrefix(row.String("files.file_path"), sitePrefix), "/")
+			file.IsDir = row.Bool("files.is_dir")
+			file.Size = row.Int64("files.size")
+			file.Bytes = buf
+			file.ModTime = row.Time("files.mod_time")
+			file.CreationTime = row.Time("files.creation_time")
+			file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
+			return file
+		})
+		if err != nil {
+			return err
+		}
+		defer cursor.Close()
+		for cursor.Next() {
+			file, err := cursor.Result()
+			if err != nil {
+				return err
+			}
+			tarHeader := &tar.Header{
+				Name:    file.FilePath,
+				ModTime: file.ModTime,
+				Size:    file.Size,
+				PAXRecords: map[string]string{
+					"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
+					"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
+				},
+			}
+			if file.IsPinned {
+				tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
+			}
+			if file.IsDir {
+				tarHeader.Typeflag = tar.TypeDir
+				tarHeader.Mode = 0755
+				err = tarWriter.WriteHeader(tarHeader)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
+			if !ok {
+				continue
+			}
+			if fileType.Has(AttributeImg) && len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
+				tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
+			}
+			tarHeader.Typeflag = tar.TypeReg
+			tarHeader.Mode = 0644
+			err = tarWriter.WriteHeader(tarHeader)
+			if err != nil {
+				return err
+			}
+			if fileType.Has(AttributeObject) {
+				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
+				if err != nil {
+					return err
+				}
+				_, err = io.Copy(tarWriter, reader)
+				if err != nil {
+					reader.Close()
+					return err
+				}
+				err = reader.Close()
+				if err != nil {
+					return err
+				}
+			} else {
+				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
+					if gzipReader == nil {
+						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
+						if err != nil {
+							return err
+						}
+					} else {
+						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
+						if err != nil {
+							return err
+						}
+					}
+					_, err = io.Copy(tarWriter, gzipReader)
+					if err != nil {
+						return err
+					}
+				} else {
+					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+		err = cursor.Close()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	walkDirFunc := func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		fileInfo, err := dirEntry.Info()
+		if err != nil {
+			return err
+		}
+		var absolutePath string
+		if dirFS, ok := fsys.(*DirFS); ok {
+			absolutePath = path.Join(dirFS.RootDir, filePath)
+		}
+		modTime := fileInfo.ModTime()
+		creationTime := CreationTime(absolutePath, fileInfo)
+		tarHeader := &tar.Header{
+			Name:    filePath,
+			ModTime: modTime,
+			Size:    fileInfo.Size(),
+			PAXRecords: map[string]string{
+				"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+				"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+			},
+		}
+		if dirEntry.IsDir() {
+			tarHeader.Typeflag = tar.TypeDir
+			tarHeader.Mode = 0755
+			err = tarWriter.WriteHeader(tarHeader)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		_, ok := AllowedFileTypes[path.Ext(filePath)]
+		if !ok {
+			return nil
+		}
+		tarHeader.Typeflag = tar.TypeReg
+		tarHeader.Mode = 0644
+		err = tarWriter.WriteHeader(tarHeader)
+		if err != nil {
+			return err
+		}
+		file, err := fsys.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(tarWriter, file)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if dir == "." {
+		for _, root := range []string{
+			path.Join(sitePrefix, "notes"),
+			path.Join(sitePrefix, "pages"),
+			path.Join(sitePrefix, "posts"),
+			path.Join(sitePrefix, "output"),
+			path.Join(sitePrefix, "site.json"),
+		} {
+			err := fs.WalkDir(fsys, root, walkDirFunc)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		root := path.Join(sitePrefix, dir)
+		err := fs.WalkDir(fsys, root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+			if filePath == root {
+				return nil
+			}
+			return walkDirFunc(filePath, dirEntry, err)
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, outputDir string, action exportAction) (int64, error) {
@@ -1837,4 +1583,519 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 		return 0, err
 	}
 	return size, nil
+}
+
+func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefix string, outputDir string, action exportAction) error {
+	type File struct {
+		FileID       ID
+		FilePath     string
+		IsDir        bool
+		Size         int64
+		ModTime      time.Time
+		CreationTime time.Time
+		Bytes        []byte
+		IsPinned     bool
+	}
+	head, tail, _ := strings.Cut(outputDir, "/")
+	if head != "output" {
+		return fmt.Errorf("programmer error: attempted to export output directory %s (which is not an output directory)", outputDir)
+	}
+	if action == 0 {
+		return nil
+	}
+	nextHead, nextTail, _ := strings.Cut(tail, "/")
+	if action&exportFiles != 0 && action&exportDirectories == 0 {
+		if nextTail != "" {
+			var counterpart string
+			if nextHead == "posts" {
+				counterpart = path.Join(sitePrefix, "posts", nextTail)
+			} else {
+				counterpart = path.Join(sitePrefix, "pages", nextTail)
+			}
+			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+			} else if counterpartFileInfo.IsDir() {
+				// Export only the files.
+				if databaseFS, ok := fsys.(*DatabaseFS); ok {
+					buf := bufPool.Get().(*bytes.Buffer).Bytes()
+					defer func() {
+						if cap(buf) <= maxPoolableBufferCapacity {
+							buf = buf[:0]
+							bufPool.Put(bytes.NewBuffer(buf))
+						}
+					}()
+					gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
+					defer func() {
+						if gzipReader != nil {
+							gzipReader.Reset(empty)
+							gzipReaderPool.Put(gzipReader)
+						}
+					}()
+					cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "SELECT {*}" +
+							" FROM files" +
+							" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {outputDir})" +
+							" AND NOT is_dir" +
+							" ORDER BY file_path",
+					}, func(row *sq.Row) (file File) {
+						buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
+						file.FileID = row.UUID("files.file_id")
+						file.FilePath = strings.TrimPrefix(strings.TrimPrefix(row.String("files.file_path"), sitePrefix), "/")
+						file.IsDir = row.Bool("files.is_dir")
+						file.Size = row.Int64("files.size")
+						file.Bytes = buf
+						file.ModTime = row.Time("files.mod_time")
+						file.CreationTime = row.Time("files.creation_time")
+						file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
+						return file
+					})
+					if err != nil {
+						return err
+					}
+					defer cursor.Close()
+					for cursor.Next() {
+						file, err := cursor.Result()
+						if err != nil {
+							return err
+						}
+						fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
+						if !ok {
+							continue
+						}
+						tarHeader := &tar.Header{
+							Typeflag: tar.TypeReg,
+							Mode:     0644,
+							Name:     file.FilePath,
+							ModTime:  file.ModTime,
+							Size:     file.Size,
+							PAXRecords: map[string]string{
+								"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
+								"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
+							},
+						}
+						if file.IsPinned {
+							tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
+						}
+						err = tarWriter.WriteHeader(tarHeader)
+						if err != nil {
+							return err
+						}
+						if fileType.Has(AttributeObject) {
+							reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
+							if err != nil {
+								return err
+							}
+							_, err = io.Copy(tarWriter, reader)
+							if err != nil {
+								reader.Close()
+								return err
+							}
+							err = reader.Close()
+							if err != nil {
+								return err
+							}
+						} else {
+							if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
+								if gzipReader == nil {
+									gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
+									if err != nil {
+										return err
+									}
+								} else {
+									err = gzipReader.Reset(bytes.NewReader(file.Bytes))
+									if err != nil {
+										return err
+									}
+								}
+								_, err = io.Copy(tarWriter, gzipReader)
+								if err != nil {
+									return err
+								}
+							} else {
+								_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
+								if err != nil {
+									return err
+								}
+							}
+						}
+					}
+				} else {
+					dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
+					if err != nil {
+						return err
+					}
+					for _, dirEntry := range dirEntries {
+						if dirEntry.IsDir() {
+							continue
+						}
+						name := dirEntry.Name()
+						_, ok := AllowedFileTypes[path.Ext(name)]
+						if !ok {
+							continue
+						}
+						file, err := fsys.Open(path.Join(sitePrefix, outputDir, name))
+						if err != nil {
+							return err
+						}
+						fileInfo, err := file.Stat()
+						if err != nil {
+							file.Close()
+							return err
+						}
+						var absolutePath string
+						if dirFS, ok := fsys.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+						}
+						modTime := fileInfo.ModTime()
+						creationTime := CreationTime(absolutePath, fileInfo)
+						err = tarWriter.WriteHeader(&tar.Header{
+							Typeflag: tar.TypeReg,
+							Mode:     0644,
+							Name:     path.Join(outputDir, name),
+							ModTime:  modTime,
+							Size:     fileInfo.Size(),
+							PAXRecords: map[string]string{
+								"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+								"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+							},
+						})
+						if err != nil {
+							file.Close()
+							return err
+						}
+						_, err = io.Copy(tarWriter, file)
+						if err != nil {
+							file.Close()
+							return err
+						}
+						file.Close()
+					}
+				}
+				return nil
+			}
+		}
+	}
+	if action&exportFiles == 0 && action&exportDirectories != 0 {
+		if tail != "" {
+			var counterpart string
+			if head == "posts" {
+				counterpart = path.Join(sitePrefix, "posts", tail+".md")
+			} else {
+				counterpart = path.Join(sitePrefix, "pages", tail+".html")
+			}
+			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+			} else if !counterpartFileInfo.IsDir() {
+				// Export only the directories.
+				var names []string
+				if databaseFS, ok := fsys.(*DatabaseFS); ok {
+					cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
+						Dialect: databaseFS.Dialect,
+						Format: "SELECT {*}" +
+							" FROM files" +
+							" WHERE parent_id = (SELECT file_id FROM files WHERE file_path = {outputDir})" +
+							" AND is_dir" +
+							" ORDER BY file_path",
+					}, func(row *sq.Row) (file File) {
+						file.FileID = row.UUID("files.file_id")
+						file.FilePath = strings.TrimPrefix(strings.TrimPrefix(row.String("files.file_path"), sitePrefix), "/")
+						file.IsDir = row.Bool("files.is_dir")
+						file.Size = row.Int64("files.size")
+						file.ModTime = row.Time("files.mod_time")
+						file.CreationTime = row.Time("files.creation_time")
+						file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
+						return file
+					})
+					if err != nil {
+						return err
+					}
+					defer cursor.Close()
+					var names []string
+					for cursor.Next() {
+						file, err := cursor.Result()
+						if err != nil {
+							return err
+						}
+						tarHeader := &tar.Header{
+							Typeflag: tar.TypeDir,
+							Mode:     0755,
+							Name:     file.FilePath,
+							ModTime:  file.ModTime,
+							PAXRecords: map[string]string{
+								"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
+								"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
+							},
+						}
+						if file.IsPinned {
+							tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
+						}
+						err = tarWriter.WriteHeader(tarHeader)
+						if err != nil {
+							return err
+						}
+						names = append(names, path.Base(file.FilePath))
+					}
+				} else {
+					dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
+					if err != nil {
+						return err
+					}
+					for _, dirEntry := range dirEntries {
+						if !dirEntry.IsDir() {
+							continue
+						}
+						name := dirEntry.Name()
+						fileInfo, err := dirEntry.Info()
+						if err != nil {
+							return err
+						}
+						var absolutePath string
+						if dirFS, ok := fsys.(*DirFS); ok {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+						}
+						modTime := fileInfo.ModTime()
+						creationTime := CreationTime(absolutePath, fileInfo)
+						err = tarWriter.WriteHeader(&tar.Header{
+							Typeflag: tar.TypeDir,
+							Mode:     0755,
+							Name:     path.Join(outputDir, name),
+							ModTime:  modTime,
+							PAXRecords: map[string]string{
+								"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+								"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+							},
+						})
+						if err != nil {
+							return err
+						}
+						names = append(names, name)
+					}
+				}
+				for _, name := range names {
+					err = exportOutputDir(ctx, tarWriter, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+		}
+	}
+	if databaseFS, ok := fsys.(*DatabaseFS); ok {
+		buf := bufPool.Get().(*bytes.Buffer).Bytes()
+		defer func() {
+			if cap(buf) <= maxPoolableBufferCapacity {
+				buf = buf[:0]
+				bufPool.Put(bytes.NewBuffer(buf))
+			}
+		}()
+		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
+		defer func() {
+			if gzipReader != nil {
+				gzipReader.Reset(empty)
+				gzipReaderPool.Put(gzipReader)
+			}
+		}()
+		var condition sq.Expression
+		if outputDir == "output" {
+			condition = sq.Expr("files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
+				" AND files.file_path <> {outputPosts}"+
+				" AND files.file_path <> {outputThemes}"+
+				" AND files.file_path NOT LIKE {outputPostsPrefix} ESCAPE '\\'"+
+				" AND files.file_path NOT LIKE {outputThemesPrefix} ESCAPE '\\'",
+				sq.StringParam("outputPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output"))+"/%"),
+				sq.StringParam("outputPosts", path.Join(sitePrefix, "output/posts")),
+				sq.StringParam("outputThemes", path.Join(sitePrefix, "output/themes")),
+				sq.StringParam("outputPostsPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/posts"))+"/%"),
+				sq.StringParam("outputThemesPrefix", wildcardReplacer.Replace(path.Join(sitePrefix, "output/themes"))+"/%"),
+			)
+		} else {
+			condition = sq.Expr("files.file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(path.Join(sitePrefix, outputDir))+"/%")
+		}
+		cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
+			Dialect: databaseFS.Dialect,
+			Format: "SELECT {*}" +
+				" FROM files" +
+				" LEFT JOIN pinned_file ON pinned_file.parent_id = files.parent_id AND pinned_file.file_id = files.file_id" +
+				" WHERE {condition}" +
+				" ORDER BY file_path",
+			Values: []any{
+				sq.Param("condition", condition),
+			},
+		}, func(row *sq.Row) (file File) {
+			buf = row.Bytes(buf[:0], "COALESCE(files.text, files.data)")
+			file.FileID = row.UUID("files.file_id")
+			file.FilePath = strings.TrimPrefix(strings.TrimPrefix(row.String("files.file_path"), sitePrefix), "/")
+			file.IsDir = row.Bool("files.is_dir")
+			file.Size = row.Int64("files.size")
+			file.Bytes = buf
+			file.ModTime = row.Time("files.mod_time")
+			file.CreationTime = row.Time("files.creation_time")
+			file.IsPinned = row.Bool("pinned_file.file_id IS NOT NULL")
+			return file
+		})
+		if err != nil {
+			return err
+		}
+		defer cursor.Close()
+		for cursor.Next() {
+			file, err := cursor.Result()
+			if err != nil {
+				return err
+			}
+			tarHeader := &tar.Header{
+				Name:    file.FilePath,
+				ModTime: file.ModTime,
+				Size:    file.Size,
+				PAXRecords: map[string]string{
+					"NOTEBREW.file.modTime":      file.ModTime.UTC().Format("2006-01-02T15:04:05Z"),
+					"NOTEBREW.file.creationTime": file.CreationTime.UTC().Format("2006-01-02T15:04:05Z"),
+				},
+			}
+			if file.IsPinned {
+				tarHeader.PAXRecords["NOTEBREW.file.isPinned"] = "true"
+			}
+			if file.IsDir {
+				tarHeader.Typeflag = tar.TypeDir
+				tarHeader.Mode = 0755
+				err = tarWriter.WriteHeader(tarHeader)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
+			if !ok {
+				continue
+			}
+			if fileType.Has(AttributeImg) && len(file.Bytes) > 0 && utf8.Valid(file.Bytes) {
+				tarHeader.PAXRecords["NOTEBREW.file.caption"] = string(file.Bytes)
+			}
+			tarHeader.Typeflag = tar.TypeReg
+			tarHeader.Mode = 0644
+			err = tarWriter.WriteHeader(tarHeader)
+			if err != nil {
+				return err
+			}
+			if fileType.Has(AttributeObject) {
+				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
+				if err != nil {
+					return err
+				}
+				_, err = io.Copy(tarWriter, reader)
+				if err != nil {
+					reader.Close()
+					return err
+				}
+				err = reader.Close()
+				if err != nil {
+					return err
+				}
+			} else {
+				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
+					if gzipReader == nil {
+						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
+						if err != nil {
+							return err
+						}
+					} else {
+						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
+						if err != nil {
+							return err
+						}
+					}
+					_, err = io.Copy(tarWriter, gzipReader)
+					if err != nil {
+						return err
+					}
+				} else {
+					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
+		err = cursor.Close()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	root := path.Join(sitePrefix, outputDir)
+	err := fs.WalkDir(fsys, root, func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if filePath == root {
+			return nil
+		}
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		fileInfo, err := dirEntry.Info()
+		if err != nil {
+			return err
+		}
+		var absolutePath string
+		if dirFS, ok := fsys.(*DirFS); ok {
+			absolutePath = path.Join(dirFS.RootDir, filePath)
+		}
+		modTime := fileInfo.ModTime()
+		creationTime := CreationTime(absolutePath, fileInfo)
+		tarHeader := &tar.Header{
+			Name:    filePath,
+			ModTime: modTime,
+			Size:    fileInfo.Size(),
+			PAXRecords: map[string]string{
+				"NOTEBREW.file.modTime":      modTime.UTC().Format("2006-01-02T15:04:05Z"),
+				"NOTEBREW.file.creationTime": creationTime.UTC().Format("2006-01-02T15:04:05Z"),
+			},
+		}
+		if dirEntry.IsDir() {
+			if outputDir == "output" {
+				if filePath == path.Join(sitePrefix, "output/posts") || filePath == path.Join(sitePrefix, "output/themes") {
+					return fs.SkipDir
+				}
+			}
+			tarHeader.Typeflag = tar.TypeDir
+			tarHeader.Mode = 0755
+			err = tarWriter.WriteHeader(tarHeader)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		_, ok := AllowedFileTypes[path.Ext(filePath)]
+		if !ok {
+			return nil
+		}
+		tarHeader.Typeflag = tar.TypeReg
+		tarHeader.Mode = 0644
+		err = tarWriter.WriteHeader(tarHeader)
+		if err != nil {
+			return err
+		}
+		file, err := fsys.Open(filePath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(tarWriter, file)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }

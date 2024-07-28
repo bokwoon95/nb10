@@ -235,15 +235,15 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		}
 		response.Size = fileInfo.Size()
 		startTime := time.Now().UTC()
-		importJobID := NewID()
 		if nbrew.DB == nil {
-			err := nbrew.importTgz(r.Context(), importJobID, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
+			err := nbrew.importTgz(r.Context(), ID{}, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		} else {
+			importJobID := NewID()
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "INSERT INTO import_job (import_job_id, site_id, file_name, start_time, total_bytes)" +
