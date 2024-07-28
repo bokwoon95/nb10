@@ -136,6 +136,7 @@ if exporting anything under posts/x/y/z, export its counterpart under output/pos
 if exporting anything under pages/x/y/z, export its counterpart under output/x/y/z
 if exporting pages, export everything under output/ *except* for output/posts/ and output/themes/
 
+TODO: why is import.go not importing isPinned successfully? test it out using dummy tgz files.
 TODO: change the $.Markdown map from map[string]template.HTML to map[string]string, add a markdownToHTML template function instead.
     - {{ markdownToHTML (index $.Markdown "content.md") }}
     - TODO: this also means $image.Caption needs to change from template.HTML to the raw markdown string, and users can choose to either display it as plain text or pass it through markdownToHTML.
