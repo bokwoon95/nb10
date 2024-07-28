@@ -149,7 +149,7 @@
 <ul class='list-style-disc ph3 mv3'>
   {{- range $exportJob := $.ExportJobs }}
   <li>
-    <span class='b'>{{ $exportJob.FileName }}</span>
+    <span class='b'>{{ $exportJob.TgzFileName }}</span>
     <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $exportJob.ProcessedBytes }}/&asymp;{{ humanReadableFileSize $exportJob.TotalBytes }}</span>
     <a href='/{{ join "files" $.SitePrefix "cancelexport" }}/?exportJobID={{ $exportJob.ExportJobID }}' class='ml2 dark-red'>cancel</a>
   </li>

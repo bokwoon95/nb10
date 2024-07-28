@@ -29,7 +29,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	}
 	type ExportJob struct {
 		ExportJobID    ID        `json:"exportJobID"`
-		FileName       string    `json:"fileName"`
+		TgzFileName    string    `json:"tgzFileName"`
 		StartTime      time.Time `json:"startTime"`
 		TotalBytes     int64     `json:"totalBytes"`
 		ProcessedBytes int64     `json:"processedBytes"`
@@ -234,7 +234,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 			}, func(row *sq.Row) ExportJob {
 				return ExportJob{
 					ExportJobID:    row.UUID("export_job_id"),
-					FileName:       row.String("file_name"),
+					TgzFileName:    row.String("tgz_file_name"),
 					StartTime:      row.Time("start_time"),
 					TotalBytes:     row.Int64("total_bytes"),
 					ProcessedBytes: row.Int64("processed_bytes"),

@@ -246,8 +246,8 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 			importJobID := NewID()
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO import_job (import_job_id, site_id, file_name, start_time, total_bytes)" +
-					" VALUES ({importJobID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {startTime}, {size})",
+				Format: "INSERT INTO import_job (import_job_id, site_id, tgz_file_name, start_time, total_bytes)" +
+					" VALUES ({importJobID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {tgzFileName}, {startTime}, {size})",
 				Values: []any{
 					sq.UUIDParam("importJobID", importJobID),
 					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),

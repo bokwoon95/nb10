@@ -299,7 +299,7 @@
         }
       },
       {
-        "column": "file_name",
+        "column": "tgz_file_name",
         "type": {
           "default": "VARCHAR(500)"
         },
@@ -359,7 +359,7 @@
         }
       },
       {
-        "column": "file_name",
+        "column": "tgz_file_name",
         "type": {
           "default": "VARCHAR(500)"
         },

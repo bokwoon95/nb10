@@ -692,8 +692,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		if response.OutputName == "" {
 			response.OutputName = "files-" + strings.ReplaceAll(startTime.Format("2006-01-02-150405.999"), ".", "-")
 		}
-		fileName := response.OutputName + ".tgz"
-		_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "exports", fileName))
+		tgzFileName := response.OutputName + ".tgz"
+		_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "exports", tgzFileName))
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
 				getLogger(r.Context()).Error(err.Error())
@@ -1112,7 +1112,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		exportJobID := NewID()
 		if nbrew.DB == nil {
 			// TODO: nbrew.exportParent | nbrew.exportNames
-			err := nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, outputDirsToExport, fileName, storageRemaining)
+			err := nbrew.doExport(r.Context(), exportJobID, sitePrefix, parent, names, outputDirsToExport, tgzFileName, storageRemaining)
 			if err != nil {
 				getLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -1121,12 +1121,12 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		} else {
 			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO export_job (export_job_id, site_id, file_name, start_time, total_bytes)" +
-					" VALUES ({exportJobID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {startTime}, {totalBytes})",
+				Format: "INSERT INTO export_job (export_job_id, site_id, tgz_file_name, start_time, total_bytes)" +
+					" VALUES ({exportJobID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {tgzFileName}, {startTime}, {totalBytes})",
 				Values: []any{
 					sq.UUIDParam("exportJobID", exportJobID),
 					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-					sq.StringParam("fileName", fileName),
+					sq.StringParam("tgzFileName", tgzFileName),
 					sq.TimeParam("startTime", startTime),
 					sq.Int64Param("totalBytes", response.TotalBytes),
 				},
@@ -1154,14 +1154,14 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, outputDirsToExport, fileName, storageRemaining)
+				err := nbrew.doExport(nbrew.ctx, exportJobID, sitePrefix, parent, names, outputDirsToExport, tgzFileName, storageRemaining)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("exportJobID", exportJobID.String()),
 						slog.String("sitePrefix", sitePrefix),
 						slog.String("parent", parent),
 						slog.String("names", strings.Join(names, "|")),
-						slog.String("fileName", fileName),
+						slog.String("fileName", tgzFileName),
 					)
 				}
 			}()

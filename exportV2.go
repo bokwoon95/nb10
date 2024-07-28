@@ -392,8 +392,8 @@ func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user Use
 			}
 			err := nbrew.SetFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
-					"from":     "export",
-					"fileName": response.OutputName + ".tgz",
+					"from":        "export",
+					"tgzFileName": response.OutputName + ".tgz",
 				},
 			})
 			if err != nil {
@@ -682,12 +682,12 @@ func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user Use
 			exportJobID := NewID()
 			_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
-				Format: "INSERT INTO export_job (export_job_id, site_id, file_name, start_time, total_bytes)" +
-					" VALUES ({exportJobID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {fileName}, {startTime}, {totalBytes})",
+				Format: "INSERT INTO export_job (export_job_id, site_id, tgz_file_name, start_time, total_bytes)" +
+					" VALUES ({exportJobID}, (SELECT site_id FROM site WHERE site_name = {siteName}), {tgzFileName}, {startTime}, {totalBytes})",
 				Values: []any{
 					sq.UUIDParam("exportJobID", exportJobID),
 					sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-					sq.StringParam("fileName", tgzFileName),
+					sq.StringParam("tgzFileName", tgzFileName),
 					sq.TimeParam("startTime", startTime),
 					sq.Int64Param("totalBytes", response.TotalBytes),
 				},
@@ -721,7 +721,7 @@ func (nbrew *Notebrew) exportV2(w http.ResponseWriter, r *http.Request, user Use
 						slog.String("exportJobID", exportJobID.String()),
 						slog.String("sitePrefix", sitePrefix),
 						slog.String("filePaths", strings.Join(filePaths, "|")),
-						slog.String("fileName", tgzFileName),
+						slog.String("tgzFileName", tgzFileName),
 					)
 				}
 			}()
