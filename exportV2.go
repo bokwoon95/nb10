@@ -1007,7 +1007,6 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				return err
 			}
 		}
-		return nil
 	} else {
 		for _, filePath := range filePaths {
 			if filePath == "." {
