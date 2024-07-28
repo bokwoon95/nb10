@@ -143,7 +143,9 @@ TODO: change the create session button to two links: create session token &bull;
 TODO: hunt down all uses of context in exportV2 and investigate why context keeps getting canceled on object_storage.go:97 (*S3ObjectStorage).Put.func1.
 TODO: make all image previews in the CMS use object-fit: cover instead of stretching  to fit the square diemnsions.
 TODO: figure out how to make a pluggable header image in a theme
-    idea: /themes/background.jpg, /themes/hero.jpg, /themes/banner.jpg, /themes/profile.jpg. User can substitute their own images, or they can edit the CSS source files.
+    - /themes/background.jpg: full-size image that occupies the whole screen
+    - /themes/banner.jpg:     long jpg that occupies a strip on the top of the screen
+    - /themes/profile.jpg:    profile photo
 TODO: signup.go
     TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
 TODO: export.go needs to take into account page and post assets when exporting (oh god this is complicated).
