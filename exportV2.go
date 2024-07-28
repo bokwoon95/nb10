@@ -2129,6 +2129,14 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				}
 			} else if fileInfo.IsDir() {
 				// TODO: we need to stat the outputDir and write it into the tarHeader as well
+				// - filePath
+				// - modTime
+				// - creationTime <= we need this
+				// - size (always 0)
+				// - isPinned <= we need this
+				// - typeFlag (always TypeDir)
+				// - mode (always 0755)
+				// the most efficient way is not a general Stat but rather a specialized SQL query if fsys.(*DatabaseFS)
 				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 				if err != nil {
 					return err
