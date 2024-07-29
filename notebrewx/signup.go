@@ -185,6 +185,8 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		}
 		if response.Email == "" {
 			response.FormErrors.Add("email", "required")
+		} else {
+			// TODO: check if email is a valid email format.
 		}
 		if len(response.FormErrors) > 0 {
 			response.Error = "FormErrorsPresent"
