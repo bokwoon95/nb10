@@ -39,13 +39,13 @@
 <div class='text-sm gray-600'>{{ formatTime $.CreationTime "2006-01-02" $.Site.TimezoneOffsetSeconds }}</div>
 <div><a href='/{{ join "posts" $.Category }}/'>&larr; index</a></div>
 <main>
-  {{ $.Content }}
+  {{ markdownToHTML $.Content }}
   {{ range $image := $.Images }}
   <div class='w-80-l w-90-m w-100 mx-auto'>
     <img id='{{ $image.Name }}' src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto object-cover' loading='lazy'>
     <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
   </div>
-  <div class='my-4'>{{ $image.Caption }}</div>
+  <div class='my-4'>{{ markdownToHTML $image.Caption }}</div>
   {{ end }}
 </main>
 <hr>

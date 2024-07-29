@@ -66,7 +66,7 @@ type Site struct {
 	Title                 string
 	Favicon               template.URL
 	TimezoneOffsetSeconds int
-	Description           template.HTML
+	Description           string
 	NavigationLinks       []NavigationLink
 }
 
@@ -185,12 +185,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		NavigationLinks:       config.NavigationLinks,
 	}
 	if config.Description != "" {
-		var b strings.Builder
-		err := siteGen.markdown.Convert([]byte(config.Description), &b)
-		if err != nil {
-			return nil, err
-		}
-		siteGen.Site.Description = template.HTML(b.String())
+		siteGen.Site.Description = config.Description
 	}
 	if siteGen.cdnDomain == "" {
 		return siteGen, nil
@@ -459,7 +454,7 @@ type PageData struct {
 	Parent           string
 	Name             string
 	ChildPages       []Page
-	Markdown         map[string]template.HTML
+	Markdown         map[string]string
 	Images           []Image
 	ModificationTime time.Time
 	CreationTime     time.Time
@@ -475,7 +470,7 @@ type Image struct {
 	Parent  string
 	Name    string
 	AltText string
-	Caption template.HTML
+	Caption string
 }
 
 func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text string, modTime, creationTime time.Time) error {
@@ -491,7 +486,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		Parent:           path.Dir(urlPath),
 		Name:             path.Base(urlPath),
 		ChildPages:       []Page{},
-		Markdown:         make(map[string]template.HTML),
+		Markdown:         make(map[string]string),
 		Images:           []Image{},
 		ModificationTime: modTime.UTC(),
 		CreationTime:     creationTime.UTC(),
@@ -591,13 +586,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 							altText = bytes.TrimSpace(bytes.TrimPrefix(altText, []byte("!alt ")))
 							result.Text = bytes.TrimSpace(result.Text)
 						}
-						var b strings.Builder
-						err = siteGen.markdown.Convert(result.Text, &b)
-						if err != nil {
-							return err
-						}
 						pageData.Images[i].AltText = string(altText)
-						pageData.Images[i].Caption = template.HTML(b.String())
+						pageData.Images[i].Caption = string(result.Text)
 						return nil
 					})
 				} else {
@@ -613,13 +603,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						if err != nil {
 							return err
 						}
-						var b strings.Builder
-						err = siteGen.markdown.Convert(result.Text, &b)
-						if err != nil {
-							return err
-						}
 						markdownMu.Lock()
-						pageData.Markdown[name] = template.HTML(b.String())
+						pageData.Markdown[name] = string(result.Text)
 						markdownMu.Unlock()
 						return nil
 					})
@@ -671,13 +656,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						if err != nil {
 							return err
 						}
-						var b strings.Builder
-						err = siteGen.markdown.Convert(buf.Bytes(), &b)
-						if err != nil {
-							return err
-						}
 						markdownMu.Lock()
-						pageData.Markdown[name] = template.HTML(b.String())
+						pageData.Markdown[name] = buf.String()
 						markdownMu.Unlock()
 						return nil
 					})
@@ -900,7 +880,7 @@ type PostData struct {
 	Category         string
 	Name             string
 	Title            string
-	Content          template.HTML
+	Content          string
 	Images           []Image
 	CreationTime     time.Time
 	ModificationTime time.Time
@@ -951,6 +931,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		postData.Title = postData.Name
 	}
 	// Content
+	postData.Content = text
+	imgIsMentioned := make(map[string]struct{})
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		buf.Reset()
@@ -960,8 +942,6 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	if err != nil {
 		return err
 	}
-	postData.Content = template.HTML(buf.String())
-	imgIsMentioned := make(map[string]struct{})
 	tokenizer := html.NewTokenizer(bytes.NewReader(buf.Bytes()))
 	for {
 		tokenType := tokenizer.Next()
@@ -1073,13 +1053,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 					altText = bytes.TrimSpace(bytes.TrimPrefix(altText, []byte("!alt ")))
 					result.Text = bytes.TrimSpace(result.Text)
 				}
-				var b strings.Builder
-				err = siteGen.markdown.Convert(result.Text, &b)
-				if err != nil {
-					return err
-				}
 				postData.Images[i].AltText = string(altText)
-				postData.Images[i].Caption = template.HTML(b.String())
+				postData.Images[i].Caption = string(result.Text)
 				return nil
 			})
 		}
@@ -1297,7 +1272,7 @@ type Post struct {
 	Title            string
 	Preview          string
 	HasMore          bool
-	Content          template.HTML
+	Content          string
 	Images           []Image
 	CreationTime     time.Time
 	ModificationTime time.Time
@@ -1669,12 +1644,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			if posts[i].Title == "" {
 				posts[i].Title = posts[i].Name
 			}
-			var b strings.Builder
-			err = siteGen.markdown.Convert(posts[i].text, &b)
-			if err != nil {
-				return err
-			}
-			posts[i].Content = template.HTML(b.String())
+			posts[i].Content = string(posts[i].text)
 			return nil
 		})
 		groupA.Go(func() (err error) {
@@ -1758,13 +1728,8 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 							altText = bytes.TrimSpace(bytes.TrimPrefix(altText, []byte("!alt ")))
 							result.Text = bytes.TrimSpace(result.Text)
 						}
-						var b strings.Builder
-						err = siteGen.markdown.Convert(result.Text, &b)
-						if err != nil {
-							return err
-						}
 						posts[i].Images[j].AltText = string(altText)
-						posts[i].Images[j].Caption = template.HTML(b.String())
+						posts[i].Images[j].Caption = string(result.Text)
 						return nil
 					})
 				}
@@ -1964,6 +1929,11 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				if postID == "" {
 					postID = scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/"
 				}
+				var b strings.Builder
+				err := siteGen.markdown.Convert([]byte(post.Content), &b)
+				if err != nil {
+					return err
+				}
 				feed.Entry[i] = AtomEntry{
 					ID:        postID,
 					Title:     post.Title,
@@ -1979,7 +1949,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					},
 					Content: AtomCDATA{
 						Type:    "html",
-						Content: strings.ReplaceAll(string(post.Content), "]]>", "]]]]><![CDATA[>"), // https://stackoverflow.com/a/36331725
+						Content: strings.ReplaceAll(b.String(), "]]>", "]]]]><![CDATA[>"), // https://stackoverflow.com/a/36331725
 					},
 				}
 			}
@@ -2284,7 +2254,8 @@ var baseFuncMap = map[string]any{
 		}
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
-	"tableOfContentsHeadings": func(x any) ([]Heading, error) {
+	"htmlHeadings": func(x any) ([]Heading, error) {
+		// TODO: reconsider this.
 		switch x := x.(type) {
 		case string:
 			return tableOfContentsHeadings(strings.NewReader(x))
