@@ -108,15 +108,9 @@
 </form>
 <h2 class='mb0 mh2 underline'>Sessions</h2>
 <div class='flex items-center'>
-  <details class='relative ml2' data-autoclose-details>
-    <summary role='button' title='Create' class='pointer flex items-center button ba br2 b--black ph2 h2 hide-marker' data-disable-click-selection>
-      {{ template "octicons-plus" }}
-      {{ template "octicons-triangle-down" }}
-    </summary>
-    <div class='absolute bg-white br2' style='top: calc(2rem + 4px); left: 0px; z-index: 1000; border: 1px solid black;'>
-      <div class='ma2 tr'><a href='/users/createsession/' class='nowrap'>create session token</a></div>
-    </div>
-  </details>
+  <a href='/users/createsession/' class='ma2'>create session token</a>
+  &bull;
+  <a href='#TODO' class='ma2'>API documentation</a>
 </div>
 <form class='overflow-x-auto'>
   <table class='mv2 collapse'>
