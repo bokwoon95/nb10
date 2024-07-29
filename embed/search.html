@@ -75,9 +75,9 @@
       <span class='mr1'>{{ incr $i }}.</span>
       {{- if isImg $match }}
         {{- if and $.CDNDomain $.IsDatabaseFS }}
-        <img src='//{{ $.CDNDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 ml1' loading='lazy'>
+        <img src='//{{ $.CDNDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 ml1 object-cover' loading='lazy'>
         {{- else }}
-        <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 ml1' loading='lazy'>
+        <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 ml1 object-cover' loading='lazy'>
         {{- end }}
       {{- end }}
       <a href='/{{ join "files" $.SitePrefix $match.FilePath }}' class='b'>{{ $match.FilePath }}</a>

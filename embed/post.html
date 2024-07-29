@@ -42,7 +42,7 @@
   {{ $.Content }}
   {{ range $image := $.Images }}
   <div class='w-80-l w-90-m w-100 mx-auto'>
-    <img id='{{ $image.Name }}' src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto' loading='lazy'>
+    <img id='{{ $image.Name }}' src='{{ $image.Name }}' alt='{{ $image.AltText }}' class='block w-100 h-auto object-cover' loading='lazy'>
     <div class='flex flex-wrap break-word justify-center text-sm'><a href='{{ $image.Name }}'>{{ $image.Name }}</a></div>
   </div>
   <div class='my-4'>{{ $image.Caption }}</div>

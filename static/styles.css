@@ -230,3 +230,4 @@ details > summary.hide-marker::marker, /* Latest Chrome, Edge, Firefox */ detail
 .arrow-before:before { content: '\00bb\00a0'; font-weight: bold; }
 .overflow-x-auto { overflow-x: auto; }
 .underline { text-decoration: underline; }
+.object-cover { object-fit: cover; }

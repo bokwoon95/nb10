@@ -39,9 +39,9 @@
       <input type='hidden' name='name' value='{{ $file.Name }}'>
       {{- if isImg $file }}
         {{- if and $.CDNDomain $.IsDatabaseFS }}
-        <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
+        <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1 object-cover' loading='lazy'>
         {{- else }}
-        <img src='/{{ join "files" $.SitePrefix $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>
+        <img src='/{{ join "files" $.SitePrefix $file.Name }}?raw' class='h3 w3 mr1 object-cover' loading='lazy'>
         {{- end }}
       {{- end }}
       <a href='/{{ join "files" $.SitePrefix $file.Name }}{{ if $file.IsDir }}/{{ end }}'>{{ base $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
