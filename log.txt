@@ -84,6 +84,7 @@ CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
 TODO: consider repurposing to Images/Markdown to PageData.Assets and PostData.Assets, and unify them into an Asset data type.
+    TODO: oh nooo wait but then you can't do {{ index $.Images 0 }} anymore to get the first image :/
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/
