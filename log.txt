@@ -60,55 +60,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-/users/signup/
-/users/signup/?sessionID= (if the signup page also includes an embedded payment form)
-/users/profile/
-/users/billing/ => user can view their current plan as well as other plans (no payment form yet)
-/users/updatebilling/ => user can change their plan, which kicks in the next year (payment form present)
-
-/signup/
-/users/profile/
-/users/billing/
-
-FLOW 1: signup is free, log in via email response, free users get 1 free site and 10 MB of storage.
-FLOW 2: signup is free, log in via email response, free users get 0 sites and 0 GB of storage.
-
-signup simply sends an invite email. in spam lockdown mode, the user needs to complete a payment form instead (after returning, we can retrieve the email from the stripe session).
-
-no comments (use disqus)
-subscription-only
-payment upfront, no trial so no spam. use it in offline or self-host if you want it to be cheaper (probably not)
-easiest way to get started is to just mail them an invite link
-*and yet,* I cannot shake myself of the feeling that the first 10 MB being free and payment for $18/year for 1 GB is the most user-friendly scheme of it all.
-    so what if some people create spam sites? you can probably
-
-== Initial ==
-Sign up, 10 MB at first. Upgrade/change plan in the dashboard.
-0 USD/year: 10 MB, 1 site
-12 USD/year (or 1 USD/month): 1 GB, 3 sites
-48 USD/year (or 4 USD/month): 6GB, 10 sites
-
-----
-0.48 USD => 1 GB storage
-0.1 USD => 20 GB CDN bandwidth
-----
-Total cost: 0.58 USD (0.42 USD profit)
-
-----
-2.88 USD => 6 GB storage
-0.6 USD => 120 GB bandwidth
-----
-Total cost: 3.48 USD (0.52 USD profit)
-
-0.52 * 1666 = 866 USD profit / mo
-
-== Spam lockdown mode ==
-Immediately need to pick a plan. The sign up flow has to be rewritten from immediately letting the users in to immediately directing them to a payment page, only after payment will they be let in. If their username is already taken, keep it as null. If the site is already taken, don't create the site and let them create it manually. In all cases the user joins via an invite link sent to their email.
-12 USD/year (or 1 USD/month): 1 GB, 3 sites
-48 USD/year (or 4 USD/month): 6GB, 10 sites
-
 moderator.notebrew.com/ => package moderator
-
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites
     - doesn't even have to be bad sites. it can fetch all unchecked sites in general. once a site is checked to be safe, it goes into the moderation database so that it doesn't have to be checked again.
@@ -120,6 +72,10 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
+only two types of emails: invite_email and password_reset_email
+every time an invite email is sent out, INSERT INTO invite_email (email, send_time)
+every time an password reset email is sent out, INSERT INTO password_reset_email (email, send_time)
+
 noreply@mailer.notebrew.com
 
 CREATE TABLE mail_queue ();
@@ -127,17 +83,9 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
-if pages/ => output/ EXCLUDE output/posts/, output/themes/
-if pages/xxx => output/xxx
-if posts/ => output/posts/
-if posts/xxx => output/posts/xxx
-
-if exporting anything under posts/x/y/z, export its counterpart under output/posts/x/y/z
-if exporting anything under pages/x/y/z, export its counterpart under output/x/y/z
-if exporting pages, export everything under output/ *except* for output/posts/ and output/themes/
-
 TODO: signup.go
-    TODO: in spam lockdown mode, if we're going to ask the user to pay upfront we're going to have to ask them to enter their credit card details *alongside* their username/email/site name, *and* we need dynamic verification via javascript so that they don't try to submit their credit card details with a faulty username/email address/site name.
+    TODO: /signup/
+    TODO: /users/billing/
 TODO: add a hash to the response headers so that clients can do a GET to synchronize their local copy with remote
 TODO: tests
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/

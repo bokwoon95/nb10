@@ -86,6 +86,121 @@
       <option value='{{ $codeStyle }}'{{ if eq $.CodeStyle $codeStyle }} selected{{ end }}>{{ $codeStyle }}</option>
       {{- end }}
     </select>
+    <details>
+      <summary class='pointer'>supported languages</summary>
+      <div class='overflow-x-auto'>
+        <table class='mv2 collapse'>
+          <thead>
+            <tr class='bb h2'>
+              <th class='pa2'>Prefix</th>
+              <th class='pa2'>Language</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class='bb'>
+              <td class='pa2'>A</td>
+              <td class='pa2'>ABAP, ABNF, ActionScript, ActionScript 3, Ada, Agda, AL, Alloy, Angular2, ANTLR, ApacheConf, APL, AppleScript, ArangoDB AQL, Arduino, ArmAsm, AutoHotkey, AutoIt, Awk</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>B</td>
+              <td class='pa2'>Ballerina, Bash, Bash Session, Batchfile, BibTeX, Bicep, BlitzBasic, BNF, BQN, Brainfuck</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>C</td>
+              <td class='pa2'>C, C#, C++, Caddyfile, Caddyfile Directives, Cap'n Proto, Cassandra CQL, Ceylon, CFEngine3, cfstatement, ChaiScript, Chapel, Cheetah, Clojure, CMake, COBOL, CoffeeScript, Common Lisp, Coq, Crystal, CSS, Cython</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>D</td>
+              <td class='pa2'>D, Dart, Dax, Desktop Entry, Diff, Django/Jinja, dns, Docker, DTD, Dylan</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>E</td>
+              <td class='pa2'>EBNF, Elixir, Elm, EmacsLisp, Erlang</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>F</td>
+              <td class='pa2'>Factor, Fennel, Fish, Forth, Fortran, FortranFixed, FSharp</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>G</td>
+              <td class='pa2'>GAS, GDScript, Genshi, Genshi HTML, Genshi Text, Gherkin, GLSL, Gnuplot, Go, Go HTML Template, Go Text Template, GraphQL, Groff, Groovy</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>H</td>
+              <td class='pa2'>Handlebars, Hare, Haskell, Haxe, HCL, Hexdump, HLB, HLSL, HolyC, HTML, HTTP, Hy</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>I</td>
+              <td class='pa2'>Idris, Igor, INI, Io, ISCdhcpd</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>J</td>
+              <td class='pa2'>J, Java, JavaScript, JSON, Julia, Jungle</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>K</td>
+              <td class='pa2'>Kotlin</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>L</td>
+              <td class='pa2'>Lighttpd configuration file, LLVM, Lua</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>M</td>
+              <td class='pa2'>Makefile, Mako, markdown, Mason, Materialize SQL dialect, Mathematica, Matlab, mcfunction, Meson, Metal, MiniZinc, MLIR, Modula-2, MonkeyC, MorrowindScript, Myghty, MySQL</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>N</td>
+              <td class='pa2'>NASM, Natural, Newspeak, Nginx configuration file, Nim, Nix</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>O</td>
+              <td class='pa2'>Objective-C, OCaml, Octave, Odin, OnesEnterprise, OpenEdge ABL, OpenSCAD, Org Mode</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>P</td>
+              <td class='pa2'>PacmanConf, Perl, PHP, PHTML, Pig, PkgConfig, PL/pgSQL, plaintext, Plutus Core, Pony, PostgreSQL SQL dialect, PostScript, POVRay, PowerQuery, PowerShell, Prolog, PromQL, Promela, properties, Protocol Buffer, PRQL, PSL, Puppet, Python, Python 2</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>Q</td>
+              <td class='pa2'>QBasic, QML</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>R</td>
+              <td class='pa2'>R, Racket, Ragel, Raku, react, ReasonML, reg, Rego, reStructuredText, Rexx, RPMSpec, Ruby, Rust</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>S</td>
+              <td class='pa2'>SAS, Sass, Scala, Scheme, Scilab, SCSS, Sed, Sieve, Smali, Smalltalk, Smarty, Snobol, Solidity, SourcePawn, SPARQL, SQL, SquidConf, Standard ML, stas, Stylus, Svelte, Swift, SYSTEMD, systemverilog</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>T</td>
+              <td class='pa2'>TableGen, Tal, TASM, Tcl, Tcsh, Termcap, Terminfo, Terraform, TeX, Thrift, TOML, TradingView, Transact-SQL, Turing, Turtle, Twig, TypeScript, TypoScript, TypoScriptCssData, TypoScriptHtmlData</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>V</td>
+              <td class='pa2'>V, V shell, Vala, VB.net, verilog, VHDL, VHS, VimL, vue</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>W</td>
+              <td class='pa2'>WDTE, WebGPU Shading Language, Whiley</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>X</td>
+              <td class='pa2'>XML, Xorg</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>Y</td>
+              <td class='pa2'>YAML, YANG</td>
+            </tr>
+            <tr class='bb'>
+              <td class='pa2'>Z</td>
+              <td class='pa2'>Z80 Assembly, Zed, Zig</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
   </div>
   <div class='mv3'>
     <div><label for='timezoneOffset' class='b'>Preferred Timezone Offset:</label></div>
