@@ -3,6 +3,7 @@ module github.com/bokwoon95/nb10
 go 1.22.0
 
 require (
+	git.sr.ht/~mekyt/latex2mathml v0.0.0-20231214134936-808832af73fc
 	github.com/alecthomas/chroma/v2 v2.14.0
 	github.com/aws/aws-sdk-go-v2 v1.25.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.4
@@ -23,6 +24,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/mileusna/useragent v1.3.4
 	github.com/oschwald/maxminddb-golang v1.13.1
+	github.com/stefanfritsch/goldmark-fences v1.0.0
 	github.com/stripe/stripe-go/v79 v79.2.0
 	github.com/yuin/goldmark v1.7.4
 	golang.org/x/crypto v0.18.0
@@ -35,7 +37,6 @@ require (
 )
 
 require (
-	git.sr.ht/~mekyt/latex2mathml v0.0.0-20231214134936-808832af73fc // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.2 // indirect

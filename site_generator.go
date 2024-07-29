@@ -31,6 +31,7 @@ import (
 	"github.com/bokwoon95/nb10/internal/markdownmath"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/davecgh/go-spew/spew"
+	fences "github.com/stefanfritsch/goldmark-fences"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -48,6 +49,7 @@ type SiteGenerator struct {
 	cdnDomain          string
 	port               int
 	markdown           goldmark.Markdown
+	funcMap            map[string]any
 	mutex              sync.RWMutex
 	templateCache      map[string]*template.Template
 	templateInProgress map[string]chan struct{}
@@ -83,6 +85,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		contentDomain:      siteGenConfig.ContentDomain,
 		contentDomainHTTPS: siteGenConfig.ContentDomainHTTPS,
 		cdnDomain:          siteGenConfig.CDNDomain,
+		funcMap:            map[string]any{},
 		mutex:              sync.RWMutex{},
 		templateCache:      make(map[string]*template.Template),
 		templateInProgress: make(map[string]chan struct{}),
@@ -143,12 +146,22 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			extension.Footnote,
 			extension.CJK,
 			markdownmath.Extension,
+			&fences.Extender{},
 		),
 		goldmark.WithRendererOptions(
 			goldmarkhtml.WithHardWraps(),
 			goldmarkhtml.WithUnsafe(),
 		),
 	)
+	for name, fn := range baseFuncMap {
+		siteGen.funcMap[name] = fn
+	}
+	siteGen.funcMap["markdownToHTML"] = func(x any) (template.HTML, error) {
+		if x, ok := x.(string); ok {
+			return markdownToHTML(siteGen.markdown, x)
+		}
+		return "", fmt.Errorf("%#v is not a string", x)
+	}
 	var timezoneOffsetSeconds int
 	if strings.HasPrefix(config.TimezoneOffset, "+") || strings.HasPrefix(config.TimezoneOffset, "-") {
 		before, after, ok := strings.Cut(config.TimezoneOffset, ":")
@@ -243,7 +256,7 @@ func (siteGen *SiteGenerator) ParseTemplate(ctx context.Context, name, text stri
 }
 
 func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text string, callers []string) (*template.Template, error) {
-	currentTemplate, err := template.New(name).Funcs(userFuncMap).Parse(text)
+	currentTemplate, err := template.New(name).Funcs(siteGen.funcMap).Parse(text)
 	if err != nil {
 		return nil, NewTemplateError(err)
 	}
@@ -417,7 +430,7 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 		return nil, err
 	}
 
-	finalTemplate := template.New(name).Funcs(userFuncMap)
+	finalTemplate := template.New(name).Funcs(siteGen.funcMap)
 	for i, externalTemplate := range externalTemplates {
 		for _, tmpl := range externalTemplate.Templates() {
 			_, err = finalTemplate.AddParseTree(tmpl.Name(), tmpl.Tree)
@@ -2212,7 +2225,7 @@ hasSuffix str suffix
   {{ hasSuffix "singapore" "" }}     => true
 `
 
-var userFuncMap = map[string]any{
+var baseFuncMap = map[string]any{
 	"dump": func(x any) template.HTML {
 		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(x)) + "</pre>")
 	},
@@ -2626,6 +2639,15 @@ func toString(v any) string {
 	default:
 		return fmt.Sprint(v)
 	}
+}
+
+func markdownToHTML(markdown goldmark.Markdown, s string) (template.HTML, error) {
+	var b strings.Builder
+	err := markdown.Convert([]byte(s), &b)
+	if err != nil {
+		return "", err
+	}
+	return template.HTML(b.String()), nil
 }
 
 type Heading struct {
