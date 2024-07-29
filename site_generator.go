@@ -460,6 +460,13 @@ type PageData struct {
 	CreationTime     time.Time
 }
 
+type Asset struct {
+	Parent  string
+	Name    string
+	AltText string
+	Content string
+}
+
 type Page struct {
 	Parent string
 	Name   string
