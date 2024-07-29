@@ -296,7 +296,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 			}
 			request.Username = r.Form.Get("username")
 			request.Password = r.Form.Get("password")
-			request.CaptchaResponse = r.Form.Get("h-captcha-response")
+			request.CaptchaResponse = r.Form.Get(nbrew.CaptchaConfig.ResponseTokenName)
 			redirect = r.Form.Get("redirect")
 		default:
 			nbrew.UnsupportedContentType(w, r)

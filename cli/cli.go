@@ -1021,6 +1021,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		nbrew.CaptchaConfig.WidgetScriptSrc = template.URL(captchaConfig.WidgetScriptSrc)
 		nbrew.CaptchaConfig.WidgetClass = captchaConfig.WidgetClass
 		nbrew.CaptchaConfig.VerificationURL = captchaConfig.VerificationURL
+		nbrew.CaptchaConfig.ResponseTokenName = captchaConfig.ResponseTokenName
 		nbrew.CaptchaConfig.SiteKey = captchaConfig.SiteKey
 		nbrew.CaptchaConfig.SecretKey = captchaConfig.SecretKey
 		nbrew.CaptchaConfig.CSP = captchaConfig.CSP

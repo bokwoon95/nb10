@@ -174,12 +174,13 @@ type Notebrew struct {
 	ErrorCode func(error) string
 
 	CaptchaConfig struct {
-		WidgetScriptSrc template.URL
-		WidgetClass     string
-		VerificationURL string
-		SiteKey         string
-		SecretKey       string
-		CSP             map[string]string
+		WidgetScriptSrc   template.URL
+		WidgetClass       string
+		VerificationURL   string
+		ResponseTokenName string
+		SiteKey           string
+		SecretKey         string
+		CSP               map[string]string
 	}
 
 	ProxyConfig struct {

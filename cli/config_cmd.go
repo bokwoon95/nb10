@@ -313,6 +313,8 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, captchaConfig.WidgetClass+"\n")
 			case "verificationURL":
 				io.WriteString(cmd.Stdout, captchaConfig.VerificationURL+"\n")
+			case "responseTokenName":
+				io.WriteString(cmd.Stdout, captchaConfig.ResponseTokenName+"\n")
 			case "siteKey":
 				io.WriteString(cmd.Stdout, captchaConfig.SiteKey+"\n")
 			case "secretKey":
@@ -686,6 +688,8 @@ func (cmd *ConfigCmd) Run() error {
 			captchaConfig.WidgetClass = cmd.Value.String
 		case "verificationURL":
 			captchaConfig.VerificationURL = cmd.Value.String
+		case "responseTokenName":
+			captchaConfig.ResponseTokenName = cmd.Value.String
 		case "siteKey":
 			captchaConfig.SiteKey = cmd.Value.String
 		case "secretKey":
@@ -904,22 +908,24 @@ const objectsHelp = `# == objects keys == #
 `
 
 type CaptchaConfig struct {
-	WidgetScriptSrc string            `json:"widgetScriptSrc"`
-	WidgetClass     string            `json:"widgetClass"`
-	VerificationURL string            `json:"verificationURL"`
-	SiteKey         string            `json:"siteKey"`
-	SecretKey       string            `json:"secretKey"`
-	CSP             map[string]string `json:"csp"`
+	WidgetScriptSrc   string            `json:"widgetScriptSrc"`
+	WidgetClass       string            `json:"widgetClass"`
+	VerificationURL   string            `json:"verificationURL"`
+	ResponseTokenName string            `json:"responseTokenName"`
+	SiteKey           string            `json:"siteKey"`
+	SecretKey         string            `json:"secretKey"`
+	CSP               map[string]string `json:"csp"`
 }
 
 const captchaHelp = `# == captcha keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# widgetScriptSrc - Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js, https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback
-# widgetClass     - Captcha widget's container div class. e.g. h-captcha, cf-turnstile
-# verificationURL - Captcha verification URL to make POST requests to. e.g. https://api.hcaptcha.com/siteverify, https://challenges.cloudflare.com/turnstile/v0/siteverify
-# siteKey         - Captcha site key.
-# secretKey       - Captcha secret key.
-# csp             - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work. e.g. {"script-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","frame-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","style-src":"https://hcaptcha.com https://*.hcaptcha.com","connect-src":"https://hcaptcha.com https://*.hcaptcha.com"}
+# widgetScriptSrc   - Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js, https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback
+# widgetClass       - Captcha widget's container div class. e.g. h-captcha, cf-turnstile
+# verificationURL   - Captcha verification URL to make POST requests to. e.g. https://api.hcaptcha.com/siteverify, https://challenges.cloudflare.com/turnstile/v0/siteverify
+# responseTokenName - Captcha response token name e.g. h-captcha-response, cf-turnstile-response
+# siteKey           - Captcha site key.
+# secretKey         - Captcha secret key.
+# csp               - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work. e.g. {"script-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","frame-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","style-src":"https://hcaptcha.com https://*.hcaptcha.com","connect-src":"https://hcaptcha.com https://*.hcaptcha.com"}
 `
 
 type ProxyConfig struct {
