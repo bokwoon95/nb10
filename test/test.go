@@ -50,9 +50,9 @@ func (m *mathTransformer) Transform(doc *ast.Document, reader text.Reader, pc pa
 		}
 		if cb, ok := n.(*ast.FencedCodeBlock); ok && string(cb.Language(reader.Source())) == "math" {
 			fmt.Println("got here!")
-			mathNode := &mathNode{}
-			mathNode.AppendChild(mathNode, cb)
-			n.Parent().ReplaceChild(n.Parent(), n, mathNode)
+			// mathNode := &mathNode{}
+			// mathNode.AppendChild(mathNode, cb)
+			// n.Parent().ReplaceChild(n.Parent(), n, mathNode)
 		}
 		return ast.WalkContinue, nil
 	})
