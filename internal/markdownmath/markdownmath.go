@@ -51,6 +51,7 @@ type mathTransformer struct{}
 var _ parser.ASTTransformer = (*mathTransformer)(nil)
 
 func (t mathTransformer) Transform(document *ast.Document, reader text.Reader, _ parser.Context) {
+	var nodes []ast.Node
 	ast.Walk(document, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
@@ -62,14 +63,17 @@ func (t mathTransformer) Transform(document *ast.Document, reader text.Reader, _
 		if !bytes.Equal(fencedCodeBlock.Language(reader.Source()), []byte("math")) {
 			return ast.WalkContinue, nil
 		}
-		mathNode := &mathNode{}
-		mathNode.SetLines(fencedCodeBlock.Lines())
-		parent := fencedCodeBlock.Parent()
-		if parent != nil {
-			parent.ReplaceChild(parent, fencedCodeBlock, mathNode)
-		}
+		nodes = append(nodes, fencedCodeBlock)
 		return ast.WalkContinue, nil
 	})
+	for _, node := range nodes {
+		parent := node.Parent()
+		if parent != nil {
+			mathNode := &mathNode{}
+			mathNode.SetLines(node.Lines())
+			parent.ReplaceChild(parent, node, mathNode)
+		}
+	}
 }
 
 type mathRenderer struct{}
