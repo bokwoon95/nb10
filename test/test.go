@@ -65,6 +65,7 @@ func (r *mathRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 }
 
 func (r *mathRenderer) renderMath(w util.BufWriter, source []byte, n ast.Node, entering bool) (ast.WalkStatus, error) {
+	// TODO: what if I just overrode the renderer for fenced code blocks?
 	fmt.Println("got here!!")
 	if entering {
 		w.WriteString("bruh")
