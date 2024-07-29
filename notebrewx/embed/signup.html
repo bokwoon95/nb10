@@ -5,7 +5,10 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<script type="module" src="/admin/static/login.js"></script>
+<!-- <script type="module" src="/admin/static/login.js"></script> -->
+{{- if $.CaptchaSiteKey }}
+<script src='{{ $.CaptchaWidgetScriptSrc }}' async defer></script>
+{{- end }}
 <title>Signup</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -26,6 +29,10 @@
       {{- end }}
     </ul>
   </div>
+  {{- if $.CaptchaSiteKey }}
+  <div class='b'>I'm not a bot:</div>
+  <div class='{{ $.CaptchaWidgetClass }}' data-sitekey='{{ $.CaptchaSiteKey }}'></div>
+  {{- end }}
   <div role='status'></div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>sign up</button>
 </form>

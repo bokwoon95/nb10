@@ -16,9 +16,12 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		Email string
 	}
 	type Response struct {
-		Email      string     `json:"email"`
-		Error      string     `json:"error"`
-		FormErrors url.Values `json:"formErrors"`
+		CaptchaWidgetScriptSrc template.URL `json:"captchaWidgetScriptSrc"`
+		CaptchaWidgetClass     string       `json:"captchaWidgetClass"`
+		CaptchaSiteKey         string       `json:"captchaSiteKey"`
+		Email                  string       `json:"email"`
+		Error                  string       `json:"error"`
+		FormErrors             url.Values   `json:"formErrors"`
 	}
 
 	switch r.Method {
@@ -62,6 +65,9 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
 		}
+		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
+		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
+		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

@@ -154,6 +154,7 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, databaseHelp)
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(databaseConfig)
 				if err != nil {
 					return err
@@ -175,6 +176,7 @@ func (cmd *ConfigCmd) Run() error {
 			case "params":
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(databaseConfig.Params)
 				if err != nil {
 					return err
@@ -205,6 +207,7 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, filesHelp)
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(filesConfig)
 				if err != nil {
 					return err
@@ -226,6 +229,7 @@ func (cmd *ConfigCmd) Run() error {
 			case "params":
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(filesConfig.Params)
 				if err != nil {
 					return err
@@ -253,6 +257,7 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, objectsHelp)
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(objectsConfig)
 				if err != nil {
 					return err
@@ -297,10 +302,15 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, captchaHelp)
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(captchaConfig)
 				if err != nil {
 					return err
 				}
+			case "widgetScriptSrc":
+				io.WriteString(cmd.Stdout, captchaConfig.WidgetScriptSrc+"\n")
+			case "widgetClass":
+				io.WriteString(cmd.Stdout, captchaConfig.WidgetClass+"\n")
 			case "verificationURL":
 				io.WriteString(cmd.Stdout, captchaConfig.VerificationURL+"\n")
 			case "siteKey":
@@ -310,6 +320,7 @@ func (cmd *ConfigCmd) Run() error {
 			case "csp":
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(captchaConfig.CSP)
 				if err != nil {
 					return err
@@ -339,6 +350,7 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, proxyHelp)
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(proxyConfig)
 				if err != nil {
 					return err
@@ -346,6 +358,7 @@ func (cmd *ConfigCmd) Run() error {
 			case "realIPHeaders":
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(proxyConfig.RealIPHeaders)
 				if err != nil {
 					return err
@@ -353,6 +366,7 @@ func (cmd *ConfigCmd) Run() error {
 			case "proxies":
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(proxyConfig.ProxyIPs)
 				if err != nil {
 					return err
@@ -380,6 +394,7 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, dnsHelp)
 				encoder := json.NewEncoder(cmd.Stdout)
 				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(dnsConfig)
 				if err != nil {
 					return err
@@ -504,6 +519,7 @@ func (cmd *ConfigCmd) Run() error {
 		defer file.Close()
 		encoder := json.NewEncoder(file)
 		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
 		err = encoder.Encode(databaseConfig)
 		if err != nil {
 			return err
@@ -573,6 +589,7 @@ func (cmd *ConfigCmd) Run() error {
 		defer file.Close()
 		encoder := json.NewEncoder(file)
 		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
 		err = encoder.Encode(filesConfig)
 		if err != nil {
 			return err
@@ -630,6 +647,7 @@ func (cmd *ConfigCmd) Run() error {
 		defer file.Close()
 		encoder := json.NewEncoder(file)
 		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
 		err = encoder.Encode(objectsConfig)
 		if err != nil {
 			return err
@@ -662,6 +680,10 @@ func (cmd *ConfigCmd) Run() error {
 				return err
 			}
 			captchaConfig = newCaptchaConfig
+		case "widgetScriptSrc":
+			captchaConfig.WidgetScriptSrc = cmd.Value.String
+		case "widgetClass":
+			captchaConfig.WidgetClass = cmd.Value.String
 		case "verificationURL":
 			captchaConfig.VerificationURL = cmd.Value.String
 		case "siteKey":
@@ -680,6 +702,22 @@ func (cmd *ConfigCmd) Run() error {
 		default:
 			io.WriteString(cmd.Stderr, captchaHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "captcha.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
+		err = encoder.Encode(captchaConfig)
+		if err != nil {
+			return err
+		}
+		err = file.Close()
+		if err != nil {
+			return err
 		}
 	case "proxy":
 		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
@@ -724,6 +762,22 @@ func (cmd *ConfigCmd) Run() error {
 		default:
 			io.WriteString(cmd.Stderr, proxyHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "proxy.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		encoder := json.NewEncoder(file)
+		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
+		err = encoder.Encode(proxyConfig)
+		if err != nil {
+			return err
+		}
+		err = file.Close()
+		if err != nil {
+			return err
 		}
 	case "dns":
 		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
@@ -770,6 +824,7 @@ func (cmd *ConfigCmd) Run() error {
 		defer file.Close()
 		encoder := json.NewEncoder(file)
 		encoder.SetIndent("", "  ")
+		encoder.SetEscapeHTML(false)
 		err = encoder.Encode(dnsConfig)
 		if err != nil {
 			return err
@@ -859,12 +914,12 @@ type CaptchaConfig struct {
 
 const captchaHelp = `# == captcha keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# widgetScriptSrc - Captcha widget's script src.
-# widgetClass     - Captcha widget's container div class.
-# verificationURL - Captcha verification URL to make POST requests to.
+# widgetScriptSrc - Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js, https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback
+# widgetClass     - Captcha widget's container div class. e.g. h-captcha, cf-turnstile
+# verificationURL - Captcha verification URL to make POST requests to. e.g. https://api.hcaptcha.com/siteverify, https://challenges.cloudflare.com/turnstile/v0/siteverify
 # siteKey         - Captcha site key.
 # secretKey       - Captcha secret key.
-# csp             - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work.
+# csp             - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work. e.g. {"script-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","frame-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","style-src":"https://hcaptcha.com https://*.hcaptcha.com","connect-src":"https://hcaptcha.com https://*.hcaptcha.com"}
 `
 
 type ProxyConfig struct {
