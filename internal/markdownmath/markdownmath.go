@@ -1,6 +1,7 @@
 package markdownmath
 
 import (
+	"bytes"
 	"strings"
 
 	"git.sr.ht/~mekyt/latex2mathml"
@@ -56,6 +57,9 @@ func (t mathTransformer) Transform(document *ast.Document, reader text.Reader, _
 		}
 		fencedCodeBlock, ok := node.(*ast.FencedCodeBlock)
 		if !ok {
+			return ast.WalkContinue, nil
+		}
+		if !bytes.Equal(fencedCodeBlock.Language(reader.Source()), []byte("math")) {
 			return ast.WalkContinue, nil
 		}
 		mathNode := &mathNode{}
