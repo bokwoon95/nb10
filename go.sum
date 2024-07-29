@@ -1,3 +1,5 @@
+git.sr.ht/~mekyt/latex2mathml v0.0.0-20231214134936-808832af73fc h1:Yy9H2uH0njy/owOBGyTJ0f4zESzXh0uI/RNgiDO5sEg=
+git.sr.ht/~mekyt/latex2mathml v0.0.0-20231214134936-808832af73fc/go.mod h1:nqCw5t3X5/awtU/3GdvlDY7IZbDkiNLbcf/yvegFjyc=
 github.com/alecthomas/assert/v2 v2.7.0 h1:QtqSACNS3tF7oasA8CU6A6sXZSBDqnm7RfpLl9bZqbE=
 github.com/alecthomas/assert/v2 v2.7.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
 github.com/alecthomas/chroma/v2 v2.14.0 h1:R3+wzpnUArGcQz7fCETQBzO5n9IMNi13iIs46aU4V9E=
@@ -150,6 +152,8 @@ github.com/mileusna/useragent v1.3.4 h1:MiuRRuvGjEie1+yZHO88UBYg8YBC/ddF6T7F56i3
 github.com/mileusna/useragent v1.3.4/go.mod h1:3d8TOmwL/5I8pJjyVDteHtgDGcefrFUX4ccGOMKNYYc=
 github.com/ncruces/go-strftime v0.1.9 h1:bY0MQC28UADQmHmaF5dgpLmImcShSi2kHU9XLdhx/f4=
 github.com/ncruces/go-strftime v0.1.9/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
+github.com/neruyzo/etree v0.0.0-20230816193247-70b7b06b18ad h1:IFwkE74VpR/tnfi4UCZUYK7+pMU0xIbEorgugpFypG0=
+github.com/neruyzo/etree v0.0.0-20230816193247-70b7b06b18ad/go.mod h1:7hUaAgCNhmIwcrIolKvs2StY/ho5G7bAGSdvaowcxqw=
 github.com/oschwald/maxminddb-golang v1.13.1 h1:G3wwjdN9JmIK2o/ermkHM+98oX5fS+k5MbwsmL4MRQE=
 github.com/oschwald/maxminddb-golang v1.13.1/go.mod h1:K4pgV9N/GcK694KSTmVSDTODk4IsCNThNdTmnaBZ/F8=
 github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
