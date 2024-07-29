@@ -919,7 +919,7 @@ type CaptchaConfig struct {
 
 const captchaHelp = `# == captcha keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# widgetScriptSrc   - Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js, https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback
+# widgetScriptSrc   - Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js, https://challenges.cloudflare.com/turnstile/v0/api.js
 # widgetClass       - Captcha widget's container div class. e.g. h-captcha, cf-turnstile
 # verificationURL   - Captcha verification URL to make POST requests to. e.g. https://api.hcaptcha.com/siteverify, https://challenges.cloudflare.com/turnstile/v0/siteverify
 # responseTokenName - Captcha response token name e.g. h-captcha-response, cf-turnstile-response
