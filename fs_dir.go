@@ -59,8 +59,10 @@ func NewDirFS(config DirFSConfig) (*DirFS, error) {
 }
 
 func (fsys *DirFS) As(target any) bool {
-	if dirFS, ok := target.(*DirFS); ok {
-		*dirFS = *fsys
+	if target, ok := target.(**DirFS); ok {
+		if target == nil {
+		}
+		*target = fsys
 		return true
 	}
 	return false

@@ -252,7 +252,8 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					file.CreationTime = fileInfo.CreationTime
 				} else {
 					var absolutePath string
-					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					dirFS := &DirFS{}
+					if CastAs(nbrew.FS, &dirFS) {
 						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
 					}
 					file.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -1025,7 +1026,8 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				return err
 			}
 			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			dirFS := &DirFS{}
+			if CastAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, filePath)
 			}
 			modTime := fileInfo.ModTime()
@@ -1077,7 +1079,8 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				return err
 			}
 			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			dirFS := &DirFS{}
+			if CastAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
 			}
 			modTime := fileInfo.ModTime()
@@ -1380,7 +1383,8 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			return err
 		}
 		var absolutePath string
-		if dirFS, ok := fsys.(*DirFS); ok {
+		dirFS := &DirFS{}
+		if CastAs(fsys, &dirFS) {
 			absolutePath = path.Join(dirFS.RootDir, filePath)
 		}
 		modTime := fileInfo.ModTime()
@@ -1767,7 +1771,8 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 							return err
 						}
 						var absolutePath string
-						if dirFS, ok := fsys.(*DirFS); ok {
+						dirFS := &DirFS{}
+						if CastAs(fsys, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
 						}
 						modTime := fileInfo.ModTime()
@@ -1877,7 +1882,8 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 							return err
 						}
 						var absolutePath string
-						if dirFS, ok := fsys.(*DirFS); ok {
+						dirFS := &DirFS{}
+						if CastAs(fsys, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
 						}
 						modTime := fileInfo.ModTime()
@@ -2065,7 +2071,8 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			return err
 		}
 		var absolutePath string
-		if dirFS, ok := fsys.(*DirFS); ok {
+		dirFS := &DirFS{}
+		if CastAs(fsys, &dirFS) {
 			absolutePath = path.Join(dirFS.RootDir, filePath)
 		}
 		modTime := fileInfo.ModTime()

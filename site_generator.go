@@ -1254,7 +1254,8 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 				return err
 			}
 			var absolutePath string
-			if dirFS, ok := siteGen.fsys.(*DirFS); ok {
+			dirFS := &DirFS{}
+			if CastAs(siteGen.fsys, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category, name)
 			}
 			creationTime := CreationTime(absolutePath, fileInfo)
@@ -1528,7 +1529,8 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	page := 1
 	batch := make([]Post, 0, config.PostsPerPage)
 	var absoluteDir string
-	if dirFS, ok := siteGen.fsys.(*DirFS); ok {
+	dirFS := &DirFS{}
+	if CastAs(siteGen.fsys, &dirFS) {
 		absoluteDir = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category)
 	}
 	for _, dirEntry := range dirEntries {

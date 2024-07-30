@@ -129,7 +129,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			dirFS := &DirFS{}
+			if CastAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -295,7 +296,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						var absolutePath string
-						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						dirFS := &DirFS{}
+						if CastAs(nbrew.FS, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
 						}
 						response.Assets = append(response.Assets, Asset{
@@ -447,7 +449,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						var absolutePath string
-						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						dirFS := &DirFS{}
+						if CastAs(nbrew.FS, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
 						}
 						response.Assets = append(response.Assets, Asset{
@@ -1028,7 +1031,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			dirFS := &DirFS{}
+			if CastAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -1143,7 +1147,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						creationTime = fileInfo.CreationTime
 					} else {
 						var absolutePath string
-						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						dirFS := &DirFS{}
+						if CastAs(nbrew.FS, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
@@ -1348,7 +1353,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						creationTime = fileInfo.CreationTime
 					} else {
 						var absolutePath string
-						if dirFS, ok := nbrew.FS.(*DirFS); ok {
+						dirFS := &DirFS{}
+						if CastAs(nbrew.FS, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)

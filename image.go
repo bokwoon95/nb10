@@ -85,7 +85,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			if dirFS, ok := nbrew.FS.(*DirFS); ok {
+			dirFS := &DirFS{}
+			if CastAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -450,7 +451,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						return
 					}
 					var absolutePath string
-					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					dirFS := &DirFS{}
+					if CastAs(nbrew.FS, &dirFS) {
 						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.BelongsTo)
 					}
 					text = b.String()
@@ -539,7 +541,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					text = b.String()
 					modTime = fileInfo.ModTime()
 					var absolutePath string
-					if dirFS, ok := nbrew.FS.(*DirFS); ok {
+					dirFS := &DirFS{}
+					if CastAs(nbrew.FS, &dirFS) {
 						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 					}
 					creationTime = CreationTime(absolutePath, fileInfo)

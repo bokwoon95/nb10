@@ -689,7 +689,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					return err
 				}
 				var absolutePath string
-				if dirFS, ok := nbrew.FS.(*DirFS); ok {
+				dirFS := &DirFS{}
+				if CastAs(nbrew.FS, dirFS) {
 					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
