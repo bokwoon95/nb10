@@ -454,7 +454,7 @@ type PageData struct {
 	Parent           string
 	Name             string
 	ChildPages       []Page
-	Content          map[string]string
+	ContentMap       map[string]string
 	Images           []Image
 	ModificationTime time.Time
 	CreationTime     time.Time
@@ -493,7 +493,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		Parent:           path.Dir(urlPath),
 		Name:             path.Base(urlPath),
 		ChildPages:       []Page{},
-		Content:          make(map[string]string),
+		ContentMap:       make(map[string]string),
 		Images:           []Image{},
 		ModificationTime: modTime.UTC(),
 		CreationTime:     creationTime.UTC(),
@@ -611,7 +611,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 							return err
 						}
 						markdownMu.Lock()
-						pageData.Content[name] = string(result.Text)
+						pageData.ContentMap[name] = string(result.Text)
 						markdownMu.Unlock()
 						return nil
 					})
@@ -664,7 +664,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 							return err
 						}
 						markdownMu.Lock()
-						pageData.Content[name] = buf.String()
+						pageData.ContentMap[name] = buf.String()
 						markdownMu.Unlock()
 						return nil
 					})
