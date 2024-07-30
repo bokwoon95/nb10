@@ -103,7 +103,9 @@ you can still replicate all writes synchronously -- just write to the leader fs 
 TODO: SFTPFS
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
-TODO: rename $.Content to $.ContentMap for pages.
+TODO: signup.go
+    TODO: /signup/
+    TODO: /users/billing/
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
     TODO: /files/static/definitive-guide-6a0f0a00.html (user tutorials)
@@ -113,10 +115,8 @@ TODO: need to add a markdown reference for all textareas that accept markdown te
         TODO: digitalocean | linode | vultr | ovh | buyvm, emphasize that if you can pay for Netflix/Spotify every month you can pay for a VPS every month.
     TODO: /files/static/advanced-self-hosting-tutorial-6a0f0a00.html
     TODO: /files/static/admin-tutorial-6a0f0a00.html
-TODO: signup.go
-    TODO: /signup/
-    TODO: /users/billing/
 TODO: add a hash to the response headers so that clients can do a GET to synchronize their local copy with remote
+    TODO: this is mostly for local instances that need to synchronize files with a remote Notebrew server (think apps, local CLI tools).
 TODO: tests
 TODO: embed the tutorial as /files/tutorial/, and also embed the chroma style gallery as /files/chroma-style-gallery/
 TODO: include handwritten API documentation, involving POST-ing to /login/.
