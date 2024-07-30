@@ -46,94 +46,6 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var (
-	//go:embed embed static
-	embedFS embed.FS
-
-	RuntimeFS fs.FS = embedFS
-
-	developerMode = false
-
-	StylesCSS string
-
-	StylesCSSHash string
-
-	BaselineJS string
-
-	BaselineJSHash string
-
-	Revision string
-
-	commonPasswords = make(map[string]struct{})
-
-	CountryCodes map[string]string
-
-	ReservedSubdomains = []string{"www", "cdn", "storage", "videocdn", "videostorage"}
-)
-
-func init() {
-	// vcs.revision
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				Revision = setting.Value
-				break
-			}
-		}
-	}
-	// styles.css
-	b, err := fs.ReadFile(embedFS, "static/styles.css")
-	if err != nil {
-		panic(err)
-	}
-	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-	hash := sha256.Sum256(b)
-	StylesCSS = string(b)
-	StylesCSSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
-	// baseline.js
-	b, err = fs.ReadFile(embedFS, "static/baseline.js")
-	if err != nil {
-		panic(err)
-	}
-	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-	hash = sha256.Sum256(b)
-	BaselineJS = string(b)
-	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
-	// common passwords
-	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	done := false
-	for {
-		if done {
-			break
-		}
-		line, err := reader.ReadBytes('\n')
-		done = err == io.EOF
-		if err != nil && !done {
-			panic(err)
-		}
-		line = bytes.TrimSpace(line)
-		if len(line) == 0 {
-			continue
-		}
-		commonPasswords[string(line)] = struct{}{}
-	}
-	// country codes
-	file, err = RuntimeFS.Open("embed/country_codes.json")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	err = json.NewDecoder(file).Decode(&CountryCodes)
-	if err != nil {
-		panic(err)
-	}
-}
-
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
 	CMSDomain string // localhost:6444, example.com
@@ -1407,4 +1319,92 @@ func (e *CallerError) Caller() (function, file string, line int) {
 		return "", "", 0
 	}
 	return fr.Function, fr.File, fr.Line
+}
+
+var (
+	//go:embed embed static
+	embedFS embed.FS
+
+	RuntimeFS fs.FS = embedFS
+
+	developerMode = false
+
+	StylesCSS string
+
+	StylesCSSHash string
+
+	BaselineJS string
+
+	BaselineJSHash string
+
+	Revision string
+
+	commonPasswords = make(map[string]struct{})
+
+	CountryCodes map[string]string
+
+	ReservedSubdomains = []string{"www", "cdn", "storage", "videocdn", "videostorage"}
+)
+
+func init() {
+	// vcs.revision
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				Revision = setting.Value
+				break
+			}
+		}
+	}
+	// styles.css
+	b, err := fs.ReadFile(embedFS, "static/styles.css")
+	if err != nil {
+		panic(err)
+	}
+	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+	hash := sha256.Sum256(b)
+	StylesCSS = string(b)
+	StylesCSSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+	// baseline.js
+	b, err = fs.ReadFile(embedFS, "static/baseline.js")
+	if err != nil {
+		panic(err)
+	}
+	b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+	hash = sha256.Sum256(b)
+	BaselineJS = string(b)
+	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
+	// common passwords
+	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	reader := bufio.NewReader(file)
+	done := false
+	for {
+		if done {
+			break
+		}
+		line, err := reader.ReadBytes('\n')
+		done = err == io.EOF
+		if err != nil && !done {
+			panic(err)
+		}
+		line = bytes.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+		commonPasswords[string(line)] = struct{}{}
+	}
+	// country codes
+	file, err = RuntimeFS.Open("embed/country_codes.json")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	err = json.NewDecoder(file).Decode(&CountryCodes)
+	if err != nil {
+		panic(err)
+	}
 }

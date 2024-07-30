@@ -71,6 +71,17 @@ func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 	return databaseFS, nil
 }
 
+func (fsys *DatabaseFS) As(target any) bool {
+	if fsFields, ok := target.(*FSFields); ok {
+		fsFields.DB = fsys.DB
+		fsFields.Dialect = fsys.Dialect
+		fsFields.ErrorCode = fsys.ErrorCode
+		fsFields.ObjectStorage = fsys.ObjectStorage
+		return true
+	}
+	return false
+}
+
 func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 	return &DatabaseFS{
 		DB:                fsys.DB,

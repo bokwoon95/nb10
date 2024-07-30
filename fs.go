@@ -3,6 +3,7 @@ package nb10
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"io"
 	"io/fs"
 	"slices"
@@ -53,6 +54,26 @@ type FS interface {
 	Rename(oldName, newName string) error
 
 	Copy(srcName, destName string) error
+}
+
+// FSFields is a grab bag of fields for various FS implementations to populate
+// so that we can write more specialized code that leverages the underlying
+// implementation.
+type FSFields struct {
+	DB            *sql.DB
+	Dialect       string
+	ErrorCode     func(error) string
+	ObjectStorage ObjectStorage
+	RootDir       string
+}
+
+func AsTarget(fsys FS, target any) bool {
+	if fsys, ok := fsys.(interface {
+		As(target any) bool
+	}); ok {
+		return fsys.As(target)
+	}
+	return false
 }
 
 type Attribute int

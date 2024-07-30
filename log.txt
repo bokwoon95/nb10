@@ -90,6 +90,47 @@ FilesConfig struct{
     followers []
 }
 
+type FSFields struct
+
+FSFields is a grab bag of fields for various FS implementations to populate so
+that we can write more specialized code targeting them (e.g. don't make
+repeated database calls to walk a DatabaseFS when we can just issue one
+well-crafted query that will pull in everything we want)
+type FSFields struct{
+}
+
+var fsFields FSFields
+if AsTarget(db, &fsFields) && fsFields.DB != nil {
+}
+
+func (fsys *DatabaseFS) As(target any) bool {
+}
+
+type FSParts struct
+
+fsItems.DB
+fsParts.DB
+fsUnits.DB
+fsComponents.DB
+
+fs.DB
+
+type FSAspect struct
+type FSData struct
+type FSFields struct
+
+var fsData FSData
+As(v any)
+if fsys.AsData(&fsData) && fsData.DB != nil {
+}
+
+ReplicatedFS => Unwrap() => DatabaseFS
+
+GetDatabase(FS) (dialect string, db *sql.DB)
+
+if dialect, db := GetUnderlyingDatabase(nbrew.FS); db != nil {
+}
+
 DirFS
 DatabaseFS
 fsys *SFTPFS
