@@ -72,11 +72,11 @@ func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 }
 
 func (fsys *DatabaseFS) As(target any) bool {
-	if fsFields, ok := target.(*FSFields); ok {
-		fsFields.DB = fsys.DB
-		fsFields.Dialect = fsys.Dialect
-		fsFields.ErrorCode = fsys.ErrorCode
-		fsFields.ObjectStorage = fsys.ObjectStorage
+	if target, ok := target.(**DatabaseFS); ok {
+		if target == nil {
+			return false
+		}
+		*target = fsys
 		return true
 	}
 	return false

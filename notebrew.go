@@ -1408,3 +1408,12 @@ func init() {
 		panic(err)
 	}
 }
+
+func CastAs(item, target any) bool {
+	if item, ok := item.(interface {
+		As(target any) bool
+	}); ok {
+		return item.As(target)
+	}
+	return false
+}
