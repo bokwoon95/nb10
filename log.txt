@@ -100,7 +100,7 @@ notebrew config files.provider
 once we get follower to work, that means users would be able to replicate file changes
 you can still replicate all writes synchronously -- just write to the leader fs first, once successful then open a reader from the leaderFS and open a multiwriter to all follower FSes and write it in.
 
-TODO: revamp WithCaption, WithCreationTime etc and just change it to WithValues(map[string]string).
+TODO: SFTPFS
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: rename $.Content to $.ContentMap for pages.
