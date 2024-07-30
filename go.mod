@@ -24,6 +24,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/mileusna/useragent v1.3.4
 	github.com/oschwald/maxminddb-golang v1.13.1
+	github.com/pkg/sftp v1.13.6
 	github.com/stefanfritsch/goldmark-fences v1.0.0
 	github.com/stripe/stripe-go/v79 v79.2.0
 	github.com/yuin/goldmark v1.7.4
@@ -55,6 +56,7 @@ require (
 	github.com/jackc/pgproto3/v2 v2.3.2 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mholt/acmez v1.2.0 // indirect
 	github.com/miekg/dns v1.1.55 // indirect
