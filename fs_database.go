@@ -56,9 +56,6 @@ type DatabaseFS struct {
 	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
 	ctx               context.Context
 	values            map[string]any // modTime time.Time, creationTime time.Time, caption string
-	modTime           time.Time
-	creationTime      time.Time
-	caption           string
 }
 
 func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
@@ -83,9 +80,7 @@ func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 		Logger:            fsys.Logger,
 		UpdateStorageUsed: fsys.UpdateStorageUsed,
 		ctx:               ctx,
-		modTime:           fsys.modTime,
-		creationTime:      fsys.creationTime,
-		caption:           fsys.caption,
+		values:            fsys.values,
 	}
 }
 
@@ -99,51 +94,6 @@ func (fsys *DatabaseFS) WithValues(values map[string]any) FS {
 		UpdateStorageUsed: fsys.UpdateStorageUsed,
 		ctx:               fsys.ctx,
 		values:            values,
-	}
-}
-
-func (fsys *DatabaseFS) WithModTime(modTime time.Time) *DatabaseFS {
-	return &DatabaseFS{
-		DB:                fsys.DB,
-		Dialect:           fsys.Dialect,
-		ErrorCode:         fsys.ErrorCode,
-		ObjectStorage:     fsys.ObjectStorage,
-		Logger:            fsys.Logger,
-		UpdateStorageUsed: fsys.UpdateStorageUsed,
-		ctx:               fsys.ctx,
-		modTime:           modTime,
-		creationTime:      fsys.creationTime,
-		caption:           fsys.caption,
-	}
-}
-
-func (fsys *DatabaseFS) WithCreationTime(creationTime time.Time) *DatabaseFS {
-	return &DatabaseFS{
-		DB:                fsys.DB,
-		Dialect:           fsys.Dialect,
-		ErrorCode:         fsys.ErrorCode,
-		ObjectStorage:     fsys.ObjectStorage,
-		Logger:            fsys.Logger,
-		UpdateStorageUsed: fsys.UpdateStorageUsed,
-		ctx:               fsys.ctx,
-		modTime:           fsys.modTime,
-		creationTime:      creationTime,
-		caption:           fsys.caption,
-	}
-}
-
-func (fsys *DatabaseFS) WithCaption(caption string) *DatabaseFS {
-	return &DatabaseFS{
-		DB:                fsys.DB,
-		Dialect:           fsys.Dialect,
-		ErrorCode:         fsys.ErrorCode,
-		ObjectStorage:     fsys.ObjectStorage,
-		Logger:            fsys.Logger,
-		UpdateStorageUsed: fsys.UpdateStorageUsed,
-		ctx:               fsys.ctx,
-		modTime:           fsys.modTime,
-		creationTime:      fsys.creationTime,
-		caption:           caption,
 	}
 }
 
@@ -427,12 +377,22 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	}
 	now := time.Now().UTC()
 	modTime := now
-	if !fsys.modTime.IsZero() {
-		modTime = fsys.modTime
+	if value := fsys.values["modTime"]; value != nil {
+		if value, ok := value.(time.Time); ok {
+			modTime = value
+		}
 	}
 	creationTime := now
-	if !fsys.creationTime.IsZero() {
-		creationTime = fsys.creationTime
+	if value := fsys.values["creationTime"]; value != nil {
+		if value, ok := value.(time.Time); ok {
+			creationTime = value
+		}
+	}
+	caption := ""
+	if value := fsys.values["caption"]; value != nil {
+		if value, ok := value.(string); ok {
+			caption = value
+		}
 	}
 	file := &DatabaseFileWriter{
 		db:                fsys.DB,
@@ -446,7 +406,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		filePath:          name,
 		modTime:           modTime,
 		creationTime:      creationTime,
-		caption:           fsys.caption,
+		caption:           caption,
 	}
 	// If parentDir is the root directory, just fetch the file information.
 	// Otherwise fetch both the parent and file information.
@@ -843,12 +803,16 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	}
 	now := time.Now().UTC()
 	modTime := now
-	if !fsys.modTime.IsZero() {
-		modTime = fsys.modTime
+	if value := fsys.values["modTime"]; value != nil {
+		if value, ok := value.(time.Time); ok {
+			modTime = value
+		}
 	}
 	creationTime := now
-	if !fsys.creationTime.IsZero() {
-		creationTime = fsys.creationTime
+	if value := fsys.values["creationTime"]; value != nil {
+		if value, ok := value.(time.Time); ok {
+			creationTime = value
+		}
 	}
 	parentDir := path.Dir(name)
 	if parentDir == "." {
@@ -935,12 +899,16 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	// Insert the top level directory (no parent), ignoring duplicates.
 	now := time.Now().UTC()
 	modTime := now
-	if !fsys.modTime.IsZero() {
-		modTime = fsys.modTime
+	if value := fsys.values["modTime"]; value != nil {
+		if value, ok := value.(time.Time); ok {
+			modTime = value
+		}
 	}
 	creationTime := now
-	if !fsys.creationTime.IsZero() {
-		creationTime = fsys.creationTime
+	if value := fsys.values["creationTime"]; value != nil {
+		if value, ok := value.(time.Time); ok {
+			creationTime = value
+		}
 	}
 	segments := strings.Split(name, "/")
 	switch fsys.Dialect {

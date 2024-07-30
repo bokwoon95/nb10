@@ -419,7 +419,10 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			}
 		}
 		if databaseFS, ok := fsys.(*DatabaseFS); ok {
-			fsys = databaseFS.WithModTime(modTime).WithCreationTime(creationTime)
+			fsys = databaseFS.WithValues(map[string]any{
+				"modTime":      modTime,
+				"creationTime": creationTime,
+			})
 		}
 		err := fsys.Mkdir(filePath, 0755)
 		if err != nil {
@@ -490,7 +493,11 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			}
 		}
 		if databaseFS, ok := fsys.(*DatabaseFS); ok {
-			fsys = databaseFS.WithModTime(modTime).WithCreationTime(creationTime).WithCaption(caption)
+			fsys = databaseFS.WithValues(map[string]any{
+				"modTime":      modTime,
+				"creationTime": creationTime,
+				"caption":      caption,
+			})
 		}
 		writer, err := fsys.OpenWriter(filePath, 0644)
 		if err != nil {
