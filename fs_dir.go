@@ -59,13 +59,16 @@ func NewDirFS(config DirFSConfig) (*DirFS, error) {
 }
 
 func (fsys *DirFS) As(target any) bool {
-	if target, ok := target.(**DirFS); ok {
-		if target == nil {
-		}
+	switch target := target.(type) {
+	case *DirFS:
+		*target = *fsys
+		return true
+	case **DirFS:
 		*target = fsys
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func (fsys *DirFS) WithContext(ctx context.Context) FS {

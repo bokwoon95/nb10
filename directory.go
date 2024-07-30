@@ -258,7 +258,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.CDNDomain = nbrew.CDNDomain
-	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+	response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
@@ -271,7 +271,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	} else {
 		var absolutePath string
 		dirFS := &DirFS{}
-		if CastAs(nbrew.FS, &dirFS) {
+		if castAs(nbrew.FS, &dirFS) {
 			absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 		}
 		response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -423,8 +423,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		response.UploadableExts = append(response.UploadableExts, fontExts...)
 	}
 
-	databaseFS, ok := nbrew.FS.(*DatabaseFS)
-	if !ok {
+	databaseFS := &DatabaseFS{}
+	if !castAs(nbrew.FS, &databaseFS) {
 		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, filePath))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -442,7 +442,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			name := fileInfo.Name()
 			var absolutePath string
 			dirFS := &DirFS{}
-			if CastAs(nbrew.FS, &dirFS) {
+			if castAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath, name)
 			}
 			file := File{

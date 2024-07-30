@@ -130,7 +130,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.SitePrefix = sitePrefix
-	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+	response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.DisableReason = user.DisableReason
@@ -192,8 +192,8 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 		}
 	}
 
-	databaseFS, ok := nbrew.FS.(*DatabaseFS)
-	if !ok {
+	databaseFS := &DatabaseFS{}
+	if !castAs(nbrew.FS, &databaseFS) {
 		for _, name := range []string{"notes", "pages", "posts", "output/themes", "output", "site.json", "imports", "exports"} {
 			fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, name))
 			if err != nil {
@@ -206,7 +206,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			}
 			var absolutePath string
 			dirFS := &DirFS{}
-			if CastAs(nbrew.FS, &dirFS) {
+			if castAs(nbrew.FS, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, sitePrefix, name)
 			}
 			response.Files = append(response.Files, File{

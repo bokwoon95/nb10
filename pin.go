@@ -22,8 +22,8 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 		Parent    string `json:"parent"`
 		NumPinned int    `json:"numPinned"`
 	}
-	databaseFS, ok := nbrew.FS.(*DatabaseFS)
-	if !ok {
+	databaseFS := &DatabaseFS{}
+	if !castAs(nbrew.FS, &databaseFS) {
 		nbrew.NotFound(w, r)
 		return
 	}

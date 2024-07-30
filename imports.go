@@ -186,7 +186,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.CDNDomain = nbrew.CDNDomain
-	_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+	response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
@@ -198,7 +198,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 	} else {
 		var absolutePath string
 		dirFS := &DirFS{}
-		if CastAs(nbrew.FS, &dirFS) {
+		if castAs(nbrew.FS, &dirFS) {
 			absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
 		}
 		response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -239,7 +239,8 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 			return nil
 		})
 	}
-	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(nbrew.FS, &databaseFS) {
 		group.Go(func() (err error) {
 			defer func() {
 				if v := recover(); v != nil {
@@ -327,7 +328,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				name := fileInfo.Name()
 				var absolutePath string
 				dirFS := &DirFS{}
-				if CastAs(nbrew.FS, &dirFS) {
+				if castAs(nbrew.FS, &dirFS) {
 					absolutePath = path.Join(dirFS.RootDir, sitePrefix, "imports", name)
 				}
 				file := File{

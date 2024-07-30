@@ -515,7 +515,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			} else {
 				var absolutePath string
 				dirFS := &DirFS{}
-				if CastAs(nbrew.FS, &dirFS) {
+				if castAs(nbrew.FS, &dirFS) {
 					absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
 				}
 				creationTime = CreationTime(absolutePath, fileInfo)
@@ -669,7 +669,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
-						if CastAs(nbrew.FS, &dirFS) {
+						if castAs(nbrew.FS, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPost)
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
@@ -760,7 +760,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
-						if CastAs(nbrew.FS, &dirFS) {
+						if castAs(nbrew.FS, &dirFS) {
 							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)

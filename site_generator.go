@@ -190,8 +190,8 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	if siteGen.cdnDomain == "" {
 		return siteGen, nil
 	}
-	databaseFS, ok := siteGen.fsys.(*DatabaseFS)
-	if !ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(siteGen.fsys, databaseFS) {
 		return siteGen, nil
 	}
 	extFilter := sq.Expr("1 = 1")
@@ -526,7 +526,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 		}()
 		markdownMu := sync.Mutex{}
-		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+		databaseFS := &DatabaseFS{}
+		if castAs(siteGen.fsys, &databaseFS) {
 			var b strings.Builder
 			args := make([]any, 0, len(imgExts)+1)
 			b.WriteString("(file_path LIKE '%.md' ESCAPE '\\'")
@@ -684,7 +685,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 		}()
 		pageDir := path.Join(siteGen.sitePrefix, "pages", urlPath)
-		if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+		databaseFS := &DatabaseFS{}
+		if castAs(siteGen.fsys, &databaseFS) {
 			pageData.ChildPages, err = sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -844,7 +846,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	if err != nil {
 		return err
 	}
-	_, isDatabaseFS := siteGen.fsys.(*DatabaseFS)
+	isDatabaseFS := castAs(siteGen.fsys, &DatabaseFS{})
 	if siteGen.cdnDomain != "" && isDatabaseFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
@@ -982,7 +984,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	}
 	// Images.
-	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(siteGen.fsys, &databaseFS) {
 		extFilter := sq.Expr("1 = 1")
 		if len(imgExts) > 0 {
 			var b strings.Builder
@@ -1116,7 +1119,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	if err != nil {
 		return err
 	}
-	_, isDatabaseFS := siteGen.fsys.(*DatabaseFS)
+	isDatabaseFS := castAs(siteGen.fsys, &DatabaseFS{})
 	if siteGen.cdnDomain != "" && isDatabaseFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
@@ -1155,7 +1158,8 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 }
 
 func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string, tmpl *template.Template) (int64, error) {
-	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(siteGen.fsys, &databaseFS) {
 		type File struct {
 			FilePath     string
 			Text         string
@@ -1255,7 +1259,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 			}
 			var absolutePath string
 			dirFS := &DirFS{}
-			if CastAs(siteGen.fsys, &dirFS) {
+			if castAs(siteGen.fsys, &dirFS) {
 				absolutePath = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category, name)
 			}
 			creationTime := CreationTime(absolutePath, fileInfo)
@@ -1314,7 +1318,8 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	if config.PostsPerPage <= 0 {
 		config.PostsPerPage = 100
 	}
-	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(siteGen.fsys, &databaseFS) {
 		count, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
@@ -1530,7 +1535,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	batch := make([]Post, 0, config.PostsPerPage)
 	var absoluteDir string
 	dirFS := &DirFS{}
-	if CastAs(siteGen.fsys, &dirFS) {
+	if castAs(siteGen.fsys, &dirFS) {
 		absoluteDir = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category)
 	}
 	for _, dirEntry := range dirEntries {
@@ -1663,7 +1668,8 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}
 			}()
 			outputDir := path.Join(siteGen.sitePrefix, "output/posts", posts[i].Category, posts[i].Name)
-			if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+			databaseFS := &DatabaseFS{}
+			if castAs(siteGen.fsys, &databaseFS) {
 				extFilter := sq.Expr("1 = 1")
 				if len(imgExts) > 0 {
 					var b strings.Builder
@@ -1817,7 +1823,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		if err != nil {
 			return err
 		}
-		_, isDatabaseFS := siteGen.fsys.(*DatabaseFS)
+		isDatabaseFS := castAs(siteGen.fsys, &DatabaseFS{})
 		if siteGen.cdnDomain != "" && isDatabaseFS {
 			pipeReader, pipeWriter := io.Pipe()
 			result := make(chan error, 1)
@@ -2947,7 +2953,8 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 	}
 	var text string
 	var found bool
-	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(siteGen.fsys, &databaseFS) {
 		result, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -3023,7 +3030,8 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 	var err error
 	var text string
 	var found bool
-	if databaseFS, ok := siteGen.fsys.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(siteGen.fsys, &databaseFS) {
 		result, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",

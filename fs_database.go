@@ -72,14 +72,16 @@ func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 }
 
 func (fsys *DatabaseFS) As(target any) bool {
-	if target, ok := target.(**DatabaseFS); ok {
-		if target == nil {
-			return false
-		}
+	switch target := target.(type) {
+	case *DatabaseFS:
+		*target = *fsys
+		return true
+	case **DatabaseFS:
 		*target = fsys
 		return true
+	default:
+		return false
 	}
-	return false
 }
 
 func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {

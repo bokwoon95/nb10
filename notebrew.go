@@ -139,9 +139,10 @@ func (nbrew *Notebrew) Close() error {
 		nbrew.DB.Exec("PRAGMA optimize")
 		nbrew.DB.Close()
 	}
-	if fsys, ok := nbrew.FS.(*DatabaseFS); ok && fsys.Dialect == "sqlite" {
-		fsys.DB.Exec("PRAGMA optimize")
-		fsys.DB.Close()
+	databaseFS := &DatabaseFS{}
+	if castAs(nbrew.FS, &databaseFS) && databaseFS.Dialect == "sqlite" {
+		databaseFS.DB.Exec("PRAGMA optimize")
+		databaseFS.DB.Close()
 	}
 	return nil
 }
@@ -1409,11 +1410,23 @@ func init() {
 	}
 }
 
-func CastAs(item, target any) bool {
-	if item, ok := item.(interface {
-		As(target any) bool
-	}); ok {
-		return item.As(target)
+func castAs[T any](v any, target *T) bool {
+	switch v := v.(type) {
+	case interface{ As(target any) bool }:
+		return v.As(target)
+	case T:
+		if target == nil {
+			return false
+		}
+		*target = v
+		return true
+	case *T:
+		if target == nil {
+			return false
+		}
+		*target = *v
+		return true
+	default:
+		return false
 	}
-	return false
 }

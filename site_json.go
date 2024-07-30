@@ -144,7 +144,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			getLogger(r.Context()).Error(err.Error())
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-		_, response.IsDatabaseFS = nbrew.FS.(*DatabaseFS)
+		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -341,7 +341,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	var regenerationCount atomic.Int64
 	startedAt := time.Now()
 
-	if databaseFS, ok := nbrew.FS.(*DatabaseFS); ok {
+	databaseFS := &DatabaseFS{}
+	if castAs(nbrew.FS, &databaseFS) {
 		type File struct {
 			FilePath     string
 			Text         string
@@ -587,7 +588,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				}
 				var absolutePath string
 				dirFS := &DirFS{}
-				if CastAs(nbrew.FS, &dirFS) {
+				if castAs(nbrew.FS, &dirFS) {
 					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
@@ -690,7 +691,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				}
 				var absolutePath string
 				dirFS := &DirFS{}
-				if CastAs(nbrew.FS, dirFS) {
+				if castAs(nbrew.FS, dirFS) {
 					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)

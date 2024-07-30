@@ -57,8 +57,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 		return
 	}
 
-	databaseFS, ok := nbrew.FS.(*DatabaseFS)
-	if !ok {
+	databaseFS := &DatabaseFS{}
+	if !castAs(nbrew.FS, &databaseFS) {
 		nbrew.NotFound(w, r)
 		return
 	}
