@@ -26,9 +26,6 @@ type DirFSConfig struct {
 
 // DirFS represents a filesystem rooted on a directory.
 type DirFS struct {
-	// Context provides the context of all operations called on the DirFS.
-	Context context.Context
-
 	// RootDir is the root directory of the DirFS. Has to be an absolute
 	// path!!
 	RootDir string
@@ -39,6 +36,9 @@ type DirFS struct {
 	// *insert github issue where rename on windows keep failing intermittently
 	// with an annoying permission error*)
 	TempDir string
+
+	// ctx provides the context of all operations called on the DirFS.
+	ctx context.Context
 }
 
 func NewDirFS(config DirFSConfig) (*DirFS, error) {
@@ -51,7 +51,7 @@ func NewDirFS(config DirFSConfig) (*DirFS, error) {
 		return nil, err
 	}
 	dirFS := &DirFS{
-		Context: context.Background(),
+		ctx:     context.Background(),
 		RootDir: rootDir,
 		TempDir: tempDir,
 	}
@@ -60,14 +60,14 @@ func NewDirFS(config DirFSConfig) (*DirFS, error) {
 
 func (fsys *DirFS) WithContext(ctx context.Context) FS {
 	return &DirFS{
-		Context: ctx,
 		RootDir: fsys.RootDir,
 		TempDir: fsys.TempDir,
+		ctx:     ctx,
 	}
 }
 
 func (fsys *DirFS) Open(name string) (fs.File, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (fsys *DirFS) Open(name string) (fs.File, error) {
 }
 
 func (fsys *DirFS) Stat(name string) (fs.FileInfo, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (fsys *DirFS) Stat(name string) (fs.FileInfo, error) {
 }
 
 func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		return nil, err
 	}
 	file := &DirFileWriter{
-		ctx:     fsys.Context,
+		ctx:     fsys.ctx,
 		rootDir: fsys.RootDir,
 		tempDir: fsys.TempDir,
 		name:    filepath.FromSlash(name),
@@ -216,7 +216,7 @@ func (file *DirFileWriter) Close() error {
 }
 
 func (fsys *DirFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func (fsys *DirFS) ReadDir(name string) ([]fs.DirEntry, error) {
 }
 
 func (fsys *DirFS) Mkdir(name string, _ fs.FileMode) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func (fsys *DirFS) Mkdir(name string, _ fs.FileMode) error {
 }
 
 func (fsys *DirFS) MkdirAll(name string, _ fs.FileMode) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -252,7 +252,7 @@ func (fsys *DirFS) MkdirAll(name string, _ fs.FileMode) error {
 }
 
 func (fsys *DirFS) Remove(name string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (fsys *DirFS) Remove(name string) error {
 }
 
 func (fsys *DirFS) RemoveAll(name string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func (fsys *DirFS) RemoveAll(name string) error {
 }
 
 func (fsys *DirFS) Rename(oldName, newName string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func (fsys *DirFS) Rename(oldName, newName string) error {
 }
 
 func (fsys *DirFS) Copy(srcName, destName string) error {
-	err := fsys.Context.Err()
+	err := fsys.ctx.Err()
 	if err != nil {
 		return err
 	}
@@ -335,12 +335,12 @@ func (fsys *DirFS) Copy(srcName, destName string) error {
 		return err
 	}
 	if !srcFileInfo.IsDir() {
-		srcFile, err := fsys.WithContext(fsys.Context).Open(srcName)
+		srcFile, err := fsys.WithContext(fsys.ctx).Open(srcName)
 		if err != nil {
 			return err
 		}
 		defer srcFile.Close()
-		destFile, err := fsys.WithContext(fsys.Context).OpenWriter(destName, 0644)
+		destFile, err := fsys.WithContext(fsys.ctx).OpenWriter(destName, 0644)
 		if err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func (fsys *DirFS) Copy(srcName, destName string) error {
 		}
 		return nil
 	}
-	group, groupctx := errgroup.WithContext(fsys.Context)
+	group, groupctx := errgroup.WithContext(fsys.ctx)
 	err = fs.WalkDir(fsys.WithContext(groupctx), srcName, func(filePath string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
