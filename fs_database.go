@@ -55,6 +55,7 @@ type DatabaseFS struct {
 	Logger            *slog.Logger
 	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
 	ctx               context.Context
+	values            map[string]any // modTime time.Time, creationTime time.Time, caption string
 	modTime           time.Time
 	creationTime      time.Time
 	caption           string
@@ -85,6 +86,19 @@ func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 		modTime:           fsys.modTime,
 		creationTime:      fsys.creationTime,
 		caption:           fsys.caption,
+	}
+}
+
+func (fsys *DatabaseFS) WithValues(values map[string]any) FS {
+	return &DatabaseFS{
+		DB:                fsys.DB,
+		Dialect:           fsys.Dialect,
+		ErrorCode:         fsys.ErrorCode,
+		ObjectStorage:     fsys.ObjectStorage,
+		Logger:            fsys.Logger,
+		UpdateStorageUsed: fsys.UpdateStorageUsed,
+		ctx:               fsys.ctx,
+		values:            values,
 	}
 }
 

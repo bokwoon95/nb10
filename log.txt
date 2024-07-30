@@ -83,8 +83,26 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
-// SynchronizeOutputFS
-TODO: investigate if we can add additional file synchronization destinations to the DatabaseFS.
+FilesConfig struct{
+    provider dir | database | sftp
+    asyncFollowers bool
+    dialect
+    followers []
+}
+
+DirFS
+DatabaseFS
+fsys *SFTPFS
+SFTPObjectStorage
+
+notebrew config files.provider
+
+once we get follower to work, that means users would be able to replicate file changes
+you can still replicate all writes synchronously -- just write to the leader fs first, once successful then open a reader from the leaderFS and open a multiwriter to all follower FSes and write it in.
+
+TODO: revamp WithCaption, WithCreationTime etc and just change it to WithValues(map[string]string).
+TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
+TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: rename $.Content to $.ContentMap for pages.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
