@@ -100,7 +100,6 @@ sftpclientkk
 PersistentSFTPClient
 fac.NewClient
 
-TODO: export.go: when showing the export size preview for individual files, also include page and post assets in that number.
 TODO: SFTPFS
     TODO: notebrew config files.provider, which is one of dir | database | sftp
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
