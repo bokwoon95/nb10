@@ -989,10 +989,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		_, err := io.Copy(w, reader)
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-		}
+		io.Copy(w, reader)
 		return
 	}
 
@@ -1103,15 +1100,8 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	_, err := io.Copy(gzipWriter, reader)
-	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
-	} else {
-		err = gzipWriter.Close()
-		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
-		}
-	}
+	io.Copy(gzipWriter, reader)
+	gzipWriter.Close()
 }
 
 var ErrStorageLimitExceeded = fmt.Errorf("storage limit exceeded")
