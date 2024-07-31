@@ -97,6 +97,8 @@ sftputil.NewClient creates a new sftutil.Client that monitors its own SSH connec
 sftputil.Client.GetSFTPClient returns a new
 
 sftpclientkk
+PersistentSFTPClient
+fac.NewClient
 
 TODO: SFTPFS
     TODO: notebrew config files.provider, which is one of dir | database | sftp
