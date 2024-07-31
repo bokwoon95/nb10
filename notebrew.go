@@ -135,14 +135,20 @@ func New() *Notebrew {
 func (nbrew *Notebrew) Close() error {
 	nbrew.cancel()
 	nbrew.waitGroup.Wait()
-	if nbrew.DB != nil && nbrew.Dialect == "sqlite" {
-		nbrew.DB.Exec("PRAGMA optimize")
-		nbrew.DB.Close()
+	if nbrew.DB != nil {
+		if nbrew.Dialect == "sqlite" {
+			nbrew.DB.Exec("PRAGMA optimize")
+			nbrew.DB.Close()
+		}
 	}
 	databaseFS := &DatabaseFS{}
-	if castAs(nbrew.FS, &databaseFS) && databaseFS.Dialect == "sqlite" {
-		databaseFS.DB.Exec("PRAGMA optimize")
-		databaseFS.DB.Close()
+	if castAs(nbrew.FS, &databaseFS) {
+		if databaseFS.Dialect == "sqlite" {
+			databaseFS.DB.Exec("PRAGMA optimize")
+			databaseFS.DB.Close()
+		}
+	} else if closer, ok := nbrew.FS.(io.Closer); ok {
+		closer.Close()
 	}
 	return nil
 }
