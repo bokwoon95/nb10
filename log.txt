@@ -93,7 +93,11 @@ FilesConfig struct{
 once we get follower to work, that means users would be able to replicate file changes
 you can still replicate all writes synchronously -- just write to the leader fs first, once successful then open a reader from the leaderFS and open a multiwriter to all follower FSes and write it in.
 
-TODO: convert the entire codebase to use CastAs()
+sftputil.NewClient creates a new sftutil.Client that monitors its own SSH connection status and knows when the underlying SSH connection is disconnected
+sftputil.Client.GetSFTPClient returns a new
+
+sftpclientkk
+
 TODO: SFTPFS
     TODO: notebrew config files.provider, which is one of dir | database | sftp
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }

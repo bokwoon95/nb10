@@ -837,12 +837,12 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
-	_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+	_, err = io.Copy(writer, strings.NewReader("<!DOCTYPE html>\n"+
 		"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 		"<meta charset='utf-8'>\n"+
 		"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
-	)
+	))
 	if err != nil {
 		return err
 	}
@@ -861,7 +861,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		err = tmpl.Execute(pipeWriter, pageData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(pipeWriter, html.EscapeString(templateErr.Error()))
+			io.Copy(pipeWriter, strings.NewReader(html.EscapeString(templateErr.Error())))
 			return templateErr
 		}
 		pipeWriter.Close()
@@ -873,7 +873,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		err = tmpl.Execute(writer, pageData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(writer, html.EscapeString(templateErr.Error()))
+			io.Copy(writer, strings.NewReader(html.EscapeString(templateErr.Error())))
 			return templateErr
 		}
 	}
@@ -1110,12 +1110,12 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
-	_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+	_, err = io.Copy(writer, strings.NewReader("<!DOCTYPE html>\n"+
 		"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 		"<meta charset='utf-8'>\n"+
 		"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
-	)
+	))
 	if err != nil {
 		return err
 	}
@@ -1134,7 +1134,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		err = tmpl.Execute(pipeWriter, postData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(pipeWriter, html.EscapeString(templateErr.Error()))
+			io.Copy(pipeWriter, strings.NewReader(html.EscapeString(templateErr.Error())))
 			return templateErr
 		}
 		pipeWriter.Close()
@@ -1146,7 +1146,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		err = tmpl.Execute(writer, postData)
 		if err != nil {
 			templateErr := NewTemplateError(err)
-			io.WriteString(writer, html.EscapeString(templateErr.Error()))
+			io.Copy(writer, strings.NewReader(html.EscapeString(templateErr.Error())))
 			return templateErr
 		}
 	}
@@ -1813,13 +1813,13 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		}
 		defer writer.Close()
 		atomPath := "/" + path.Join("posts", category) + "/index.atom"
-		_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+		_, err = io.Copy(writer, strings.NewReader("<!DOCTYPE html>\n"+
 			"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 			"<meta charset='utf-8'>\n"+
 			"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 			"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n"+
 			"<link rel='alternate' href='"+template.HTMLEscapeString(atomPath)+"' type='application/atom+xml'>\n",
-		)
+		))
 		if err != nil {
 			return err
 		}
@@ -1838,7 +1838,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			err = tmpl.Execute(pipeWriter, postListData)
 			if err != nil {
 				templateErr := NewTemplateError(err)
-				io.WriteString(pipeWriter, html.EscapeString(templateErr.Error()))
+				io.Copy(pipeWriter, strings.NewReader(html.EscapeString(templateErr.Error())))
 				return templateErr
 			}
 			pipeWriter.Close()
@@ -1850,7 +1850,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			err = tmpl.Execute(writer, postListData)
 			if err != nil {
 				templateErr := NewTemplateError(err)
-				io.WriteString(writer, html.EscapeString(templateErr.Error()))
+				io.Copy(writer, strings.NewReader(html.EscapeString(templateErr.Error())))
 				return templateErr
 			}
 		}
@@ -1879,14 +1879,14 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			}
 			defer writer.Close()
 			urlPath := "/" + path.Join("posts", category) + "/"
-			_, err = io.WriteString(writer, "<!DOCTYPE html>\n"+
+			_, err = io.Copy(writer, strings.NewReader("<!DOCTYPE html>\n"+
 				"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 				"<meta charset='utf-8'>\n"+
 				"<meta name='viewport' content='width=device-width, initial-scale=1'>\n"+
 				"<meta http-equiv='refresh' content='0; url="+template.HTMLEscapeString(urlPath)+"'>\n"+
 				"<title>redirect to "+urlPath+"</title>\n"+
 				"<p>redirect to <a href='"+template.HTMLEscapeString(urlPath)+"'>"+urlPath+"</a></p>\n",
-			)
+			))
 			if err != nil {
 				return err
 			}
