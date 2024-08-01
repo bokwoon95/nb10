@@ -100,7 +100,6 @@ sftpclientkk
 PersistentSFTPClient
 fac.NewClient
 
-TODO: "save and regenerate post list" on an image is not regenerating the post list (only the post itself)
 TODO: SFTPFS
     TODO: notebrew config files.provider, which is one of dir | database | sftp
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
