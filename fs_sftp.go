@@ -102,7 +102,7 @@ func (fsys *SFTPFS) WithValues(values map[string]any) FS {
 		NewSSHClient: fsys.NewSSHClient,
 		RootDir:      fsys.RootDir,
 		TempDir:      fsys.TempDir,
-		index: fsys.index,
+		index:        fsys.index,
 		ctx:          fsys.ctx,
 	}
 }
