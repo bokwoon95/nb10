@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"path"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -340,7 +341,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 
 		var request struct {
-			Content string
+			Content            string
+			RegenerateParent   bool
+			RegeneratePostList bool
+			RegenerateSite     bool
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 1<<20 /* 1 MB */)
 		contentType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -368,6 +372,9 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 			}
 			request.Content = r.Form.Get("content")
+			request.RegenerateParent, _ = strconv.ParseBool(r.Form.Get("regenerateParent"))
+			request.RegeneratePostList, _ = strconv.ParseBool(r.Form.Get("regeneratePostList"))
+			request.RegenerateSite, _ = strconv.ParseBool(r.Form.Get("regenerateSite"))
 		default:
 			nbrew.UnsupportedContentType(w, r)
 			return
