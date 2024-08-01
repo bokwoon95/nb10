@@ -200,15 +200,15 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.DisableReason = user.DisableReason
-	if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-		response.FileID = fileInfo.FileID
-		response.ModTime = fileInfo.ModTime()
-		response.CreationTime = fileInfo.CreationTime
+	if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+		response.FileID = databaseFileInfo.FileID
+		response.ModTime = databaseFileInfo.ModTime()
+		response.CreationTime = databaseFileInfo.CreationTime
 	} else {
 		var absolutePath string
 		dirFS := &DirFS{}
 		if castAs(nbrew.FS, &dirFS) {
-			absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
+			absolutePath = path.Join(dirFS.RootDir, sitePrefix, "exports")
 		}
 		response.CreationTime = CreationTime(absolutePath, fileInfo)
 	}

@@ -510,8 +510,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 				return
 			}
 			var creationTime time.Time
-			if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-				creationTime = fileInfo.CreationTime
+			if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+				creationTime = databaseFileInfo.CreationTime
 			} else {
 				var absolutePath string
 				dirFS := &DirFS{}
@@ -643,7 +643,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 			if next == "posts" {
 				if fileType.Has(AttributeImg) {
 					parentPost := tail + ".md"
-					file, err := nbrew.FS.WithContext(r.Context()).Open(parentPost)
+					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPost))
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
@@ -664,8 +664,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						return
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-						creationTime = fileInfo.CreationTime
+					if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
@@ -722,7 +722,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					} else {
 						parentPage = path.Join("pages", tail+".html")
 					}
-					file, err := nbrew.FS.WithContext(r.Context()).Open(parentPage)
+					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, parentPage))
 					if err != nil {
 						getLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
@@ -755,8 +755,8 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 						return
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-						creationTime = fileInfo.CreationTime
+					if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}

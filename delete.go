@@ -899,8 +899,8 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 						return err
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-						creationTime = fileInfo.CreationTime
+					if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}

@@ -553,7 +553,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					var absolutePath string
 					dirFS := &DirFS{}
 					if castAs(nbrew.FS, &dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.FilePath)
+						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.BelongsTo)
 					}
 					creationTime = CreationTime(absolutePath, fileInfo)
 				}

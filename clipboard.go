@@ -782,8 +782,8 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						return err
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-						creationTime = fileInfo.CreationTime
+					if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
@@ -856,8 +856,8 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						return err
 					}
 					var creationTime time.Time
-					if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-						creationTime = fileInfo.CreationTime
+					if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
