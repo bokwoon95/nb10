@@ -396,7 +396,10 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			return
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
-		if head == "output" {
+		switch head {
+		case "pages":
+		case "posts":
+		case "output":
 			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
 				FS:                 nbrew.FS,
 				ContentDomain:      nbrew.ContentDomain,
@@ -410,7 +413,17 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return
 			}
 			next, _, _ := strings.Cut(tail, "/")
-			if next == "posts" {
+			if next == "themes"{
+				if request.RegenerateSite {
+					regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
+					if err != nil {
+						getLogger(r.Context()).Error(err.Error())
+						nbrew.InternalServerError(w, r, err)
+						return
+					}
+					response.RegenerationStats = regenerationStats
+				}
+			} else if next == "posts" {
 				var text string
 				var creationTime time.Time
 				response.BelongsTo = path.Dir(tail) + ".md"
@@ -491,7 +504,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 				response.RegenerationStats.Count = 1
 				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
-			} else if next != "themes" {
+			} else {
 				var text string
 				var modTime, creationTime time.Time
 				dir := path.Dir(tail)
