@@ -1407,19 +1407,18 @@ func init() {
 }
 
 func castAs[T any](v any, target *T) bool {
+	if target == nil {
+		return false
+	}
 	switch v := v.(type) {
-	case interface{ As(target any) bool }:
+	case interface {
+		As(target any) bool
+	}:
 		return v.As(target)
 	case T:
-		if target == nil {
-			return false
-		}
 		*target = v
 		return true
 	case *T:
-		if target == nil {
-			return false
-		}
 		*target = *v
 		return true
 	default:
