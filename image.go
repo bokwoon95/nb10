@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -342,7 +343,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 
 		var request struct {
 			Content            string
-			RegenerateParent   bool
 			RegeneratePostList bool
 			RegenerateSite     bool
 		}
@@ -372,7 +372,6 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 			}
 			request.Content = r.Form.Get("content")
-			request.RegenerateParent, _ = strconv.ParseBool(r.Form.Get("regenerateParent"))
 			request.RegeneratePostList, _ = strconv.ParseBool(r.Form.Get("regeneratePostList"))
 			request.RegenerateSite, _ = strconv.ParseBool(r.Form.Get("regenerateSite"))
 		default:
@@ -396,24 +395,9 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			return
 		}
 		head, tail, _ := strings.Cut(filePath, "/")
-		switch head {
-		case "pages":
-		case "posts":
-		case "output":
-			siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
-				FS:                 nbrew.FS,
-				ContentDomain:      nbrew.ContentDomain,
-				ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-				CDNDomain:          nbrew.CDNDomain,
-				SitePrefix:         sitePrefix,
-			})
-			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
+		if head == "output" {
 			next, _, _ := strings.Cut(tail, "/")
-			if next == "themes"{
+			if next == "themes" {
 				if request.RegenerateSite {
 					regenerationStats, err := nbrew.RegenerateSite(r.Context(), sitePrefix)
 					if err != nil {
@@ -424,87 +408,154 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					response.RegenerationStats = regenerationStats
 				}
 			} else if next == "posts" {
-				var text string
-				var creationTime time.Time
+				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+					FS:                 nbrew.FS,
+					ContentDomain:      nbrew.ContentDomain,
+					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+					CDNDomain:          nbrew.CDNDomain,
+					SitePrefix:         sitePrefix,
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				}
+				var count atomic.Int64
+				var templateErrPtr atomic.Pointer[TemplateError]
+				group, groupctx := errgroup.WithContext(r.Context())
 				response.BelongsTo = path.Dir(tail) + ".md"
-				databaseFS := &DatabaseFS{}
-				if castAs(nbrew.FS, &databaseFS) {
-					result, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
-						Dialect: databaseFS.Dialect,
-						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
-						Values: []any{
-							sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),
-						},
-					}, func(row *sq.Row) (result struct {
-						Text         string
-						CreationTime time.Time
-					}) {
-						result.Text = row.String("text")
-						result.CreationTime = row.Time("creation_time")
-						return result
-					})
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
-						return
-					}
-					text = result.Text
-					creationTime = result.CreationTime
-				} else {
-					file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, response.BelongsTo))
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
-						return
-					}
-					defer file.Close()
-					fileInfo, err := file.Stat()
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
-						return
-					}
-					var b strings.Builder
-					b.Grow(int(fileInfo.Size()))
-					_, err = io.Copy(&b, file)
-					if err != nil {
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
-						return
-					}
-					var absolutePath string
-					dirFS := &DirFS{}
-					if castAs(nbrew.FS, &dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.BelongsTo)
-					}
-					text = b.String()
-					creationTime = CreationTime(absolutePath, fileInfo)
-				}
 				category := path.Dir(strings.TrimPrefix(response.BelongsTo, "posts/"))
+				if category == "." {
+					category = ""
+				}
 				startedAt := time.Now()
-				tmpl, err := siteGen.PostTemplate(r.Context(), category)
-				if err != nil {
-					if errors.As(err, &response.RegenerationStats.TemplateError) {
-						writeResponse(w, r, response)
-						return
+				group.Go(func() (err error) {
+					defer func() {
+						if v := recover(); v != nil {
+							err = fmt.Errorf("panic: " + string(debug.Stack()))
+						}
+					}()
+					var text string
+					var creationTime time.Time
+					databaseFS := &DatabaseFS{}
+					if castAs(nbrew.FS, &databaseFS) {
+						result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
+							Dialect: databaseFS.Dialect,
+							Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
+							Values: []any{
+								sq.StringParam("filePath", path.Join(sitePrefix, response.BelongsTo)),
+							},
+						}, func(row *sq.Row) (result struct {
+							Text         string
+							CreationTime time.Time
+						}) {
+							result.Text = row.String("text")
+							result.CreationTime = row.Time("creation_time")
+							return result
+						})
+						if err != nil {
+							return err
+						}
+						text = result.Text
+						creationTime = result.CreationTime
+					} else {
+						file, err := nbrew.FS.WithContext(groupctx).Open(path.Join(sitePrefix, response.BelongsTo))
+						if err != nil {
+							return err
+						}
+						defer file.Close()
+						fileInfo, err := file.Stat()
+						if err != nil {
+							return err
+						}
+						var b strings.Builder
+						b.Grow(int(fileInfo.Size()))
+						_, err = io.Copy(&b, file)
+						if err != nil {
+							return err
+						}
+						var absolutePath string
+						dirFS := &DirFS{}
+						if castAs(nbrew.FS, &dirFS) {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.BelongsTo)
+						}
+						text = b.String()
+						creationTime = CreationTime(absolutePath, fileInfo)
 					}
+					tmpl, err := siteGen.PostTemplate(groupctx, category)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					err = siteGen.GeneratePost(groupctx, response.BelongsTo, text, time.Now(), creationTime, tmpl)
+					if err != nil {
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
+						}
+						return err
+					}
+					count.Add(1)
+					return nil
+				})
+				if request.RegeneratePostList {
+					group.Go(func() (err error) {
+						defer func() {
+							if v := recover(); v != nil {
+								err = fmt.Errorf("panic: " + string(debug.Stack()))
+							}
+						}()
+						tmpl, err := siteGen.PostListTemplate(groupctx, category)
+						if err != nil {
+							var templateErr TemplateError
+							if errors.As(err, &templateErr) {
+								templateErrPtr.CompareAndSwap(nil, &templateErr)
+								return nil
+							}
+							return err
+						}
+						n, err := siteGen.GeneratePostList(groupctx, category, tmpl)
+						if err != nil {
+							var templateErr TemplateError
+							if errors.As(err, &templateErr) {
+								templateErrPtr.CompareAndSwap(nil, &templateErr)
+								return nil
+							}
+							return err
+						}
+						count.Add(n)
+						return nil
+					})
+				}
+				err = group.Wait()
+				if err != nil {
 					getLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
-				err = siteGen.GeneratePost(r.Context(), response.BelongsTo, text, time.Now(), creationTime, tmpl)
-				if err != nil {
-					if errors.As(err, &response.RegenerationStats.TemplateError) {
-						writeResponse(w, r, response)
-						return
-					}
-					getLogger(r.Context()).Error(err.Error())
-					nbrew.InternalServerError(w, r, err)
-					return
-				}
-				response.RegenerationStats.Count = 1
+				response.RegenerationStats.Count = count.Load()
 				response.RegenerationStats.TimeTaken = time.Since(startedAt).String()
+				if ptr := templateErrPtr.Load(); ptr != nil {
+					response.RegenerationStats.TemplateError = *ptr
+				}
 			} else {
+				siteGen, err := NewSiteGenerator(r.Context(), SiteGeneratorConfig{
+					FS:                 nbrew.FS,
+					ContentDomain:      nbrew.ContentDomain,
+					ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
+					CDNDomain:          nbrew.CDNDomain,
+					SitePrefix:         sitePrefix,
+				})
+				if err != nil {
+					getLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				}
 				var text string
 				var modTime, creationTime time.Time
 				dir := path.Dir(tail)

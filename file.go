@@ -1265,13 +1265,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					}
 					err = siteGen.GeneratePost(r.Context(), filePath, response.Content, response.ModTime, response.CreationTime, tmpl)
 					if err != nil {
-						if errors.As(err, &response.RegenerationStats.TemplateError) {
-							writeResponse(w, r, response)
-							return
+						var templateErr TemplateError
+						if errors.As(err, &templateErr) {
+							templateErrPtr.CompareAndSwap(nil, &templateErr)
+							return nil
 						}
-						getLogger(r.Context()).Error(err.Error())
-						nbrew.InternalServerError(w, r, err)
-						return
+						return err
 					}
 					count.Add(1)
 					return nil

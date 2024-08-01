@@ -112,10 +112,10 @@
       <span class='ml1'>word wrap</span>
     </label>
     <button type='submit' class='button ba ph3 br2 b--black pv1'>save</button>
-    {{- if eq (head $.BelongsTo) "pages" }}
-    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
-    {{- else if eq (head $.BelongsTo) "posts" }}
+    {{- if eq (head $.BelongsTo) "posts" }}
     <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+    {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") }}
+    <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
     {{- end }}
   </div>
   <div data-editor='{"ext":".md","wordwrapCheckboxID":"wordwrap"}'>
@@ -130,10 +130,10 @@ And this is the the caption.</pre>
     </div>
   </details>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
-  {{- if eq (head $.BelongsTo) "pages" }}
-  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100 bg-transparent' name='regenerateParent' value='true'>save and regenerate parent page</button>
-  {{- else if eq (head $.BelongsTo) "posts" }}
+  {{- if eq (head $.BelongsTo) "posts" }}
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100 bg-transparent' name='regeneratePostList' value='true'>save and regenerate post list</button>
+  {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") }}
+  <button type='submit' class='button ba ph3 br2 b--black pv1 ml1 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
   {{- end }}
   <div role='status'></div>
 </form>
