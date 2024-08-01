@@ -3,6 +3,7 @@ package nb10
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -48,7 +49,18 @@ type SFTPFS struct {
 
 func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 	rootDir := filepath.ToSlash(config.RootDir)
+	if rootDir == "" {
+		return nil, fmt.Errorf("rootDir cannot be empty")
+	}
+	if !strings.HasPrefix(rootDir, "/") {
+		rootDir = "/" + rootDir
+	}
 	tempDir := filepath.ToSlash(config.TempDir)
+	if tempDir != "" {
+		if !strings.HasPrefix(tempDir, "/") {
+			tempDir = "/" + tempDir
+		}
+	}
 	maxConnections := config.MaxConnections
 	if maxConnections < 1 {
 		maxConnections = 1
@@ -286,6 +298,87 @@ func (fsys *SFTPFS) MkdirAll(name string, _ fs.FileMode) error {
 		return err
 	}
 	return sftpClient.MkdirAll(path.Join(fsys.RootDir, name))
+}
+
+func (fsys *SFTPFS) Remove(name string) error {
+	err := fsys.ctx.Err()
+	if err != nil {
+		return err
+	}
+	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
+		return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrInvalid}
+	}
+	sftpClient, err := fsys.Clients[int(fsys.index.Add(1))%len(fsys.Clients)].Get(fsys.NewSSHClient)
+	if err != nil {
+		return err
+	}
+	return sftpClient.Remove(path.Join(fsys.RootDir, name))
+}
+
+func (fsys *SFTPFS) RemoveAll(name string) error {
+	err := fsys.ctx.Err()
+	if err != nil {
+		return err
+	}
+	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
+		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
+	}
+	sftpClient, err := fsys.Clients[int(fsys.index.Add(1))%len(fsys.Clients)].Get(fsys.NewSSHClient)
+	if err != nil {
+		return err
+	}
+	_, err = sftpClient.Stat(path.Join(fsys.RootDir, name))
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	} else {
+		return nil
+	}
+	return sftpClient.RemoveAll(path.Join(fsys.RootDir, name))
+}
+
+func (fsys *SFTPFS) Rename(oldName, newName string) error {
+	err := fsys.ctx.Err()
+	if err != nil {
+		return err
+	}
+	if !fs.ValidPath(oldName) || strings.Contains(oldName, "\\") {
+		return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrInvalid}
+	}
+	if !fs.ValidPath(newName) || strings.Contains(newName, "\\") {
+		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrInvalid}
+	}
+	sftpClient, err := fsys.Clients[int(fsys.index.Add(1))%len(fsys.Clients)].Get(fsys.NewSSHClient)
+	if err != nil {
+		return err
+	}
+	_, err = sftpClient.Stat(path.Join(fsys.RootDir, newName))
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	} else {
+		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
+	}
+	if _, ok := sftpClient.HasExtension("posix-rename@openssh.com"); ok {
+		err := sftpClient.PosixRename(path.Join(fsys.RootDir, oldName), path.Join(fsys.RootDir, newName))
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
+			}
+			return err
+		}
+	} else {
+		err := sftpClient.Rename(path.Join(fsys.RootDir, oldName), path.Join(fsys.RootDir, newName))
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 func (fsys *SFTPFS) Close() error {
