@@ -1415,11 +1415,11 @@ func castAs[T any](v any, target *T) bool {
 		As(target any) bool
 	}:
 		return v.As(target)
-	case *T:
-		*target = *v
-		return true
 	case T:
 		*target = v
+		return true
+	case *T:
+		*target = *v
 		return true
 	default:
 		return false
