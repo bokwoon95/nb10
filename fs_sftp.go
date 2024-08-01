@@ -96,17 +96,6 @@ func (fsys *SFTPFS) WithContext(ctx context.Context) FS {
 	}
 }
 
-func (fsys *SFTPFS) WithValues(values map[string]any) FS {
-	return &SFTPFS{
-		Clients:      fsys.Clients,
-		NewSSHClient: fsys.NewSSHClient,
-		RootDir:      fsys.RootDir,
-		TempDir:      fsys.TempDir,
-		index:        fsys.index,
-		ctx:          fsys.ctx,
-	}
-}
-
 func (fsys *SFTPFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {

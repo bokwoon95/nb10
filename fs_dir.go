@@ -66,14 +66,6 @@ func (fsys *DirFS) WithContext(ctx context.Context) FS {
 	}
 }
 
-func (fsys *DirFS) WithValues(values map[string]any) FS {
-	return &DirFS{
-		RootDir: fsys.RootDir,
-		TempDir: fsys.TempDir,
-		ctx:     fsys.ctx,
-	}
-}
-
 func (fsys *DirFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {

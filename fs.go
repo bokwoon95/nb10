@@ -27,8 +27,6 @@ type FS interface {
 	// WithContext returns a new FS with the given context.
 	WithContext(context.Context) FS
 
-	WithValues(map[string]any) FS
-
 	// Open opens the named file.
 	Open(name string) (fs.File, error)
 

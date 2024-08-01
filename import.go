@@ -407,10 +407,15 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 	}
 	regenerateSite := false
 	mkdir := func(ctx context.Context, filePath string, modTime, creationTime time.Time, isPinned bool) error {
-		fsys := nbrew.FS.WithContext(ctx).WithValues(map[string]any{
-			"modTime":      modTime,
-			"creationTime": creationTime,
-		})
+		fsys := nbrew.FS.WithContext(ctx)
+		if v, ok := fsys.(interface {
+			WithValues(map[string]any) FS
+		}); ok {
+			fsys = v.WithValues(map[string]any{
+				"modTime":      modTime,
+				"creationTime": creationTime,
+			})
+		}
 		if !overwriteExistingFiles {
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
@@ -480,11 +485,16 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 		return nil
 	}
 	writeFile := func(ctx context.Context, filePath string, modTime, creationTime time.Time, caption string, isPinned bool, reader io.Reader) error {
-		fsys := nbrew.FS.WithContext(ctx).WithValues(map[string]any{
-			"modTime":      modTime,
-			"creationTime": creationTime,
-			"caption":      caption,
-		})
+		fsys := nbrew.FS.WithContext(ctx)
+		if v, ok := fsys.(interface {
+			WithValues(map[string]any) FS
+		}); ok {
+			fsys = v.WithValues(map[string]any{
+				"modTime":      modTime,
+				"creationTime": creationTime,
+				"caption":      caption,
+			})
+		}
 		if !overwriteExistingFiles {
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
