@@ -9,12 +9,14 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/sync/errgroup"
 )
 
 type FilesConfig struct {
@@ -43,7 +45,7 @@ type SFTPFS struct {
 	NewSSHClient func() (*ssh.Client, error)
 	RootDir      string
 	TempDir      string
-	index        atomic.Uint64
+	index        *atomic.Uint64
 	ctx          context.Context
 }
 
@@ -70,6 +72,7 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 		NewSSHClient: config.NewSSHClient,
 		RootDir:      rootDir,
 		TempDir:      tempDir,
+		index:        &atomic.Uint64{},
 		ctx:          context.Background(),
 	}
 	for i := 0; i < maxConnections; i++ {
@@ -83,11 +86,25 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 }
 
 func (fsys *SFTPFS) WithContext(ctx context.Context) FS {
-	return nil // TODO
+	return &SFTPFS{
+		Clients:      fsys.Clients,
+		NewSSHClient: fsys.NewSSHClient,
+		RootDir:      fsys.RootDir,
+		TempDir:      fsys.TempDir,
+		index:        fsys.index,
+		ctx:          ctx,
+	}
 }
 
-func (fsys *SFTPFS) WithValues(ctx context.Context) FS {
-	return nil // TODO
+func (fsys *SFTPFS) WithValues(values map[string]any) FS {
+	return &SFTPFS{
+		Clients:      fsys.Clients,
+		NewSSHClient: fsys.NewSSHClient,
+		RootDir:      fsys.RootDir,
+		TempDir:      fsys.TempDir,
+		index: fsys.index,
+		ctx:          fsys.ctx,
+	}
 }
 
 func (fsys *SFTPFS) Open(name string) (fs.File, error) {
@@ -377,6 +394,108 @@ func (fsys *SFTPFS) Rename(oldName, newName string) error {
 			}
 			return err
 		}
+	}
+	return nil
+}
+
+func (fsys *SFTPFS) Copy(srcName, destName string) error {
+	err := fsys.ctx.Err()
+	if err != nil {
+		return err
+	}
+	if !fs.ValidPath(srcName) || strings.Contains(srcName, "\\") {
+		return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrInvalid}
+	}
+	if !fs.ValidPath(destName) || strings.Contains(destName, "\\") {
+		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrInvalid}
+	}
+	sftpClient, err := fsys.Clients[int(fsys.index.Add(1))%len(fsys.Clients)].Get(fsys.NewSSHClient)
+	if err != nil {
+		return err
+	}
+	_, err = sftpClient.Stat(path.Join(fsys.RootDir, destName))
+	if err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	} else {
+		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
+	}
+	srcFileInfo, err := sftpClient.Stat(path.Join(fsys.RootDir, srcName))
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrNotExist}
+		}
+		return err
+	}
+	if !srcFileInfo.IsDir() {
+		srcFile, err := fsys.WithContext(fsys.ctx).Open(srcName)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+		destFile, err := fsys.WithContext(fsys.ctx).OpenWriter(destName, 0644)
+		if err != nil {
+			return err
+		}
+		defer destFile.Close()
+		_, err = io.Copy(destFile, srcFile)
+		if err != nil {
+			return err
+		}
+		err = destFile.Close()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	group, groupctx := errgroup.WithContext(fsys.ctx)
+	err = fs.WalkDir(fsys.WithContext(groupctx), srcName, func(filePath string, dirEntry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		relativePath := strings.TrimPrefix(strings.TrimPrefix(filePath, srcName), "/")
+		if dirEntry.IsDir() {
+			err := fsys.WithContext(groupctx).MkdirAll(path.Join(destName, relativePath), 0755)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		group.Go(func() (err error) {
+			defer func() {
+				if v := recover(); v != nil {
+					err = fmt.Errorf("panic: " + string(debug.Stack()))
+				}
+			}()
+			srcFile, err := fsys.WithContext(groupctx).Open(filePath)
+			if err != nil {
+				return err
+			}
+			defer srcFile.Close()
+			destFile, err := fsys.WithContext(groupctx).OpenWriter(path.Join(destName, relativePath), 0644)
+			if err != nil {
+				return err
+			}
+			defer destFile.Close()
+			_, err = io.Copy(destFile, srcFile)
+			if err != nil {
+				return err
+			}
+			err = destFile.Close()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	err = group.Wait()
+	if err != nil {
+		return err
 	}
 	return nil
 }
