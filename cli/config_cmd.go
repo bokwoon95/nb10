@@ -873,7 +873,7 @@ const databaseHelp = `# == database keys == #
 `
 
 type FilesConfig struct {
-	Provider       string            `json:"provider"`
+	Provider       string            `json:"provider"` // dir | database | sftp (default is dir)
 	Dialect        string            `json:"dialect"`
 	FilePath       string            `json:"filePath"`
 	AuthMethod     string            `json:"authMethod"` // password | key (default is key)
