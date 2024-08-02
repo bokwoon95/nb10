@@ -872,6 +872,20 @@ const databaseHelp = `# == database keys == #
 # params   - Database-specific connection parameters (see https://example.com for more info)
 `
 
+type FilesConfig struct {
+	Provider       string            `json:"provider"`
+	Dialect        string            `json:"dialect"`
+	FilePath       string            `json:"filePath"`
+	AuthMethod     string            `json:"authMethod"` // password | key (default is key)
+	MaxConnections int               `json:"maxConnections"`
+	User           string            `json:"user"`
+	Password       string            `json:"password"`
+	Host           string            `json:"host"`
+	Port           string            `json:"port"`
+	DBName         string            `json:"dbName"`
+	Params         map[string]string `json:"params"`
+}
+
 const filesHelp = `# == files keys == #
 # Choose between using a directory or a database-backed filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
