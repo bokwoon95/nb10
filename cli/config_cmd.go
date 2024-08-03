@@ -931,7 +931,7 @@ const databaseHelp = `# == database keys == #
 # port            - Database port.
 # dbName          - Database name.
 # params          - Database-specific connection parameters (see https://example.com for more info).
-# maxOpenConns    - Max open connections to the database (0 means unset).
+# maxOpenConns    - Max open connections to the database (0 means unset, default is unlimited).
 # maxIdleConns    - Max idle connections to the database (0 means unset, default is 2).
 # connMaxLifetime - Connection max lifetime. e.g. 5m, 10m30s
 # connMaxIdleTime - Connection max idle time. e.g. 5m, 10m30s
@@ -966,7 +966,7 @@ const filesHelp = `# == files keys == #
 # port     - Database/SFTP port.
 # dbName   - Database name.
 # params   - Database-specific connection parameters (see https://example.com for more info).
-# maxOpenConns    - Max open connections to the database/SFTP server (0 means unset).
+# maxOpenConns    - Max open connections to the database/SFTP server (0 means unset, default is unlimited for the database and 1 for the SFTP server).
 # maxIdleConns    - Max idle connections to the database (0 means unset, default is 2).
 # connMaxLifetime - Connection max lifetime. e.g. 5m, 10m30s
 # connMaxIdleTime - Connection max idle time. e.g. 5m, 10m30s
