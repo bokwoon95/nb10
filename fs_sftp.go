@@ -19,20 +19,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type FilesConfig struct {
-	Provider       string            `json:"provider"`
-	Dialect        string            `json:"dialect"`
-	FilePath       string            `json:"filePath"`
-	AuthMethod     string            `json:"authMethod"` // password | key (default is key)
-	MaxConnections int               `json:"maxConnections"`
-	User           string            `json:"user"`
-	Password       string            `json:"password"`
-	Host           string            `json:"host"`
-	Port           string            `json:"port"`
-	DBName         string            `json:"dbName"`
-	Params         map[string]string `json:"params"`
-}
-
 type SFTPFSConfig struct {
 	NewSSHClient   func() (*ssh.Client, error)
 	RootDir        string
