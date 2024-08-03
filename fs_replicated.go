@@ -103,6 +103,9 @@ func (fsys *ReplicatedFS) Open(name string) (fs.File, error) {
 }
 
 func (fsys *ReplicatedFS) OpenWriter(name string, perm fs.FileMode) (io.WriteCloser, error) {
+	// TODO: No!! We need a custom replicatedFS writer that wraps the leader's
+	// writecloser and replicates the write to the rest of the writers when
+	// Close() is called.
 	return fsys.Leader.OpenWriter(name, perm)
 }
 
@@ -151,7 +154,151 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 			}()
 			err := follower.WithContext(gracePeriodCtx).Mkdir(name, perm)
 			if err != nil {
-				slog.Default().Error(err.Error())
+				fsys.Logger.Error(err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
+func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
+	err := fsys.Leader.MkdirAll(name, perm)
+	if err != nil {
+		return err
+	}
+	if fsys.Synchronous {
+		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+		for _, follower := range fsys.Followers {
+			follower := follower
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				return follower.WithContext(groupctx).MkdirAll(name, perm)
+			})
+		}
+		return group.Wait()
+	}
+	for _, follower := range fsys.Followers {
+		follower := follower
+		fsys.baseCtxWaitGroup.Add(1)
+		go func() {
+			defer fsys.baseCtxWaitGroup.Done()
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + string(debug.Stack()))
+				}
+			}()
+			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
+			defer gracePeriodCancel()
+			gracePeriodTimer := time.NewTimer(time.Hour)
+			defer gracePeriodTimer.Stop()
+			go func() {
+				<-fsys.baseCtx.Done()
+				<-gracePeriodTimer.C
+				gracePeriodCancel()
+			}()
+			err := follower.WithContext(gracePeriodCtx).Mkdir(name, perm)
+			if err != nil {
+				fsys.Logger.Error(err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
+func (fsys *ReplicatedFS) Remove(name string) error {
+	err := fsys.Leader.Remove(name)
+	if err != nil {
+		return err
+	}
+	if fsys.Synchronous {
+		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+		for _, follower := range fsys.Followers {
+			follower := follower
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				return follower.WithContext(groupctx).Remove(name)
+			})
+		}
+		return group.Wait()
+	}
+	for _, follower := range fsys.Followers {
+		follower := follower
+		fsys.baseCtxWaitGroup.Add(1)
+		go func() {
+			defer fsys.baseCtxWaitGroup.Done()
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + string(debug.Stack()))
+				}
+			}()
+			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
+			defer gracePeriodCancel()
+			gracePeriodTimer := time.NewTimer(time.Hour)
+			defer gracePeriodTimer.Stop()
+			go func() {
+				<-fsys.baseCtx.Done()
+				<-gracePeriodTimer.C
+				gracePeriodCancel()
+			}()
+			err := follower.WithContext(gracePeriodCtx).Remove(name)
+			if err != nil {
+				fsys.Logger.Error(err.Error())
+			}
+		}()
+	}
+	return nil
+}
+
+func (fsys *ReplicatedFS) RemoveAll(name string) error {
+	err := fsys.Leader.RemoveAll(name)
+	if err != nil {
+		return err
+	}
+	if fsys.Synchronous {
+		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+		for _, follower := range fsys.Followers {
+			follower := follower
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				return follower.WithContext(groupctx).RemoveAll(name)
+			})
+		}
+		return group.Wait()
+	}
+	for _, follower := range fsys.Followers {
+		follower := follower
+		fsys.baseCtxWaitGroup.Add(1)
+		go func() {
+			defer fsys.baseCtxWaitGroup.Done()
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + string(debug.Stack()))
+				}
+			}()
+			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
+			defer gracePeriodCancel()
+			gracePeriodTimer := time.NewTimer(time.Hour)
+			defer gracePeriodTimer.Stop()
+			go func() {
+				<-fsys.baseCtx.Done()
+				<-gracePeriodTimer.C
+				gracePeriodCancel()
+			}()
+			err := follower.WithContext(gracePeriodCtx).RemoveAll(name)
+			if err != nil {
+				fsys.Logger.Error(err.Error())
 			}
 		}()
 	}
