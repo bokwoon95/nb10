@@ -278,6 +278,20 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 					}
 				}()
 				defer nbrew.waitGroup.Done()
+				// Instead of immediately canceling all ongoing import jobs
+				// when nbrew.ctx is done, give up to one hour of grace period.
+				// Unlike an export job, when an import job is canceled there
+				// is zero feedback that it happened (a canceled export job
+				// will show up as a missing export file, prompting the user to
+				// restart the export job) so the user will not even realize it
+				// unless they manually check the presence of every file. By
+				// then, they might have already deleted the tgz import file
+				// because they assumed the import job was successful.
+				//
+				// One hour is long enough that all import jobs should have
+				// reasonably completed within that period of time, we are not
+				// interested in preserving any import jobs that take longer
+				// than one hour.
 				ctx, cancel := context.WithCancel(nbrew.ctx)
 				defer cancel()
 				timer := time.NewTimer(time.Hour)
