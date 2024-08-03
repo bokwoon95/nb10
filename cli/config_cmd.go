@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -181,6 +182,14 @@ func (cmd *ConfigCmd) Run() error {
 				if err != nil {
 					return err
 				}
+			case "maxOpenConns":
+				io.WriteString(cmd.Stdout, strconv.Itoa(databaseConfig.MaxOpenConns)+"\n")
+			case "maxIdleConns":
+				io.WriteString(cmd.Stdout, strconv.Itoa(databaseConfig.MaxIdleConns)+"\n")
+			case "connMaxLifetime":
+				io.WriteString(cmd.Stdout, databaseConfig.ConnMaxLifetime+"\n")
+			case "connMaxIdleTime":
+				io.WriteString(cmd.Stdout, databaseConfig.ConnMaxIdleTime+"\n")
 			default:
 				io.WriteString(cmd.Stderr, databaseHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -190,7 +199,7 @@ func (cmd *ConfigCmd) Run() error {
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
-			var filesConfig DatabaseConfig
+			var filesConfig FilesConfig
 			if len(b) > 0 {
 				decoder := json.NewDecoder(bytes.NewReader(b))
 				decoder.DisallowUnknownFields()
@@ -212,6 +221,10 @@ func (cmd *ConfigCmd) Run() error {
 				if err != nil {
 					return err
 				}
+			case "provider":
+				io.WriteString(cmd.Stdout, filesConfig.Provider+"\n")
+			case "authenticationMethod":
+				io.WriteString(cmd.Stdout, filesConfig.AuthenticationMethod+"\n")
 			case "dialect":
 				io.WriteString(cmd.Stdout, filesConfig.Dialect+"\n")
 			case "filePath":
@@ -234,6 +247,14 @@ func (cmd *ConfigCmd) Run() error {
 				if err != nil {
 					return err
 				}
+			case "maxOpenConns":
+				io.WriteString(cmd.Stdout, strconv.Itoa(filesConfig.MaxOpenConns)+"\n")
+			case "maxIdleConns":
+				io.WriteString(cmd.Stdout, strconv.Itoa(filesConfig.MaxIdleConns)+"\n")
+			case "connMaxLifetime":
+				io.WriteString(cmd.Stdout, filesConfig.ConnMaxLifetime+"\n")
+			case "connMaxIdleTime":
+				io.WriteString(cmd.Stdout, filesConfig.ConnMaxIdleTime+"\n")
 			default:
 				io.WriteString(cmd.Stderr, filesHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -484,7 +505,7 @@ func (cmd *ConfigCmd) Run() error {
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&newDatabaseConfig)
 			if err != nil {
-				return err
+				return fmt.Errorf("invalid value: %w", err)
 			}
 			databaseConfig = newDatabaseConfig
 		case "dialect":
@@ -507,9 +528,25 @@ func (cmd *ConfigCmd) Run() error {
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&params)
 			if err != nil {
-				return err
+				return fmt.Errorf("invalid value: %w", err)
 			}
 			databaseConfig.Params = params
+		case "maxOpenConns":
+			maxOpenConns, err := strconv.Atoi(cmd.Value.String)
+			if err != nil {
+				return fmt.Errorf("invalid value: %w", err)
+			}
+			databaseConfig.MaxOpenConns = maxOpenConns
+		case "maxIdleConns":
+			maxIdleConns, err := strconv.Atoi(cmd.Value.String)
+			if err != nil {
+				return fmt.Errorf("invalid value: %w", err)
+			}
+			databaseConfig.MaxIdleConns = maxIdleConns
+		case "connMaxLifetime":
+			databaseConfig.ConnMaxLifetime = cmd.Value.String
+		case "connMaxIdleTime":
+			databaseConfig.ConnMaxIdleTime = cmd.Value.String
 		default:
 			io.WriteString(cmd.Stderr, databaseHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -535,7 +572,7 @@ func (cmd *ConfigCmd) Run() error {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
-		var filesConfig DatabaseConfig
+		var filesConfig FilesConfig
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
@@ -549,7 +586,7 @@ func (cmd *ConfigCmd) Run() error {
 		}
 		switch tail {
 		case "":
-			var newFilesConfig DatabaseConfig
+			var newFilesConfig FilesConfig
 			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
 			decoder.DisallowUnknownFields()
 			err := decoder.Decode(&newFilesConfig)
@@ -557,6 +594,10 @@ func (cmd *ConfigCmd) Run() error {
 				return err
 			}
 			filesConfig = newFilesConfig
+		case "provider":
+			filesConfig.Provider = cmd.Value.String
+		case "authenticationMethod":
+			filesConfig.AuthenticationMethod = cmd.Value.String
 		case "dialect":
 			filesConfig.Dialect = cmd.Value.String
 		case "filePath":
@@ -580,6 +621,22 @@ func (cmd *ConfigCmd) Run() error {
 				return err
 			}
 			filesConfig.Params = params
+		case "maxOpenConns":
+			maxOpenConns, err := strconv.Atoi(cmd.Value.String)
+			if err != nil {
+				return fmt.Errorf("invalid value: %w", err)
+			}
+			filesConfig.MaxOpenConns = maxOpenConns
+		case "maxIdleConns":
+			maxIdleConns, err := strconv.Atoi(cmd.Value.String)
+			if err != nil {
+				return fmt.Errorf("invalid value: %w", err)
+			}
+			filesConfig.MaxIdleConns = maxIdleConns
+		case "connMaxLifetime":
+			filesConfig.ConnMaxLifetime = cmd.Value.String
+		case "connMaxIdleTime":
+			filesConfig.ConnMaxIdleTime = cmd.Value.String
 		default:
 			io.WriteString(cmd.Stderr, filesHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -850,14 +907,18 @@ func (cmd *ConfigCmd) Run() error {
 }
 
 type DatabaseConfig struct {
-	Dialect  string            `json:"dialect"`
-	FilePath string            `json:"filePath"`
-	User     string            `json:"user"`
-	Password string            `json:"password"`
-	Host     string            `json:"host"`
-	Port     string            `json:"port"`
-	DBName   string            `json:"dbName"`
-	Params   map[string]string `json:"params"`
+	Dialect         string            `json:"dialect"`
+	FilePath        string            `json:"filePath"`
+	User            string            `json:"user"`
+	Password        string            `json:"password"`
+	Host            string            `json:"host"`
+	Port            string            `json:"port"`
+	DBName          string            `json:"dbName"`
+	Params          map[string]string `json:"params"`
+	MaxOpenConns    int               `json:"maxOpenConns"`
+	MaxIdleConns    int               `json:"maxIdleConns"`
+	ConnMaxLifetime string            `json:"connMaxLifetime"`
+	ConnMaxIdleTime string            `json:"connMaxIdleTime"`
 }
 
 const databaseHelp = `# == database keys == #
@@ -873,17 +934,20 @@ const databaseHelp = `# == database keys == #
 `
 
 type FilesConfig struct {
-	Provider       string            `json:"provider"` // dir | database | sftp (default is dir)
-	Dialect        string            `json:"dialect"`
-	FilePath       string            `json:"filePath"`
-	AuthMethod     string            `json:"authMethod"` // password | key (default is key)
-	MaxConnections int               `json:"maxConnections"`
-	User           string            `json:"user"`
-	Password       string            `json:"password"`
-	Host           string            `json:"host"`
-	Port           string            `json:"port"`
-	DBName         string            `json:"dbName"`
-	Params         map[string]string `json:"params"`
+	Provider             string            `json:"provider"`             // dir | database | sftp (default is dir)
+	AuthenticationMethod string            `json:"authenticationMethod"` // password | key (default is key)
+	Dialect              string            `json:"dialect"`
+	FilePath             string            `json:"filePath"`
+	User                 string            `json:"user"`
+	Password             string            `json:"password"`
+	Host                 string            `json:"host"`
+	Port                 string            `json:"port"`
+	DBName               string            `json:"dbName"`
+	Params               map[string]string `json:"params"`
+	MaxOpenConns         int               `json:"maxOpenConns"`
+	MaxIdleConns         int               `json:"maxIdleConns"`
+	ConnMaxLifetime      string            `json:"connMaxLifetime"`
+	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
 }
 
 const filesHelp = `# == files keys == #

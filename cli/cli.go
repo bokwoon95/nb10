@@ -500,6 +500,26 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "database.json"), nbrew.Dialect, dataSourceName, err)
 		}
+		if databaseConfig.MaxOpenConns > 0 {
+			nbrew.DB.SetMaxOpenConns(databaseConfig.MaxOpenConns)
+		}
+		if databaseConfig.MaxIdleConns > 0 {
+			nbrew.DB.SetMaxIdleConns(databaseConfig.MaxIdleConns)
+		}
+		if databaseConfig.ConnMaxLifetime != "" {
+			duration, err := time.ParseDuration(databaseConfig.ConnMaxLifetime)
+			if err != nil {
+				return nil, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "database.json"), databaseConfig.ConnMaxLifetime, err)
+			}
+			nbrew.DB.SetConnMaxLifetime(duration)
+		}
+		if databaseConfig.ConnMaxIdleTime != "" {
+			duration, err := time.ParseDuration(databaseConfig.ConnMaxIdleTime)
+			if err != nil {
+				return nil, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "database.json"), databaseConfig.ConnMaxIdleTime, err)
+			}
+			nbrew.DB.SetConnMaxIdleTime(duration)
+		}
 		databaseCatalog, err := nb10.DatabaseCatalog(nbrew.Dialect)
 		if err != nil {
 			return nil, err
@@ -662,6 +682,26 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "files.json"), dialect, dataSourceName, err)
 		}
+		if filesConfig.MaxOpenConns > 0 {
+			db.SetMaxOpenConns(filesConfig.MaxOpenConns)
+		}
+		if filesConfig.MaxIdleConns > 0 {
+			db.SetMaxIdleConns(filesConfig.MaxIdleConns)
+		}
+		if filesConfig.ConnMaxLifetime != "" {
+			duration, err := time.ParseDuration(filesConfig.ConnMaxLifetime)
+			if err != nil {
+				return nil, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxLifetime, err)
+			}
+			db.SetConnMaxLifetime(duration)
+		}
+		if filesConfig.ConnMaxIdleTime != "" {
+			duration, err := time.ParseDuration(filesConfig.ConnMaxIdleTime)
+			if err != nil {
+				return nil, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxIdleTime, err)
+			}
+			db.SetConnMaxIdleTime(duration)
+		}
 		filesCatalog, err := nb10.FilesCatalog(dialect)
 		if err != nil {
 			return nil, err
@@ -823,6 +863,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		nbrew.FS = databaseFS
 	case "sftp":
+		// TODO:
 	default:
 		return nil, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), filesConfig.Provider)
 	}
