@@ -955,7 +955,7 @@ type FilesConfig struct {
 }
 
 const filesHelp = `# == files keys == #
-# Choose between using a directory or a database-backed filesystem to store files.
+# Choose between using a directory, database or sftp filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider - Files provider (possible values: directory, database, sftp)
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using a directory).
@@ -983,7 +983,7 @@ type ObjectsConfig struct {
 }
 
 const objectsHelp = `# == objects keys == #
-# Choose between using a directory or an S3-compatible provider to store objects. Only applicable if using the database-backed filesytem (see ` + "`notebrew config files`" + `).
+# Choose between using a directory or an S3-compatible provider to store objects. Only applicable if using the database filesytem (see ` + "`notebrew config files`" + `).
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider        - Object storage provider (possible values: directory, s3).
 # filePath        - Object storage directory filePath (if using a directory).
