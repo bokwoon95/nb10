@@ -3,9 +3,13 @@ package cli
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"html/template"
@@ -38,6 +42,7 @@ import (
 	"github.com/libdns/porkbun"
 	"github.com/oschwald/maxminddb-golang"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -865,9 +870,6 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		nbrew.FS = databaseFS
 	case "sftp":
-		// TODO: we may need to generate ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub ourselves if it doesn't already exist (reference: https://gist.github.com/goliatone/e9c13e5f046e34cef6e150d06f20a34c).
-		// TODO: BUT if the provider is password, we need to use username-password authentication instead.
-		// TODO: we also need to find the known_hosts path
 		if filesConfig.FilePath == "" {
 			filesConfig.FilePath = "/notebrew-files"
 		} else {
@@ -881,6 +883,87 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			if !strings.HasPrefix(filesConfig.TempDir, "/") {
 				return nil, fmt.Errorf("%s: tempDir %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.TempDir)
 			}
+		}
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		hostKeyCallback, err := knownhosts.New(filepath.Join(homeDir, ".ssh", "known_hosts"))
+		if err != nil {
+			return nil, err
+		}
+		sshClientConfig := &ssh.ClientConfig{
+			User:            filesConfig.User,
+			HostKeyCallback: hostKeyCallback,
+		}
+		switch filesConfig.AuthenticationMethod {
+		case "", "password":
+			sshClientConfig.Auth = []ssh.AuthMethod{
+				ssh.Password(filesConfig.Password),
+			}
+		case "publickey":
+			var privateKeyFileExists bool
+			_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa"))
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return nil, err
+				}
+			} else {
+				privateKeyFileExists = true
+			}
+			var publicKeyFileExists bool
+			_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa.pub"))
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					return nil, err
+				}
+			} else {
+				publicKeyFileExists = true
+			}
+			if !privateKeyFileExists && !publicKeyFileExists {
+				rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+				if err != nil {
+					return nil, err
+				}
+				err = rsaPrivateKey.Validate()
+				if err != nil {
+					return nil, err
+				}
+				privateKeyBytes := pem.EncodeToMemory(&pem.Block{
+					Type:    "RSA PRIVATE KEY",
+					Headers: nil,
+					Bytes:   x509.MarshalPKCS1PrivateKey(rsaPrivateKey),
+				})
+				publicKey, err := ssh.NewPublicKey(rsaPrivateKey.PublicKey)
+				if err != nil {
+					return nil, err
+				}
+				publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
+				err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa"), privateKeyBytes, 0600)
+				if err != nil {
+					return nil, err
+				}
+				err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa.pub"), publicKeyBytes, 0600)
+				if err != nil {
+					return nil, err
+				}
+			}
+			pemBytes, err := os.ReadFile(filepath.Join(homeDir, ".ssh", "id_rsa"))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil, fmt.Errorf("%s does not exist", filepath.Join(homeDir, ".ssh", "id_rsa"))
+				}
+				return nil, err
+			}
+			signer, err := ssh.ParsePrivateKey(pemBytes)
+			if err != nil {
+				return nil, err
+			}
+			sshClientConfig.Auth = []ssh.AuthMethod{
+				ssh.PublicKeys(signer),
+			}
+		default:
+			return nil, fmt.Errorf("%s: invalid authenticationMethod %q", filepath.Join(configDir, "files.json"), filesConfig.AuthenticationMethod)
 		}
 		sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
 			NewSSHClient: func() (*ssh.Client, error) {
