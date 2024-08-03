@@ -508,11 +508,11 @@ type SFTPClient struct {
 	sftpClient   *sftp.Client
 }
 
-func (conn *SFTPClient) Get(newSSHClient func() (*ssh.Client, error)) (*sftp.Client, error) {
-	conn.mutex.Lock()
-	defer conn.mutex.Unlock()
-	if !conn.disconnected && conn.sftpClient != nil {
-		return conn.sftpClient, nil
+func (client *SFTPClient) Get(newSSHClient func() (*ssh.Client, error)) (*sftp.Client, error) {
+	client.mutex.Lock()
+	defer client.mutex.Unlock()
+	if !client.disconnected && client.sftpClient != nil {
+		return client.sftpClient, nil
 	}
 	sshClient, err := newSSHClient()
 	if err != nil {
@@ -522,13 +522,13 @@ func (conn *SFTPClient) Get(newSSHClient func() (*ssh.Client, error)) (*sftp.Cli
 	if err != nil {
 		return nil, err
 	}
-	conn.sftpClient = sftpClient
-	conn.disconnected = false
+	client.sftpClient = sftpClient
+	client.disconnected = false
 	go func() {
 		sshClient.Wait()
-		conn.mutex.Lock()
-		conn.disconnected = true
-		conn.mutex.Unlock()
+		client.mutex.Lock()
+		client.disconnected = true
+		client.mutex.Unlock()
 	}()
-	return conn.sftpClient, nil
+	return client.sftpClient, nil
 }
