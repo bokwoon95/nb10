@@ -959,7 +959,7 @@ const filesHelp = `# == files keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider - Files provider (possible values: directory, database, sftp)
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql).
-# filePath - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite).
+# filePath - Files root directory (if using a directory), file path to the sqlite file (if using sqlite database) or remote root directory (if using SFTP).
 # user     - Database/SFTP user
 # password - Database/SFTP password
 # host     - Database/SFTP host
