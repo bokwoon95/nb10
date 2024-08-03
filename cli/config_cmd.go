@@ -958,7 +958,7 @@ const filesHelp = `# == files keys == #
 # Choose between using a directory, database or sftp filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider - Files provider (possible values: directory, database, sftp)
-# dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using a directory).
+# dialect  - Database dialect (possible values: sqlite, postgres, mysql).
 # filePath - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite).
 # user     - Database/SFTP user
 # password - Database/SFTP password
