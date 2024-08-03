@@ -20,10 +20,10 @@ import (
 )
 
 type SFTPFSConfig struct {
-	NewSSHClient   func() (*ssh.Client, error)
-	RootDir        string
-	TempDir        string
-	MaxConnections int
+	NewSSHClient func() (*ssh.Client, error)
+	RootDir      string
+	TempDir      string
+	MaxOpenConns int
 }
 
 type SFTPFS struct {
@@ -49,7 +49,7 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 			tempDir = "/" + tempDir
 		}
 	}
-	maxConnections := config.MaxConnections
+	maxConnections := config.MaxOpenConns
 	if maxConnections < 1 {
 		maxConnections = 1
 	}
