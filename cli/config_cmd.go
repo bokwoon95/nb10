@@ -910,21 +910,6 @@ func (cmd *ConfigCmd) Run() error {
 	return nil
 }
 
-type DatabaseConfig struct {
-	Dialect         string            `json:"dialect"`
-	FilePath        string            `json:"filePath"`
-	User            string            `json:"user"`
-	Password        string            `json:"password"`
-	Host            string            `json:"host"`
-	Port            string            `json:"port"`
-	DBName          string            `json:"dbName"`
-	Params          map[string]string `json:"params"`
-	MaxOpenConns    int               `json:"maxOpenConns"`
-	MaxIdleConns    int               `json:"maxIdleConns"`
-	ConnMaxLifetime string            `json:"connMaxLifetime"`
-	ConnMaxIdleTime string            `json:"connMaxIdleTime"`
-}
-
 const databaseHelp = `# == database keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # dialect         - Database dialect (possible values: sqlite, postgres, mysql).
@@ -941,22 +926,19 @@ const databaseHelp = `# == database keys == #
 # connMaxIdleTime - Connection max idle time. e.g. 5m, 10m30s
 `
 
-type FilesConfig struct {
-	Provider             string            `json:"provider"`
-	AuthenticationMethod string            `json:"authenticationMethod"`
-	TempDir              string            `json:"tempDir"`
-	Dialect              string            `json:"dialect"`
-	FilePath             string            `json:"filePath"`
-	User                 string            `json:"user"`
-	Password             string            `json:"password"`
-	Host                 string            `json:"host"`
-	Port                 string            `json:"port"`
-	DBName               string            `json:"dbName"`
-	Params               map[string]string `json:"params"`
-	MaxOpenConns         int               `json:"maxOpenConns"`
-	MaxIdleConns         int               `json:"maxIdleConns"`
-	ConnMaxLifetime      string            `json:"connMaxLifetime"`
-	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
+type DatabaseConfig struct {
+	Dialect         string            `json:"dialect"`
+	FilePath        string            `json:"filePath"`
+	User            string            `json:"user"`
+	Password        string            `json:"password"`
+	Host            string            `json:"host"`
+	Port            string            `json:"port"`
+	DBName          string            `json:"dbName"`
+	Params          map[string]string `json:"params"`
+	MaxOpenConns    int               `json:"maxOpenConns"`
+	MaxIdleConns    int               `json:"maxIdleConns"`
+	ConnMaxLifetime string            `json:"connMaxLifetime"`
+	ConnMaxIdleTime string            `json:"connMaxIdleTime"`
 }
 
 const filesHelp = `# == files keys == #
@@ -979,14 +961,22 @@ const filesHelp = `# == files keys == #
 # connMaxIdleTime      - Connection max idle time. e.g. 5m, 10m30s
 `
 
-type ObjectsConfig struct {
-	Provider        string `json:"provider"`
-	FilePath        string `json:"filePath"`
-	Endpoint        string `json:"endpoint"`
-	Region          string `json:"region"`
-	Bucket          string `json:"bucket"`
-	AccessKeyID     string `json:"accessKeyID"`
-	SecretAccessKey string `json:"secretAccessKey"`
+type FilesConfig struct {
+	Provider             string            `json:"provider"`
+	AuthenticationMethod string            `json:"authenticationMethod"`
+	TempDir              string            `json:"tempDir"`
+	Dialect              string            `json:"dialect"`
+	FilePath             string            `json:"filePath"`
+	User                 string            `json:"user"`
+	Password             string            `json:"password"`
+	Host                 string            `json:"host"`
+	Port                 string            `json:"port"`
+	DBName               string            `json:"dbName"`
+	Params               map[string]string `json:"params"`
+	MaxOpenConns         int               `json:"maxOpenConns"`
+	MaxIdleConns         int               `json:"maxIdleConns"`
+	ConnMaxLifetime      string            `json:"connMaxLifetime"`
+	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
 }
 
 const objectsHelp = `# == objects keys == #
@@ -1001,14 +991,14 @@ const objectsHelp = `# == objects keys == #
 # secretAccessKey - S3 secret access key.
 `
 
-type CaptchaConfig struct {
-	WidgetScriptSrc   string            `json:"widgetScriptSrc"`
-	WidgetClass       string            `json:"widgetClass"`
-	VerificationURL   string            `json:"verificationURL"`
-	ResponseTokenName string            `json:"responseTokenName"`
-	SiteKey           string            `json:"siteKey"`
-	SecretKey         string            `json:"secretKey"`
-	CSP               map[string]string `json:"csp"`
+type ObjectsConfig struct {
+	Provider        string `json:"provider"`
+	FilePath        string `json:"filePath"`
+	Endpoint        string `json:"endpoint"`
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
+	AccessKeyID     string `json:"accessKeyID"`
+	SecretAccessKey string `json:"secretAccessKey"`
 }
 
 const captchaHelp = `# == captcha keys == #
@@ -1022,9 +1012,14 @@ const captchaHelp = `# == captcha keys == #
 # csp               - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work. e.g. {"script-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","frame-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","style-src":"https://hcaptcha.com https://*.hcaptcha.com","connect-src":"https://hcaptcha.com https://*.hcaptcha.com"}
 `
 
-type ProxyConfig struct {
-	RealIPHeaders map[string]string `json:"realIPHeaders"`
-	ProxyIPs      []string          `json:"proxyIPs"`
+type CaptchaConfig struct {
+	WidgetScriptSrc   string            `json:"widgetScriptSrc"`
+	WidgetClass       string            `json:"widgetClass"`
+	VerificationURL   string            `json:"verificationURL"`
+	ResponseTokenName string            `json:"responseTokenName"`
+	SiteKey           string            `json:"siteKey"`
+	SecretKey         string            `json:"secretKey"`
+	CSP               map[string]string `json:"csp"`
 }
 
 const proxyHelp = `# == proxy keys == #
@@ -1033,12 +1028,9 @@ const proxyHelp = `# == proxy keys == #
 # proxyIPs      - Array of proxy IP addresses.
 `
 
-type DNSConfig struct {
-	Provider  string `json:"provider"`
-	Username  string `json:"username"`
-	APIKey    string `json:"apiKey"`
-	APIToken  string `json:"apiToken"`
-	SecretKey string `json:"secretKey"`
+type ProxyConfig struct {
+	RealIPHeaders map[string]string `json:"realIPHeaders"`
+	ProxyIPs      []string          `json:"proxyIPs"`
 }
 
 const dnsHelp = `# == dns keys == #
@@ -1049,3 +1041,11 @@ const dnsHelp = `# == dns keys == #
 # apiToken  - DNS API token      (required by: cloudflare, godaddy).
 # secretKey - DNS API secret key (required by: porkbun).
 `
+
+type DNSConfig struct {
+	Provider  string `json:"provider"`
+	Username  string `json:"username"`
+	APIKey    string `json:"apiKey"`
+	APIToken  string `json:"apiToken"`
+	SecretKey string `json:"secretKey"`
+}
