@@ -715,7 +715,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.exportTgz(nbrew.ctx, exportJobID, sitePrefix, filePaths, outputDirsToExport, tgzFileName, storageRemaining)
+				err := nbrew.exportTgz(nbrew.baseCtx, exportJobID, sitePrefix, filePaths, outputDirsToExport, tgzFileName, storageRemaining)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("exportJobID", exportJobID.String()),

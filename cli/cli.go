@@ -46,7 +46,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
+func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
+	var closers []io.Closer
 	nbrew := nb10.New()
 	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
@@ -56,14 +57,14 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// CMS domain.
 	b, err := os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "cmsdomain.txt"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "cmsdomain.txt"), err)
 	}
 	nbrew.CMSDomain = string(bytes.TrimSpace(b))
 
 	// Content domain.
 	b, err = os.ReadFile(filepath.Join(configDir, "contentdomain.txt"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "contentdomain.txt"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "contentdomain.txt"), err)
 	}
 	nbrew.ContentDomain = string(bytes.TrimSpace(b))
 
@@ -71,7 +72,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	b, err = os.ReadFile(filepath.Join(configDir, "cdndomain.txt"))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "cdndomain.txt"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "cdndomain.txt"), err)
 		}
 	} else {
 		nbrew.CDNDomain = string(bytes.TrimSpace(b))
@@ -80,35 +81,36 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// Img cmd.
 	b, err = os.ReadFile(filepath.Join(configDir, "imgcmd.txt"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "imgcmd.txt"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "imgcmd.txt"), err)
 	}
 	nbrew.ImgCmd = string(bytes.TrimSpace(b))
 
 	// MaxMind DB reader.
 	b, err = os.ReadFile(filepath.Join(configDir, "maxminddb.txt"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "maxminddb.txt"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "maxminddb.txt"), err)
 	}
 	maxMindDBFilePath := string(bytes.TrimSpace(b))
 	if maxMindDBFilePath != "" {
 		_, err = os.Stat(maxMindDBFilePath)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				return nil, fmt.Errorf("%s: %s does not exist", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath)
+				return nil, closers, fmt.Errorf("%s: %s does not exist", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath)
 			}
-			return nil, fmt.Errorf("%s: %s: %w", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath, err)
+			return nil, closers, fmt.Errorf("%s: %s: %w", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath, err)
 		}
 		maxmindDBReader, err := maxminddb.Open(maxMindDBFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s: %w", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath, err)
+			return nil, closers, fmt.Errorf("%s: %s: %w", filepath.Join(configDir, "maxminddb.txt"), maxMindDBFilePath, err)
 		}
 		nbrew.MaxMindDBReader = maxmindDBReader
+		closers = append(closers, maxmindDBReader)
 	}
 
 	// Port.
 	b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
 	}
 	port := string(bytes.TrimSpace(b))
 
@@ -116,15 +118,15 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	if port != "" {
 		nbrew.Port, err = strconv.Atoi(port)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %q is not a valid integer", filepath.Join(configDir, "port.txt"), port)
+			return nil, closers, fmt.Errorf("%s: %q is not a valid integer", filepath.Join(configDir, "port.txt"), port)
 		}
 		if nbrew.Port <= 0 {
-			return nil, fmt.Errorf("%s: %d is not a valid port", filepath.Join(configDir, "port.txt"), nbrew.Port)
+			return nil, closers, fmt.Errorf("%s: %d is not a valid port", filepath.Join(configDir, "port.txt"), nbrew.Port)
 		}
 		if nbrew.CMSDomain == "" {
 			switch nbrew.Port {
 			case 443:
-				return nil, fmt.Errorf("%s: cannot use port 443 without specifying the cmsdomain", filepath.Join(configDir, "port.txt"))
+				return nil, closers, fmt.Errorf("%s: cannot use port 443 without specifying the cmsdomain", filepath.Join(configDir, "port.txt"))
 			case 80:
 				break // Use IP address as domain when we find it later.
 			default:
@@ -212,10 +214,10 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		})
 		err := group.Wait()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		if !nbrew.IP4.IsValid() && !nbrew.IP6.IsValid() {
-			return nil, fmt.Errorf("unable to determine the IP address of the current machine")
+			return nil, closers, fmt.Errorf("unable to determine the IP address of the current machine")
 		}
 		if nbrew.CMSDomain == "" {
 			if nbrew.IP4.IsValid() {
@@ -232,7 +234,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// DNS.
 	b, err = os.ReadFile(filepath.Join(configDir, "dns.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
 	}
 	b = bytes.TrimSpace(b)
 	var dnsConfig DNSConfig
@@ -241,7 +243,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		decoder.DisallowUnknownFields()
 		err := decoder.Decode(&dnsConfig)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "dns.json"), err)
 		}
 	}
 	switch dnsConfig.Provider {
@@ -249,13 +251,13 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		break
 	case "namecheap":
 		if dnsConfig.Username == "" {
-			return nil, fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
+			return nil, closers, fmt.Errorf("%s: namecheap: missing username field", filepath.Join(configDir, "dns.json"))
 		}
 		if dnsConfig.APIKey == "" {
-			return nil, fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
+			return nil, closers, fmt.Errorf("%s: namecheap: missing apiKey field", filepath.Join(configDir, "dns.json"))
 		}
 		if !nbrew.IP4.IsValid() && (nbrew.Port == 443 || nbrew.Port == 80) {
-			return nil, fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
+			return nil, closers, fmt.Errorf("the current machine's IP address (%s) is not IPv4: an IPv4 address is needed to integrate with namecheap's API", nbrew.IP6.String())
 		}
 		nbrew.DNSProvider = &namecheap.Provider{
 			APIKey:      dnsConfig.APIKey,
@@ -265,17 +267,17 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 	case "cloudflare":
 		if dnsConfig.APIToken == "" {
-			return nil, fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
+			return nil, closers, fmt.Errorf("%s: cloudflare: missing apiToken field", filepath.Join(configDir, "dns.json"))
 		}
 		nbrew.DNSProvider = &cloudflare.Provider{
 			APIToken: dnsConfig.APIToken,
 		}
 	case "porkbun":
 		if dnsConfig.APIKey == "" {
-			return nil, fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
+			return nil, closers, fmt.Errorf("%s: porkbun: missing apiKey field", filepath.Join(configDir, "dns.json"))
 		}
 		if dnsConfig.SecretKey == "" {
-			return nil, fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
+			return nil, closers, fmt.Errorf("%s: porkbun: missing secretKey field", filepath.Join(configDir, "dns.json"))
 		}
 		nbrew.DNSProvider = &porkbun.Provider{
 			APIKey:       dnsConfig.APIKey,
@@ -283,13 +285,13 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 	case "godaddy":
 		if dnsConfig.APIToken == "" {
-			return nil, fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
+			return nil, closers, fmt.Errorf("%s: godaddy: missing apiToken field", filepath.Join(configDir, "dns.json"))
 		}
 		nbrew.DNSProvider = &godaddy.Provider{
 			APIToken: dnsConfig.APIToken,
 		}
 	default:
-		return nil, fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
+		return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: namecheap, cloudflare, porkbun, godaddy)", filepath.Join(configDir, "dns.json"), dnsConfig.Provider)
 	}
 
 	_, err1 := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(nbrew.CMSDomain, "["), "]"))
@@ -313,7 +315,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// Certmagic.
 	b, err = os.ReadFile(filepath.Join(configDir, "certmagic.txt"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "certmagic.txt"), err)
 	}
 	certmagicDir := string(bytes.TrimSpace(b))
 	if certmagicDir == "" {
@@ -323,7 +325,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	}
 	err = os.MkdirAll(certmagicDir, 0755)
 	if err != nil {
-		return nil, err
+		return nil, closers, err
 	}
 	nbrew.CertStorage = &certmagic.FileStorage{
 		Path: certmagicDir,
@@ -361,7 +363,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		err = group.Wait()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		if nbrew.Port == 80 {
 			for i, domain := range nbrew.Domains {
@@ -397,7 +399,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// Database.
 	b, err = os.ReadFile(filepath.Join(configDir, "database.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
 	}
 	b = bytes.TrimSpace(b)
 	var databaseConfig DatabaseConfig
@@ -406,7 +408,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		decoder.DisallowUnknownFields()
 		err := decoder.Decode(&databaseConfig)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "database.json"), err)
 		}
 	}
 	if databaseConfig.Dialect != "" {
@@ -418,14 +420,15 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			}
 			databaseConfig.FilePath, err = filepath.Abs(databaseConfig.FilePath)
 			if err != nil {
-				return nil, fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "database.json"), err)
+				return nil, closers, fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "database.json"), err)
 			}
 			dataSourceName = databaseConfig.FilePath + "?" + sqliteQueryString(databaseConfig.Params)
 			nbrew.Dialect = "sqlite"
 			nbrew.DB, err = sql.Open(sqliteDriverName, dataSourceName)
 			if err != nil {
-				return nil, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "database.json"), dataSourceName, err)
+				return nil, closers, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "database.json"), dataSourceName, err)
 			}
+			closers = append(closers, nbrew.DB)
 			nbrew.ErrorCode = sqliteErrorCode
 		case "postgres":
 			values := make(url.Values)
@@ -452,8 +455,9 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			nbrew.Dialect = "postgres"
 			nbrew.DB, err = sql.Open("pgx", dataSourceName)
 			if err != nil {
-				return nil, fmt.Errorf("%s: postgres: open %s: %w", filepath.Join(configDir, "database.json"), dataSourceName, err)
+				return nil, closers, fmt.Errorf("%s: postgres: open %s: %w", filepath.Join(configDir, "database.json"), dataSourceName, err)
 			}
+			closers = append(closers, nbrew.DB)
 			nbrew.ErrorCode = func(err error) string {
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) {
@@ -478,7 +482,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			}
 			config, err := mysql.ParseDSN(fmt.Sprintf("tcp(%s:%s)/%s?%s", databaseConfig.Host, databaseConfig.Port, url.PathEscape(databaseConfig.DBName), values.Encode()))
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			// Set user and passwd manually to accomodate special characters.
 			// https://github.com/go-sql-driver/mysql/issues/1323
@@ -486,11 +490,12 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			config.Passwd = databaseConfig.Password
 			driver, err := mysql.NewConnector(config)
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			dataSourceName = config.FormatDSN()
 			nbrew.Dialect = "mysql"
 			nbrew.DB = sql.OpenDB(driver)
+			closers = append(closers, nbrew.DB)
 			nbrew.ErrorCode = func(err error) string {
 				var mysqlErr *mysql.MySQLError
 				if errors.As(err, &mysqlErr) {
@@ -499,12 +504,11 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 				return ""
 			}
 		default:
-			return nil, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "database.json"), databaseConfig.Dialect)
+			return nil, closers, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "database.json"), databaseConfig.Dialect)
 		}
-
 		err := nbrew.DB.Ping()
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "database.json"), nbrew.Dialect, dataSourceName, err)
+			return nil, closers, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "database.json"), nbrew.Dialect, dataSourceName, err)
 		}
 		if databaseConfig.MaxOpenConns > 0 {
 			nbrew.DB.SetMaxOpenConns(databaseConfig.MaxOpenConns)
@@ -515,20 +519,20 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if databaseConfig.ConnMaxLifetime != "" {
 			duration, err := time.ParseDuration(databaseConfig.ConnMaxLifetime)
 			if err != nil {
-				return nil, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "database.json"), databaseConfig.ConnMaxLifetime, err)
+				return nil, closers, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "database.json"), databaseConfig.ConnMaxLifetime, err)
 			}
 			nbrew.DB.SetConnMaxLifetime(duration)
 		}
 		if databaseConfig.ConnMaxIdleTime != "" {
 			duration, err := time.ParseDuration(databaseConfig.ConnMaxIdleTime)
 			if err != nil {
-				return nil, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "database.json"), databaseConfig.ConnMaxIdleTime, err)
+				return nil, closers, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "database.json"), databaseConfig.ConnMaxIdleTime, err)
 			}
 			nbrew.DB.SetConnMaxIdleTime(duration)
 		}
 		databaseCatalog, err := nb10.DatabaseCatalog(nbrew.Dialect)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		automigrateCmd := &ddl.AutomigrateCmd{
 			DB:             nbrew.DB,
@@ -539,7 +543,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		err = automigrateCmd.Run()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		_, err = sq.Exec(context.Background(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
@@ -551,7 +555,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			errorCode := nbrew.ErrorCode(err)
 			if !nb10.IsKeyViolation(nbrew.Dialect, errorCode) {
-				return nil, err
+				return nil, closers, err
 			}
 		}
 	}
@@ -559,7 +563,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// Files.
 	b, err = os.ReadFile(filepath.Join(configDir, "files.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 	}
 	b = bytes.TrimSpace(b)
 	var filesConfig FilesConfig
@@ -568,7 +572,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		decoder.DisallowUnknownFields()
 		err = decoder.Decode(&filesConfig)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 		}
 	}
 	switch filesConfig.Provider {
@@ -580,14 +584,14 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		err := os.MkdirAll(filesConfig.FilePath, 0755)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		dirFS, err := nb10.NewDirFS(nb10.DirFSConfig{
 			RootDir: filesConfig.FilePath,
 			TempDir: filesConfig.TempDir,
 		})
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		nbrew.FS = dirFS
 	case "database":
@@ -602,14 +606,15 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			}
 			filesConfig.FilePath, err = filepath.Abs(filesConfig.FilePath)
 			if err != nil {
-				return nil, fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "files.json"), err)
+				return nil, closers, fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "files.json"), err)
 			}
 			dataSourceName = filesConfig.FilePath + "?" + sqliteQueryString(filesConfig.Params)
 			dialect = "sqlite"
 			db, err = sql.Open(sqliteDriverName, dataSourceName)
 			if err != nil {
-				return nil, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
+				return nil, closers, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
 			}
+			closers = append(closers, db)
 			errorCode = sqliteErrorCode
 		case "postgres":
 			values := make(url.Values)
@@ -636,8 +641,9 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			dialect = "postgres"
 			db, err = sql.Open("pgx", dataSourceName)
 			if err != nil {
-				return nil, fmt.Errorf("%s: postgres: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
+				return nil, closers, fmt.Errorf("%s: postgres: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
 			}
+			closers = append(closers, db)
 			errorCode = func(err error) string {
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) {
@@ -662,7 +668,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			}
 			config, err := mysql.ParseDSN(fmt.Sprintf("tcp(%s:%s)/%s?%s", filesConfig.Host, filesConfig.Port, url.PathEscape(filesConfig.DBName), values.Encode()))
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			// Set user and passwd manually to accomodate special characters.
 			// https://github.com/go-sql-driver/mysql/issues/1323
@@ -670,11 +676,12 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			config.Passwd = filesConfig.Password
 			driver, err := mysql.NewConnector(config)
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			dataSourceName = config.FormatDSN()
 			dialect = "mysql"
 			db = sql.OpenDB(driver)
+			closers = append(closers, db)
 			errorCode = func(err error) string {
 				var mysqlErr *mysql.MySQLError
 				if errors.As(err, &mysqlErr) {
@@ -683,11 +690,11 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 				return ""
 			}
 		default:
-			return nil, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), filesConfig.Dialect)
+			return nil, closers, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), filesConfig.Dialect)
 		}
 		err = db.Ping()
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "files.json"), dialect, dataSourceName, err)
+			return nil, closers, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "files.json"), dialect, dataSourceName, err)
 		}
 		if filesConfig.MaxOpenConns > 0 {
 			db.SetMaxOpenConns(filesConfig.MaxOpenConns)
@@ -698,20 +705,20 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if filesConfig.ConnMaxLifetime != "" {
 			duration, err := time.ParseDuration(filesConfig.ConnMaxLifetime)
 			if err != nil {
-				return nil, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxLifetime, err)
+				return nil, closers, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxLifetime, err)
 			}
 			db.SetConnMaxLifetime(duration)
 		}
 		if filesConfig.ConnMaxIdleTime != "" {
 			duration, err := time.ParseDuration(filesConfig.ConnMaxIdleTime)
 			if err != nil {
-				return nil, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxIdleTime, err)
+				return nil, closers, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxIdleTime, err)
 			}
 			db.SetConnMaxIdleTime(duration)
 		}
 		filesCatalog, err := nb10.FilesCatalog(dialect)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		automigrateCmd := &ddl.AutomigrateCmd{
 			DB:             db,
@@ -722,25 +729,25 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		err = automigrateCmd.Run()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		if dialect == "sqlite" {
 			dbi := ddl.NewDatabaseIntrospector(dialect, db)
 			dbi.Tables = []string{"files_fts5"}
 			tables, err := dbi.GetTables()
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			if len(tables) == 0 {
 				_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 			}
 			dbi.Tables = []string{"files"}
 			triggers, err := dbi.GetTriggers()
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			triggerNames := make(map[string]struct{})
 			for _, trigger := range triggers {
@@ -752,7 +759,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 					"\nEND;",
 				)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 			}
 			if _, ok := triggerNames["files_after_delete"]; !ok {
@@ -761,7 +768,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 					"\nEND;",
 				)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 			}
 			if _, ok := triggerNames["files_after_update"]; !ok {
@@ -771,7 +778,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 					"\nEND;",
 				)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 			}
 		}
@@ -780,7 +787,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		var objectStorage nb10.ObjectStorage
 		b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
 		}
 		b = bytes.TrimSpace(b)
 		var objectsConfig ObjectsConfig
@@ -789,7 +796,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			decoder.DisallowUnknownFields()
 			err = decoder.Decode(&objectsConfig)
 			if err != nil {
-				return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
+				return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
 			}
 		}
 		switch objectsConfig.Provider {
@@ -801,27 +808,27 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			}
 			err := os.MkdirAll(objectsConfig.FilePath, 0755)
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			objectStorage, err = nb10.NewDirObjectStorage(objectsConfig.FilePath, os.TempDir())
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 		case "s3":
 			if objectsConfig.Endpoint == "" {
-				return nil, fmt.Errorf("%s: missing endpoint field", filepath.Join(configDir, "objects.json"))
+				return nil, closers, fmt.Errorf("%s: missing endpoint field", filepath.Join(configDir, "objects.json"))
 			}
 			if objectsConfig.Region == "" {
-				return nil, fmt.Errorf("%s: missing region field", filepath.Join(configDir, "objects.json"))
+				return nil, closers, fmt.Errorf("%s: missing region field", filepath.Join(configDir, "objects.json"))
 			}
 			if objectsConfig.Bucket == "" {
-				return nil, fmt.Errorf("%s: missing bucket field", filepath.Join(configDir, "objects.json"))
+				return nil, closers, fmt.Errorf("%s: missing bucket field", filepath.Join(configDir, "objects.json"))
 			}
 			if objectsConfig.AccessKeyID == "" {
-				return nil, fmt.Errorf("%s: missing accessKeyID field", filepath.Join(configDir, "objects.json"))
+				return nil, closers, fmt.Errorf("%s: missing accessKeyID field", filepath.Join(configDir, "objects.json"))
 			}
 			if objectsConfig.SecretAccessKey == "" {
-				return nil, fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
+				return nil, closers, fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
 			}
 			objectStorage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
 				Endpoint:        objectsConfig.Endpoint,
@@ -832,10 +839,10 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 				Logger:          nbrew.Logger,
 			})
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 		default:
-			return nil, fmt.Errorf("%s: unsupported provider %q (possible values: directory, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
+			return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
 		}
 		databaseFS, err := nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
 			DB:            db,
@@ -845,7 +852,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			Logger:        nbrew.Logger,
 		})
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		if nbrew.DB != nil {
 			databaseFS.UpdateStorageUsed = func(ctx context.Context, sitePrefix string, delta int64) error {
@@ -874,23 +881,23 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			filesConfig.FilePath = "/notebrew-files"
 		} else {
 			if !strings.HasPrefix(filesConfig.FilePath, "/") {
-				return nil, fmt.Errorf("%s: filePath %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.FilePath)
+				return nil, closers, fmt.Errorf("%s: filePath %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.FilePath)
 			}
 		}
 		if filesConfig.TempDir == "" {
 			filesConfig.TempDir = "/tmp"
 		} else {
 			if !strings.HasPrefix(filesConfig.TempDir, "/") {
-				return nil, fmt.Errorf("%s: tempDir %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.TempDir)
+				return nil, closers, fmt.Errorf("%s: tempDir %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.TempDir)
 			}
 		}
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		hostKeyCallback, err := knownhosts.New(filepath.Join(homeDir, ".ssh", "known_hosts"))
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		sshClientConfig := &ssh.ClientConfig{
 			User:            filesConfig.User,
@@ -906,7 +913,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa"))
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return nil, err
+					return nil, closers, err
 				}
 			} else {
 				privateKeyFileExists = true
@@ -915,7 +922,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa.pub"))
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return nil, err
+					return nil, closers, err
 				}
 			} else {
 				publicKeyFileExists = true
@@ -923,11 +930,11 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			if !privateKeyFileExists && !publicKeyFileExists {
 				rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 				err = rsaPrivateKey.Validate()
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 				privateKeyBytes := pem.EncodeToMemory(&pem.Block{
 					Type:    "RSA PRIVATE KEY",
@@ -936,34 +943,34 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 				})
 				publicKey, err := ssh.NewPublicKey(rsaPrivateKey.PublicKey)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 				publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
 				err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa"), privateKeyBytes, 0600)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 				err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa.pub"), publicKeyBytes, 0600)
 				if err != nil {
-					return nil, err
+					return nil, closers, err
 				}
 			}
 			pemBytes, err := os.ReadFile(filepath.Join(homeDir, ".ssh", "id_rsa"))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
-					return nil, fmt.Errorf("%s does not exist", filepath.Join(homeDir, ".ssh", "id_rsa"))
+					return nil, closers, fmt.Errorf("%s does not exist", filepath.Join(homeDir, ".ssh", "id_rsa"))
 				}
-				return nil, err
+				return nil, closers, err
 			}
 			signer, err := ssh.ParsePrivateKey(pemBytes)
 			if err != nil {
-				return nil, err
+				return nil, closers, err
 			}
 			sshClientConfig.Auth = []ssh.AuthMethod{
 				ssh.PublicKeys(signer),
 			}
 		default:
-			return nil, fmt.Errorf("%s: invalid authenticationMethod %q", filepath.Join(configDir, "files.json"), filesConfig.AuthenticationMethod)
+			return nil, closers, fmt.Errorf("%s: invalid authenticationMethod %q", filepath.Join(configDir, "files.json"), filesConfig.AuthenticationMethod)
 		}
 		sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
 			NewSSHClient: func() (*ssh.Client, error) {
@@ -974,11 +981,12 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			MaxOpenConns: filesConfig.MaxOpenConns,
 		})
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
+		closers = append(closers, sftpFS)
 		nbrew.FS = sftpFS
 	default:
-		return nil, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), filesConfig.Provider)
+		return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), filesConfig.Provider)
 	}
 	for _, dir := range []string{
 		"notes",
@@ -992,53 +1000,53 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	} {
 		err = nbrew.FS.Mkdir(dir, 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 	_, err = fs.Stat(nbrew.FS, "site.json")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, closers, err
 		}
 		tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		writer, err := nbrew.FS.OpenWriter("site.json", 0644)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		defer writer.Close()
 		err = tmpl.Execute(writer, nil)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 	_, err = fs.Stat(nbrew.FS, "posts/postlist.json")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, closers, err
 		}
 		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.json")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		writer, err := nbrew.FS.OpenWriter("posts/postlist.json", 0644)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		defer writer.Close()
 		_, err = writer.Write(b)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 	siteGen, err := nb10.NewSiteGenerator(context.Background(), nb10.SiteGeneratorConfig{
@@ -1049,123 +1057,123 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		SitePrefix:         "",
 	})
 	if err != nil {
-		return nil, err
+		return nil, closers, err
 	}
 	_, err = fs.Stat(nbrew.FS, "pages/index.html")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, closers, err
 		}
 		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/index.html")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		writer, err := nbrew.FS.OpenWriter("pages/index.html", 0644)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		defer writer.Close()
 		_, err = writer.Write(b)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		creationTime := time.Now()
 		err = siteGen.GeneratePage(context.Background(), "pages/index.html", string(b), creationTime, creationTime)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 	_, err = fs.Stat(nbrew.FS, "pages/404.html")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, closers, err
 		}
 		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/404.html")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		writer, err := nbrew.FS.OpenWriter("pages/404.html", 0644)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		defer writer.Close()
 		_, err = writer.Write(b)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		creationTime := time.Now()
 		err = siteGen.GeneratePage(context.Background(), "pages/404.html", string(b), creationTime, creationTime)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 	_, err = fs.Stat(nbrew.FS, "posts/post.html")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, closers, err
 		}
 		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/post.html")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		writer, err := nbrew.FS.OpenWriter("posts/post.html", 0644)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		defer writer.Close()
 		_, err = writer.Write(b)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 	_, err = fs.Stat(nbrew.FS, "posts/postlist.html")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, err
+			return nil, closers, err
 		}
 		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.html")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		writer, err := nbrew.FS.OpenWriter("posts/postlist.html", 0644)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		defer writer.Close()
 		_, err = writer.Write(b)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		err = writer.Close()
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		tmpl, err := siteGen.PostListTemplate(context.Background(), "")
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 		_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
 		if err != nil {
-			return nil, err
+			return nil, closers, err
 		}
 	}
 
 	// Captcha.
 	b, err = os.ReadFile(filepath.Join(configDir, "captcha.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
 	}
 	b = bytes.TrimSpace(b)
 	if len(b) > 0 {
@@ -1174,7 +1182,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		decoder.DisallowUnknownFields()
 		err := decoder.Decode(&captchaConfig)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "captcha.json"), err)
 		}
 		nbrew.CaptchaConfig.WidgetScriptSrc = template.URL(captchaConfig.WidgetScriptSrc)
 		nbrew.CaptchaConfig.WidgetClass = captchaConfig.WidgetClass
@@ -1188,7 +1196,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 	// Proxy.
 	b, err = os.ReadFile(filepath.Join(configDir, "proxy.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "proxy.json"), err)
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "proxy.json"), err)
 	}
 	b = bytes.TrimSpace(b)
 	if len(b) > 0 {
@@ -1197,13 +1205,13 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		decoder.DisallowUnknownFields()
 		err := decoder.Decode(&proxyConfig)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "proxy.json"), err)
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "proxy.json"), err)
 		}
 		nbrew.ProxyConfig.RealIPHeaders = make(map[netip.Addr]string)
 		for ip, header := range proxyConfig.RealIPHeaders {
 			addr, err := netip.ParseAddr(ip)
 			if err != nil {
-				return nil, fmt.Errorf("%s: realIPHeaders: %s: %w", filepath.Join(configDir, "proxy.json"), ip, err)
+				return nil, closers, fmt.Errorf("%s: realIPHeaders: %s: %w", filepath.Join(configDir, "proxy.json"), ip, err)
 			}
 			nbrew.ProxyConfig.RealIPHeaders[addr] = header
 		}
@@ -1211,7 +1219,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		for _, ip := range proxyConfig.ProxyIPs {
 			addr, err := netip.ParseAddr(ip)
 			if err != nil {
-				return nil, fmt.Errorf("%s: proxyIPs: %s: %w", filepath.Join(configDir, "proxy.json"), ip, err)
+				return nil, closers, fmt.Errorf("%s: proxyIPs: %s: %w", filepath.Join(configDir, "proxy.json"), ip, err)
 			}
 			nbrew.ProxyConfig.ProxyIPs[addr] = struct{}{}
 		}
@@ -1256,7 +1264,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		buf.WriteString(" frame-src " + value + ";")
 	}
 	nbrew.ContentSecurityPolicy = buf.String()
-	return nbrew, nil
+	return nbrew, closers, nil
 }
 
 func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {

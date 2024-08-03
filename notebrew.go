@@ -115,40 +115,36 @@ type Notebrew struct {
 
 	MaxMindDBReader *maxminddb.Reader
 
-	// ctx is associated with this struct. When Close() is called, the ctx is
+	// baseCtx is associated with this struct. When Close() is called, the baseCtx is
 	// canceled.
-	ctx       context.Context
-	cancel    func()
-	waitGroup sync.WaitGroup
+	baseCtx       context.Context
+	baseCtxCancel func()
+	waitGroup     sync.WaitGroup
 }
 
 func New() *Notebrew {
 	populateExts()
-	ctx, cancel := context.WithCancel(context.Background())
+	baseCtx, baseCtxCancel := context.WithCancel(context.Background())
 	nbrew := &Notebrew{
-		ctx:    ctx,
-		cancel: cancel,
+		baseCtx:       baseCtx,
+		baseCtxCancel: baseCtxCancel,
 	}
 	return nbrew
 }
 
 func (nbrew *Notebrew) Close() error {
-	nbrew.cancel()
-	nbrew.waitGroup.Wait()
+	nbrew.baseCtxCancel()
+	defer nbrew.waitGroup.Wait()
 	if nbrew.DB != nil {
 		if nbrew.Dialect == "sqlite" {
 			nbrew.DB.Exec("PRAGMA optimize")
-			nbrew.DB.Close()
 		}
 	}
 	databaseFS := &DatabaseFS{}
 	if castAs(nbrew.FS, &databaseFS) {
 		if databaseFS.Dialect == "sqlite" {
 			databaseFS.DB.Exec("PRAGMA optimize")
-			databaseFS.DB.Close()
 		}
-	} else if closer, ok := nbrew.FS.(io.Closer); ok {
-		closer.Close()
 	}
 	return nil
 }

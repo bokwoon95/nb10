@@ -72,6 +72,19 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 	return sftpFS, nil
 }
 
+func (fsys *SFTPFS) As(target any) bool {
+	switch target := target.(type) {
+	case *SFTPFS:
+		*target = *fsys
+		return true
+	case **SFTPFS:
+		*target = fsys
+		return true
+	default:
+		return false
+	}
+}
+
 func (fsys *SFTPFS) WithContext(ctx context.Context) FS {
 	return &SFTPFS{
 		Clients:      fsys.Clients,
@@ -477,16 +490,22 @@ func (fsys *SFTPFS) Copy(srcName, destName string) error {
 }
 
 func (fsys *SFTPFS) Close() error {
-	var closeErr error
+	var waitGroup sync.WaitGroup
+	defer waitGroup.Wait()
 	for _, client := range fsys.Clients {
-		err := client.sftpClient.Close()
-		if err != nil {
-			if closeErr == nil {
-				closeErr = err
-			}
-		}
+		client := client
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + string(debug.Stack()))
+				}
+			}()
+			client.sftpClient.Close()
+		}()
 	}
-	return closeErr
+	return nil
 }
 
 type SFTPClient struct {
