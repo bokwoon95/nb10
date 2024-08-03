@@ -100,8 +100,6 @@ sftpclientkk
 PersistentSFTPClient
 fac.NewClient
 
-TODO: SFTPFS
-    TODO: notebrew config files.provider, which is one of dir | database | sftp
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: signup.go
