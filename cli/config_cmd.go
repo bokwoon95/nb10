@@ -225,6 +225,8 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, filesConfig.Provider+"\n")
 			case "authenticationMethod":
 				io.WriteString(cmd.Stdout, filesConfig.AuthenticationMethod+"\n")
+			case "tempDir":
+				io.WriteString(cmd.Stdout, filesConfig.TempDir+"\n")
 			case "dialect":
 				io.WriteString(cmd.Stdout, filesConfig.Dialect+"\n")
 			case "filePath":
@@ -598,6 +600,8 @@ func (cmd *ConfigCmd) Run() error {
 			filesConfig.Provider = cmd.Value.String
 		case "authenticationMethod":
 			filesConfig.AuthenticationMethod = cmd.Value.String
+		case "tempDir":
+			filesConfig.TempDir = cmd.Value.String
 		case "dialect":
 			filesConfig.Dialect = cmd.Value.String
 		case "filePath":
@@ -938,8 +942,9 @@ const databaseHelp = `# == database keys == #
 `
 
 type FilesConfig struct {
-	Provider             string            `json:"provider"`             // dir | database | sftp (default is dir)
-	AuthenticationMethod string            `json:"authenticationMethod"` // password | key (default is key)
+	Provider             string            `json:"provider"`
+	AuthenticationMethod string            `json:"authenticationMethod"`
+	TempDir              string            `json:"tempDir"`
 	Dialect              string            `json:"dialect"`
 	FilePath             string            `json:"filePath"`
 	User                 string            `json:"user"`
@@ -957,19 +962,21 @@ type FilesConfig struct {
 const filesHelp = `# == files keys == #
 # Choose between using a directory, database or sftp filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# provider - Files provider (possible values: directory, database, sftp).
-# dialect  - Database dialect (possible values: sqlite, postgres, mysql).
-# filePath - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite database) or remote root directory (if using SFTP).
-# user     - Database/SFTP user.
-# password - Database/SFTP password.
-# host     - Database/SFTP host.
-# port     - Database/SFTP port.
-# dbName   - Database name.
-# params   - Database-specific connection parameters (see https://example.com for more info).
-# maxOpenConns    - Max open connections to the database/SFTP server (0 means unset, default is unlimited for the database and 1 for the SFTP server).
-# maxIdleConns    - Max idle connections to the database (0 means unset, default is 2).
-# connMaxLifetime - Connection max lifetime. e.g. 5m, 10m30s
-# connMaxIdleTime - Connection max idle time. e.g. 5m, 10m30s
+# provider             - Files provider (possible values: directory, database, sftp).
+# authenticationMethod - Authentication method for connecting to SFTP server (possible values: password, key).
+# tempDir              - Temporary directory to store files in while they are being written (if using a directory or sftp).
+# dialect              - Database dialect (possible values: sqlite, postgres, mysql).
+# filePath             - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite database) or remote root directory (if using SFTP).
+# user                 - Database/SFTP user.
+# password             - Database/SFTP password.
+# host                 - Database/SFTP host.
+# port                 - Database/SFTP port.
+# dbName               - Database name.
+# params               - Database-specific connection parameters (see https://example.com for more info).
+# maxOpenConns         - Max open connections to the database/SFTP server (0 means unset, default is unlimited for the database and 1 for the SFTP server).
+# maxIdleConns         - Max idle connections to the database (0 means unset, default is 2).
+# connMaxLifetime      - Connection max lifetime. e.g. 5m, 10m30s
+# connMaxIdleTime      - Connection max idle time. e.g. 5m, 10m30s
 `
 
 type ObjectsConfig struct {
