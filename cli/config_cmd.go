@@ -923,14 +923,18 @@ type DatabaseConfig struct {
 
 const databaseHelp = `# == database keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# dialect  - Database dialect (possible values: sqlite, postgres, mysql).
-# filePath - File path to the sqlite file (if dialect is sqlite).
-# user     - Database user
-# password - Database password
-# host     - Database host
-# port     - Database port
-# dbName   - Database name
-# params   - Database-specific connection parameters (see https://example.com for more info)
+# dialect         - Database dialect (possible values: sqlite, postgres, mysql).
+# filePath        - File path to the sqlite file (if dialect is sqlite).
+# user            - Database user
+# password        - Database password
+# host            - Database host
+# port            - Database port
+# dbName          - Database name
+# params          - Database-specific connection parameters (see https://example.com for more info)
+# maxOpenConns    - Max open connections to the database
+# maxIdleConns    - Max idle connections to the database
+# connMaxLifetime - Connection max lifetime e.g. 5m, 10m30s
+# connMaxIdleTime - Connection max idle time e.g. 5m, 10m30s
 `
 
 type FilesConfig struct {
@@ -953,14 +957,19 @@ type FilesConfig struct {
 const filesHelp = `# == files keys == #
 # Choose between using a directory or a database-backed filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
+# provider - Files provider (possible values: directory, database, sftp)
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql -- leave blank if using a directory).
 # filePath - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite).
-# user     - Database user
-# password - Database password
-# host     - Database host
-# port     - Database port
+# user     - Database/SFTP user
+# password - Database/SFTP password
+# host     - Database/SFTP host
+# port     - Database/SFTP port
 # dbName   - Database name
 # params   - Database-specific connection parameters (see https://example.com for more info)
+# maxOpenConns    - Max open connections to the database/SFTP server
+# maxIdleConns    - Max idle connections to the database
+# connMaxLifetime - Connection max lifetime e.g. 5m, 10m30s
+# connMaxIdleTime - Connection max idle time e.g. 5m, 10m30s
 `
 
 type ObjectsConfig struct {
