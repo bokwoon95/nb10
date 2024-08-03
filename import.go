@@ -278,7 +278,16 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 					}
 				}()
 				defer nbrew.waitGroup.Done()
-				err := nbrew.importTgz(nbrew.ctx, importJobID, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
+				ctx, cancel := context.WithCancel(nbrew.ctx)
+				defer cancel()
+				timer := time.NewTimer(time.Hour)
+				defer timer.Stop()
+				go func() {
+					defer cancel()
+					<-nbrew.ctx.Done()
+					<-timer.C
+				}()
+				err := nbrew.importTgz(ctx, importJobID, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
 				if err != nil {
 					logger.Error(err.Error(),
 						slog.String("importJobID", importJobID.String()),
