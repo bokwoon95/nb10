@@ -280,12 +280,15 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				defer nbrew.baseCtxWaitGroup.Done()
 				gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 				defer gracePeriodCancel()
-				gracePeriodTimer := time.NewTimer(time.Hour)
-				defer gracePeriodTimer.Stop()
 				go func() {
-					<-nbrew.baseCtx.Done()
-					<-gracePeriodTimer.C
-					gracePeriodCancel()
+					gracePeriodTimer := time.NewTimer(time.Hour)
+					defer gracePeriodTimer.Stop()
+					select {
+					case <-gracePeriodCtx.Done():
+					case <-nbrew.baseCtx.Done():
+						<-gracePeriodTimer.C
+						gracePeriodCancel()
+					}
 				}()
 				err := nbrew.importTgz(gracePeriodCtx, importJobID, sitePrefix, response.TgzFileName, response.Root, response.OverwriteExistingFiles)
 				if err != nil {
