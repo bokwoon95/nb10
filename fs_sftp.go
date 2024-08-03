@@ -39,14 +39,15 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 	rootDir := filepath.ToSlash(config.RootDir)
 	if rootDir == "" {
 		return nil, fmt.Errorf("rootDir cannot be empty")
-	}
-	if !strings.HasPrefix(rootDir, "/") {
-		rootDir = "/" + rootDir
+	} else {
+		if !strings.HasPrefix(rootDir, "/") {
+			return nil, fmt.Errorf("rootDir is not an absolute path")
+		}
 	}
 	tempDir := filepath.ToSlash(config.TempDir)
 	if tempDir != "" {
 		if !strings.HasPrefix(tempDir, "/") {
-			tempDir = "/" + tempDir
+			return nil, fmt.Errorf("tempDir is not an absolute path")
 		}
 	}
 	maxOpenConns := config.MaxOpenConns

@@ -868,6 +868,20 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		// TODO: we may need to generate ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub ourselves if it doesn't already exist (reference: https://gist.github.com/goliatone/e9c13e5f046e34cef6e150d06f20a34c).
 		// TODO: BUT if the provider is password, we need to use username-password authentication instead.
 		// TODO: we also need to find the known_hosts path
+		if filesConfig.FilePath == "" {
+			filesConfig.FilePath = "/notebrew-files"
+		} else {
+			if !strings.HasPrefix(filesConfig.FilePath, "/") {
+				return nil, fmt.Errorf("%s: filePath %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.FilePath)
+			}
+		}
+		if filesConfig.TempDir == "" {
+			filesConfig.TempDir = "/tmp"
+		} else {
+			if !strings.HasPrefix(filesConfig.TempDir, "/") {
+				return nil, fmt.Errorf("%s: tempDir %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.TempDir)
+			}
+		}
 		sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
 			NewSSHClient: func() (*ssh.Client, error) {
 				return nil, nil
