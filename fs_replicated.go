@@ -21,27 +21,27 @@ type ReplicatedFSConfig struct {
 }
 
 type ReplicatedFS struct {
-	Leader        FS
-	Followers     []FS
-	Synchronous   bool
-	Logger        *slog.Logger
-	operationsCtx context.Context
-	baseCtx       context.Context
-	baseCtxCancel func()
-	waitGroup     *sync.WaitGroup
+	Leader           FS
+	Followers        []FS
+	Synchronous      bool
+	Logger           *slog.Logger
+	operationsCtx    context.Context
+	baseCtx          context.Context
+	baseCtxCancel    func()
+	baseCtxWaitGroup *sync.WaitGroup
 }
 
 func NewReplicatedFS(config ReplicatedFSConfig) (*ReplicatedFS, error) {
 	baseCtx, baseCtxCancel := context.WithCancel(context.Background())
 	replicatedFS := &ReplicatedFS{
-		Leader:        config.Leader,
-		Followers:     config.Followers,
-		Synchronous:   config.Synchronous,
-		Logger:        config.Logger,
-		operationsCtx: context.Background(),
-		baseCtx:       baseCtx,
-		baseCtxCancel: baseCtxCancel,
-		waitGroup:     &sync.WaitGroup{},
+		Leader:           config.Leader,
+		Followers:        config.Followers,
+		Synchronous:      config.Synchronous,
+		Logger:           config.Logger,
+		operationsCtx:    context.Background(),
+		baseCtx:          baseCtx,
+		baseCtxCancel:    baseCtxCancel,
+		baseCtxWaitGroup: &sync.WaitGroup{},
 	}
 	return replicatedFS, nil
 }
@@ -73,14 +73,14 @@ func (fsys *ReplicatedFS) WithContext(ctx context.Context) FS {
 
 func (fsys *ReplicatedFS) WithValues(values map[string]any) FS {
 	replicatedFS := &ReplicatedFS{
-		Leader:        fsys.Leader,
-		Followers:     append(make([]FS, 0, len(fsys.Followers)), fsys.Followers...),
-		Synchronous:   fsys.Synchronous,
-		Logger:        fsys.Logger,
-		operationsCtx: fsys.operationsCtx,
-		baseCtx:       fsys.baseCtx,
-		baseCtxCancel: fsys.baseCtxCancel,
-		waitGroup:     fsys.waitGroup,
+		Leader:           fsys.Leader,
+		Followers:        append(make([]FS, 0, len(fsys.Followers)), fsys.Followers...),
+		Synchronous:      fsys.Synchronous,
+		Logger:           fsys.Logger,
+		operationsCtx:    fsys.operationsCtx,
+		baseCtx:          fsys.baseCtx,
+		baseCtxCancel:    fsys.baseCtxCancel,
+		baseCtxWaitGroup: fsys.baseCtxWaitGroup,
 	}
 	if v, ok := replicatedFS.Leader.(interface {
 		WithValues(map[string]any) FS
@@ -132,9 +132,9 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
-		fsys.waitGroup.Add(1)
+		fsys.baseCtxWaitGroup.Add(1)
 		go func() {
-			defer fsys.waitGroup.Done()
+			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
 					fmt.Println("panic: " + string(debug.Stack()))
@@ -160,34 +160,6 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 
 func (fsys *ReplicatedFS) Close() error {
 	fsys.baseCtxCancel()
-	defer fsys.waitGroup.Wait()
-	var waitGroup sync.WaitGroup
-	defer waitGroup.Wait()
-	if closer, ok := fsys.Leader.(io.Closer); ok {
-		waitGroup.Add(1)
-		go func() {
-			defer waitGroup.Done()
-			defer func() {
-				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
-				}
-			}()
-			closer.Close()
-		}()
-	}
-	for _, follower := range fsys.Followers {
-		if closer, ok := follower.(io.Closer); ok {
-			waitGroup.Add(1)
-			go func() {
-				defer waitGroup.Done()
-				defer func() {
-					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
-					}
-				}()
-				closer.Close()
-			}()
-		}
-	}
+	defer fsys.baseCtxWaitGroup.Wait()
 	return nil
 }

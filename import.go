@@ -269,7 +269,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			nbrew.waitGroup.Add(1)
+			nbrew.baseCtxWaitGroup.Add(1)
 			logger := getLogger(r.Context())
 			go func() {
 				defer func() {
@@ -277,7 +277,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 						fmt.Println("panic:\n" + string(debug.Stack()))
 					}
 				}()
-				defer nbrew.waitGroup.Done()
+				defer nbrew.baseCtxWaitGroup.Done()
 				gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 				defer gracePeriodCancel()
 				gracePeriodTimer := time.NewTimer(time.Hour)

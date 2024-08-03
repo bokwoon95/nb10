@@ -117,9 +117,9 @@ type Notebrew struct {
 
 	// baseCtx is associated with this struct. When Close() is called, the baseCtx is
 	// canceled.
-	baseCtx       context.Context
-	baseCtxCancel func()
-	waitGroup     sync.WaitGroup
+	baseCtx          context.Context
+	baseCtxCancel    func()
+	baseCtxWaitGroup sync.WaitGroup
 }
 
 func New() *Notebrew {
@@ -134,7 +134,7 @@ func New() *Notebrew {
 
 func (nbrew *Notebrew) Close() error {
 	nbrew.baseCtxCancel()
-	defer nbrew.waitGroup.Wait()
+	defer nbrew.baseCtxWaitGroup.Wait()
 	if nbrew.DB != nil {
 		if nbrew.Dialect == "sqlite" {
 			nbrew.DB.Exec("PRAGMA optimize")
