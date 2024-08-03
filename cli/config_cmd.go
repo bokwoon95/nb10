@@ -925,16 +925,16 @@ const databaseHelp = `# == database keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # dialect         - Database dialect (possible values: sqlite, postgres, mysql).
 # filePath        - File path to the sqlite file (if dialect is sqlite).
-# user            - Database user
-# password        - Database password
-# host            - Database host
-# port            - Database port
-# dbName          - Database name
-# params          - Database-specific connection parameters (see https://example.com for more info)
-# maxOpenConns    - Max open connections to the database (0 means unset)
-# maxIdleConns    - Max idle connections to the database (0 means unset, default is 2)
-# connMaxLifetime - Connection max lifetime e.g. 5m, 10m30s
-# connMaxIdleTime - Connection max idle time e.g. 5m, 10m30s
+# user            - Database user.
+# password        - Database password.
+# host            - Database host.
+# port            - Database port.
+# dbName          - Database name.
+# params          - Database-specific connection parameters (see https://example.com for more info).
+# maxOpenConns    - Max open connections to the database (0 means unset).
+# maxIdleConns    - Max idle connections to the database (0 means unset, default is 2).
+# connMaxLifetime - Connection max lifetime. e.g. 5m, 10m30s
+# connMaxIdleTime - Connection max idle time. e.g. 5m, 10m30s
 `
 
 type FilesConfig struct {
@@ -957,19 +957,19 @@ type FilesConfig struct {
 const filesHelp = `# == files keys == #
 # Choose between using a directory, database or sftp filesystem to store files.
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# provider - Files provider (possible values: directory, database, sftp)
+# provider - Files provider (possible values: directory, database, sftp).
 # dialect  - Database dialect (possible values: sqlite, postgres, mysql).
 # filePath - Files root directory (if using a directory) or file path to the sqlite file (if using sqlite database) or remote root directory (if using SFTP).
-# user     - Database/SFTP user
-# password - Database/SFTP password
-# host     - Database/SFTP host
-# port     - Database/SFTP port
-# dbName   - Database name
-# params   - Database-specific connection parameters (see https://example.com for more info)
-# maxOpenConns    - Max open connections to the database/SFTP server (0 means unset)
-# maxIdleConns    - Max idle connections to the database (0 means unset, default is 2)
-# connMaxLifetime - Connection max lifetime e.g. 5m, 10m30s
-# connMaxIdleTime - Connection max idle time e.g. 5m, 10m30s
+# user     - Database/SFTP user.
+# password - Database/SFTP password.
+# host     - Database/SFTP host.
+# port     - Database/SFTP port.
+# dbName   - Database name.
+# params   - Database-specific connection parameters (see https://example.com for more info).
+# maxOpenConns    - Max open connections to the database/SFTP server (0 means unset).
+# maxIdleConns    - Max idle connections to the database (0 means unset, default is 2).
+# connMaxLifetime - Connection max lifetime. e.g. 5m, 10m30s
+# connMaxIdleTime - Connection max idle time. e.g. 5m, 10m30s
 `
 
 type ObjectsConfig struct {
@@ -987,7 +987,7 @@ const objectsHelp = `# == objects keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
 # provider        - Object storage provider (possible values: directory, s3).
 # filePath        - Object storage directory filePath (if using a directory).
-# endpoint        - Object storage provider endpoint (if using s3). e.g. https://s3.us-east-1.amazonaws.com, https://s3.us-west-004.backblazeb2.com.
+# endpoint        - Object storage provider endpoint (if using s3). e.g. https://s3.us-east-1.amazonaws.com, https://s3.us-west-004.backblazeb2.com
 # region          - S3 region. e.g. us-east-1, us-west-004
 # bucket          - S3 bucket.
 # accessKeyID     - S3 access key ID.
@@ -1009,7 +1009,7 @@ const captchaHelp = `# == captcha keys == #
 # widgetScriptSrc   - Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js, https://challenges.cloudflare.com/turnstile/v0/api.js
 # widgetClass       - Captcha widget's container div class. e.g. h-captcha, cf-turnstile
 # verificationURL   - Captcha verification URL to make POST requests to. e.g. https://api.hcaptcha.com/siteverify, https://challenges.cloudflare.com/turnstile/v0/siteverify
-# responseTokenName - Captcha response token name e.g. h-captcha-response, cf-turnstile-response
+# responseTokenName - Captcha response token name. e.g. h-captcha-response, cf-turnstile-response
 # siteKey           - Captcha site key.
 # secretKey         - Captcha secret key.
 # csp               - String-to-string mapping of Content-Security-Policy directive names to values for the captcha widget to work. e.g. {"script-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","frame-src":"https://hcaptcha.com https://*.hcaptcha.com https://challenges.cloudflare.com","style-src":"https://hcaptcha.com https://*.hcaptcha.com","connect-src":"https://hcaptcha.com https://*.hcaptcha.com"}
@@ -1036,9 +1036,9 @@ type DNSConfig struct {
 
 const dnsHelp = `# == dns keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.
-# provider  - DNS provider (possible values: namecheap, cloudflare, porkbun, godaddy)
-# username  - DNS API username   (required by: namecheap)
-# apiKey    - DNS API key        (required by: namecheap, porkbun)
-# apiToken  - DNS API token      (required by: cloudflare, godaddy)
-# secretKey - DNS API secret key (required by: porkbun)
+# provider  - DNS provider (possible values: namecheap, cloudflare, porkbun, godaddy).
+# username  - DNS API username   (required by: namecheap).
+# apiKey    - DNS API key        (required by: namecheap, porkbun).
+# apiToken  - DNS API token      (required by: cloudflare, godaddy).
+# secretKey - DNS API secret key (required by: porkbun).
 `
