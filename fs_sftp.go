@@ -49,19 +49,19 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 			tempDir = "/" + tempDir
 		}
 	}
-	maxConnections := config.MaxOpenConns
-	if maxConnections < 1 {
-		maxConnections = 1
+	maxOpenConns := config.MaxOpenConns
+	if maxOpenConns < 1 {
+		maxOpenConns = 1
 	}
 	sftpFS := &SFTPFS{
-		Clients:      make([]*SFTPClient, 0, maxConnections),
+		Clients:      make([]*SFTPClient, 0, maxOpenConns),
 		NewSSHClient: config.NewSSHClient,
 		RootDir:      rootDir,
 		TempDir:      tempDir,
 		index:        &atomic.Uint64{},
 		ctx:          context.Background(),
 	}
-	for i := 0; i < maxConnections; i++ {
+	for i := 0; i < maxOpenConns; i++ {
 		sftpFS.Clients = append(sftpFS.Clients, &SFTPClient{})
 	}
 	_, err := sftpFS.Clients[0].Get(sftpFS.NewSSHClient)

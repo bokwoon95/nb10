@@ -37,6 +37,7 @@ import (
 	"github.com/libdns/namecheap"
 	"github.com/libdns/porkbun"
 	"github.com/oschwald/maxminddb-golang"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -576,13 +577,14 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			return nil, err
 		}
-		nbrew.FS, err = nb10.NewDirFS(nb10.DirFSConfig{
+		dirFS, err := nb10.NewDirFS(nb10.DirFSConfig{
 			RootDir: filesConfig.FilePath,
 			TempDir: filesConfig.TempDir,
 		})
 		if err != nil {
 			return nil, err
 		}
+		nbrew.FS = dirFS
 	case "database":
 		var dataSourceName string
 		var dialect string
@@ -863,7 +865,21 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		}
 		nbrew.FS = databaseFS
 	case "sftp":
-		// TODO:
+		// TODO: we may need to generate ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub ourselves if it doesn't already exist (reference: https://gist.github.com/goliatone/e9c13e5f046e34cef6e150d06f20a34c).
+		// TODO: BUT if the provider is password, we need to use username-password authentication instead.
+		// TODO: we also need to find the known_hosts path
+		sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
+			NewSSHClient: func() (*ssh.Client, error) {
+				return nil, nil
+			},
+			RootDir:      filesConfig.FilePath,
+			TempDir:      filesConfig.TempDir,
+			MaxOpenConns: filesConfig.MaxOpenConns,
+		})
+		if err != nil {
+			return nil, err
+		}
+		nbrew.FS = sftpFS
 	default:
 		return nil, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), filesConfig.Provider)
 	}
