@@ -536,7 +536,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 	}
 	b = bytes.TrimSpace(b)
-	var filesConfig DatabaseConfig
+	var filesConfig FilesConfig
 	if len(b) > 0 {
 		decoder := json.NewDecoder(bytes.NewReader(b))
 		decoder.DisallowUnknownFields()
@@ -545,7 +545,8 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 		}
 	}
-	if filesConfig.Dialect == "" {
+	switch filesConfig.Provider {
+	case "", "directory":
 		if filesConfig.FilePath == "" {
 			filesConfig.FilePath = filepath.Join(dataDir, "notebrew-files")
 		} else {
@@ -562,7 +563,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else {
+	case "database":
 		var dataSourceName string
 		var dialect string
 		var db *sql.DB
@@ -821,6 +822,9 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, error) {
 			}
 		}
 		nbrew.FS = databaseFS
+	case "sftp":
+	default:
+		return nil, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), filesConfig.Provider)
 	}
 	for _, dir := range []string{
 		"notes",
