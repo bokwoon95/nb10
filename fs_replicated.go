@@ -315,6 +315,29 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 	return nil
 }
 
+func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
+	err := fsys.Leader.Rename(oldName, newName)
+	if err != nil {
+		return err
+	}
+	if fsys.Synchronous {
+		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+		for _, follower := range fsys.Followers {
+			follower := follower
+			group.Go(func() (err error) {
+				defer func() {
+					if v := recover(); v != nil {
+						err = fmt.Errorf("panic: " + string(debug.Stack()))
+					}
+				}()
+				return follower.WithContext(groupctx).Rename(oldName, newName)
+			})
+		}
+		return group.Wait()
+	}
+	return nil
+}
+
 func (fsys *ReplicatedFS) Close() error {
 	fsys.baseCtxCancel()
 	defer fsys.baseCtxWaitGroup.Wait()
