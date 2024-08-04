@@ -10,39 +10,37 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 )
 
 type ReplicatedFSConfig struct {
-	Leader      FS
-	Followers   []FS
-	Synchronous bool
-	Logger      *slog.Logger
+	Leader                 FS
+	Followers              []FS
+	SynchronousReplication bool
+	Logger                 *slog.Logger
 }
 
 type ReplicatedFS struct {
-	Leader           FS
-	Followers        []FS
-	Synchronous      bool
-	Logger           *slog.Logger
-	operationsCtx    context.Context
-	baseCtx          context.Context
-	baseCtxCancel    func()
-	baseCtxWaitGroup *sync.WaitGroup
+	Leader                 FS
+	Followers              []FS
+	SynchronousReplication bool
+	Logger                 *slog.Logger
+	ctx                    context.Context
+	baseCtx                context.Context
+	baseCtxCancel          func()
+	baseCtxWaitGroup       *sync.WaitGroup
 }
 
 func NewReplicatedFS(config ReplicatedFSConfig) (*ReplicatedFS, error) {
 	baseCtx, baseCtxCancel := context.WithCancel(context.Background())
 	replicatedFS := &ReplicatedFS{
-		Leader:           config.Leader,
-		Followers:        config.Followers,
-		Synchronous:      config.Synchronous,
-		Logger:           config.Logger,
-		operationsCtx:    context.Background(),
-		baseCtx:          baseCtx,
-		baseCtxCancel:    baseCtxCancel,
-		baseCtxWaitGroup: &sync.WaitGroup{},
+		Leader:                 config.Leader,
+		Followers:              config.Followers,
+		SynchronousReplication: config.SynchronousReplication,
+		Logger:                 config.Logger,
+		ctx:                    context.Background(),
+		baseCtx:                baseCtx,
+		baseCtxCancel:          baseCtxCancel,
+		baseCtxWaitGroup:       &sync.WaitGroup{},
 	}
 	return replicatedFS, nil
 }
@@ -72,14 +70,14 @@ func (fsys *ReplicatedFS) WithContext(ctx context.Context) FS {
 
 func (fsys *ReplicatedFS) WithValues(values map[string]any) FS {
 	replicatedFS := &ReplicatedFS{
-		Leader:           fsys.Leader,
-		Followers:        append(make([]FS, 0, len(fsys.Followers)), fsys.Followers...),
-		Synchronous:      fsys.Synchronous,
-		Logger:           fsys.Logger,
-		operationsCtx:    fsys.operationsCtx,
-		baseCtx:          fsys.baseCtx,
-		baseCtxCancel:    fsys.baseCtxCancel,
-		baseCtxWaitGroup: fsys.baseCtxWaitGroup,
+		Leader:                 fsys.Leader,
+		Followers:              append(make([]FS, 0, len(fsys.Followers)), fsys.Followers...),
+		SynchronousReplication: fsys.SynchronousReplication,
+		Logger:                 fsys.Logger,
+		ctx:                    fsys.ctx,
+		baseCtx:                fsys.baseCtx,
+		baseCtxCancel:          fsys.baseCtxCancel,
+		baseCtxWaitGroup:       fsys.baseCtxWaitGroup,
 	}
 	if v, ok := replicatedFS.Leader.(interface {
 		WithValues(map[string]any) FS
@@ -101,11 +99,77 @@ func (fsys *ReplicatedFS) Open(name string) (fs.File, error) {
 	return fsys.Leader.Open(name)
 }
 
+func (fsys *ReplicatedFS) Stat(name string) (fs.FileInfo, error) {
+	if statFS, ok := fsys.Leader.(fs.StatFS); ok {
+		return statFS.Stat(name)
+	}
+	file, err := fsys.Leader.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return file.Stat()
+}
+
+type ReplicatedFileWriter struct {
+	writer           io.WriteCloser
+	writeFailed      bool
+	followers        []FS
+	synchronous      bool
+	logger           *slog.Logger
+	ctx              context.Context
+	baseCtx          context.Context
+	baseCtxWaitGroup *sync.WaitGroup
+}
+
 func (fsys *ReplicatedFS) OpenWriter(name string, perm fs.FileMode) (io.WriteCloser, error) {
-	// TODO: No!! We need a custom replicatedFS writer that wraps the leader's
-	// writecloser and replicates the write to the rest of the writers when
-	// Close() is called.
-	return fsys.Leader.OpenWriter(name, perm)
+	writer, err := fsys.Leader.OpenWriter(name, perm)
+	if err != nil {
+		return nil, err
+	}
+	file := &ReplicatedFileWriter{
+		writer:           writer,
+		followers:        fsys.Followers,
+		synchronous:      fsys.SynchronousReplication,
+		logger:           fsys.Logger,
+		ctx:              fsys.ctx,
+		baseCtx:          fsys.baseCtx,
+		baseCtxWaitGroup: fsys.baseCtxWaitGroup,
+	}
+	return file, nil
+}
+
+func (file *ReplicatedFileWriter) Write(p []byte) (n int, err error) {
+	err = file.ctx.Err()
+	if err != nil {
+		file.writeFailed = true
+		return n, err
+	}
+	n, err = file.writer.Write(p)
+	if err != nil {
+		file.writeFailed = true
+		return n, err
+	}
+	return n, err
+}
+
+func (file *ReplicatedFileWriter) Close() error {
+	if file.writer == nil {
+		return fs.ErrClosed
+	}
+	defer func() {
+		file.writer = nil
+	}()
+	err := file.writer.Close()
+	if err != nil {
+		return err
+	}
+	if file.writeFailed {
+		return nil
+	}
+	if file.synchronous {
+	}
+	return nil
 }
 
 func (fsys *ReplicatedFS) ReadDir(name string) ([]fs.DirEntry, error) {
@@ -117,20 +181,31 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 	if err != nil {
 		return err
 	}
-	if fsys.Synchronous {
-		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+	if fsys.SynchronousReplication {
+		var errPtr atomic.Pointer[error]
+		var waitGroup sync.WaitGroup
 		for _, follower := range fsys.Followers {
 			follower := follower
-			group.Go(func() (err error) {
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
+						fmt.Println("panic: " + string(debug.Stack()))
 					}
 				}()
-				return follower.WithContext(groupctx).Mkdir(name, perm)
-			})
+				err := follower.WithContext(fsys.ctx).Mkdir(name, perm)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+			}()
 		}
-		return group.Wait()
+		waitGroup.Wait()
+		if ptr := errPtr.Load(); ptr != nil {
+			return *ptr
+		}
+		return nil
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
@@ -175,20 +250,31 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 	if err != nil {
 		return err
 	}
-	if fsys.Synchronous {
-		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+	if fsys.SynchronousReplication {
+		var errPtr atomic.Pointer[error]
+		var waitGroup sync.WaitGroup
 		for _, follower := range fsys.Followers {
 			follower := follower
-			group.Go(func() (err error) {
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
+						fmt.Println("panic: " + string(debug.Stack()))
 					}
 				}()
-				return follower.WithContext(groupctx).MkdirAll(name, perm)
-			})
+				err := follower.WithContext(fsys.ctx).MkdirAll(name, perm)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+			}()
 		}
-		return group.Wait()
+		waitGroup.Wait()
+		if ptr := errPtr.Load(); ptr != nil {
+			return *ptr
+		}
+		return nil
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
@@ -233,20 +319,31 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 	if err != nil {
 		return err
 	}
-	if fsys.Synchronous {
-		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+	if fsys.SynchronousReplication {
+		var errPtr atomic.Pointer[error]
+		var waitGroup sync.WaitGroup
 		for _, follower := range fsys.Followers {
 			follower := follower
-			group.Go(func() (err error) {
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
+						fmt.Println("panic: " + string(debug.Stack()))
 					}
 				}()
-				return follower.WithContext(groupctx).Remove(name)
-			})
+				err := follower.WithContext(fsys.ctx).Remove(name)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+			}()
 		}
-		return group.Wait()
+		waitGroup.Wait()
+		if ptr := errPtr.Load(); ptr != nil {
+			return *ptr
+		}
+		return nil
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
@@ -291,20 +388,31 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 	if err != nil {
 		return err
 	}
-	if fsys.Synchronous {
-		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+	if fsys.SynchronousReplication {
+		var errPtr atomic.Pointer[error]
+		var waitGroup sync.WaitGroup
 		for _, follower := range fsys.Followers {
 			follower := follower
-			group.Go(func() (err error) {
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
+						fmt.Println("panic: " + string(debug.Stack()))
 					}
 				}()
-				return follower.WithContext(groupctx).RemoveAll(name)
-			})
+				err := follower.WithContext(fsys.ctx).RemoveAll(name)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+			}()
 		}
-		return group.Wait()
+		waitGroup.Wait()
+		if ptr := errPtr.Load(); ptr != nil {
+			return *ptr
+		}
+		return nil
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
@@ -349,7 +457,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 	if err != nil {
 		return err
 	}
-	if fsys.Synchronous {
+	if fsys.SynchronousReplication {
 		var errPtr atomic.Pointer[error]
 		var waitGroup sync.WaitGroup
 		for _, follower := range fsys.Followers {
@@ -362,7 +470,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 						fmt.Println("panic: " + string(debug.Stack()))
 					}
 				}()
-				err = follower.WithContext(fsys.operationsCtx).Rename(oldName, newName)
+				err = follower.WithContext(fsys.ctx).Rename(oldName, newName)
 				if err != nil {
 					errPtr.CompareAndSwap(nil, &err)
 					return
@@ -373,6 +481,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 		if ptr := errPtr.Load(); ptr != nil {
 			return *ptr
 		}
+		return nil
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
@@ -417,7 +526,7 @@ func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
 	if err != nil {
 		return err
 	}
-	if fsys.Synchronous {
+	if fsys.SynchronousReplication {
 		var errPtr atomic.Pointer[error]
 		var waitGroup sync.WaitGroup
 		for _, follower := range fsys.Followers {
@@ -430,7 +539,7 @@ func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
 						fmt.Println("panic: " + string(debug.Stack()))
 					}
 				}()
-				err = follower.WithContext(fsys.operationsCtx).Copy(srcName, destName)
+				err = follower.WithContext(fsys.ctx).Copy(srcName, destName)
 				if err != nil {
 					errPtr.CompareAndSwap(nil, &err)
 					return
@@ -441,6 +550,7 @@ func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
 		if ptr := errPtr.Load(); ptr != nil {
 			return *ptr
 		}
+		return nil
 	}
 	for _, follower := range fsys.Followers {
 		follower := follower
