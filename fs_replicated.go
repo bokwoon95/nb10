@@ -2,12 +2,14 @@ package nb10
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -321,19 +323,40 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 		return err
 	}
 	if fsys.Synchronous {
-		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
-		for _, follower := range fsys.Followers {
-			follower := follower
-			group.Go(func() (err error) {
+		var retryFollowerCount atomic.Int64
+		retryFollowers := make([]FS, len(fsys.Followers))
+		groupA, groupctxA := errgroup.WithContext(fsys.operationsCtx)
+		for i, follower := range fsys.Followers {
+			i, follower := i, follower
+			groupA.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				return follower.WithContext(groupctx).Rename(oldName, newName)
+				err = follower.WithContext(groupctxA).Rename(oldName, newName)
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						retryFollowerCount.Add(1)
+						retryFollowers[i] = follower
+						return nil
+					}
+					return err
+				}
+				return nil
 			})
 		}
-		return group.Wait()
+		err := groupA.Wait()
+		if err != nil {
+			return err
+		}
+		if retryFollowerCount.Load() > 0 {
+			for _, follower := range retryFollowers {
+				if follower == nil {
+					continue
+				}
+			}
+		}
 	}
 	return nil
 }
