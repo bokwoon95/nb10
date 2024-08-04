@@ -100,14 +100,12 @@ sftpclientkk
 PersistentSFTPClient
 fac.NewClient
 
-notebrew config files.followers[0].provider directory
 
-TODO: hardcode 1 hour delay on interrupts for imports and replicatedFS follower replication.
-TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
-TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/
+TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
+TODO: notebrew config files.followers[0].provider directory
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
     TODO: /files/static/definitive-guide-6a0f0a00.html (user tutorials)
