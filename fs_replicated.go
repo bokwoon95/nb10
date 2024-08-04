@@ -47,14 +47,12 @@ func NewReplicatedFS(config ReplicatedFSConfig) (*ReplicatedFS, error) {
 }
 
 func (fsys *ReplicatedFS) As(target any) bool {
-	if v, ok := fsys.Leader.(interface {
-		As(target any) bool
-	}); ok {
-		if v.As(target) {
-			return true
-		}
+	switch v := fsys.Leader.(type) {
+	case interface{ As(any) bool }:
+		return v.As(target)
+	default:
+		return false
 	}
-	return false
 }
 
 func (fsys *ReplicatedFS) WithContext(ctx context.Context) FS {
