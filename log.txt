@@ -83,24 +83,6 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
-FilesConfig struct{
-    provider dir | database | sftp
-    asyncFollowers bool
-    dialect
-    followers []
-}
-
-once we get follower to work, that means users would be able to replicate file changes
-you can still replicate all writes synchronously -- just write to the leader fs first, once successful then open a reader from the leaderFS and open a multiwriter to all follower FSes and write it in.
-
-sftputil.NewClient creates a new sftutil.Client that monitors its own SSH connection status and knows when the underlying SSH connection is disconnected
-sftputil.Client.GetSFTPClient returns a new
-
-sftpclientkk
-PersistentSFTPClient
-fac.NewClient
-
-
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/
