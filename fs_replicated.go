@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -158,6 +157,7 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 			err := follower.WithContext(gracePeriodCtx).Mkdir(name, perm)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
+				return
 			}
 		}()
 	}
@@ -209,6 +209,7 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 			err := follower.WithContext(gracePeriodCtx).Mkdir(name, perm)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
+				return
 			}
 		}()
 	}
@@ -260,6 +261,7 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 			err := follower.WithContext(gracePeriodCtx).Remove(name)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
+				return
 			}
 		}()
 	}
@@ -311,6 +313,7 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 			err := follower.WithContext(gracePeriodCtx).RemoveAll(name)
 			if err != nil {
 				fsys.Logger.Error(err.Error())
+				return
 			}
 		}()
 	}
@@ -323,40 +326,113 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 		return err
 	}
 	if fsys.Synchronous {
-		var retryFollowerCount atomic.Int64
-		retryFollowers := make([]FS, len(fsys.Followers))
-		groupA, groupctxA := errgroup.WithContext(fsys.operationsCtx)
-		for i, follower := range fsys.Followers {
-			i, follower := i, follower
-			groupA.Go(func() (err error) {
+		group, groupctx := errgroup.WithContext(fsys.operationsCtx)
+		for _, follower := range fsys.Followers {
+			follower := follower
+			group.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
 						err = fmt.Errorf("panic: " + string(debug.Stack()))
 					}
 				}()
-				err = follower.WithContext(groupctxA).Rename(oldName, newName)
+				err = follower.WithContext(groupctx).Rename(oldName, newName)
 				if err != nil {
-					if errors.Is(err, fs.ErrNotExist) {
-						retryFollowerCount.Add(1)
-						retryFollowers[i] = follower
-						return nil
+					if !errors.Is(err, fs.ErrNotExist) {
+						return err
 					}
+				} else {
+					return nil
+				}
+				file, err := fsys.Leader.WithContext(groupctx).Open(newName)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+				writerCtx, writerCancel := context.WithCancel(groupctx)
+				defer writerCancel()
+				writer, err := follower.WithContext(writerCtx).OpenWriter(newName, 0644)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					writerCancel()
+					writer.Close()
+				}()
+				_, err = io.Copy(writer, file)
+				if err != nil {
+					return err
+				}
+				err = writer.Close()
+				if err != nil {
 					return err
 				}
 				return nil
 			})
 		}
-		err := groupA.Wait()
+		err := group.Wait()
 		if err != nil {
 			return err
 		}
-		if retryFollowerCount.Load() > 0 {
-			for _, follower := range retryFollowers {
-				if follower == nil {
-					continue
+	}
+	for _, follower := range fsys.Followers {
+		follower := follower
+		fsys.baseCtxWaitGroup.Add(1)
+		go func() {
+			defer fsys.baseCtxWaitGroup.Done()
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + string(debug.Stack()))
 				}
+			}()
+			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
+			defer gracePeriodCancel()
+			go func() {
+				gracePeriodTimer := time.NewTimer(time.Hour)
+				defer gracePeriodTimer.Stop()
+				select {
+				case <-gracePeriodCtx.Done():
+				case <-fsys.baseCtx.Done():
+					<-gracePeriodTimer.C
+					gracePeriodCancel()
+				}
+			}()
+			err := follower.WithContext(gracePeriodCtx).Rename(oldName, newName)
+			if err != nil {
+				if !errors.Is(err, fs.ErrNotExist) {
+					fsys.Logger.Error(err.Error())
+					return
+				}
+			} else {
+				return
 			}
-		}
+			file, err := fsys.Leader.WithContext(gracePeriodCtx).Open(newName)
+			if err != nil {
+				fsys.Logger.Error(err.Error())
+				return
+			}
+			defer file.Close()
+			writerCtx, writerCancel := context.WithCancel(gracePeriodCtx)
+			defer writerCancel()
+			writer, err := follower.WithContext(writerCtx).OpenWriter(newName, 0644)
+			if err != nil {
+				fsys.Logger.Error(err.Error())
+				return
+			}
+			defer func() {
+				writerCancel()
+				writer.Close()
+			}()
+			_, err = io.Copy(writer, file)
+			if err != nil {
+				fsys.Logger.Error(err.Error())
+				return
+			}
+			err = writer.Close()
+			if err != nil {
+				fsys.Logger.Error(err.Error())
+				return
+			}
+		}()
 	}
 	return nil
 }
