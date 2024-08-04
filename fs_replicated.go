@@ -145,13 +145,19 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				gracePeriodTimer := time.NewTimer(time.Hour)
-				defer gracePeriodTimer.Stop()
-				select {
-				case <-gracePeriodCtx.Done():
-				case <-fsys.baseCtx.Done():
-					<-gracePeriodTimer.C
-					gracePeriodCancel()
+				timer := time.NewTimer(0)
+				timer.Stop()
+				defer timer.Stop()
+				for {
+					select {
+					case <-fsys.baseCtx.Done():
+						timer.Reset(time.Hour)
+					case <-timer.C:
+						gracePeriodCancel()
+						return
+					case <-gracePeriodCtx.Done():
+						return
+					}
 				}
 			}()
 			err := follower.WithContext(gracePeriodCtx).Mkdir(name, perm)
@@ -197,13 +203,19 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				gracePeriodTimer := time.NewTimer(time.Hour)
-				defer gracePeriodTimer.Stop()
-				select {
-				case <-gracePeriodCtx.Done():
-				case <-fsys.baseCtx.Done():
-					<-gracePeriodTimer.C
-					gracePeriodCancel()
+				timer := time.NewTimer(0)
+				timer.Stop()
+				defer timer.Stop()
+				for {
+					select {
+					case <-fsys.baseCtx.Done():
+						timer.Reset(time.Hour)
+					case <-timer.C:
+						gracePeriodCancel()
+						return
+					case <-gracePeriodCtx.Done():
+						return
+					}
 				}
 			}()
 			err := follower.WithContext(gracePeriodCtx).Mkdir(name, perm)
@@ -249,13 +261,19 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				gracePeriodTimer := time.NewTimer(time.Hour)
-				defer gracePeriodTimer.Stop()
-				select {
-				case <-gracePeriodCtx.Done():
-				case <-fsys.baseCtx.Done():
-					<-gracePeriodTimer.C
-					gracePeriodCancel()
+				timer := time.NewTimer(0)
+				timer.Stop()
+				defer timer.Stop()
+				for {
+					select {
+					case <-fsys.baseCtx.Done():
+						timer.Reset(time.Hour)
+					case <-timer.C:
+						gracePeriodCancel()
+						return
+					case <-gracePeriodCtx.Done():
+						return
+					}
 				}
 			}()
 			err := follower.WithContext(gracePeriodCtx).Remove(name)
@@ -301,13 +319,19 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				gracePeriodTimer := time.NewTimer(time.Hour)
-				defer gracePeriodTimer.Stop()
-				select {
-				case <-gracePeriodCtx.Done():
-				case <-fsys.baseCtx.Done():
-					<-gracePeriodTimer.C
-					gracePeriodCancel()
+				timer := time.NewTimer(0)
+				timer.Stop()
+				defer timer.Stop()
+				for {
+					select {
+					case <-fsys.baseCtx.Done():
+						timer.Reset(time.Hour)
+					case <-timer.C:
+						gracePeriodCancel()
+						return
+					case <-gracePeriodCtx.Done():
+						return
+					}
 				}
 			}()
 			err := follower.WithContext(gracePeriodCtx).RemoveAll(name)
@@ -387,13 +411,19 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				gracePeriodTimer := time.NewTimer(time.Hour)
-				defer gracePeriodTimer.Stop()
-				select {
-				case <-gracePeriodCtx.Done():
-				case <-fsys.baseCtx.Done():
-					<-gracePeriodTimer.C
-					gracePeriodCancel()
+				timer := time.NewTimer(0)
+				timer.Stop()
+				defer timer.Stop()
+				for {
+					select {
+					case <-fsys.baseCtx.Done():
+						timer.Reset(time.Hour)
+					case <-timer.C:
+						gracePeriodCancel()
+						return
+					case <-gracePeriodCtx.Done():
+						return
+					}
 				}
 			}()
 			err := follower.WithContext(gracePeriodCtx).Rename(oldName, newName)
