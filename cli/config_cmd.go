@@ -977,6 +977,7 @@ type FilesConfig struct {
 	MaxIdleConns         int               `json:"maxIdleConns"`
 	ConnMaxLifetime      string            `json:"connMaxLifetime"`
 	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
+	Synchronous          bool              `json:"synchronous"`
 	Followers            []FollowerConfig  `json:"followers"`
 }
 
