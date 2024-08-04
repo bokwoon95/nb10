@@ -100,6 +100,8 @@ sftpclientkk
 PersistentSFTPClient
 fac.NewClient
 
+notebrew config files.followers[0].provider directory
+
 TODO: hardcode 1 hour delay on interrupts for imports and replicatedFS follower replication.
 TODO: ReplicatedFS { Leader FS; Followers []FS; Synchronous bool; PropogateErrNotExist bool; }
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.

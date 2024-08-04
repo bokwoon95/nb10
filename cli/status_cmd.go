@@ -138,7 +138,7 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "files         = <error: %s: %s>\n", filepath.Join(cmd.ConfigDir, "files.json"), err)
 	} else {
 		b = bytes.TrimSpace(b)
-		var filesConfig DatabaseConfig
+		var filesConfig FilesConfig
 		var decodeError error
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
@@ -147,7 +147,7 @@ func (cmd *StatusCmd) Run() error {
 		}
 		if decodeError != nil {
 			fmt.Fprintf(cmd.Stdout, "files         = <error: %s: %s>\n", filepath.Join(cmd.ConfigDir, "files.json"), err)
-		} else if filesConfig.Dialect == "" {
+		} else if filesConfig.Provider == "" || filesConfig.Provider == "directory" {
 			var filePath string
 			if filesConfig.FilePath == "" {
 				filePath = filepath.Join(dataHomeDir, "notebrew-files")
@@ -159,7 +159,7 @@ func (cmd *StatusCmd) Run() error {
 				}
 			}
 			fmt.Fprintf(cmd.Stdout, "files         = %s\n", filePath)
-		} else {
+		} else if filesConfig.Provider == "database" {
 			if filesConfig.Dialect == "sqlite" {
 				var filePath string
 				if filesConfig.FilePath == "" {
@@ -206,6 +206,12 @@ func (cmd *StatusCmd) Run() error {
 					fmt.Fprintf(cmd.Stdout, "objects       = %s/%s\n", strings.TrimSuffix(objectsConfig.Endpoint, "/"), objectsConfig.Bucket)
 				}
 			}
+		} else if filesConfig.Provider == "sftp" {
+			fmt.Fprintf(cmd.Stdout, "files         = sftp (%s:%s/%s)\n", filesConfig.Host, filesConfig.Port, strings.TrimPrefix(filesConfig.FilePath, "/"))
+		}
+		if len(filesConfig.Followers) > 0 {
+			// TODO: need to make this a loop, up to index 9.
+			// fmt.Fprintf(cmd.Stdout, "followers[0]  = %s\n", filesConfig.Host)
 		}
 	}
 
@@ -213,7 +219,7 @@ func (cmd *StatusCmd) Run() error {
 	if cmd.Notebrew.CaptchaConfig.VerificationURL == "" {
 		fmt.Fprintf(cmd.Stdout, "captcha       = <not configured>\n")
 	} else {
-		fmt.Fprintf(cmd.Stdout, "captcha       = %s\n", cmd.Notebrew.CaptchaConfig.VerificationURL)
+		fmt.Fprintf(cmd.Stdout, "captcha       = %s\n", cmd.Notebrew.CaptchaConfig.WidgetScriptSrc)
 	}
 
 	// Proxy.

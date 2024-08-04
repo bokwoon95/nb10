@@ -977,6 +977,25 @@ type FilesConfig struct {
 	MaxIdleConns         int               `json:"maxIdleConns"`
 	ConnMaxLifetime      string            `json:"connMaxLifetime"`
 	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
+	Followers            []FollowerConfig  `json:"followers"`
+}
+
+type FollowerConfig struct {
+	Provider             string            `json:"provider"`
+	AuthenticationMethod string            `json:"authenticationMethod"`
+	TempDir              string            `json:"tempDir"`
+	Dialect              string            `json:"dialect"`
+	FilePath             string            `json:"filePath"`
+	User                 string            `json:"user"`
+	Password             string            `json:"password"`
+	Host                 string            `json:"host"`
+	Port                 string            `json:"port"`
+	DBName               string            `json:"dbName"`
+	Params               map[string]string `json:"params"`
+	MaxOpenConns         int               `json:"maxOpenConns"`
+	MaxIdleConns         int               `json:"maxIdleConns"`
+	ConnMaxLifetime      string            `json:"connMaxLifetime"`
+	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
 }
 
 const objectsHelp = `# == objects keys == #
