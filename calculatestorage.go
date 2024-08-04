@@ -125,8 +125,14 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 			sitePrefix = head
 		}
 	}
-	databaseFS := &DatabaseFS{}
-	if castAs(fsys, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := fsys.(type) {
+	case *DatabaseFS:
+		databaseFS, ok = v, true
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		var filter sq.Expression
 		if root == "." || sitePrefix == root {
 			filter = sq.Expr("("+

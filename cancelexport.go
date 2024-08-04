@@ -91,7 +91,10 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.CDNDomain = nbrew.CDNDomain
-		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			response.IsDatabaseFS = v.As(&DatabaseFS{})
+		}
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason

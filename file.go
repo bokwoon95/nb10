@@ -130,8 +130,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		} else {
 			var absolutePath string
 			dirFS := &DirFS{}
-			if castAs(nbrew.FS, &dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				if v.As(&dirFS) {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
@@ -140,7 +143,10 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.ModTime = fileInfo.ModTime()
 		response.Size = fileInfo.Size()
 		response.CDNDomain = nbrew.CDNDomain
-		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			response.IsDatabaseFS = v.As(&DatabaseFS{})
+		}
 
 		if isEditable {
 			var b strings.Builder
@@ -181,8 +187,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				b.WriteString(")")
 				extFilter = sq.Expr(b.String(), args...)
 			}
-			databaseFS := &DatabaseFS{}
-			if castAs(nbrew.FS, &databaseFS) {
+			databaseFS, ok := &DatabaseFS{}, false
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				ok = v.As(&databaseFS)
+			}
+			if ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() (err error) {
 					defer func() {
@@ -298,8 +308,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
+							}
 						}
 						response.Assets = append(response.Assets, Asset{
 							Parent:       response.AssetDir,
@@ -335,8 +348,12 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				b.WriteString(")")
 				extFilter = sq.Expr(b.String(), args...)
 			}
-			databaseFS := &DatabaseFS{}
-			if castAs(nbrew.FS, &databaseFS) {
+			databaseFS, ok := &DatabaseFS{}, false
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				ok = v.As(&databaseFS)
+			}
+			if ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() (err error) {
 					defer func() {
@@ -452,8 +469,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
+							}
 						}
 						response.Assets = append(response.Assets, Asset{
 							Name:         name,
@@ -636,7 +656,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			RegeneratePostList bool
 			RegenerateSite     bool
 		}
-		isDatabaseFS := castAs(nbrew.FS, &DatabaseFS{})
+		var isDatabaseFS bool
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			isDatabaseFS = v.As(&DatabaseFS{})
+		}
 		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
 			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -1034,8 +1058,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		} else {
 			var absolutePath string
 			dirFS := &DirFS{}
-			if castAs(nbrew.FS, &dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				if v.As(&dirFS) {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
@@ -1150,8 +1177,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
+							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
@@ -1355,8 +1385,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}

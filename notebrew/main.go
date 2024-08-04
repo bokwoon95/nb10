@@ -124,7 +124,12 @@ func main() {
 				}
 			}()
 		}
-		if databaseFS, ok := nbrew.FS.(*nb10.DatabaseFS); ok && databaseFS.Dialect == "sqlite" {
+		databaseFS, ok := &nb10.DatabaseFS{}, false
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			ok = v.As(&databaseFS)
+		}
+		if ok && databaseFS.Dialect == "sqlite" {
 			_, err := databaseFS.DB.ExecContext(context.Background(), "PRAGMA optimize(0x10002)")
 			if err != nil {
 				nbrew.Logger.Error(err.Error())

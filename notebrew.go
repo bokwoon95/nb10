@@ -140,8 +140,12 @@ func (nbrew *Notebrew) Close() error {
 			nbrew.DB.Exec("PRAGMA optimize")
 		}
 	}
-	databaseFS := &DatabaseFS{}
-	if castAs(nbrew.FS, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		if databaseFS.Dialect == "sqlite" {
 			databaseFS.DB.Exec("PRAGMA optimize")
 		}
@@ -1399,25 +1403,5 @@ func init() {
 	err = json.NewDecoder(file).Decode(&CountryCodes)
 	if err != nil {
 		panic(err)
-	}
-}
-
-func castAs[T any](v any, target *T) bool {
-	if target == nil {
-		return false
-	}
-	switch v := v.(type) {
-	case interface {
-		As(target any) bool
-	}:
-		return v.As(target)
-	case T:
-		*target = v
-		return true
-	case *T:
-		*target = *v
-		return true
-	default:
-		return false
 	}
 }

@@ -144,7 +144,10 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			getLogger(r.Context()).Error(err.Error())
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
-		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			response.IsDatabaseFS = v.As(&DatabaseFS{})
+		}
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -341,8 +344,12 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	var regenerationCount atomic.Int64
 	startedAt := time.Now()
 
-	databaseFS := &DatabaseFS{}
-	if castAs(nbrew.FS, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		type File struct {
 			FilePath     string
 			Text         string
@@ -588,8 +595,11 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				}
 				var absolutePath string
 				dirFS := &DirFS{}
-				if castAs(nbrew.FS, &dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				switch v := nbrew.FS.(type) {
+				case interface{ As(any) bool }:
+					if v.As(&dirFS) {
+						absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+					}
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
 				err = siteGen.GeneratePage(subctx, filePath, b.String(), fileInfo.ModTime(), creationTime)
@@ -691,8 +701,11 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 				}
 				var absolutePath string
 				dirFS := &DirFS{}
-				if castAs(nbrew.FS, dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				switch v := nbrew.FS.(type) {
+				case interface{ As(any) bool }:
+					if v.As(&dirFS) {
+						absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+					}
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
 				err = siteGen.GeneratePost(subctxB, filePath, b.String(), fileInfo.ModTime(), creationTime, postTemplate)

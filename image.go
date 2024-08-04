@@ -88,8 +88,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		} else {
 			var absolutePath string
 			dirFS := &DirFS{}
-			if castAs(nbrew.FS, &dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				if v.As(&dirFS) {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
@@ -97,8 +100,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		response.Size = fileInfo.Size()
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
-		databaseFS := &DatabaseFS{}
-		if castAs(nbrew.FS, &databaseFS) {
+		databaseFS, ok := &DatabaseFS{}, false
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			ok = v.As(&databaseFS)
+		}
+		if ok {
 			response.IsDatabaseFS = true
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() (err error) {
@@ -335,8 +342,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		}
 
 		response := Response{}
-		databaseFS := &DatabaseFS{}
-		if !castAs(nbrew.FS, &databaseFS) {
+		databaseFS, ok := &DatabaseFS{}, false
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			ok = v.As(&databaseFS)
+		}
+		if !ok {
 			writeResponse(w, r, response)
 			return
 		}
@@ -437,8 +448,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					}()
 					var text string
 					var creationTime time.Time
-					databaseFS := &DatabaseFS{}
-					if castAs(nbrew.FS, &databaseFS) {
+					databaseFS, ok := &DatabaseFS{}, false
+					switch v := nbrew.FS.(type) {
+					case interface{ As(any) bool }:
+						ok = v.As(&databaseFS)
+					}
+					if ok {
 						result, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 							Dialect: databaseFS.Dialect,
 							Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -476,8 +491,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						}
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.BelongsTo)
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.BelongsTo)
+							}
 						}
 						text = b.String()
 						creationTime = CreationTime(absolutePath, fileInfo)
@@ -564,8 +582,12 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				} else {
 					response.BelongsTo = path.Join("pages", path.Dir(tail)+".html")
 				}
-				databaseFS := &DatabaseFS{}
-				if castAs(nbrew.FS, &databaseFS) {
+				databaseFS, ok := &DatabaseFS{}, false
+				switch v := nbrew.FS.(type) {
+				case interface{ As(any) bool }:
+					ok = v.As(&databaseFS)
+				}
+				if ok {
 					result, err := sq.FetchOne(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -616,8 +638,11 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					modTime = fileInfo.ModTime()
 					var absolutePath string
 					dirFS := &DirFS{}
-					if castAs(nbrew.FS, &dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.BelongsTo)
+					switch v := nbrew.FS.(type) {
+					case interface{ As(any) bool }:
+						if v.As(&dirFS) {
+							absolutePath = path.Join(dirFS.RootDir, response.SitePrefix, response.BelongsTo)
+						}
 					}
 					creationTime = CreationTime(absolutePath, fileInfo)
 				}

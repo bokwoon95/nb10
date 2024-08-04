@@ -41,8 +41,12 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		Files          []File `json:"files"`
 		Error          string `json:"error"`
 	}
-	databaseFS := &DatabaseFS{}
-	if !castAs(nbrew.FS, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if !ok {
 		nbrew.NotFound(w, r)
 		return
 	}
@@ -100,7 +104,10 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.CDNDomain = nbrew.CDNDomain
-		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			response.IsDatabaseFS = v.As(&DatabaseFS{})
+		}
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -170,8 +177,11 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				} else {
 					var absolutePath string
 					dirFS := &DirFS{}
-					if castAs(nbrew.FS, &dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+					switch v := nbrew.FS.(type) {
+					case interface{ As(any) bool }:
+						if v.As(&dirFS) {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+						}
 					}
 					file.CreationTime = CreationTime(absolutePath, fileInfo)
 				}

@@ -220,8 +220,12 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					err = fmt.Errorf("panic: " + string(debug.Stack()))
 				}
 			}()
-			databaseFS := &DatabaseFS{}
-			if castAs(nbrew.FS, &databaseFS) {
+			databaseFS, ok := &DatabaseFS{}, false
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				ok = v.As(&databaseFS)
+			}
+			if ok {
 				categories, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +
@@ -379,8 +383,12 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 		if request.ForAllCategories {
 			response.ForAllCategories = true
 			response.Categories = []string{""}
-			databaseFS := &DatabaseFS{}
-			if castAs(nbrew.FS, &databaseFS) {
+			databaseFS, ok := &DatabaseFS{}, false
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				ok = v.As(&databaseFS)
+			}
+			if ok {
 				categories, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format: "SELECT {*}" +

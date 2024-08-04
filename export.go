@@ -122,7 +122,10 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.CDNDomain = nbrew.CDNDomain
-		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			response.IsDatabaseFS = v.As(&DatabaseFS{})
+		}
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -253,8 +256,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				} else {
 					var absolutePath string
 					dirFS := &DirFS{}
-					if castAs(nbrew.FS, &dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+					switch v := nbrew.FS.(type) {
+					case interface{ As(any) bool }:
+						if v.As(&dirFS) {
+							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+						}
 					}
 					file.CreationTime = CreationTime(absolutePath, fileInfo)
 				}
@@ -645,7 +651,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		response.TotalBytes = totalBytes.Load()
 
 		var storageRemaining *atomic.Int64
-		isDatabaseFS := castAs(nbrew.FS, &DatabaseFS{})
+		var isDatabaseFS bool
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			isDatabaseFS = v.As(&DatabaseFS{})
+		}
 		if nbrew.DB != nil && isDatabaseFS && user.StorageLimit >= 0 {
 			storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -817,8 +827,12 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 		outputDirs = append(outputDirs, outputDir)
 	}
 	slices.Sort(outputDirs)
-	databaseFS := &DatabaseFS{}
-	if castAs(nbrew.FS, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		type File struct {
 			FileID       ID
 			FilePath     string
@@ -1028,8 +1042,11 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			}
 			var absolutePath string
 			dirFS := &DirFS{}
-			if castAs(nbrew.FS, &dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, filePath)
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				if v.As(&dirFS) {
+					absolutePath = path.Join(dirFS.RootDir, filePath)
+				}
 			}
 			modTime := fileInfo.ModTime()
 			creationTime := CreationTime(absolutePath, fileInfo)
@@ -1081,8 +1098,11 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			}
 			var absolutePath string
 			dirFS := &DirFS{}
-			if castAs(nbrew.FS, &dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				if v.As(&dirFS) {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
+				}
 			}
 			modTime := fileInfo.ModTime()
 			creationTime := CreationTime(absolutePath, fileInfo)
@@ -1123,8 +1143,12 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 }
 
 func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir string) (int64, error) {
-	databaseFS := &DatabaseFS{}
-	if castAs(fsys, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := fsys.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		var condition sq.Expression
 		if dir == "." {
 			condition = sq.Expr("("+
@@ -1212,8 +1236,12 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 }
 
 func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefix string, dir string) error {
-	databaseFS := &DatabaseFS{}
-	if castAs(fsys, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := fsys.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		type File struct {
 			FileID       ID
 			FilePath     string
@@ -1387,8 +1415,11 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 		}
 		var absolutePath string
 		dirFS := &DirFS{}
-		if castAs(fsys, &dirFS) {
-			absolutePath = path.Join(dirFS.RootDir, filePath)
+		switch v := fsys.(type) {
+		case interface{ As(any) bool }:
+			if v.As(&dirFS) {
+				absolutePath = path.Join(dirFS.RootDir, filePath)
+			}
 		}
 		modTime := fileInfo.ModTime()
 		creationTime := CreationTime(absolutePath, fileInfo)
@@ -1548,8 +1579,12 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 			}
 		}
 	}
-	databaseFS := &DatabaseFS{}
-	if castAs(fsys, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := fsys.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		var condition sq.Expression
 		if outputDir == "output" {
 			condition = sq.Expr("files.file_path LIKE {outputPrefix} ESCAPE '\\'"+
@@ -1647,8 +1682,12 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				}
 			} else if counterpartFileInfo.IsDir() {
 				// Export only the files.
-				databaseFS := &DatabaseFS{}
-				if castAs(fsys, &databaseFS) {
+				databaseFS, ok := &DatabaseFS{}, false
+				switch v := fsys.(type) {
+				case interface{ As(any) bool }:
+					ok = v.As(&databaseFS)
+				}
+				if ok {
 					buf := bufPool.Get().(*bytes.Buffer).Bytes()
 					defer func() {
 						if cap(buf) <= maxPoolableBufferCapacity {
@@ -1777,8 +1816,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						}
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(fsys, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+						switch v := fsys.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+							}
 						}
 						modTime := fileInfo.ModTime()
 						creationTime := CreationTime(absolutePath, fileInfo)
@@ -1825,8 +1867,12 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			} else if !counterpartFileInfo.IsDir() {
 				// Export only the directories.
 				var names []string
-				databaseFS := &DatabaseFS{}
-				if castAs(fsys, &databaseFS) {
+				databaseFS, ok := &DatabaseFS{}, false
+				switch v := fsys.(type) {
+				case interface{ As(any) bool }:
+					ok = v.As(&databaseFS)
+				}
+				if ok {
 					cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -1889,8 +1935,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						}
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(fsys, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+						switch v := fsys.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+							}
 						}
 						modTime := fileInfo.ModTime()
 						creationTime := CreationTime(absolutePath, fileInfo)
@@ -1920,8 +1969,12 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			}
 		}
 	}
-	databaseFS := &DatabaseFS{}
-	if castAs(fsys, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := fsys.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if ok {
 		buf := bufPool.Get().(*bytes.Buffer).Bytes()
 		defer func() {
 			if cap(buf) <= maxPoolableBufferCapacity {
@@ -2079,8 +2132,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 		}
 		var absolutePath string
 		dirFS := &DirFS{}
-		if castAs(fsys, &dirFS) {
-			absolutePath = path.Join(dirFS.RootDir, filePath)
+		switch v := fsys.(type) {
+		case interface{ As(any) bool }:
+			if v.As(&dirFS) {
+				absolutePath = path.Join(dirFS.RootDir, filePath)
+			}
 		}
 		modTime := fileInfo.ModTime()
 		creationTime := CreationTime(absolutePath, fileInfo)

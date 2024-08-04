@@ -91,7 +91,10 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.CDNDomain = nbrew.CDNDomain
-		response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			response.IsDatabaseFS = v.As(&DatabaseFS{})
+		}
 		response.UserID = user.UserID
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
@@ -455,8 +458,12 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 		if head == "posts" {
 			regenerateSite = true
 		}
-		databaseFS := &DatabaseFS{}
-		if castAs(fsys, &databaseFS) {
+		databaseFS, ok := &DatabaseFS{}, false
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			ok = v.As(&databaseFS)
+		}
+		if ok {
 			if isPinned {
 				switch databaseFS.Dialect {
 				case "sqlite", "postgres":
@@ -544,8 +551,12 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 		if head == "pages" || head == "posts" {
 			regenerateSite = true
 		}
-		databaseFS := &DatabaseFS{}
-		if castAs(fsys, &databaseFS) {
+		databaseFS, ok := &DatabaseFS{}, false
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			ok = v.As(&databaseFS)
+		}
+		if ok {
 			if isPinned {
 				switch databaseFS.Dialect {
 				case "sqlite", "postgres":

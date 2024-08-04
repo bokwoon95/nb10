@@ -258,7 +258,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.CDNDomain = nbrew.CDNDomain
-	response.IsDatabaseFS = castAs(nbrew.FS, &DatabaseFS{})
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		response.IsDatabaseFS = v.As(&DatabaseFS{})
+	}
 	response.SitePrefix = sitePrefix
 	response.UserID = user.UserID
 	response.Username = user.Username
@@ -271,8 +274,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	} else {
 		var absolutePath string
 		dirFS := &DirFS{}
-		if castAs(nbrew.FS, &dirFS) {
-			absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+		switch v := nbrew.FS.(type) {
+		case interface{ As(any) bool }:
+			if v.As(&dirFS) {
+				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+			}
 		}
 		response.CreationTime = CreationTime(absolutePath, fileInfo)
 	}
@@ -423,8 +429,12 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		response.UploadableExts = append(response.UploadableExts, fontExts...)
 	}
 
-	databaseFS := &DatabaseFS{}
-	if !castAs(nbrew.FS, &databaseFS) {
+	databaseFS, ok := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		ok = v.As(&databaseFS)
+	}
+	if !ok {
 		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, filePath))
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -442,8 +452,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			name := fileInfo.Name()
 			var absolutePath string
 			dirFS := &DirFS{}
-			if castAs(nbrew.FS, &dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath, name)
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				if v.As(&dirFS) {
+					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath, name)
+				}
 			}
 			file := File{
 				Parent:       filePath,

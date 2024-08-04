@@ -226,7 +226,11 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 				nbrew.NotAuthorized(w, r)
 				return
 			}
-			isDatabaseFS := castAs(nbrew.FS, &DatabaseFS{})
+			var isDatabaseFS bool
+			switch v := nbrew.FS.(type) {
+			case interface{ As(any) bool }:
+				isDatabaseFS = v.As(&DatabaseFS{})
+			}
 			if isDatabaseFS && user.StorageLimit >= 0 {
 				storageUsed, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
@@ -373,8 +377,12 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							return nil
 						}
 					} else {
-						databaseFS := &DatabaseFS{}
-						if castAs(nbrew.FS, &databaseFS) {
+						databaseFS, ok := &DatabaseFS{}, false
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							ok = v.As(&databaseFS)
+						}
+						if ok {
 							exists, err := sq.FetchExists(groupctxA, databaseFS.DB, sq.Query{
 								Dialect: databaseFS.Dialect,
 								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' AND NOT is_dir AND file_path NOT LIKE '%.html' ESCAPE '\\'",
@@ -415,8 +423,12 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							return nil
 						}
 					} else {
-						databaseFS := &DatabaseFS{}
-						if castAs(nbrew.FS, &databaseFS) {
+						databaseFS, ok := &DatabaseFS{}, false
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							ok = v.As(&databaseFS)
+						}
+						if ok {
 							exists, err := sq.FetchExists(groupctxA, databaseFS.DB, sq.Query{
 								Dialect: databaseFS.Dialect,
 								Format:  "SELECT 1 FROM files WHERE file_path LIKE {pattern} ESCAPE '\\' AND NOT is_dir AND file_path NOT LIKE '%.md' ESCAPE '\\'",
@@ -786,9 +798,12 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
-						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							dirFS := &DirFS{}
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
+							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
@@ -861,8 +876,11 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 					} else {
 						var absolutePath string
 						dirFS := &DirFS{}
-						if castAs(nbrew.FS, &dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
+						switch v := nbrew.FS.(type) {
+						case interface{ As(any) bool }:
+							if v.As(&dirFS) {
+								absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
+							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
 					}
