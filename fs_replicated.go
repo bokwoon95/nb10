@@ -96,14 +96,14 @@ func (fsys *ReplicatedFS) WithValues(values map[string]any) FS {
 }
 
 func (fsys *ReplicatedFS) Open(name string) (fs.File, error) {
-	return fsys.Leader.Open(name)
+	return fsys.Leader.WithContext(fsys.ctx).Open(name)
 }
 
 func (fsys *ReplicatedFS) Stat(name string) (fs.FileInfo, error) {
-	if statFS, ok := fsys.Leader.(fs.StatFS); ok {
+	if statFS, ok := fsys.Leader.WithContext(fsys.ctx).(fs.StatFS); ok {
 		return statFS.Stat(name)
 	}
-	file, err := fsys.Leader.Open(name)
+	file, err := fsys.Leader.WithContext(fsys.ctx).Open(name)
 	if err != nil {
 		return nil, err
 	}
@@ -112,29 +112,35 @@ func (fsys *ReplicatedFS) Stat(name string) (fs.FileInfo, error) {
 }
 
 type ReplicatedFileWriter struct {
-	writer           io.WriteCloser
-	writeFailed      bool
-	followers        []FS
-	synchronous      bool
-	logger           *slog.Logger
-	ctx              context.Context
-	baseCtx          context.Context
-	baseCtxWaitGroup *sync.WaitGroup
+	name                   string
+	perm                   fs.FileMode
+	writer                 io.WriteCloser
+	writeFailed            bool
+	leader                 FS
+	followers              []FS
+	synchronousReplication bool
+	logger                 *slog.Logger
+	ctx                    context.Context
+	baseCtx                context.Context
+	baseCtxWaitGroup       *sync.WaitGroup
 }
 
 func (fsys *ReplicatedFS) OpenWriter(name string, perm fs.FileMode) (io.WriteCloser, error) {
-	writer, err := fsys.Leader.OpenWriter(name, perm)
+	writer, err := fsys.Leader.WithContext(fsys.ctx).OpenWriter(name, perm)
 	if err != nil {
 		return nil, err
 	}
 	file := &ReplicatedFileWriter{
-		writer:           writer,
-		followers:        fsys.Followers,
-		synchronous:      fsys.SynchronousReplication,
-		logger:           fsys.Logger,
-		ctx:              fsys.ctx,
-		baseCtx:          fsys.baseCtx,
-		baseCtxWaitGroup: fsys.baseCtxWaitGroup,
+		name:                   name,
+		perm:                   perm,
+		writer:                 writer,
+		leader:                 fsys.Leader,
+		followers:              fsys.Followers,
+		synchronousReplication: fsys.SynchronousReplication,
+		logger:                 fsys.Logger,
+		ctx:                    fsys.ctx,
+		baseCtx:                fsys.baseCtx,
+		baseCtxWaitGroup:       fsys.baseCtxWaitGroup,
 	}
 	return file, nil
 }
@@ -167,17 +173,110 @@ func (file *ReplicatedFileWriter) Close() error {
 	if file.writeFailed {
 		return nil
 	}
-	if file.synchronous {
+	if file.synchronousReplication {
+		var errPtr atomic.Pointer[error]
+		var waitGroup sync.WaitGroup
+		for _, follower := range file.followers {
+			follower := follower
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
+				defer func() {
+					if v := recover(); v != nil {
+						fmt.Println("panic: " + string(debug.Stack()))
+					}
+				}()
+				leaderFile, err := file.leader.WithContext(file.ctx).Open(file.name)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+				defer leaderFile.Close()
+				writer, err := follower.WithContext(file.ctx).OpenWriter(file.name, file.perm)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+				defer writer.Close()
+				_, err = io.Copy(writer, leaderFile)
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+				err = writer.Close()
+				if err != nil {
+					errPtr.CompareAndSwap(nil, &err)
+					return
+				}
+			}()
+		}
+		waitGroup.Wait()
+		if ptr := errPtr.Load(); ptr != nil {
+			return *ptr
+		}
+		return nil
+	}
+	for _, follower := range file.followers {
+		follower := follower
+		file.baseCtxWaitGroup.Add(1)
+		go func() {
+			defer file.baseCtxWaitGroup.Done()
+			defer func() {
+				if v := recover(); v != nil {
+					fmt.Println("panic: " + string(debug.Stack()))
+				}
+			}()
+			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
+			defer gracePeriodCancel()
+			go func() {
+				timer := time.NewTimer(0)
+				timer.Stop()
+				defer timer.Stop()
+				for {
+					select {
+					case <-file.baseCtx.Done():
+						timer.Reset(time.Hour)
+					case <-timer.C:
+						gracePeriodCancel()
+						return
+					case <-gracePeriodCtx.Done():
+						return
+					}
+				}
+			}()
+			leaderFile, err := file.leader.WithContext(gracePeriodCtx).Open(file.name)
+			if err != nil {
+				file.logger.Error(err.Error())
+				return
+			}
+			defer leaderFile.Close()
+			writer, err := follower.WithContext(gracePeriodCtx).OpenWriter(file.name, file.perm)
+			if err != nil {
+				file.logger.Error(err.Error())
+				return
+			}
+			defer writer.Close()
+			_, err = io.Copy(writer, leaderFile)
+			if err != nil {
+				file.logger.Error(err.Error())
+				return
+			}
+			err = writer.Close()
+			if err != nil {
+				file.logger.Error(err.Error())
+				return
+			}
+		}()
 	}
 	return nil
 }
 
 func (fsys *ReplicatedFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	return fsys.Leader.ReadDir(name)
+	return fsys.Leader.WithContext(fsys.ctx).ReadDir(name)
 }
 
 func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
-	err := fsys.Leader.Mkdir(name, perm)
+	err := fsys.Leader.WithContext(fsys.ctx).Mkdir(name, perm)
 	if err != nil {
 		return err
 	}
@@ -246,7 +345,7 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 }
 
 func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
-	err := fsys.Leader.MkdirAll(name, perm)
+	err := fsys.Leader.WithContext(fsys.ctx).MkdirAll(name, perm)
 	if err != nil {
 		return err
 	}
@@ -315,7 +414,7 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 }
 
 func (fsys *ReplicatedFS) Remove(name string) error {
-	err := fsys.Leader.Remove(name)
+	err := fsys.Leader.WithContext(fsys.ctx).Remove(name)
 	if err != nil {
 		return err
 	}
@@ -384,7 +483,7 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 }
 
 func (fsys *ReplicatedFS) RemoveAll(name string) error {
-	err := fsys.Leader.RemoveAll(name)
+	err := fsys.Leader.WithContext(fsys.ctx).RemoveAll(name)
 	if err != nil {
 		return err
 	}
@@ -453,7 +552,7 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 }
 
 func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
-	err := fsys.Leader.Rename(oldName, newName)
+	err := fsys.Leader.WithContext(fsys.ctx).Rename(oldName, newName)
 	if err != nil {
 		return err
 	}
@@ -522,7 +621,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 }
 
 func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
-	err := fsys.Leader.Copy(srcName, destName)
+	err := fsys.Leader.WithContext(fsys.ctx).Copy(srcName, destName)
 	if err != nil {
 		return err
 	}
