@@ -83,6 +83,7 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
+TODO: why is copy and pasting a file on windows resulting in an error? Where are the backslashes coming from?
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/
