@@ -13,7 +13,6 @@ import (
 	"net/netip"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"slices"
 	"strings"
 	texttemplate "text/template"
@@ -453,11 +452,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer TraceError(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -482,11 +477,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer TraceError(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -517,11 +508,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer TraceError(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -552,11 +539,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer TraceError(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -581,11 +564,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer TraceError(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())

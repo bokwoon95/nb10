@@ -29,6 +29,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -883,6 +884,23 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	var errmsg string
+	var lines []string
+	var annotatedErr *TracedError
+	if errors.As(serverErr, &annotatedErr) {
+		errmsg = annotatedErr.Err.Error()
+		lines = annotatedErr.Lines
+	} else {
+		errmsg = serverErr.Error()
+		var pc [50]uintptr
+		n := runtime.Callers(2, pc[:]) // skip runtime.Callers + InternalServerError
+		lines = make([]string, 0, n)
+		frames := runtime.CallersFrames(pc[:n])
+		for frame, more := frames.Next(); more; frame, more = frames.Next() {
+			lines = append(lines, frame.File+":"+strconv.Itoa(frame.Line))
+		}
+		lines = append(lines, "vcs.revision="+Revision)
+	}
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -894,7 +912,8 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 		encoder.SetEscapeHTML(false)
 		err := encoder.Encode(map[string]any{
 			"error":   "InternalServerError",
-			"message": serverErr.Error(),
+			"message": errmsg,
+			"lines":   lines,
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -921,7 +940,8 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 			"Title":    "500 internal server error",
 			"Headline": "500 internal server error",
 			"Byline":   "There's a bug with notebrew.",
-			"Details":  serverErr.Error(),
+			"Details":  errmsg,
+			"Lines":    lines,
 		}
 	}
 	err := errorTemplate.Execute(buf, data)
@@ -1404,4 +1424,46 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type TracedError struct {
+	Err   error
+	Lines []string
+}
+
+func TraceError(err *error) {
+	if v := recover(); v != nil {
+		*err = fmt.Errorf("panic: " + fmt.Sprint(v))
+	}
+	if *err == nil {
+		return
+	}
+	var lines []string
+	var tracedErr *TracedError
+	if errors.As(*err, &tracedErr) {
+		return
+	}
+	var pc [50]uintptr
+	n := runtime.Callers(2, pc[:]) // skip runtime.Callers + TraceError
+	lines = slices.Grow(lines, n)
+	frames := runtime.CallersFrames(pc[:n])
+	for frame, more := frames.Next(); more; frame, more = frames.Next() {
+		lines = append(lines, frame.File+":"+strconv.Itoa(frame.Line))
+	}
+	lines = append(lines, "vcs.revision="+Revision)
+	*err = &TracedError{
+		Err:   *err,
+		Lines: lines,
+	}
+}
+
+func (e *TracedError) Error() string {
+	if e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
+}
+
+func (e *TracedError) Unwrap() error {
+	return e.Err
 }

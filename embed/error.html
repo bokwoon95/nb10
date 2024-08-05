@@ -20,6 +20,14 @@
   <details>
     <summary>details</summary>
     <pre class='ws-normal'>{{ $.Details }}</pre>
+    {{- if $.Lines }}
+    <strong>error trace:</strong>
+    <ul>
+      {{- range $line := $.Lines }}
+      <li>{{ $line }}</li>
+      {{- end }}
+    </ul>
+    {{- end }}
   </details>
   {{- end }}
 </div>

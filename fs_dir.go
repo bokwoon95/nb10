@@ -42,18 +42,18 @@ type DirFS struct {
 }
 
 func NewDirFS(config DirFSConfig) (*DirFS, error) {
-	rootDir, err := filepath.Abs(filepath.FromSlash(config.RootDir))
+	rootDir, err := filepath.Abs(config.RootDir)
 	if err != nil {
 		return nil, err
 	}
-	tempDir, err := filepath.Abs(filepath.FromSlash(config.TempDir))
+	tempDir, err := filepath.Abs(config.TempDir)
 	if err != nil {
 		return nil, err
 	}
 	dirFS := &DirFS{
 		ctx:     context.Background(),
-		RootDir: rootDir,
-		TempDir: tempDir,
+		RootDir: filepath.ToSlash(rootDir),
+		TempDir: filepath.ToSlash(tempDir),
 	}
 	return dirFS, nil
 }
@@ -87,8 +87,7 @@ func (fsys *DirFS) Open(name string) (fs.File, error) {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	file, err := os.Open(filepath.Join(fsys.RootDir, name))
+	file, err := os.Open(path.Join(fsys.RootDir, name))
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +102,7 @@ func (fsys *DirFS) Stat(name string) (fs.FileInfo, error) {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	fileInfo, err := os.Stat(filepath.Join(fsys.RootDir, name))
+	fileInfo, err := os.Stat(path.Join(fsys.RootDir, name))
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +118,13 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrInvalid}
 	}
 	if runtime.GOOS == "windows" {
-		file, err := os.OpenFile(filepath.Join(fsys.RootDir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		file, err := os.OpenFile(path.Join(fsys.RootDir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return nil, err
 		}
 		return file, nil
 	}
-	_, err = os.Stat(filepath.Join(fsys.RootDir, filepath.Dir(name)))
+	_, err = os.Stat(path.Join(fsys.RootDir, path.Dir(name)))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
@@ -137,7 +135,7 @@ func (fsys *DirFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error
 		ctx:     fsys.ctx,
 		rootDir: fsys.RootDir,
 		tempDir: fsys.TempDir,
-		name:    filepath.FromSlash(name),
+		name:    name,
 	}
 	if file.tempDir == "" {
 		file.tempDir = os.TempDir()
@@ -211,8 +209,8 @@ func (file *DirFileWriter) Write(p []byte) (n int, err error) {
 }
 
 func (file *DirFileWriter) Close() error {
-	tempFilePath := filepath.Join(file.tempDir, file.tempName)
-	destFilePath := filepath.Join(file.rootDir, file.name)
+	tempFilePath := path.Join(file.tempDir, file.tempName)
+	destFilePath := path.Join(file.rootDir, file.name)
 	defer os.Remove(tempFilePath)
 	err := file.tempFile.Close()
 	if err != nil {
@@ -236,8 +234,7 @@ func (fsys *DirFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	return os.ReadDir(filepath.Join(fsys.RootDir, name))
+	return os.ReadDir(path.Join(fsys.RootDir, name))
 }
 
 func (fsys *DirFS) Mkdir(name string, _ fs.FileMode) error {
@@ -248,8 +245,7 @@ func (fsys *DirFS) Mkdir(name string, _ fs.FileMode) error {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	return os.Mkdir(filepath.Join(fsys.RootDir, name), 0755)
+	return os.Mkdir(path.Join(fsys.RootDir, name), 0755)
 }
 
 func (fsys *DirFS) MkdirAll(name string, _ fs.FileMode) error {
@@ -260,8 +256,7 @@ func (fsys *DirFS) MkdirAll(name string, _ fs.FileMode) error {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "mkdirall", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	return os.MkdirAll(filepath.Join(fsys.RootDir, name), 0755)
+	return os.MkdirAll(path.Join(fsys.RootDir, name), 0755)
 }
 
 func (fsys *DirFS) Remove(name string) error {
@@ -272,8 +267,7 @@ func (fsys *DirFS) Remove(name string) error {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	return os.Remove(filepath.Join(fsys.RootDir, name))
+	return os.Remove(path.Join(fsys.RootDir, name))
 }
 
 func (fsys *DirFS) RemoveAll(name string) error {
@@ -284,8 +278,7 @@ func (fsys *DirFS) RemoveAll(name string) error {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
 	}
-	name = filepath.FromSlash(name)
-	return os.RemoveAll(filepath.Join(fsys.RootDir, name))
+	return os.RemoveAll(path.Join(fsys.RootDir, name))
 }
 
 func (fsys *DirFS) Rename(oldName, newName string) error {
@@ -299,9 +292,7 @@ func (fsys *DirFS) Rename(oldName, newName string) error {
 	if !fs.ValidPath(newName) || strings.Contains(newName, "\\") {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrInvalid}
 	}
-	oldName = filepath.FromSlash(oldName)
-	newName = filepath.FromSlash(newName)
-	_, err = os.Stat(filepath.Join(fsys.RootDir, newName))
+	_, err = os.Stat(path.Join(fsys.RootDir, newName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
@@ -309,7 +300,7 @@ func (fsys *DirFS) Rename(oldName, newName string) error {
 	} else {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
 	}
-	err = os.Rename(filepath.Join(fsys.RootDir, oldName), filepath.Join(fsys.RootDir, newName))
+	err = os.Rename(path.Join(fsys.RootDir, oldName), path.Join(fsys.RootDir, newName))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
@@ -330,9 +321,7 @@ func (fsys *DirFS) Copy(srcName, destName string) error {
 	if !fs.ValidPath(destName) || strings.Contains(destName, "\\") {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrInvalid}
 	}
-	srcName = filepath.FromSlash(srcName)
-	destName = filepath.FromSlash(destName)
-	_, err = os.Stat(filepath.Join(fsys.RootDir, destName))
+	_, err = os.Stat(path.Join(fsys.RootDir, destName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
@@ -340,7 +329,7 @@ func (fsys *DirFS) Copy(srcName, destName string) error {
 	} else {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
 	}
-	srcFileInfo, err := os.Stat(filepath.Join(fsys.RootDir, srcName))
+	srcFileInfo, err := os.Stat(path.Join(fsys.RootDir, srcName))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrNotExist}

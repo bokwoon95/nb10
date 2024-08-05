@@ -345,11 +345,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		for _, name := range names {
 			name := name
 			groupA.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer TraceError(&err)
 				srcFilePath := path.Join(sitePrefix, response.SrcParent, name)
 				srcFileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxA), srcFilePath)
 				if err != nil {
