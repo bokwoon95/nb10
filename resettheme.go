@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -122,7 +123,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		} else {
 			err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts"), func(filePath string, dirEntry fs.DirEntry, err error) error {
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				if dirEntry.IsDir() {
 					response.Categories = append(response.Categories, path.Base(filePath))
@@ -251,7 +252,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 			} else {
 				err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts"), func(filePath string, dirEntry fs.DirEntry, err error) error {
 					if err != nil {
-						return err
+						return stacktrace.WrapError(err)
 					}
 					if dirEntry.IsDir() {
 						response.Categories = append(response.Categories, path.Base(filePath))
@@ -302,10 +303,10 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		group, groupctx := errgroup.WithContext(r.Context())
 		if response.ResetIndexHTML {
 			group.Go(func() (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
 				if err != nil {
@@ -336,7 +337,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		}
 		if response.Reset404HTML {
 			group.Go(func() (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 				if err != nil {
 					return err
@@ -370,7 +371,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 		}
 		if response.ResetPostHTML {
 			resetPostHTML := func(ctx context.Context, category string) (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 				if err != nil {
 					return err
@@ -413,20 +414,20 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				for _, category := range response.Categories {
 					category := category
 					group.Go(func() (err error) {
-						defer TraceError(&err)
+						defer stacktrace.RecoverPanic(&err)
 						return resetPostHTML(groupctx, category)
 					})
 				}
 			} else {
 				group.Go(func() (err error) {
-					defer TraceError(&err)
+					defer stacktrace.RecoverPanic(&err)
 					return resetPostHTML(groupctx, response.ForCategory)
 				})
 			}
 		}
 		if response.ResetPostListHTML {
 			resetPostListHTML := func(ctx context.Context, category string) (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "postlist.html"), 0644)
 				if err != nil {
@@ -466,13 +467,13 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				for _, category := range response.Categories {
 					category := category
 					group.Go(func() (err error) {
-						defer TraceError(&err)
+						defer stacktrace.RecoverPanic(&err)
 						return resetPostListHTML(groupctx, category)
 					})
 				}
 			} else {
 				group.Go(func() (err error) {
-					defer TraceError(&err)
+					defer stacktrace.RecoverPanic(&err)
 					return resetPostListHTML(groupctx, response.ForCategory)
 				})
 			}

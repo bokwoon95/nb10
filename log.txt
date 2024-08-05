@@ -85,6 +85,8 @@ no email table, if the server restarts it just closes the events channel and com
 
 TODO: replace all defer funcs with TraceError(&err)
     - Why is resettheme not working?
+TODO: Change from TracedError to StackError
+    - TODO: change from TraceError to recoverPanic, which should convert the panic to a stack trace.
 TODO: why is copy and pasting a file on windows resulting in an error? Where are the backslashes coming from?
 TODO: signup.go
     TODO: /signup/
