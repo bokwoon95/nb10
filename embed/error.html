@@ -21,7 +21,7 @@
     <summary>details</summary>
     <pre class='ws-normal'>{{ $.Details }}</pre>
     {{- if $.Callers }}
-    <strong>error trace:</strong>
+    <strong>stack trace:</strong>
     <ul>
       {{- range $caller := $.Callers }}
       <li>{{ $caller }}</li>

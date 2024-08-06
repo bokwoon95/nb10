@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -611,11 +612,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	waitFiles := make(chan struct{})
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() (err error) {
-		defer func() {
-			if v := recover(); v != nil {
-				err = fmt.Errorf("panic: " + string(debug.Stack()))
-			}
-		}()
+		defer stacktrace.RecoverPanic(&err)
 		pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
@@ -639,9 +636,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 		})
 		if err != nil {
-			return err
+			return stacktrace.WithCallers(err)
 		}
 		response.PinnedFiles = pinnedFiles
+		var a []string
+		_ = a[0]
 		return nil
 	})
 	switch response.Sort {

@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -139,11 +140,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			fileInfo, err := fs.Stat(nbrew.FS, path.Join(sitePrefix, response.Parent, "index.html"))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {

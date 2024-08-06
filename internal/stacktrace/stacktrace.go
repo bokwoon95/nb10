@@ -13,7 +13,7 @@ type Error struct {
 	Callers []string
 }
 
-func WrapError(err error) error {
+func WithCallers(err error) error {
 	_, ok := err.(*Error)
 	if ok {
 		return err
@@ -36,23 +36,21 @@ func WrapError(err error) error {
 }
 
 func RecoverPanic(err *error) {
-	if *err == nil {
+	if err == nil {
 		return
 	}
-	v := recover()
-	if v == nil {
-		return
-	}
-	var pc [30]uintptr
-	n := runtime.Callers(2, pc[:])
-	frames := runtime.CallersFrames(pc[:n])
-	callers := make([]string, 0, n)
-	for frame, more := frames.Next(); more; frame, more = frames.Next() {
-		callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
-	}
-	*err = &Error{
-		Err:     fmt.Errorf("panic: %v", v),
-		Callers: callers,
+	if v := recover(); v != nil {
+		var pc [30]uintptr
+		n := runtime.Callers(2, pc[:])
+		frames := runtime.CallersFrames(pc[:n])
+		callers := make([]string, 0, n)
+		for frame, more := frames.Next(); more; frame, more = frames.Next() {
+			callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
+		}
+		*err = &Error{
+			Err:     fmt.Errorf("panic: %v", v),
+			Callers: callers,
+		}
 	}
 }
 
