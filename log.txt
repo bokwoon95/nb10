@@ -83,9 +83,6 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
-stacktrace.Wrap(err)
-stacktrace.WithStack(err)
-
 TODO: notebrew config files.followers[0].provider directory
 TODO: signup.go
     TODO: /signup/
