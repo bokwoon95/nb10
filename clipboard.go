@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -345,7 +346,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 		for _, name := range names {
 			name := name
 			groupA.Go(func() (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				srcFilePath := path.Join(sitePrefix, response.SrcParent, name)
 				srcFileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctxA), srcFilePath)
 				if err != nil {

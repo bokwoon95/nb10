@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -321,7 +322,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			}
 			text := b.String()
 			group.Go(func() (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				err = writeFile(groupctx, filePath, strings.NewReader(text))
 				if err != nil {
 					return err
@@ -367,7 +368,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			monotonicCounter.CompareAndSwap(0, now.Unix())
 			creationTime := time.Unix(max(now.Unix(), monotonicCounter.Add(1)), 0).UTC()
 			group.Go(func() (err error) {
-				defer TraceError(&err)
+				defer stacktrace.RecoverPanic(&err)
 				var timestamp [8]byte
 				binary.BigEndian.PutUint64(timestamp[:], uint64(creationTime.Unix()))
 				prefix := strings.TrimLeft(base32Encoding.EncodeToString(timestamp[len(timestamp)-5:]), "0")
@@ -492,7 +493,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 							return
 						}
 						group.Go(func() (err error) {
-							defer TraceError(&err)
+							defer stacktrace.RecoverPanic(&err)
 							defer os.Remove(inputPath)
 							defer os.Remove(outputPath)
 							cmd := exec.CommandContext(groupctx, imgCmdPath, inputPath, outputPath)

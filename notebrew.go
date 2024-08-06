@@ -887,15 +887,9 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 	}
 	var errmsg string
 	var callers []string
-	if e := new(TracedError); errors.As(serverErr, &e) {
+	if e := new(stacktrace.Error); errors.As(serverErr, &e) {
 		errmsg = e.Err.Error()
-		callers = e.Lines
-	} else if e := new(stacktrace.Error); errors.As(serverErr, &e) {
-		errmsg = e.Err.Error()
-		frames := runtime.CallersFrames(e.Callers)
-		for frame, more := frames.Next(); more; frame, more = frames.Next() {
-			callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
-		}
+		callers = e.Callers
 	} else {
 		errmsg = serverErr.Error()
 		var pc [50]uintptr

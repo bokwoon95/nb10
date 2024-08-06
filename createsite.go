@@ -18,6 +18,7 @@ import (
 	texttemplate "text/template"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/caddyserver/certmagic"
 	"golang.org/x/sync/errgroup"
@@ -452,7 +453,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() (err error) {
-			defer TraceError(&err)
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -477,7 +478,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer TraceError(&err)
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -508,7 +509,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer TraceError(&err)
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -539,7 +540,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer TraceError(&err)
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
@@ -564,7 +565,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer TraceError(&err)
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 			if err != nil {
 				getLogger(groupctx).Error(err.Error())
