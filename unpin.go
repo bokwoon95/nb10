@@ -171,11 +171,11 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 					file.CreationTime = databaseFileInfo.CreationTime
 				} else {
 					var absolutePath string
-					dirFS := &DirFS{}
 					switch v := nbrew.FS.(type) {
 					case interface{ As(any) bool }:
-						if v.As(&dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+						var directoryFS *DirectoryFS
+						if v.As(&directoryFS) {
+							absolutePath = path.Join(directoryFS.RootDir, sitePrefix, response.Parent, name)
 						}
 					}
 					file.CreationTime = CreationTime(absolutePath, fileInfo)

@@ -1246,11 +1246,11 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 				return stacktrace.New(err)
 			}
 			var absolutePath string
-			dirFS := &DirFS{}
 			switch v := siteGen.fsys.(type) {
 			case interface{ As(any) bool }:
-				if v.As(&dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category, name)
+				var directoryFS *DirectoryFS
+				if v.As(&directoryFS) {
+					absolutePath = path.Join(directoryFS.RootDir, siteGen.sitePrefix, "posts", category, name)
 				}
 			}
 			creationTime := CreationTime(absolutePath, fileInfo)
@@ -1509,11 +1509,11 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	page := 1
 	batch := make([]Post, 0, config.PostsPerPage)
 	var absoluteDir string
-	dirFS := &DirFS{}
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		if v.As(&dirFS) {
-			absoluteDir = path.Join(dirFS.RootDir, siteGen.sitePrefix, "posts", category)
+		var directoryFS *DirectoryFS
+		if v.As(&directoryFS) {
+			absoluteDir = path.Join(directoryFS.RootDir, siteGen.sitePrefix, "posts", category)
 		}
 	}
 	for _, dirEntry := range dirEntries {

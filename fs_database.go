@@ -134,7 +134,7 @@ type DatabaseFile struct {
 func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}

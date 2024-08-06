@@ -129,11 +129,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = fileInfo.CreationTime
 		} else {
 			var absolutePath string
-			dirFS := &DirFS{}
 			switch v := nbrew.FS.(type) {
 			case interface{ As(any) bool }:
-				if v.As(&dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				var directoryFS *DirectoryFS
+				if v.As(&directoryFS) {
+					absolutePath = path.Join(directoryFS.RootDir, sitePrefix, filePath)
 				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -307,11 +307,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := nbrew.FS.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, response.AssetDir, name)
 							}
 						}
 						response.Assets = append(response.Assets, Asset{
@@ -468,11 +468,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 							return
 						}
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := nbrew.FS.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.AssetDir, name)
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, response.AssetDir, name)
 							}
 						}
 						response.Assets = append(response.Assets, Asset{
@@ -1057,11 +1057,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.CreationTime = databaseFileInfo.CreationTime
 		} else {
 			var absolutePath string
-			dirFS := &DirFS{}
 			switch v := nbrew.FS.(type) {
 			case interface{ As(any) bool }:
-				if v.As(&dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+				var directoryFS *DirectoryFS
+				if v.As(&directoryFS) {
+					absolutePath = path.Join(directoryFS.RootDir, sitePrefix, filePath)
 				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -1176,11 +1176,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := nbrew.FS.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, parentPage)
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, parentPage)
 							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
@@ -1384,11 +1384,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := nbrew.FS.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, filePath)
 							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)

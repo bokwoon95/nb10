@@ -255,11 +255,11 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					file.CreationTime = databaseFileInfo.CreationTime
 				} else {
 					var absolutePath string
-					dirFS := &DirFS{}
 					switch v := nbrew.FS.(type) {
 					case interface{ As(any) bool }:
-						if v.As(&dirFS) {
-							absolutePath = path.Join(dirFS.RootDir, sitePrefix, response.Parent, name)
+						var directoryFS *DirectoryFS
+						if v.As(&directoryFS) {
+							absolutePath = path.Join(directoryFS.RootDir, sitePrefix, response.Parent, name)
 						}
 					}
 					file.CreationTime = CreationTime(absolutePath, fileInfo)
@@ -1041,11 +1041,11 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				return err
 			}
 			var absolutePath string
-			dirFS := &DirFS{}
 			switch v := nbrew.FS.(type) {
 			case interface{ As(any) bool }:
-				if v.As(&dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, filePath)
+				var directoryFS *DirectoryFS
+				if v.As(&directoryFS) {
+					absolutePath = path.Join(directoryFS.RootDir, filePath)
 				}
 			}
 			modTime := fileInfo.ModTime()
@@ -1097,11 +1097,11 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				return err
 			}
 			var absolutePath string
-			dirFS := &DirFS{}
 			switch v := nbrew.FS.(type) {
 			case interface{ As(any) bool }:
-				if v.As(&dirFS) {
-					absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir)
+				var directoryFS *DirectoryFS
+				if v.As(&directoryFS) {
+					absolutePath = path.Join(directoryFS.RootDir, sitePrefix, outputDir)
 				}
 			}
 			modTime := fileInfo.ModTime()
@@ -1414,11 +1414,11 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			return err
 		}
 		var absolutePath string
-		dirFS := &DirFS{}
 		switch v := fsys.(type) {
 		case interface{ As(any) bool }:
-			if v.As(&dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, filePath)
+			var directoryFS *DirectoryFS
+			if v.As(&directoryFS) {
+				absolutePath = path.Join(directoryFS.RootDir, filePath)
 			}
 		}
 		modTime := fileInfo.ModTime()
@@ -1815,11 +1815,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 							return err
 						}
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := fsys.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, outputDir, name)
 							}
 						}
 						modTime := fileInfo.ModTime()
@@ -1934,11 +1934,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 							return err
 						}
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := fsys.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, outputDir, name)
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, outputDir, name)
 							}
 						}
 						modTime := fileInfo.ModTime()
@@ -2131,11 +2131,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			return err
 		}
 		var absolutePath string
-		dirFS := &DirFS{}
 		switch v := fsys.(type) {
 		case interface{ As(any) bool }:
-			if v.As(&dirFS) {
-				absolutePath = path.Join(dirFS.RootDir, filePath)
+			var directoryFS *DirectoryFS
+			if v.As(&directoryFS) {
+				absolutePath = path.Join(directoryFS.RootDir, filePath)
 			}
 		}
 		modTime := fileInfo.ModTime()

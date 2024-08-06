@@ -583,11 +583,11 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					_, filePath, _ = strings.Cut(filePath, "/")
 				}
 				var absolutePath string
-				dirFS := &DirFS{}
 				switch v := nbrew.FS.(type) {
 				case interface{ As(any) bool }:
-					if v.As(&dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+					var directoryFS *DirectoryFS
+					if v.As(&directoryFS) {
+						absolutePath = path.Join(directoryFS.RootDir, sitePrefix, filePath)
 					}
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)
@@ -689,11 +689,11 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					return err
 				}
 				var absolutePath string
-				dirFS := &DirFS{}
 				switch v := nbrew.FS.(type) {
 				case interface{ As(any) bool }:
-					if v.As(&dirFS) {
-						absolutePath = path.Join(dirFS.RootDir, sitePrefix, filePath)
+					var directoryFS *DirectoryFS
+					if v.As(&directoryFS) {
+						absolutePath = path.Join(directoryFS.RootDir, sitePrefix, filePath)
 					}
 				}
 				creationTime := CreationTime(absolutePath, fileInfo)

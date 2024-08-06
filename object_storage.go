@@ -78,7 +78,7 @@ func (storage *S3ObjectStorage) Get(ctx context.Context, key string) (io.ReadClo
 				return nil, &fs.PathError{Op: "get", Path: key, Err: fs.ErrNotExist}
 			}
 		}
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	return output.Body, nil
 }
@@ -183,12 +183,12 @@ func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string
 	return nil
 }
 
-type DirObjectStorage struct {
+type DirectoryObjectStorage struct {
 	RootDir string
 	TempDir string
 }
 
-func NewDirObjectStorage(rootDir, tempDir string) (*DirObjectStorage, error) {
+func NewDirObjectStorage(rootDir, tempDir string) (*DirectoryObjectStorage, error) {
 	var err error
 	rootDir, err = filepath.Abs(filepath.FromSlash(rootDir))
 	if err != nil {
@@ -198,14 +198,14 @@ func NewDirObjectStorage(rootDir, tempDir string) (*DirObjectStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	localStorage := &DirObjectStorage{
+	directoryObjectStorage := &DirectoryObjectStorage{
 		RootDir: filepath.FromSlash(rootDir),
 		TempDir: filepath.FromSlash(tempDir),
 	}
-	return localStorage, nil
+	return directoryObjectStorage, nil
 }
 
-func (storage *DirObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+func (storage *DirectoryObjectStorage) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	err := ctx.Err()
 	if err != nil {
 		return nil, err
@@ -223,7 +223,7 @@ func (storage *DirObjectStorage) Get(ctx context.Context, key string) (io.ReadCl
 	return file, nil
 }
 
-func (storage *DirObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
+func (storage *DirectoryObjectStorage) Put(ctx context.Context, key string, reader io.Reader) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -252,7 +252,7 @@ func (storage *DirObjectStorage) Put(ctx context.Context, key string, reader io.
 	return nil
 }
 
-func (storage *DirObjectStorage) Delete(ctx context.Context, key string) error {
+func (storage *DirectoryObjectStorage) Delete(ctx context.Context, key string) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -262,12 +262,15 @@ func (storage *DirObjectStorage) Delete(ctx context.Context, key string) error {
 	}
 	err = os.Remove(filepath.Join(storage.RootDir, key[:4], key))
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
 		return stacktrace.New(err)
 	}
 	return nil
 }
 
-func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
+func (storage *DirectoryObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
 	err := ctx.Err()
 	if err != nil {
 		return err
@@ -288,7 +291,7 @@ func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey strin
 	defer srcFile.Close()
 	destFile, err := os.OpenFile(filepath.Join(storage.RootDir, destKey[:4], destKey), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	defer destFile.Close()
 	_, err = io.Copy(destFile, srcFile)

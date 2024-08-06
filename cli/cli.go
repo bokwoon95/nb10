@@ -586,7 +586,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		if err != nil {
 			return nil, closers, err
 		}
-		dirFS, err := nb10.NewDirFS(nb10.DirFSConfig{
+		dirFS, err := nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
 			RootDir: filesConfig.FilePath,
 			TempDir: filesConfig.TempDir,
 		})

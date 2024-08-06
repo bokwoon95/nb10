@@ -797,9 +797,9 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						var absolutePath string
 						switch v := nbrew.FS.(type) {
 						case interface{ As(any) bool }:
-							dirFS := &DirFS{}
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, "posts", category, name+".md")
 							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
@@ -872,11 +872,11 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 						creationTime = databaseFileInfo.CreationTime
 					} else {
 						var absolutePath string
-						dirFS := &DirFS{}
 						switch v := nbrew.FS.(type) {
 						case interface{ As(any) bool }:
-							if v.As(&dirFS) {
-								absolutePath = path.Join(dirFS.RootDir, sitePrefix, "posts", category, name+".md")
+							var directoryFS *DirectoryFS
+							if v.As(&directoryFS) {
+								absolutePath = path.Join(directoryFS.RootDir, sitePrefix, "posts", category, name+".md")
 							}
 						}
 						creationTime = CreationTime(absolutePath, fileInfo)
