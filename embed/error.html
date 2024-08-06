@@ -23,11 +23,13 @@
     {{- if $.Lines }}
     <strong>error trace:</strong>
     <ul>
-      {{- range $line := $.Lines }}
-      <li>{{ $line }}</li>
+      {{- range $caller := $.Callers }}
+      <li>{{ $caller }}</li>
       {{- end }}
     </ul>
     {{- end }}
+    <strong>version:</strong>
+    <p>{{ $.Revision }}</p>
   </details>
   {{- end }}
 </div>

@@ -115,8 +115,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				return path.Base(row.String("file_path"))
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
+				getLogger(r.Context()).Error(stacktrace.Callers() + err.Error())
+				nbrew.InternalServerError(w, r, stacktrace.WrapError(err))
 				return
 			}
 			response.Categories = append(response.Categories, categories...)
@@ -131,8 +131,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				return nil
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
+				getLogger(r.Context()).Error(stacktrace.Callers() + err.Error())
+				nbrew.InternalServerError(w, r, stacktrace.WrapError(err))
 				return
 			}
 		}

@@ -4,7 +4,29 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strconv"
+	"strings"
 )
+
+func Callers() string {
+	var callers []string
+	var pc [30]uintptr
+	n := runtime.Callers(2, pc[:])
+	frames := runtime.CallersFrames(pc[:n])
+	for frame, more := frames.Next(); more; frame, more = frames.Next() {
+		callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
+	}
+	var b strings.Builder
+	last := len(callers) - 1
+	for i := last; i >= 0; i-- {
+		if i < last {
+			b.WriteString(" -> ")
+		}
+		b.WriteString(callers[i])
+	}
+	b.WriteString(": ")
+	return b.String()
+}
 
 type Error struct {
 	Err     error

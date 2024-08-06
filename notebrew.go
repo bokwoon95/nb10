@@ -37,6 +37,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/libdns"
@@ -885,21 +886,24 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var errmsg string
-	var lines []string
-	var annotatedErr *TracedError
-	if errors.As(serverErr, &annotatedErr) {
-		errmsg = annotatedErr.Err.Error()
-		lines = annotatedErr.Lines
+	var callers []string
+	if e := new(TracedError); errors.As(serverErr, &e) {
+		errmsg = e.Err.Error()
+		callers = e.Lines
+	} else if e := new(stacktrace.Error); errors.As(serverErr, &e) {
+		frames := runtime.CallersFrames(e.Callers)
+		for frame, more := frames.Next(); more; frame, more = frames.Next() {
+			callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
+		}
 	} else {
 		errmsg = serverErr.Error()
 		var pc [50]uintptr
 		n := runtime.Callers(2, pc[:]) // skip runtime.Callers + InternalServerError
-		lines = make([]string, 0, n)
+		callers = make([]string, 0, n)
 		frames := runtime.CallersFrames(pc[:n])
 		for frame, more := frames.Next(); more; frame, more = frames.Next() {
-			lines = append(lines, frame.File+":"+strconv.Itoa(frame.Line))
+			callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
 		}
-		lines = append(lines, "vcs.revision="+Revision)
 	}
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -913,7 +917,8 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 		err := encoder.Encode(map[string]any{
 			"error":   "InternalServerError",
 			"message": errmsg,
-			"lines":   lines,
+			"callers": callers,
+			"version": Version,
 		})
 		if err != nil {
 			getLogger(r.Context()).Error(err.Error())
@@ -941,7 +946,8 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 			"Headline": "500 internal server error",
 			"Byline":   "There's a bug with notebrew.",
 			"Details":  errmsg,
-			"Lines":    lines,
+			"Callers":  callers,
+			"Version":  Version,
 		}
 	}
 	err := errorTemplate.Execute(buf, data)
@@ -1354,7 +1360,7 @@ var (
 
 	BaselineJSHash string
 
-	Revision string
+	Version string
 
 	commonPasswords = make(map[string]struct{})
 
@@ -1368,7 +1374,7 @@ func init() {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
 			if setting.Key == "vcs.revision" {
-				Revision = setting.Value
+				Version = setting.Value
 				break
 			}
 		}
@@ -1450,7 +1456,7 @@ func TraceError(err *error) {
 	for frame, more := frames.Next(); more; frame, more = frames.Next() {
 		lines = append(lines, frame.File+":"+strconv.Itoa(frame.Line))
 	}
-	lines = append(lines, "vcs.revision="+Revision)
+	lines = append(lines, "vcs.revision="+Version)
 	*err = &TracedError{
 		Err:   *err,
 		Lines: lines,

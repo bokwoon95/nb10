@@ -261,7 +261,7 @@ func main() {
 				}
 				return nil
 			case "version":
-				fmt.Println(nb10.Revision)
+				fmt.Println(nb10.Version)
 				return nil
 			default:
 				return fmt.Errorf("unknown command: %s", args[0])

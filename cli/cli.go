@@ -52,7 +52,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		AddSource: true,
 	})
-	nbrew.Logger = slog.New(logHandler).With(slog.String("revision", nb10.Revision))
+	nbrew.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
 
 	// CMS domain.
 	b, err := os.ReadFile(filepath.Join(configDir, "cmsdomain.txt"))
