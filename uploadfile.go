@@ -198,7 +198,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		defer cancelWriter()
 		writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(filePath, 0644)
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		defer func() {
 			cancelWriter()
@@ -217,11 +217,11 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			n, err = io.Copy(writer, reader)
 		}
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		err = writer.Close()
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		uploadCount.Add(1)
 		uploadSize.Add(n)
@@ -386,7 +386,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				if err != nil {
 					var templateErr TemplateError
 					if !errors.As(err, &templateErr) {
-						return stacktrace.WithCallers(err)
+						return stacktrace.New(err)
 					}
 					templateErrPtr.CompareAndSwap(nil, &templateErr)
 				}
@@ -501,11 +501,11 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 							cmd.Stderr = os.Stderr
 							err = cmd.Run()
 							if err != nil {
-								return stacktrace.WithCallers(err)
+								return stacktrace.New(err)
 							}
 							output, err := os.Open(outputPath)
 							if err != nil {
-								return stacktrace.WithCallers(err)
+								return stacktrace.New(err)
 							}
 							err = writeFile(groupctx, filePath, output)
 							if err != nil {

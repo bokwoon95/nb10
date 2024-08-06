@@ -158,7 +158,7 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				file := File{
 					Name:    name,
@@ -334,7 +334,7 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				defer stacktrace.RecoverPanic(&err)
 				result, err := preparedExec.Exec(groupctx, sq.StringParam("filePath", path.Join(sitePrefix, name)))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				if result.RowsAffected > 0 {
 					response.Files[i] = File{

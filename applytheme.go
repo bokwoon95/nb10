@@ -144,7 +144,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			if fileInfo.IsDir() {
 				return nil
@@ -159,7 +159,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			if fileInfo.IsDir() {
 				return nil
@@ -174,7 +174,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			if fileInfo.IsDir() {
 				return nil
@@ -189,7 +189,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			if fileInfo.IsDir() {
 				return nil
@@ -218,7 +218,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return path.Base(row.String("file_path"))
 				})
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				response.Categories = append(response.Categories, categories...)
 			} else {
@@ -232,7 +232,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return nil
 				})
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 			return nil
@@ -446,11 +446,11 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				fileInfo, err := file.Stat()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				if fileInfo.IsDir() {
 					return nil
@@ -459,21 +459,21 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				b.Grow(int(fileInfo.Size()))
 				_, err = io.Copy(&b, file)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				text := b.String()
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				defer writer.Close()
 				_, err = io.Copy(writer, strings.NewReader("{{ template "+strconv.Quote("/"+path.Join("themes", nextTail)+"/index.html")+" $ }}"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				creationTime := time.Now()
 				err = siteGen.GeneratePage(groupctx, "pages/index.html", text, creationTime, creationTime)
@@ -483,7 +483,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				regenerationCount.Add(1)
 				return nil
@@ -497,11 +497,11 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				fileInfo, err := file.Stat()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				if fileInfo.IsDir() {
 					return nil
@@ -510,21 +510,21 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				b.Grow(int(fileInfo.Size()))
 				_, err = io.Copy(&b, file)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				text := b.String()
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				defer writer.Close()
 				_, err = io.Copy(writer, strings.NewReader("{{ template "+strconv.Quote("/"+path.Join("themes", nextTail)+"/404.html")+" $ }}"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				creationTime := time.Now()
 				err = siteGen.GeneratePage(groupctx, "pages/index.html", text, creationTime, creationTime)
@@ -534,7 +534,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				regenerationCount.Add(1)
 				return nil
@@ -547,11 +547,11 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				fileInfo, err := file.Stat()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				if fileInfo.IsDir() {
 					return nil
@@ -560,21 +560,21 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				b.Grow(int(fileInfo.Size()))
 				_, err = io.Copy(&b, file)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				text := b.String()
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "post.html"), 0644)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				defer writer.Close()
 				_, err = io.Copy(writer, strings.NewReader("{{ template "+strconv.Quote("/"+path.Join("themes", nextTail)+"/post.html")+" $ }}"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "post.html"), text)
 				if err != nil {
@@ -583,7 +583,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				n, err := siteGen.GeneratePosts(ctx, category, tmpl)
 				if err != nil {
@@ -592,7 +592,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				regenerationCount.Add(n)
 				return nil
@@ -619,11 +619,11 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				fileInfo, err := file.Stat()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				if fileInfo.IsDir() {
 					return nil
@@ -632,21 +632,21 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				b.Grow(int(fileInfo.Size()))
 				_, err = io.Copy(&b, file)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				text := b.String()
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "postlist.html"), 0644)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				defer writer.Close()
 				_, err = io.Copy(writer, strings.NewReader("{{ template "+strconv.Quote("/"+path.Join("themes", nextTail)+"/postlist.html")+" $ }}"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "postlist.html"), text)
 				if err != nil {
@@ -655,7 +655,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				n, err := siteGen.GeneratePostList(ctx, category, tmpl)
 				if err != nil {
@@ -664,7 +664,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				regenerationCount.Add(n)
 				return nil

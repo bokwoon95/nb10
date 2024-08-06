@@ -636,7 +636,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			}
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		response.PinnedFiles = pinnedFiles
 		return nil

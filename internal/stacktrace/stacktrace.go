@@ -13,10 +13,18 @@ type Error struct {
 	Callers []string
 }
 
-// WithCallers returns a new error annotated with the callers list. Try not to
-// nest it, and do not call it in the hot path or for errors that are expected
-// to occur very often.
-func WithCallers(err error) error {
+// New returns a wrapped error containing the stack trace of where New was
+// called.
+//
+// This is an expensive function, do not use it in the hot path. Only use it on
+// errors that are returned by operations that ordinarily are not expected to
+// fail at all. The rationale is that only unexpected code paths should get
+// stack traces (so we can debug their origin) and expected code paths do not
+// get slowed down by the generation of expensive stack traces. By extension,
+// do not use it on the error returned by an errgroup.Wait() because the error
+// never originates from there, but instead from one of its child goroutines
+// (where it should already have been wrapped).
+func New(err error) error {
 	_, ok := err.(*Error)
 	if ok {
 		return err
@@ -38,6 +46,8 @@ func WithCallers(err error) error {
 	}
 }
 
+// RecoverPanic converts a panic into an error containing a stack trace of
+// where the panic occurred and writes it into the pointer.
 func RecoverPanic(err *error) {
 	if err == nil {
 		return

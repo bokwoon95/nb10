@@ -323,20 +323,20 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		SitePrefix:         sitePrefix,
 	})
 	if err != nil {
-		return RegenerationStats{}, stacktrace.WithCallers(err)
+		return RegenerationStats{}, stacktrace.New(err)
 	}
 	rootPagesDir := path.Join(sitePrefix, "pages")
 	rootPostsDir := path.Join(sitePrefix, "posts")
 	postTemplate, err := siteGen.PostTemplate(ctx, "")
 	if err != nil {
-		return RegenerationStats{}, stacktrace.WithCallers(err)
+		return RegenerationStats{}, stacktrace.New(err)
 	}
 	postTemplates := map[string]*template.Template{
 		"": postTemplate,
 	}
 	postListTemplate, err := siteGen.PostListTemplate(ctx, "")
 	if err != nil {
-		return RegenerationStats{}, stacktrace.WithCallers(err)
+		return RegenerationStats{}, stacktrace.New(err)
 	}
 	postListTemplates := map[string]*template.Template{
 		"": postListTemplate,

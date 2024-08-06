@@ -179,13 +179,13 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
 		}
-		return nil, stacktrace.WithCallers(err)
+		return nil, stacktrace.New(err)
 	}
 	file.isFulltextIndexed = IsFulltextIndexed(file.info.FilePath)
 	if fileType.Has(AttributeObject) {
 		file.readCloser, err = file.objectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
-			return nil, stacktrace.WithCallers(err)
+			return nil, stacktrace.New(err)
 		}
 		// Writing an *os.File to net/http's ResponseWriter is fast on Linux
 		// because it uses the low-level sendfile(2) system call. If the
@@ -209,12 +209,12 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 			if file.gzipReader == nil {
 				file.gzipReader, err = gzip.NewReader(r)
 				if err != nil {
-					return nil, stacktrace.WithCallers(err)
+					return nil, stacktrace.New(err)
 				}
 			} else {
 				err = file.gzipReader.Reset(r)
 				if err != nil {
-					return nil, stacktrace.WithCallers(err)
+					return nil, stacktrace.New(err)
 				}
 			}
 		}
@@ -253,7 +253,7 @@ func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrNotExist}
 		}
-		return nil, stacktrace.WithCallers(err)
+		return nil, stacktrace.New(err)
 	}
 	return fileInfo, nil
 }
@@ -444,7 +444,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		})
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
-				return nil, stacktrace.WithCallers(err)
+				return nil, stacktrace.New(err)
 			}
 			file.fileID = NewID()
 		} else {
@@ -476,7 +476,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 			return result
 		})
 		if err != nil {
-			return nil, stacktrace.WithCallers(err)
+			return nil, stacktrace.New(err)
 		}
 		for _, result := range results {
 			switch result.filePath {
@@ -508,7 +508,7 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					file.objectStorageResult <- stacktrace.WithCallers(fmt.Errorf("panic: %v", v))
+					file.objectStorageResult <- stacktrace.New(fmt.Errorf("panic: %v", v))
 				}
 			}()
 			file.objectStorageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
@@ -579,7 +579,7 @@ func (file *DatabaseFileWriter) Close() error {
 		file.objectStorageWriter = nil
 		err := <-file.objectStorageResult
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	} else {
 		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
@@ -588,7 +588,7 @@ func (file *DatabaseFileWriter) Close() error {
 			}
 			err := file.gzipWriter.Close()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			defer func() {
 				file.gzipWriter.Reset(io.Discard)
@@ -635,7 +635,7 @@ func (file *DatabaseFileWriter) Close() error {
 				},
 			})
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		} else {
 			if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
@@ -650,7 +650,7 @@ func (file *DatabaseFileWriter) Close() error {
 					},
 				})
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			} else {
 				_, err := sq.Exec(file.ctx, file.db, sq.Query{
@@ -664,7 +664,7 @@ func (file *DatabaseFileWriter) Close() error {
 					},
 				})
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 		}
@@ -694,7 +694,7 @@ func (file *DatabaseFileWriter) Close() error {
 				go func() {
 					defer func() {
 						if v := recover(); v != nil {
-							file.logger.Error(stacktrace.WithCallers(fmt.Errorf("panic: %v", v)).Error())
+							file.logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 						}
 					}()
 					// This is a cleanup operation - don't pass in the file.ctx
@@ -702,7 +702,7 @@ func (file *DatabaseFileWriter) Close() error {
 					// cleanup.
 					err := file.objectStorage.Delete(context.Background(), file.fileID.String()+path.Ext(file.filePath))
 					if err != nil {
-						file.logger.Error(stacktrace.WithCallers(err).Error())
+						file.logger.Error(stacktrace.New(err).Error())
 					}
 				}()
 				return err
@@ -724,7 +724,7 @@ func (file *DatabaseFileWriter) Close() error {
 					},
 				})
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			} else {
 				_, err := sq.Exec(file.ctx, file.db, sq.Query{
@@ -742,7 +742,7 @@ func (file *DatabaseFileWriter) Close() error {
 					},
 				})
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 		}
@@ -756,7 +756,7 @@ func (file *DatabaseFileWriter) Close() error {
 		delta := file.size - file.initialSize
 		err := file.updateStorageUsed(file.ctx, sitePrefix, delta)
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -799,7 +799,7 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		return file
 	})
 	if err != nil {
-		return nil, stacktrace.WithCallers(err)
+		return nil, stacktrace.New(err)
 	}
 	return dirEntries, nil
 }
@@ -843,13 +843,13 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 		})
 		if err != nil {
 			if fsys.ErrorCode == nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			errcode := fsys.ErrorCode(err)
 			if IsKeyViolation(fsys.Dialect, errcode) {
 				return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrExist}
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	} else {
 		parentID, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
@@ -865,7 +865,7 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 			if errors.Is(err, sql.ErrNoRows) {
 				return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrNotExist}
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
@@ -881,13 +881,13 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 		})
 		if err != nil {
 			if fsys.ErrorCode == nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			errcode := fsys.ErrorCode(err)
 			if IsKeyViolation(fsys.Dialect, errcode) {
 				return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrExist}
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -906,7 +906,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	}
 	tx, err := fsys.DB.BeginTx(fsys.ctx, nil)
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	defer tx.Rollback()
 
@@ -940,7 +940,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 			},
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	case "mysql":
 		_, err := sq.Exec(fsys.ctx, tx, sq.Query{
@@ -956,7 +956,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 			},
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	default:
 		return fmt.Errorf("unsupported dialect %q", fsys.Dialect)
@@ -981,7 +981,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 				},
 			})
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		case "mysql":
 			preparedExec, err = sq.PrepareExec(fsys.ctx, tx, sq.Query{
@@ -998,10 +998,10 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 				},
 			})
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		default:
-			return stacktrace.WithCallers(fmt.Errorf("unsupported dialect %q", fsys.Dialect))
+			return stacktrace.New(fmt.Errorf("unsupported dialect %q", fsys.Dialect))
 		}
 		defer preparedExec.Close()
 		for i := 1; i < len(segments); i++ {
@@ -1015,17 +1015,17 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 				sq.TimeParam("creationTime", creationTime),
 			)
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		}
 		err = preparedExec.Close()
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	return nil
 }
@@ -1060,7 +1060,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrNotExist}
 		}
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	if file.hasChildren {
 		return &fs.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
@@ -1069,7 +1069,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if fileType.Has(AttributeObject) {
 		err = fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
@@ -1080,7 +1080,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		},
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
@@ -1092,7 +1092,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		return row.Int64("sum(coalesce(size, 0))")
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
@@ -1102,7 +1102,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		},
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
@@ -1112,7 +1112,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		}
 		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -1160,26 +1160,26 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return file
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	defer cursor.Close()
 	var waitGroup sync.WaitGroup
 	for cursor.Next() {
 		file, err := cursor.Result()
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		waitGroup.Add(1)
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					fsys.Logger.Error(stacktrace.WithCallers(fmt.Errorf("panic: %v", v)).Error())
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			defer waitGroup.Done()
 			err := fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 			if err != nil {
-				fsys.Logger.Error(stacktrace.WithCallers(err).Error())
+				fsys.Logger.Error(stacktrace.New(err).Error())
 			}
 		}()
 	}
@@ -1212,7 +1212,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return row.Int64("sum(coalesce(size, 0))")
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
@@ -1223,7 +1223,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		},
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
@@ -1233,7 +1233,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		}
 		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -1262,7 +1262,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	}
 	tx, err := fsys.DB.BeginTx(fsys.ctx, nil)
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	defer tx.Rollback()
 	switch fsys.Dialect {
@@ -1288,7 +1288,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			if errors.Is(err, sql.ErrNoRows) {
 				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		if oldNameIsDir {
 			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
@@ -1307,11 +1307,11 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 				},
 			})
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		} else {
 			if path.Ext(oldName) != path.Ext(newName) {
-				return stacktrace.WithCallers(fmt.Errorf("file extension cannot be changed"))
+				return stacktrace.New(fmt.Errorf("file extension cannot be changed"))
 			}
 		}
 	case "mysql":
@@ -1328,10 +1328,10 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			if errors.Is(err, sql.ErrNoRows) {
 				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		if !oldNameIsDir && path.Ext(oldName) != path.Ext(newName) {
-			return stacktrace.WithCallers(fmt.Errorf("file extension cannot be changed"))
+			return stacktrace.New(fmt.Errorf("file extension cannot be changed"))
 		}
 		var updateParent sq.Expression
 		if path.Dir(oldName) != path.Dir(newName) {
@@ -1349,7 +1349,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			},
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		_, err = sq.Exec(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
@@ -1367,14 +1367,14 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			},
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	default:
-		return stacktrace.WithCallers(fmt.Errorf("unsupported dialect %q", fsys.Dialect))
+		return stacktrace.New(fmt.Errorf("unsupported dialect %q", fsys.Dialect))
 	}
 	err = tx.Commit()
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	return nil
 }
@@ -1411,7 +1411,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		return fileInfo
 	})
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	for _, fileInfo := range fileInfos {
 		switch fileInfo.FilePath {
@@ -1440,7 +1440,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			return row.Int64("size")
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
@@ -1466,14 +1466,14 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			},
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		ext := path.Ext(srcName)
 		fileType := AllowedFileTypes[ext]
 		if fileType.Has(AttributeObject) {
 			err := fsys.ObjectStorage.Copy(fsys.ctx, srcFileID.String()+ext, destFileID.String()+ext)
 			if err != nil {
-				fsys.Logger.Error(stacktrace.WithCallers(err).Error())
+				fsys.Logger.Error(stacktrace.New(err).Error())
 			}
 		}
 		if fsys.UpdateStorageUsed != nil {
@@ -1484,7 +1484,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			}
 			err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, size)
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		}
 		return nil
@@ -1553,7 +1553,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 				defer wg.Done()
 				err := fsys.ObjectStorage.Copy(objectCtx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
 				if err != nil {
-					fsys.Logger.Error(stacktrace.WithCallers(err).Error())
+					fsys.Logger.Error(stacktrace.New(err).Error())
 				}
 			}()
 		}

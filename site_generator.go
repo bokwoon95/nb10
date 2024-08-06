@@ -17,7 +17,6 @@ import (
 	"net/url"
 	"path"
 	"reflect"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -103,12 +102,12 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	}
 	b, err := fs.ReadFile(siteGen.fsys, path.Join(siteGen.sitePrefix, "site.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, stacktrace.WithCallers(err)
+		return nil, stacktrace.New(err)
 	}
 	if len(b) > 0 {
 		err := json.Unmarshal(b, &config)
 		if err != nil {
-			return nil, stacktrace.WithCallers(err)
+			return nil, stacktrace.New(err)
 		}
 	} else {
 		config.LanguageCode = "en"
@@ -233,20 +232,20 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		return result
 	})
 	if err != nil {
-		return nil, stacktrace.WithCallers(err)
+		return nil, stacktrace.New(err)
 	}
 	defer cursor.Close()
 	siteGen.imgFileIDs = make(map[string]ID)
 	for cursor.Next() {
 		result, err := cursor.Result()
 		if err != nil {
-			return nil, stacktrace.WithCallers(err)
+			return nil, stacktrace.New(err)
 		}
 		siteGen.imgFileIDs[result.FilePath] = result.FileID
 	}
 	err = cursor.Close()
 	if err != nil {
-		return nil, stacktrace.WithCallers(err)
+		return nil, stacktrace.New(err)
 	}
 	return siteGen, nil
 }
@@ -334,7 +333,7 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			if wait != nil {
 				select {
 				case <-groupctx.Done():
-					return groupctx.Err()
+					return err
 				case <-wait:
 					break
 				}
@@ -380,12 +379,12 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 						ErrorMessage: "template " + strconv.Quote(externalName) + " does not exist",
 					}
 				}
-				return err
+				return stacktrace.New(err)
 			}
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			if fileInfo.IsDir() {
 				return TemplateError{
@@ -397,11 +396,11 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			b.Grow(int(fileInfo.Size()))
 			_, err = io.Copy(&b, file)
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			err = file.Close()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			newCallers := append(append(make([]string, 0, len(callers)+1), callers...), externalName)
 			externalTemplate, err := siteGen.parseTemplate(groupctx, externalName, b.String(), newCallers)
@@ -415,7 +414,7 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			// for its contextually auto-escaped HTML feature to work).
 			externalTemplates[i], err = externalTemplate.Clone()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			cachedTemplate = externalTemplate
 			return nil
@@ -555,14 +554,14 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				return result
 			})
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			defer cursor.Close()
 			subgroup, subctx := errgroup.WithContext(groupctx)
 			for cursor.Next() {
 				result, err := cursor.Result()
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 				name := path.Base(result.FilePath)
 				fileType := AllowedFileTypes[path.Ext(result.FilePath)]
@@ -580,7 +579,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						}()
 						err = subctx.Err()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						var altText []byte
 						result.Text = bytes.TrimSpace(result.Text)
@@ -602,7 +601,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						}()
 						err = subctx.Err()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						markdownMu.Lock()
 						pageData.ContentMap[name] = string(result.Text)
@@ -613,7 +612,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 			err = cursor.Close()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			err = subgroup.Wait()
 			if err != nil {
@@ -625,7 +624,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			subgroup, subctx := errgroup.WithContext(groupctx)
 			for _, dirEntry := range dirEntries {
@@ -639,7 +638,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						defer stacktrace.RecoverPanic(&err)
 						file, err := siteGen.fsys.WithContext(subctx).Open(path.Join(outputDir, name))
 						if err != nil {
-							return stacktrace.WithCallers(err)
+							return stacktrace.New(err)
 						}
 						defer file.Close()
 						buf := bufPool.Get().(*bytes.Buffer)
@@ -651,7 +650,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						}()
 						_, err = buf.ReadFrom(file)
 						if err != nil {
-							return stacktrace.WithCallers(err)
+							return stacktrace.New(err)
 						}
 						markdownMu.Lock()
 						pageData.ContentMap[name] = buf.String()
@@ -662,7 +661,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 			err = subgroup.Wait()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return err
 			}
 		}
 		return nil
@@ -720,7 +719,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				return page
 			})
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		} else {
 			dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(pageDir)
@@ -728,7 +727,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			pageData.ChildPages = make([]Page, len(dirEntries))
 			subgroup, subctx := errgroup.WithContext(groupctx)
@@ -749,7 +748,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					pageData.ChildPages[i].Name = strings.TrimSuffix(name, ".html")
 					file, err := siteGen.fsys.WithContext(subctx).Open(path.Join(pageDir, name))
 					if err != nil {
-						return stacktrace.WithCallers(err)
+						return stacktrace.New(err)
 					}
 					defer file.Close()
 					reader := readerPool.Get().(*bufio.Reader)
@@ -763,7 +762,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						line, err := reader.ReadSlice('\n')
 						if err != nil {
 							if err != io.EOF {
-								return stacktrace.WithCallers(err)
+								return stacktrace.New(err)
 							}
 							done = true
 						}
@@ -787,7 +786,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 			}
 			err = subgroup.Wait()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return err
 			}
 			n := 0
 			for _, childPage := range pageData.ChildPages {
@@ -802,7 +801,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	})
 	err = group.Wait()
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return err
 	}
 	if pageData.ChildPages == nil {
 		pageData.ChildPages = []Page{}
@@ -810,15 +809,15 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	writer, err := siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		err := siteGen.fsys.WithContext(ctx).MkdirAll(outputDir, 0755)
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		writer, err = siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 	}
 	defer writer.Close()
@@ -829,7 +828,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
 	))
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	var isDatabaseFS bool
 	switch v := siteGen.fsys.(type) {
@@ -842,7 +841,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					result <- stacktrace.WithCallers(fmt.Errorf("panic: %v", v))
+					result <- stacktrace.New(fmt.Errorf("panic: %v", v))
 				}
 			}()
 			result <- siteGen.rewriteURLs(writer, pipeReader, urlPath)
@@ -856,7 +855,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		pipeWriter.Close()
 		err = <-result
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return err
 		}
 	} else {
 		err = tmpl.Execute(writer, pageData)
@@ -868,7 +867,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	err = writer.Close()
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	return nil
 }
@@ -905,7 +904,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		ModificationTime: modTime.UTC(),
 	}
 	if strings.Contains(postData.Category, "/") {
-		return stacktrace.WithCallers(fmt.Errorf("invalid post category"))
+		return stacktrace.New(fmt.Errorf("invalid post category"))
 	}
 	if postData.Category == "." {
 		postData.Category = ""
@@ -938,7 +937,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	}()
 	err := siteGen.markdown.Convert([]byte(text), buf)
 	if err != nil {
-		return stacktrace.WithCallers(err)
+		return stacktrace.New(err)
 	}
 	tokenizer := html.NewTokenizer(bytes.NewReader(buf.Bytes()))
 	for {
@@ -948,7 +947,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			if err == io.EOF {
 				break
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		if tokenType == html.SelfClosingTagToken || tokenType == html.StartTagToken {
 			var key, val []byte
@@ -1015,14 +1014,14 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 			return result
 		})
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		defer cursor.Close()
 		group, groupctx := errgroup.WithContext(ctx)
 		for cursor.Next() {
 			result, err := cursor.Result()
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			name := path.Base(result.FilePath)
 			if _, ok := imgIsMentioned[name]; ok {
@@ -1043,7 +1042,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 				}()
 				err = groupctx.Err()
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				var altText []byte
 				result.Text = bytes.TrimSpace(result.Text)
@@ -1059,7 +1058,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 		err = cursor.Close()
 		if err != nil {
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		}
 		err = group.Wait()
 		if err != nil {
@@ -1087,15 +1086,15 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	writer, err := siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.New(err)
 		}
 		err := siteGen.fsys.WithContext(ctx).MkdirAll(outputDir, 0755)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		writer, err = siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	}
 	defer writer.Close()
@@ -1106,7 +1105,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		"<link rel='icon' href='"+template.HTMLEscapeString(string(siteGen.Site.Favicon))+"'>\n",
 	))
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	var isDatabaseFS bool
 	switch v := siteGen.fsys.(type) {
@@ -1119,7 +1118,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		go func() {
 			defer func() {
 				if v := recover(); v != nil {
-					result <- fmt.Errorf("panic: " + string(debug.Stack()))
+					result <- stacktrace.New(fmt.Errorf("panic: %v", v))
 				}
 			}()
 			result <- siteGen.rewriteURLs(writer, pipeReader, urlPath)
@@ -1145,7 +1144,7 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	}
 	err = writer.Close()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	return nil
 }
@@ -1182,7 +1181,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 			}
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		defer cursor.Close()
 		var count atomic.Int64
@@ -1190,14 +1189,10 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 		for cursor.Next() {
 			file, err := cursor.Result()
 			if err != nil {
-				return 0, err
+				return 0, stacktrace.New(err)
 			}
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				if siteGen.sitePrefix != "" {
 					_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 				}
@@ -1211,7 +1206,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 		}
 		err = cursor.Close()
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		err = group.Wait()
 		if err != nil {
@@ -1221,7 +1216,7 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 	}
 	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
 	if err != nil {
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	var count atomic.Int64
 	group, groupctx := errgroup.WithContext(ctx)
@@ -1234,25 +1229,21 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 			continue
 		}
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			file, err := siteGen.fsys.WithContext(groupctx).Open(path.Join(siteGen.sitePrefix, "posts", category, name))
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			var b strings.Builder
 			b.Grow(int(fileInfo.Size()))
 			_, err = io.Copy(&b, file)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			var absolutePath string
 			dirFS := &DirFS{}
@@ -1307,12 +1298,12 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	}
 	b, err := fs.ReadFile(siteGen.fsys.WithContext(ctx), path.Join(siteGen.sitePrefix, "posts", category, "postlist.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	if len(b) > 0 {
 		err := json.Unmarshal(b, &config)
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 	}
 	if config.PostsPerPage <= 0 {
@@ -1338,16 +1329,12 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			return row.Int("COUNT(*)")
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		lastPage := int(math.Ceil(float64(count) / float64(config.PostsPerPage)))
 		group, groupctx := errgroup.WithContext(ctx)
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			filePaths, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -1361,7 +1348,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				return row.String("file_path")
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			subgroup, subctx := errgroup.WithContext(groupctx)
 			for _, filePath := range filePaths {
@@ -1374,14 +1361,10 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 					continue
 				}
 				subgroup.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					stacktrace.RecoverPanic(&err)
 					err = databaseFS.WithContext(subctx).RemoveAll(filePath)
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					return nil
 				})
@@ -1414,7 +1397,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			return post
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		defer cursor.Close()
 		page := 1
@@ -1422,7 +1405,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 		for cursor.Next() {
 			post, err := cursor.Result()
 			if err != nil {
-				return int64(page), err
+				return int64(page), stacktrace.New(err)
 			}
 			timestampPrefix, _, _ := strings.Cut(post.Name, "-")
 			if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
@@ -1440,26 +1423,18 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				posts := slices.Clone(batch)
 				batch = batch[:0]
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					stacktrace.RecoverPanic(&err)
 					return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, currentPage, posts)
 				})
 			}
 		}
 		err = cursor.Close()
 		if err != nil {
-			return int64(page), err
+			return int64(page), stacktrace.New(err)
 		}
 		if len(batch) > 0 {
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, page, batch)
 			})
 		}
@@ -1477,7 +1452,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	}
 	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
 	if err != nil {
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	n := 0
 	for _, dirEntry := range dirEntries {
@@ -1495,17 +1470,13 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	lastPage := int(math.Ceil(float64(len(dirEntries)) / float64(config.PostsPerPage)))
 	group, groupctx := errgroup.WithContext(ctx)
 	group.Go(func() (err error) {
-		defer func() {
-			if v := recover(); v != nil {
-				err = fmt.Errorf("panic: " + string(debug.Stack()))
-			}
-		}()
+		defer stacktrace.RecoverPanic(&err)
 		dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(path.Join(siteGen.sitePrefix, "output/posts", category))
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		subgroup, subctx := errgroup.WithContext(groupctx)
 		for _, dirEntry := range dirEntries {
@@ -1521,12 +1492,12 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				continue
 			}
 			subgroup.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
-				return siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.FormatInt(n, 10)))
+				defer stacktrace.RecoverPanic(&err)
+				err = siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.FormatInt(n, 10)))
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				return nil
 			})
 		}
 		err = subgroup.Wait()
@@ -1548,7 +1519,7 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	for _, dirEntry := range dirEntries {
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return int64(page), err
+			return int64(page), stacktrace.New(err)
 		}
 		name := fileInfo.Name()
 		creationTime := CreationTime(path.Join(absoluteDir, name), fileInfo)
@@ -1573,22 +1544,14 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 			posts := slices.Clone(batch)
 			batch = batch[:0]
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, currentPage, posts)
 			})
 		}
 	}
 	if len(batch) > 0 {
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, page, batch)
 		})
 	}
@@ -1610,11 +1573,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 	for i := range posts {
 		i := i
 		groupA.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			if posts[i].text != nil {
 				defer func() {
 					if len(posts[i].text) <= maxPoolableBufferCapacity {
@@ -1626,7 +1585,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			} else {
 				file, err := siteGen.fsys.WithContext(groupctxA).Open(path.Join(siteGen.sitePrefix, "posts", category, posts[i].Name+".md"))
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				defer file.Close()
 				buf := bufPool.Get().(*bytes.Buffer)
@@ -1639,7 +1598,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}()
 				_, err = buf.ReadFrom(file)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				posts[i].text = buf.Bytes()
 			}
@@ -1669,11 +1628,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			return nil
 		})
 		groupA.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			outputDir := path.Join(siteGen.sitePrefix, "output/posts", posts[i].Category, posts[i].Name)
 			databaseFS, ok := &DatabaseFS{}, false
 			switch v := siteGen.fsys.(type) {
@@ -1717,14 +1672,14 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					return result
 				})
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				defer cursor.Close()
 				subgroup, subctx := errgroup.WithContext(groupctxA)
 				for cursor.Next() {
 					result, err := cursor.Result()
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					posts[i].Images = append(posts[i].Images, Image{
 						Parent: path.Join("posts", posts[i].Category, posts[i].Name),
@@ -1732,11 +1687,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					})
 					j := len(posts[i].Images) - 1
 					subgroup.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
+						defer stacktrace.RecoverPanic(&err)
 						defer func() {
 							if len(result.Text) <= maxPoolableBufferCapacity {
 								result.Text = result.Text[:0]
@@ -1745,7 +1696,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 						}()
 						err = subctx.Err()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						var altText []byte
 						result.Text = bytes.TrimSpace(result.Text)
@@ -1761,7 +1712,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				}
 				err = cursor.Close()
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				err = subgroup.Wait()
 				if err != nil {
@@ -1770,7 +1721,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			} else {
 				dirEntries, err := siteGen.fsys.WithContext(groupctxA).ReadDir(outputDir)
 				if err != nil && !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 				for _, dirEntry := range dirEntries {
 					name := dirEntry.Name()
@@ -1811,15 +1762,15 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				return err
+				return stacktrace.New(err)
 			}
 			err := siteGen.fsys.WithContext(groupctxB).MkdirAll(path.Dir(outputFile), 0755)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 		}
 		defer writer.Close()
@@ -1832,7 +1783,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			"<link rel='alternate' href='"+template.HTMLEscapeString(atomPath)+"' type='application/atom+xml'>\n",
 		))
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		var isDatabaseFS bool
 		switch v := siteGen.fsys.(type) {
@@ -1845,7 +1796,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {
-						result <- fmt.Errorf("panic: " + string(debug.Stack()))
+						result <- stacktrace.New(fmt.Errorf("panic: %v", v))
 					}
 				}()
 				result <- siteGen.rewriteURLs(writer, pipeReader, "")
@@ -1871,25 +1822,26 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		}
 		err = writer.Close()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	})
 	if currentPage == 1 {
-		groupB.Go(func() error {
+		groupB.Go(func() (err error) {
+			defer stacktrace.RecoverPanic(&err)
 			outputFile := path.Join(outputDir, "1/index.html")
 			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 				err := siteGen.fsys.WithContext(groupctxB).MkdirAll(path.Dir(outputFile), 0755)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(outputFile, 0644)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 			}
 			defer writer.Close()
@@ -1903,15 +1855,16 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				"<p>redirect to <a href='"+template.HTMLEscapeString(urlPath)+"'>"+urlPath+"</a></p>\n",
 			))
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			err = writer.Close()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		})
-		groupB.Go(func() error {
+		groupB.Go(func() (err error) {
+			defer stacktrace.RecoverPanic(&err)
 			scheme := "https://"
 			var contentDomain string
 			if strings.Contains(siteGen.sitePrefix, ".") {
@@ -1962,7 +1915,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				var b strings.Builder
 				err := siteGen.markdown.Convert([]byte(post.Content), &b)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				feed.Entry[i] = AtomEntry{
 					ID:        postID,
@@ -1986,31 +1939,31 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 				err := siteGen.fsys.WithContext(groupctxB).MkdirAll(outputDir, 0755)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 			}
 			defer writer.Close()
 			_, err = writer.Write([]byte(xml.Header))
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			encoder := xml.NewEncoder(writer)
 			encoder.Indent("", "  ")
 			err = encoder.Encode(&feed)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			err = writer.Close()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		})
@@ -2072,11 +2025,11 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			if err == io.EOF {
 				return nil
 			}
-			return stacktrace.WithCallers(err)
+			return stacktrace.New(err)
 		case html.TextToken:
 			_, err := writer.Write(tokenizer.Raw())
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 		case html.DoctypeToken:
 			for _, b := range [...][]byte{
@@ -2084,7 +2037,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			} {
 				_, err := writer.Write(b)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 		case html.CommentToken:
@@ -2093,7 +2046,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			} {
 				_, err := writer.Write(b)
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 		case html.StartTagToken, html.SelfClosingTagToken, html.EndTagToken:
@@ -2101,19 +2054,19 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			case html.StartTagToken, html.SelfClosingTagToken:
 				_, err := writer.Write([]byte("<"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			case html.EndTagToken:
 				_, err := writer.Write([]byte("</"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 			var key, val, rewrittenVal []byte
 			name, moreAttr := tokenizer.TagName()
 			_, err := writer.Write(name)
 			if err != nil {
-				return stacktrace.WithCallers(err)
+				return stacktrace.New(err)
 			}
 			isImgTag := bytes.Equal(name, []byte("img"))
 			isAnchorTag := bytes.Equal(name, []byte("a"))
@@ -2150,7 +2103,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 				} {
 					_, err := writer.Write(b)
 					if err != nil {
-						return stacktrace.WithCallers(err)
+						return stacktrace.New(err)
 					}
 				}
 			}
@@ -2158,72 +2111,17 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			case html.StartTagToken, html.EndTagToken:
 				_, err = writer.Write([]byte(">"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			case html.SelfClosingTagToken:
 				_, err = writer.Write([]byte("/>"))
 				if err != nil {
-					return stacktrace.WithCallers(err)
+					return stacktrace.New(err)
 				}
 			}
 		}
 	}
 }
-
-const functionsDocs = `functions
-
-  Prints the list of available functions.
-
-  {{ functions }}
-
-dump x
-
-  Dumps the variable into a human readable format
-
-  {{ dump "foo" }} => (string) (len=3) "foo"
-  {{ dump $ }}     => <dumps the $ variable>
-
-join x y z...
-
-  Join one or more elements into a path. Empty elements are ignored.
-
-  {{ join "foo" }}             => foo
-  {{ join "foo" "bar" "baz" }} => foo/bar/baz
-  {{ join "foo" "" "" "bar" }} => foo/bar
-
-base x
-
-  base returns the last element of a path. Trailing slashes are removed before
-  extracting the last element.
-
-  {{ base "foo/bar/baz" }}  => baz
-  {{ base "foo/bar/baz/" }} => baz
-
-ext x
-
-  ext returns the file name extension used by path. The extension is the suffix
-  beginning at the final dot in the final slash-separated element of path; it
-  is empty if there is no dot.
-
-  {{ ext "foo/bar/baz.html" }} => .html
-  {{ ext "foo/bar/baz" }}      => <empty>
-
-hasPrefix str prefix
-
-  hasPrefix returns whether the string begins with the prefix.
-
-  {{ hasPrefix "singapore" "sing" }} => true
-  {{ hasPrefix "singapore" "wing" }} => false
-  {{ hasPrefix "singapore" "" }}     => true
-
-hasSuffix str suffix
-
-  hasSuffix returns whether the string ends with the suffix.
-
-  {{ hasSuffix "singapore" "pore" }} => true
-  {{ hasSuffix "singapore" "more" }} => false
-  {{ hasSuffix "singapore" "" }}     => true
-`
 
 var baseFuncMap = map[string]any{
 	"dump": func(x any) template.HTML {
@@ -2964,7 +2862,7 @@ type AtomCDATA struct {
 
 func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string) (*template.Template, error) {
 	if strings.Contains(category, "/") {
-		return nil, fmt.Errorf("invalid post category")
+		return nil, stacktrace.New(fmt.Errorf("invalid post category"))
 	}
 	var text string
 	var found bool
@@ -2984,7 +2882,7 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 			return row.NullString("text")
 		})
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		text = result.String
 		found = result.Valid
@@ -2992,23 +2890,23 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 		file, err := siteGen.fsys.WithContext(ctx).Open(path.Join(siteGen.sitePrefix, "posts", category, "post.html"))
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 		} else {
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 			var b strings.Builder
 			b.Grow(int(fileInfo.Size()))
 			_, err = io.Copy(&b, file)
 			if err != nil {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 			err = file.Close()
 			if err != nil {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 			text = b.String()
 			found = true
@@ -3017,21 +2915,21 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 	if !found {
 		file, err := RuntimeFS.Open("embed/post.html")
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		fileInfo, err := file.Stat()
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		var b strings.Builder
 		b.Grow(int(fileInfo.Size()))
 		_, err = io.Copy(&b, file)
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		err = file.Close()
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		text = b.String()
 	}
@@ -3044,7 +2942,7 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 
 func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category string) (*template.Template, error) {
 	if strings.Contains(category, "/") {
-		return nil, stacktrace.WithCallers(fmt.Errorf("invalid post category"))
+		return nil, stacktrace.New(fmt.Errorf("invalid post category"))
 	}
 	var err error
 	var text string
@@ -3065,7 +2963,7 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 			return row.NullString("text")
 		})
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		text = result.String
 		found = result.Valid
@@ -3073,23 +2971,23 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 		file, err := siteGen.fsys.WithContext(ctx).Open(path.Join(siteGen.sitePrefix, "posts", category, "postlist.html"))
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 		} else {
 			defer file.Close()
 			fileInfo, err := file.Stat()
 			if err != nil {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 			var b strings.Builder
 			b.Grow(int(fileInfo.Size()))
 			_, err = io.Copy(&b, file)
 			if err != nil {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 			err = file.Close()
 			if err != nil {
-				return nil, err
+				return nil, stacktrace.New(err)
 			}
 			text = b.String()
 			found = true
@@ -3098,21 +2996,21 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 	if !found {
 		file, err := RuntimeFS.Open("embed/postlist.html")
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		fileInfo, err := file.Stat()
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		var b strings.Builder
 		b.Grow(int(fileInfo.Size()))
 		_, err = io.Copy(&b, file)
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		err = file.Close()
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		text = b.String()
 	}
