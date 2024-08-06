@@ -83,16 +83,11 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
-TODO: replace all defer funcs with TraceError(&err)
-    - Why is resettheme not working?
-TODO: Change from TracedError to StackError
-    - TODO: change from TraceError to recoverPanic, which should convert the panic to a stack trace.
-TODO: why is copy and pasting a file on windows resulting in an error? Where are the backslashes coming from?
+TODO: notebrew config files.followers[0].provider directory
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
-TODO: notebrew config files.followers[0].provider directory
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
     TODO: /files/static/definitive-guide-6a0f0a00.html (user tutorials)

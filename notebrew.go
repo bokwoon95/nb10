@@ -29,7 +29,6 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -1295,50 +1294,6 @@ type MaxMindDBRecord struct {
 	} `maxminddb:"country"`
 }
 
-// https://cs.opensource.google/go/x/xerrors/+/93cc26a9:frame.go
-type CallerError struct {
-	frames [3]uintptr
-	err    error
-}
-
-// TODO: should we capture just the caller, or up to the next 50 frames? See
-// sq's testutil.Callers(). The problem with just capturing the caller is that
-// it's useless if you put it inside a callback function.
-//
-// TODO: instead, WithCaller should capture the start point. Then
-// InternalServerError should recover call stack and stop it at the caller of
-// InternalServerError. So we have a nice call stack starting at the true start
-// and ending at the true end. Should we print it out to the user? Yes, I
-// think. So even end users can help debug by showing the revision, error and
-// call trace.
-func WithCaller(err error) error {
-	e := &CallerError{}
-	runtime.Callers(2, e.frames[:])
-	return e
-}
-
-func (e *CallerError) Error() string {
-	_, file, line := e.Caller()
-	if file == "" {
-		return e.err.Error()
-	}
-	return file + ":" + strconv.Itoa(line) + ": " + e.err.Error()
-}
-
-func (e *CallerError) Unwrap() error { return e.err }
-
-func (e *CallerError) Caller() (function, file string, line int) {
-	frames := runtime.CallersFrames(e.frames[:])
-	if _, ok := frames.Next(); !ok {
-		return "", "", 0
-	}
-	fr, ok := frames.Next()
-	if !ok {
-		return "", "", 0
-	}
-	return fr.Function, fr.File, fr.Line
-}
-
 var (
 	//go:embed embed static
 	embedFS embed.FS
@@ -1425,46 +1380,4 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-type TracedError struct {
-	Err   error
-	Lines []string
-}
-
-func TraceError(err *error) {
-	if v := recover(); v != nil {
-		*err = fmt.Errorf("panic: " + fmt.Sprint(v))
-	}
-	if *err == nil {
-		return
-	}
-	var lines []string
-	var tracedErr *TracedError
-	if errors.As(*err, &tracedErr) {
-		return
-	}
-	var pc [50]uintptr
-	n := runtime.Callers(2, pc[:]) // skip runtime.Callers + TraceError
-	lines = slices.Grow(lines, n)
-	frames := runtime.CallersFrames(pc[:n])
-	for frame, more := frames.Next(); more; frame, more = frames.Next() {
-		lines = append(lines, frame.File+":"+strconv.Itoa(frame.Line))
-	}
-	lines = append(lines, "vcs.revision="+Version)
-	*err = &TracedError{
-		Err:   *err,
-		Lines: lines,
-	}
-}
-
-func (e *TracedError) Error() string {
-	if e.Err == nil {
-		return ""
-	}
-	return e.Err.Error()
-}
-
-func (e *TracedError) Unwrap() error {
-	return e.Err
 }
