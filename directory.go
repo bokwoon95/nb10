@@ -639,8 +639,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			return stacktrace.WithCallers(err)
 		}
 		response.PinnedFiles = pinnedFiles
-		var a []string
-		_ = a[0]
 		return nil
 	})
 	switch response.Sort {

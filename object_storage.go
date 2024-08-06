@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 )
 
 type ObjectStorage interface {
@@ -94,7 +95,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			UploadId: uploadId,
 		})
 		if err != nil {
-			storage.Logger.Error(err.Error())
+			storage.Logger.Error(stacktrace.WithCallers(err).Error())
 		}
 	}
 	createResult, err := storage.Client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
@@ -104,7 +105,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 		ContentType:  aws.String(fileType.ContentType),
 	})
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	var parts []types.CompletedPart
 	var partNumber int32
@@ -118,7 +119,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 			}
 			if err != io.ErrUnexpectedEOF {
 				cleanup(createResult.UploadId)
-				return err
+				return stacktrace.WithCallers(err)
 			}
 			done = true
 		}
@@ -132,7 +133,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 		})
 		if err != nil {
 			cleanup(createResult.UploadId)
-			return err
+			return stacktrace.WithCallers(err)
 		}
 		parts = append(parts, types.CompletedPart{
 			ETag:       uploadResult.ETag,
@@ -148,7 +149,7 @@ func (storage *S3ObjectStorage) Put(ctx context.Context, key string, reader io.R
 		},
 	})
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	return nil
 }
@@ -158,9 +159,8 @@ func (storage *S3ObjectStorage) Delete(ctx context.Context, key string) error {
 		Bucket: &storage.Bucket,
 		Key:    aws.String(key),
 	})
-	fmt.Printf("S3ObjectStorage.Delete: %s %v\n", key, err)
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	return nil
 }
@@ -178,7 +178,7 @@ func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string
 				return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
 			}
 		}
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	return nil
 }
@@ -218,7 +218,7 @@ func (storage *DirObjectStorage) Get(ctx context.Context, key string) (io.ReadCl
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, &fs.PathError{Op: "get", Path: key, Err: fs.ErrNotExist}
 		}
-		return nil, err
+		return nil, stacktrace.WithCallers(err)
 	}
 	return file, nil
 }
@@ -234,20 +234,20 @@ func (storage *DirObjectStorage) Put(ctx context.Context, key string, reader io.
 	file, err := os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.WithCallers(err)
 		}
 		err = os.Mkdir(filepath.Join(storage.RootDir, key[:4]), 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return err
+			return stacktrace.WithCallers(err)
 		}
 		file, err = os.OpenFile(filepath.Join(storage.RootDir, key[:4], key), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return err
+			return stacktrace.WithCallers(err)
 		}
 	}
 	_, err = io.Copy(file, reader)
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	return nil
 }
@@ -262,7 +262,7 @@ func (storage *DirObjectStorage) Delete(ctx context.Context, key string) error {
 	}
 	err = os.Remove(filepath.Join(storage.RootDir, key[:4], key))
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	return nil
 }
@@ -283,7 +283,7 @@ func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey strin
 		if errors.Is(err, fs.ErrNotExist) {
 			return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
 		}
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	defer srcFile.Close()
 	destFile, err := os.OpenFile(filepath.Join(storage.RootDir, destKey[:4], destKey), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -293,11 +293,11 @@ func (storage *DirObjectStorage) Copy(ctx context.Context, srcKey, destKey strin
 	defer destFile.Close()
 	_, err = io.Copy(destFile, srcFile)
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	err = destFile.Close()
 	if err != nil {
-		return err
+		return stacktrace.WithCallers(err)
 	}
 	return nil
 }
