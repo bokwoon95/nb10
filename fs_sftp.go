@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"
@@ -24,6 +25,7 @@ type SFTPFSConfig struct {
 	RootDir      string
 	TempDir      string
 	MaxOpenConns int
+	Logger       *slog.Logger
 }
 
 type SFTPFS struct {
@@ -31,6 +33,7 @@ type SFTPFS struct {
 	NewSSHClient func() (*ssh.Client, error)
 	RootDir      string
 	TempDir      string
+	Logger       *slog.Logger
 	index        *atomic.Uint64
 	ctx          context.Context
 }
@@ -59,6 +62,7 @@ func NewSFTPFS(config SFTPFSConfig) (*SFTPFS, error) {
 		NewSSHClient: config.NewSSHClient,
 		RootDir:      rootDir,
 		TempDir:      tempDir,
+		Logger:       config.Logger,
 		index:        &atomic.Uint64{},
 		ctx:          context.Background(),
 	}
@@ -91,6 +95,7 @@ func (fsys *SFTPFS) WithContext(ctx context.Context) FS {
 		NewSSHClient: fsys.NewSSHClient,
 		RootDir:      fsys.RootDir,
 		TempDir:      fsys.TempDir,
+		Logger:       fsys.Logger,
 		index:        fsys.index,
 		ctx:          ctx,
 	}
@@ -99,7 +104,7 @@ func (fsys *SFTPFS) WithContext(ctx context.Context) FS {
 func (fsys *SFTPFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
@@ -110,7 +115,10 @@ func (fsys *SFTPFS) Open(name string) (fs.File, error) {
 	}
 	file, err := sftpClient.Open(path.Join(fsys.RootDir, name))
 	if err != nil {
-		return nil, err
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
+		return nil, stacktrace.New(err)
 	}
 	return file, nil
 }
@@ -118,7 +126,7 @@ func (fsys *SFTPFS) Open(name string) (fs.File, error) {
 func (fsys *SFTPFS) Stat(name string) (fs.FileInfo, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
@@ -129,7 +137,10 @@ func (fsys *SFTPFS) Stat(name string) (fs.FileInfo, error) {
 	}
 	fileInfo, err := sftpClient.Stat(path.Join(fsys.RootDir, name))
 	if err != nil {
-		return nil, err
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
+		return nil, stacktrace.New(err)
 	}
 	return fileInfo, nil
 }
@@ -137,7 +148,7 @@ func (fsys *SFTPFS) Stat(name string) (fs.FileInfo, error) {
 func (fsys *SFTPFS) OpenWriter(name string, perm fs.FileMode) (io.WriteCloser, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
@@ -151,7 +162,7 @@ func (fsys *SFTPFS) OpenWriter(name string, perm fs.FileMode) (io.WriteCloser, e
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
 		}
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	file := &SFTPFileWriter{
 		ctx:        fsys.ctx,
@@ -166,7 +177,7 @@ func (fsys *SFTPFS) OpenWriter(name string, perm fs.FileMode) (io.WriteCloser, e
 	file.tempName = NewID().String() + path.Ext(name)
 	file.tempFile, err = sftpClient.OpenFile(path.Join(fsys.RootDir, file.tempName), os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	return file, nil
 }
@@ -204,12 +215,12 @@ func (file *SFTPFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	n, err = file.tempFile.ReadFrom(r)
 	if err != nil {
 		file.writeFailed = true
-		return n, err
+		return n, stacktrace.New(err)
 	}
 	return n, nil
 }
@@ -218,12 +229,12 @@ func (file *SFTPFileWriter) Write(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	n, err = file.tempFile.Write(p)
 	if err != nil {
 		file.writeFailed = true
-		return n, err
+		return n, stacktrace.New(err)
 	}
 	return n, nil
 }
@@ -234,7 +245,7 @@ func (file *SFTPFileWriter) Close() error {
 	defer file.sftpClient.Remove(tempFilePath)
 	err := file.tempFile.Close()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if file.writeFailed {
 		return nil
@@ -242,12 +253,12 @@ func (file *SFTPFileWriter) Close() error {
 	if _, ok := file.sftpClient.HasExtension("posix-rename@openssh.com"); ok {
 		err := file.sftpClient.PosixRename(tempFilePath, destFilePath)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		err := file.sftpClient.Rename(tempFilePath, destFilePath)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -256,7 +267,7 @@ func (file *SFTPFileWriter) Close() error {
 func (fsys *SFTPFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
@@ -267,7 +278,10 @@ func (fsys *SFTPFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	}
 	fileInfos, err := sftpClient.ReadDir(name)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		}
+		return nil, stacktrace.New(err)
 	}
 	dirEntries := make([]fs.DirEntry, len(fileInfos))
 	for i := range fileInfos {
@@ -279,7 +293,7 @@ func (fsys *SFTPFS) ReadDir(name string) ([]fs.DirEntry, error) {
 func (fsys *SFTPFS) Mkdir(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
@@ -294,7 +308,7 @@ func (fsys *SFTPFS) Mkdir(name string, _ fs.FileMode) error {
 func (fsys *SFTPFS) MkdirAll(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
@@ -309,7 +323,7 @@ func (fsys *SFTPFS) MkdirAll(name string, _ fs.FileMode) error {
 func (fsys *SFTPFS) Remove(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrInvalid}
@@ -324,7 +338,7 @@ func (fsys *SFTPFS) Remove(name string) error {
 func (fsys *SFTPFS) RemoveAll(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
@@ -336,7 +350,7 @@ func (fsys *SFTPFS) RemoveAll(name string) error {
 	_, err = sftpClient.Stat(path.Join(fsys.RootDir, name))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		return nil
@@ -347,7 +361,7 @@ func (fsys *SFTPFS) RemoveAll(name string) error {
 func (fsys *SFTPFS) Rename(oldName, newName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(oldName) || strings.Contains(oldName, "\\") {
 		return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrInvalid}
@@ -362,7 +376,7 @@ func (fsys *SFTPFS) Rename(oldName, newName string) error {
 	_, err = sftpClient.Stat(path.Join(fsys.RootDir, newName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
@@ -373,7 +387,7 @@ func (fsys *SFTPFS) Rename(oldName, newName string) error {
 			if errors.Is(err, fs.ErrNotExist) {
 				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
 			}
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		err := sftpClient.Rename(path.Join(fsys.RootDir, oldName), path.Join(fsys.RootDir, newName))
@@ -381,7 +395,7 @@ func (fsys *SFTPFS) Rename(oldName, newName string) error {
 			if errors.Is(err, fs.ErrNotExist) {
 				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
 			}
-			return err
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -390,7 +404,7 @@ func (fsys *SFTPFS) Rename(oldName, newName string) error {
 func (fsys *SFTPFS) Copy(srcName, destName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(srcName) || strings.Contains(srcName, "\\") {
 		return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrInvalid}
@@ -405,7 +419,7 @@ func (fsys *SFTPFS) Copy(srcName, destName string) error {
 	_, err = sftpClient.Stat(path.Join(fsys.RootDir, destName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
@@ -415,65 +429,61 @@ func (fsys *SFTPFS) Copy(srcName, destName string) error {
 		if errors.Is(err, fs.ErrNotExist) {
 			return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrNotExist}
 		}
-		return err
+		return stacktrace.New(err)
 	}
 	if !srcFileInfo.IsDir() {
 		srcFile, err := fsys.WithContext(fsys.ctx).Open(srcName)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer srcFile.Close()
 		destFile, err := fsys.WithContext(fsys.ctx).OpenWriter(destName, 0644)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer destFile.Close()
 		_, err = io.Copy(destFile, srcFile)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		err = destFile.Close()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	}
 	group, groupctx := errgroup.WithContext(fsys.ctx)
 	err = fs.WalkDir(fsys.WithContext(groupctx), srcName, func(filePath string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		relativePath := strings.TrimPrefix(strings.TrimPrefix(filePath, srcName), "/")
 		if dirEntry.IsDir() {
 			err := fsys.WithContext(groupctx).MkdirAll(path.Join(destName, relativePath), 0755)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		}
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			srcFile, err := fsys.WithContext(groupctx).Open(filePath)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			defer srcFile.Close()
 			destFile, err := fsys.WithContext(groupctx).OpenWriter(path.Join(destName, relativePath), 0644)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			defer destFile.Close()
 			_, err = io.Copy(destFile, srcFile)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			err = destFile.Close()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		})
@@ -499,7 +509,7 @@ func (fsys *SFTPFS) Close() error {
 			defer waitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			client.sftpClient.Close()
@@ -526,7 +536,7 @@ func (client *SFTPClient) Get(newSSHClient func() (*ssh.Client, error)) (*sftp.C
 	}
 	sftpClient, err := sftp.NewClient(sshClient)
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	client.sftpClient = sftpClient
 	client.disconnected = false

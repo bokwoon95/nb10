@@ -286,7 +286,7 @@ func (file *DatabaseFile) Stat() (fs.FileInfo, error) {
 func (file *DatabaseFile) Read(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	if file.info.isDir {
 		return 0, &fs.PathError{Op: "read", Path: file.info.FilePath, Err: syscall.EISDIR}
@@ -534,40 +534,58 @@ func (file *DatabaseFileWriter) Write(p []byte) (n int, err error) {
 	}
 	if file.fileType.Has(AttributeObject) {
 		n, err = file.objectStorageWriter.Write(p)
+		if err != nil {
+			file.writeFailed = true
+			return n, stacktrace.New(err)
+		}
 	} else {
 		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			n, err = file.gzipWriter.Write(p)
+			if err != nil {
+				file.writeFailed = true
+				return n, stacktrace.New(err)
+			}
 		} else {
 			n, err = file.buf.Write(p)
+			if err != nil {
+				file.writeFailed = true
+				return n, stacktrace.New(err)
+			}
 		}
 	}
 	file.size += int64(n)
-	if err != nil {
-		file.writeFailed = true
-	}
-	return n, err
+	return n, nil
 }
 
 func (file *DatabaseFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	if file.fileType.Has(AttributeObject) {
 		n, err = io.Copy(file.objectStorageWriter, r)
+		if err != nil {
+			file.writeFailed = true
+			return 0, stacktrace.New(err)
+		}
 	} else {
 		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
 			n, err = io.Copy(file.gzipWriter, r)
+			if err != nil {
+				file.writeFailed = true
+				return 0, stacktrace.New(err)
+			}
 		} else {
 			n, err = file.buf.ReadFrom(r)
+			if err != nil {
+				file.writeFailed = true
+				return 0, stacktrace.New(err)
+			}
 		}
 	}
 	file.size += int64(n)
-	if err != nil {
-		file.writeFailed = true
-	}
-	return n, err
+	return n, nil
 }
 
 func (file *DatabaseFileWriter) Close() error {

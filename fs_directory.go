@@ -3,16 +3,15 @@ package nb10
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
-	"runtime/debug"
 	"strings"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -82,7 +81,7 @@ func (fsys *DirectoryFS) WithContext(ctx context.Context) FS {
 func (fsys *DirectoryFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
@@ -97,14 +96,14 @@ func (fsys *DirectoryFS) Open(name string) (fs.File, error) {
 func (fsys *DirectoryFS) Stat(name string) (fs.FileInfo, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "stat", Path: name, Err: fs.ErrInvalid}
 	}
 	fileInfo, err := os.Stat(path.Join(fsys.RootDir, name))
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	return fileInfo, nil
 }
@@ -112,7 +111,7 @@ func (fsys *DirectoryFS) Stat(name string) (fs.FileInfo, error) {
 func (fsys *DirectoryFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrInvalid}
@@ -120,7 +119,7 @@ func (fsys *DirectoryFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser,
 	if runtime.GOOS == "windows" {
 		file, err := os.OpenFile(path.Join(fsys.RootDir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return nil, err
+			return nil, stacktrace.New(err)
 		}
 		return file, nil
 	}
@@ -129,7 +128,7 @@ func (fsys *DirectoryFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser,
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, &fs.PathError{Op: "openwriter", Path: name, Err: fs.ErrNotExist}
 		}
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	file := &DirectoryFileWriter{
 		ctx:     fsys.ctx,
@@ -142,11 +141,11 @@ func (fsys *DirectoryFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser,
 	}
 	file.tempFile, err = os.CreateTemp(file.tempDir, "notebrew-temp-*"+path.Ext(name))
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	fileInfo, err := file.tempFile.Stat()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	file.tempName = fileInfo.Name()
 	return file, nil
@@ -184,12 +183,12 @@ func (file *DirectoryFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	n, err = file.tempFile.ReadFrom(r)
 	if err != nil {
 		file.writeFailed = true
-		return n, err
+		return n, stacktrace.New(err)
 	}
 	return n, nil
 }
@@ -198,12 +197,12 @@ func (file *DirectoryFileWriter) Write(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
 		file.writeFailed = true
-		return 0, err
+		return 0, stacktrace.New(err)
 	}
 	n, err = file.tempFile.Write(p)
 	if err != nil {
 		file.writeFailed = true
-		return n, err
+		return n, stacktrace.New(err)
 	}
 	return n, nil
 }
@@ -214,14 +213,14 @@ func (file *DirectoryFileWriter) Close() error {
 	defer os.Remove(tempFilePath)
 	err := file.tempFile.Close()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if file.writeFailed {
 		return nil
 	}
 	err = os.Rename(tempFilePath, destFilePath)
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	return nil
 }
@@ -229,7 +228,7 @@ func (file *DirectoryFileWriter) Close() error {
 func (fsys *DirectoryFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return nil, err
+		return nil, stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
@@ -240,7 +239,7 @@ func (fsys *DirectoryFS) ReadDir(name string) ([]fs.DirEntry, error) {
 func (fsys *DirectoryFS) Mkdir(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "mkdir", Path: name, Err: fs.ErrInvalid}
@@ -251,7 +250,7 @@ func (fsys *DirectoryFS) Mkdir(name string, _ fs.FileMode) error {
 func (fsys *DirectoryFS) MkdirAll(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "mkdirall", Path: name, Err: fs.ErrInvalid}
@@ -262,7 +261,7 @@ func (fsys *DirectoryFS) MkdirAll(name string, _ fs.FileMode) error {
 func (fsys *DirectoryFS) Remove(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "remove", Path: name, Err: fs.ErrInvalid}
@@ -273,7 +272,7 @@ func (fsys *DirectoryFS) Remove(name string) error {
 func (fsys *DirectoryFS) RemoveAll(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
@@ -284,7 +283,7 @@ func (fsys *DirectoryFS) RemoveAll(name string) error {
 func (fsys *DirectoryFS) Rename(oldName, newName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(oldName) || strings.Contains(oldName, "\\") {
 		return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrInvalid}
@@ -295,7 +294,7 @@ func (fsys *DirectoryFS) Rename(oldName, newName string) error {
 	_, err = os.Stat(path.Join(fsys.RootDir, newName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
@@ -313,7 +312,7 @@ func (fsys *DirectoryFS) Rename(oldName, newName string) error {
 func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	if !fs.ValidPath(srcName) || strings.Contains(srcName, "\\") {
 		return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrInvalid}
@@ -324,7 +323,7 @@ func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 	_, err = os.Stat(path.Join(fsys.RootDir, destName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
@@ -334,65 +333,61 @@ func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 		if errors.Is(err, fs.ErrNotExist) {
 			return &fs.PathError{Op: "copy", Path: srcName, Err: fs.ErrNotExist}
 		}
-		return err
+		return stacktrace.New(err)
 	}
 	if !srcFileInfo.IsDir() {
 		srcFile, err := fsys.WithContext(fsys.ctx).Open(srcName)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer srcFile.Close()
 		destFile, err := fsys.WithContext(fsys.ctx).OpenWriter(destName, 0644)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer destFile.Close()
 		_, err = io.Copy(destFile, srcFile)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		err = destFile.Close()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	}
 	group, groupctx := errgroup.WithContext(fsys.ctx)
 	err = fs.WalkDir(fsys.WithContext(groupctx), srcName, func(filePath string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		relativePath := strings.TrimPrefix(strings.TrimPrefix(filePath, srcName), string(os.PathSeparator))
 		if dirEntry.IsDir() {
 			err := fsys.WithContext(groupctx).MkdirAll(path.Join(destName, relativePath), 0755)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		}
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			srcFile, err := fsys.WithContext(groupctx).Open(filePath)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			defer srcFile.Close()
 			destFile, err := fsys.WithContext(groupctx).OpenWriter(path.Join(destName, relativePath), 0644)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			defer destFile.Close()
 			_, err = io.Copy(destFile, srcFile)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			err = destFile.Close()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		})

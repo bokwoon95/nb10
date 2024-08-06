@@ -6,10 +6,11 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 )
 
 type ReplicatedFSConfig struct {
@@ -55,17 +56,16 @@ func (fsys *ReplicatedFS) As(target any) bool {
 }
 
 func (fsys *ReplicatedFS) WithContext(ctx context.Context) FS {
-	// return &ReplicatedFS{
-	// 	Leader:        fsys.Leader,
-	// 	Followers:     fsys.Followers,
-	// 	Synchronous:   fsys.Synchronous,
-	// 	Logger:        fsys.Logger,
-	// 	operationsCtx: ctx,
-	// 	baseCtx:       fsys.baseCtx,
-	// 	baseCtxCancel: fsys.baseCtxCancel,
-	// 	waitGroup:     fsys.waitGroup,
-	// }
-	return nil
+	return &ReplicatedFS{
+		Leader:                 fsys.Leader,
+		Followers:              fsys.Followers,
+		SynchronousReplication: fsys.SynchronousReplication,
+		Logger:                 fsys.Logger,
+		ctx:                    ctx,
+		baseCtx:                fsys.baseCtx,
+		baseCtxCancel:          fsys.baseCtxCancel,
+		baseCtxWaitGroup:       fsys.baseCtxWaitGroup,
+	}
 }
 
 func (fsys *ReplicatedFS) WithValues(values map[string]any) FS {
@@ -91,8 +91,7 @@ func (fsys *ReplicatedFS) WithValues(values map[string]any) FS {
 			replicatedFS.Followers[i] = v.WithValues(values)
 		}
 	}
-	// return replicatedFS
-	return nil
+	return replicatedFS
 }
 
 func (fsys *ReplicatedFS) Open(name string) (fs.File, error) {
@@ -183,7 +182,7 @@ func (file *ReplicatedFileWriter) Close() error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						file.logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				leaderFile, err := file.leader.WithContext(file.ctx).Open(file.name)
@@ -223,7 +222,7 @@ func (file *ReplicatedFileWriter) Close() error {
 			defer file.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					file.logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
@@ -290,7 +289,7 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				err := follower.WithContext(fsys.ctx).Mkdir(name, perm)
@@ -313,7 +312,7 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
@@ -359,7 +358,7 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				err := follower.WithContext(fsys.ctx).MkdirAll(name, perm)
@@ -382,7 +381,7 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
@@ -428,7 +427,7 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				err := follower.WithContext(fsys.ctx).Remove(name)
@@ -451,7 +450,7 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
@@ -497,7 +496,7 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				err := follower.WithContext(fsys.ctx).RemoveAll(name)
@@ -520,7 +519,7 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
@@ -566,7 +565,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				err = follower.WithContext(fsys.ctx).Rename(oldName, newName)
@@ -589,7 +588,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
@@ -635,7 +634,7 @@ func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
 				defer waitGroup.Done()
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + string(debug.Stack()))
+						fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 					}
 				}()
 				err = follower.WithContext(fsys.ctx).Copy(srcName, destName)
@@ -658,7 +657,7 @@ func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
 			defer fsys.baseCtxWaitGroup.Done()
 			defer func() {
 				if v := recover(); v != nil {
-					fmt.Println("panic: " + string(debug.Stack()))
+					fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
 				}
 			}()
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())

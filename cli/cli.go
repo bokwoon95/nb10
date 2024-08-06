@@ -974,6 +974,8 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		}
 		sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
 			NewSSHClient: func() (*ssh.Client, error) {
+				// TODO: complete this function.
+				// TODO: use stacktrace.New where required.
 				return nil, nil
 			},
 			RootDir:      filesConfig.FilePath,
