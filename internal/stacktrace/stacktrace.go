@@ -71,5 +71,23 @@ func (e *Error) Unwrap() error {
 }
 
 func (e *Error) Error() string {
-	return e.Err.Error()
+	var callers []string
+	frames := runtime.CallersFrames(e.Callers)
+	for frame, more := frames.Next(); more; frame, more = frames.Next() {
+		callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
+	}
+	var b strings.Builder
+	last := len(callers) - 1
+	for i := last; i >= 0; i-- {
+		if i < last {
+			b.WriteString(" -> ")
+		}
+		b.WriteString(callers[i])
+	}
+	if e.Err == nil {
+		b.WriteString(": <nil>")
+	} else {
+		b.WriteString(": " + e.Err.Error())
+	}
+	return b.String()
 }

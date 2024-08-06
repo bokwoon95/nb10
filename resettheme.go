@@ -115,15 +115,19 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				return path.Base(row.String("file_path"))
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(stacktrace.Callers() + err.Error())
-				nbrew.InternalServerError(w, r, stacktrace.WrapError(err))
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			response.Categories = append(response.Categories, categories...)
 		} else {
-			err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts"), func(filePath string, dirEntry fs.DirEntry, err error) error {
+			root := path.Join(sitePrefix, "posts")
+			err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
 				if err != nil {
 					return stacktrace.WrapError(err)
+				}
+				if filePath == root {
+					return nil
 				}
 				if dirEntry.IsDir() {
 					response.Categories = append(response.Categories, path.Base(filePath))
@@ -131,8 +135,8 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				return nil
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(stacktrace.Callers() + err.Error())
-				nbrew.InternalServerError(w, r, stacktrace.WrapError(err))
+				getLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		}
@@ -310,16 +314,16 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				}
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				defer writer.Close()
 				_, err = writer.Write(b)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				creationTime := time.Now()
 				err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), creationTime, creationTime)
@@ -329,7 +333,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return err
+					return stacktrace.WrapError(err)
 				}
 				regenerationCount.Add(1)
 				return nil
@@ -340,20 +344,20 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				defer stacktrace.RecoverPanic(&err)
 				b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				defer writer.Close()
 				_, err = writer.Write(b)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				creationTime := time.Now()
 				err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), creationTime, creationTime)
@@ -363,7 +367,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return err
+					return stacktrace.WrapError(err)
 				}
 				regenerationCount.Add(1)
 				return nil
@@ -374,20 +378,20 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				defer stacktrace.RecoverPanic(&err)
 				b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "post.html"), 0644)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				defer writer.Close()
 				_, err = writer.Write(b)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "post.html"), string(b))
 				if err != nil {
@@ -396,7 +400,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return err
+					return stacktrace.WrapError(err)
 				}
 				n, err := siteGen.GeneratePosts(ctx, category, tmpl)
 				if err != nil {
@@ -405,7 +409,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return err
+					return stacktrace.WrapError(err)
 				}
 				regenerationCount.Add(n)
 				return nil
@@ -431,16 +435,16 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 				writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts", category, "postlist.html"), 0644)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				defer writer.Close()
 				_, err = writer.Write(b)
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				err = writer.Close()
 				if err != nil {
-					return err
+					return stacktrace.WrapError(err)
 				}
 				tmpl, err := siteGen.ParseTemplate(groupctx, path.Join("posts", category, "postlist.html"), string(b))
 				if err != nil {
@@ -449,7 +453,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return err
+					return stacktrace.WrapError(err)
 				}
 				n, err := siteGen.GeneratePostList(ctx, category, tmpl)
 				if err != nil {
@@ -458,7 +462,7 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 						templateErrPtr.CompareAndSwap(nil, &templateErr)
 						return nil
 					}
-					return err
+					return stacktrace.WrapError(err)
 				}
 				regenerationCount.Add(n)
 				return nil
