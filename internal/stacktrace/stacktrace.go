@@ -13,6 +13,9 @@ type Error struct {
 	Callers []string
 }
 
+// WithCallers returns a new error annotated with the callers list. Try not to
+// nest it, and do not call it in the hot path or for errors that are expected
+// to occur very often.
 func WithCallers(err error) error {
 	_, ok := err.(*Error)
 	if ok {

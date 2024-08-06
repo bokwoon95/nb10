@@ -4,18 +4,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -153,17 +152,13 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			seen[name] = true
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, name))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
 						return nil
 					}
-					return err
+					return stacktrace.WithCallers(err)
 				}
 				file := File{
 					Name:    name,
@@ -336,14 +331,10 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				continue
 			}
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				result, err := preparedExec.Exec(groupctx, sq.StringParam("filePath", path.Join(sitePrefix, name)))
 				if err != nil {
-					return err
+					return stacktrace.WithCallers(err)
 				}
 				if result.RowsAffected > 0 {
 					response.Files[i] = File{

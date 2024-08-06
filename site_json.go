@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )
@@ -322,20 +323,20 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		SitePrefix:         sitePrefix,
 	})
 	if err != nil {
-		return RegenerationStats{}, err
+		return RegenerationStats{}, stacktrace.WithCallers(err)
 	}
 	rootPagesDir := path.Join(sitePrefix, "pages")
 	rootPostsDir := path.Join(sitePrefix, "posts")
 	postTemplate, err := siteGen.PostTemplate(ctx, "")
 	if err != nil {
-		return RegenerationStats{}, err
+		return RegenerationStats{}, stacktrace.WithCallers(err)
 	}
 	postTemplates := map[string]*template.Template{
 		"": postTemplate,
 	}
 	postListTemplate, err := siteGen.PostListTemplate(ctx, "")
 	if err != nil {
-		return RegenerationStats{}, err
+		return RegenerationStats{}, stacktrace.WithCallers(err)
 	}
 	postListTemplates := map[string]*template.Template{
 		"": postListTemplate,
@@ -358,11 +359,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		}
 		group, groupctx := errgroup.WithContext(ctx)
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			cursor, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -392,11 +389,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					return err
 				}
 				subgroup.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					if sitePrefix != "" {
 						_, file.FilePath, _ = strings.Cut(file.FilePath, "/")
 					}
@@ -419,11 +412,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			cursorA, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
