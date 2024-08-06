@@ -254,9 +254,13 @@ func (nbrew *Notebrew) resettheme(w http.ResponseWriter, r *http.Request, user U
 				}
 				response.Categories = append(response.Categories, categories...)
 			} else {
-				err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "posts"), func(filePath string, dirEntry fs.DirEntry, err error) error {
+				root := path.Join(sitePrefix, "posts")
+				err := fs.WalkDir(nbrew.FS.WithContext(r.Context()), root, func(filePath string, dirEntry fs.DirEntry, err error) error {
 					if err != nil {
 						return stacktrace.WrapError(err)
+					}
+					if filePath == root {
+						return nil
 					}
 					if dirEntry.IsDir() {
 						response.Categories = append(response.Categories, path.Base(filePath))
