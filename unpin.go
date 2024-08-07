@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bokwoon95/nb10/internal/stacktrace"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"golang.org/x/sync/errgroup"
 )

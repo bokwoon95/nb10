@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/bokwoon95/nb10/internal/stacktrace"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 

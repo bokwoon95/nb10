@@ -14,7 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/bokwoon95/nb10/internal/stacktrace"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/sync/errgroup"

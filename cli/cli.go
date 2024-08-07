@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
-	"github.com/bokwoon95/nb10/internal/stacktrace"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/caddyserver/certmagic"

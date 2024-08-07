@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bokwoon95/nb10/internal/stacktrace"
+	"github.com/bokwoon95/nb10/stacktrace"
 )
 
 type ReplicatedFSConfig struct {

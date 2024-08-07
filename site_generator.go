@@ -28,7 +28,7 @@ import (
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/bokwoon95/nb10/internal/highlighting"
 	"github.com/bokwoon95/nb10/internal/markdownmath"
-	"github.com/bokwoon95/nb10/internal/stacktrace"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/davecgh/go-spew/spew"
 	fences "github.com/stefanfritsch/goldmark-fences"
