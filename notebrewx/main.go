@@ -101,10 +101,7 @@ func main() {
 		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir)
 		defer func() {
 			for _, closer := range closers {
-				err := closer.Close()
-				if err != nil {
-					fmt.Println(err.Error())
-				}
+				closer.Close()
 			}
 		}()
 		if err != nil {
