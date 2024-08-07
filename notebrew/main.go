@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"sync"
 	"syscall"
 	"time"
 
@@ -90,16 +89,12 @@ func main() {
 		}
 		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir)
 		defer func() {
-			var waitGroup sync.WaitGroup
 			for _, closer := range closers {
-				closer := closer
-				waitGroup.Add(1)
-				go func() {
-					defer waitGroup.Done()
-					closer.Close()
-				}()
+				err := closer.Close()
+				if err != nil {
+					fmt.Println(err.Error())
+				}
 			}
-			waitGroup.Wait()
 		}()
 		if err != nil {
 			return err

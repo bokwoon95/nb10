@@ -1022,7 +1022,7 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		}
 	}
 	if len(filesystems) > 1 {
-		nbrew.FS, err = nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
+		replicatedFS, err := nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
 			Leader:                 filesystems[0],
 			Followers:              filesystems[1:],
 			SynchronousReplication: filesConfig.SynchronousReplication,
@@ -1031,6 +1031,8 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		if err != nil {
 			return nil, closers, err
 		}
+		closers = append(closers, replicatedFS)
+		nbrew.FS = replicatedFS
 	} else {
 		nbrew.FS = filesystems[0]
 	}
