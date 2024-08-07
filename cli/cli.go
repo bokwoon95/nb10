@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
+	"github.com/bokwoon95/nb10/internal/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/caddyserver/certmagic"
@@ -575,420 +576,463 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 		}
 	}
-	switch filesConfig.Provider {
-	case "", "directory":
-		if filesConfig.FilePath == "" {
-			filesConfig.FilePath = filepath.Join(dataDir, "notebrew-files")
-		} else {
-			filesConfig.FilePath = filepath.Clean(filesConfig.FilePath)
-		}
-		err := os.MkdirAll(filesConfig.FilePath, 0755)
-		if err != nil {
-			return nil, closers, err
-		}
-		dirFS, err := nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
-			RootDir: filesConfig.FilePath,
-			TempDir: filesConfig.TempDir,
-		})
-		if err != nil {
-			return nil, closers, err
-		}
-		nbrew.FS = dirFS
-	case "database":
-		var dataSourceName string
-		var dialect string
-		var db *sql.DB
-		var errorCode func(error) string
-		switch filesConfig.Dialect {
-		case "sqlite":
-			if filesConfig.FilePath == "" {
-				filesConfig.FilePath = filepath.Join(dataDir, "notebrew-files.db")
-			}
-			filesConfig.FilePath, err = filepath.Abs(filesConfig.FilePath)
-			if err != nil {
-				return nil, closers, fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "files.json"), err)
-			}
-			dataSourceName = filesConfig.FilePath + "?" + sqliteQueryString(filesConfig.Params)
-			dialect = "sqlite"
-			db, err = sql.Open(sqliteDriverName, dataSourceName)
-			if err != nil {
-				return nil, closers, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
-			}
-			closers = append(closers, db)
-			errorCode = sqliteErrorCode
-		case "postgres":
-			values := make(url.Values)
-			for key, value := range filesConfig.Params {
-				switch key {
-				case "sslmode":
-					values.Set(key, value)
-				}
-			}
-			if _, ok := filesConfig.Params["sslmode"]; !ok {
-				values.Set("sslmode", "disable")
-			}
-			if filesConfig.Port == "" {
-				filesConfig.Port = "5432"
-			}
-			uri := url.URL{
-				Scheme:   "postgres",
-				User:     url.UserPassword(filesConfig.User, filesConfig.Password),
-				Host:     filesConfig.Host + ":" + filesConfig.Port,
-				Path:     filesConfig.DBName,
-				RawQuery: values.Encode(),
-			}
-			dataSourceName = uri.String()
-			dialect = "postgres"
-			db, err = sql.Open("pgx", dataSourceName)
-			if err != nil {
-				return nil, closers, fmt.Errorf("%s: postgres: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
-			}
-			closers = append(closers, db)
-			errorCode = func(err error) string {
-				var pgErr *pgconn.PgError
-				if errors.As(err, &pgErr) {
-					return pgErr.Code
-				}
-				return ""
-			}
-		case "mysql":
-			values := make(url.Values)
-			for key, value := range filesConfig.Params {
-				switch key {
-				case "charset", "collation", "loc", "maxAllowedPacket",
-					"readTimeout", "rejectReadOnly", "serverPubKey", "timeout",
-					"tls", "writeTimeout", "connectionAttributes":
-					values.Set(key, value)
-				}
-			}
-			values.Set("multiStatements", "true")
-			values.Set("parseTime", "true")
-			if filesConfig.Port == "" {
-				filesConfig.Port = "3306"
-			}
-			config, err := mysql.ParseDSN(fmt.Sprintf("tcp(%s:%s)/%s?%s", filesConfig.Host, filesConfig.Port, url.PathEscape(filesConfig.DBName), values.Encode()))
-			if err != nil {
-				return nil, closers, err
-			}
-			// Set user and passwd manually to accomodate special characters.
-			// https://github.com/go-sql-driver/mysql/issues/1323
-			config.User = filesConfig.User
-			config.Passwd = filesConfig.Password
-			driver, err := mysql.NewConnector(config)
-			if err != nil {
-				return nil, closers, err
-			}
-			dataSourceName = config.FormatDSN()
-			dialect = "mysql"
-			db = sql.OpenDB(driver)
-			closers = append(closers, db)
-			errorCode = func(err error) string {
-				var mysqlErr *mysql.MySQLError
-				if errors.As(err, &mysqlErr) {
-					return strconv.FormatUint(uint64(mysqlErr.Number), 10)
-				}
-				return ""
-			}
-		default:
-			return nil, closers, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), filesConfig.Dialect)
-		}
-		err = db.Ping()
-		if err != nil {
-			return nil, closers, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "files.json"), dialect, dataSourceName, err)
-		}
-		if filesConfig.MaxOpenConns > 0 {
-			db.SetMaxOpenConns(filesConfig.MaxOpenConns)
-		}
-		if filesConfig.MaxIdleConns > 0 {
-			db.SetMaxIdleConns(filesConfig.MaxIdleConns)
-		}
-		if filesConfig.ConnMaxLifetime != "" {
-			duration, err := time.ParseDuration(filesConfig.ConnMaxLifetime)
-			if err != nil {
-				return nil, closers, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxLifetime, err)
-			}
-			db.SetConnMaxLifetime(duration)
-		}
-		if filesConfig.ConnMaxIdleTime != "" {
-			duration, err := time.ParseDuration(filesConfig.ConnMaxIdleTime)
-			if err != nil {
-				return nil, closers, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "files.json"), filesConfig.ConnMaxIdleTime, err)
-			}
-			db.SetConnMaxIdleTime(duration)
-		}
-		filesCatalog, err := nb10.FilesCatalog(dialect)
-		if err != nil {
-			return nil, closers, err
-		}
-		automigrateCmd := &ddl.AutomigrateCmd{
-			DB:             db,
-			Dialect:        dialect,
-			DestCatalog:    filesCatalog,
-			AcceptWarnings: true,
-			Stderr:         io.Discard,
-		}
-		err = automigrateCmd.Run()
-		if err != nil {
-			return nil, closers, err
-		}
-		if dialect == "sqlite" {
-			dbi := ddl.NewDatabaseIntrospector(dialect, db)
-			dbi.Tables = []string{"files_fts5"}
-			tables, err := dbi.GetTables()
-			if err != nil {
-				return nil, closers, err
-			}
-			if len(tables) == 0 {
-				_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
-				if err != nil {
-					return nil, closers, err
-				}
-			}
-			dbi.Tables = []string{"files"}
-			triggers, err := dbi.GetTriggers()
-			if err != nil {
-				return nil, closers, err
-			}
-			triggerNames := make(map[string]struct{})
-			for _, trigger := range triggers {
-				triggerNames[trigger.TriggerName] = struct{}{}
-			}
-			if _, ok := triggerNames["files_after_insert"]; !ok {
-				_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
-					"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-					"\nEND;",
-				)
-				if err != nil {
-					return nil, closers, err
-				}
-			}
-			if _, ok := triggerNames["files_after_delete"]; !ok {
-				_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
-					"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-					"\nEND;",
-				)
-				if err != nil {
-					return nil, closers, err
-				}
-			}
-			if _, ok := triggerNames["files_after_update"]; !ok {
-				_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
-					"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-					"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-					"\nEND;",
-				)
-				if err != nil {
-					return nil, closers, err
-				}
-			}
-		}
-
-		// Objects.
-		var objectStorage nb10.ObjectStorage
-		b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
-		}
-		b = bytes.TrimSpace(b)
-		var objectsConfig ObjectsConfig
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&objectsConfig)
-			if err != nil {
-				return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
-			}
-		}
-		switch objectsConfig.Provider {
+	fsConfigs := make([]FSConfig, len(filesConfig.Followers)+1)
+	fsConfigs[0] = FSConfig{
+		Provider:             filesConfig.Provider,
+		AuthenticationMethod: filesConfig.AuthenticationMethod,
+		TempDir:              filesConfig.TempDir,
+		Dialect:              filesConfig.Dialect,
+		FilePath:             filesConfig.FilePath,
+		User:                 filesConfig.User,
+		Password:             filesConfig.Password,
+		Host:                 filesConfig.Host,
+		Port:                 filesConfig.Port,
+		DBName:               filesConfig.DBName,
+		Params:               filesConfig.Params,
+		MaxOpenConns:         filesConfig.MaxOpenConns,
+		MaxIdleConns:         filesConfig.MaxIdleConns,
+		ConnMaxLifetime:      filesConfig.ConnMaxLifetime,
+		ConnMaxIdleTime:      filesConfig.ConnMaxIdleTime,
+	}
+	copy(fsConfigs[1:], filesConfig.Followers)
+	var filesystems []nb10.FS
+	for _, fsConfig := range fsConfigs {
+		switch fsConfig.Provider {
 		case "", "directory":
-			if objectsConfig.FilePath == "" {
-				objectsConfig.FilePath = filepath.Join(dataDir, "notebrew-objects")
+			if fsConfig.FilePath == "" {
+				fsConfig.FilePath = filepath.Join(dataDir, "notebrew-files")
 			} else {
-				objectsConfig.FilePath = filepath.Clean(objectsConfig.FilePath)
+				fsConfig.FilePath = filepath.Clean(fsConfig.FilePath)
 			}
-			err := os.MkdirAll(objectsConfig.FilePath, 0755)
+			err := os.MkdirAll(fsConfig.FilePath, 0755)
 			if err != nil {
 				return nil, closers, err
 			}
-			objectStorage, err = nb10.NewDirObjectStorage(objectsConfig.FilePath, os.TempDir())
-			if err != nil {
-				return nil, closers, err
-			}
-		case "s3":
-			if objectsConfig.Endpoint == "" {
-				return nil, closers, fmt.Errorf("%s: missing endpoint field", filepath.Join(configDir, "objects.json"))
-			}
-			if objectsConfig.Region == "" {
-				return nil, closers, fmt.Errorf("%s: missing region field", filepath.Join(configDir, "objects.json"))
-			}
-			if objectsConfig.Bucket == "" {
-				return nil, closers, fmt.Errorf("%s: missing bucket field", filepath.Join(configDir, "objects.json"))
-			}
-			if objectsConfig.AccessKeyID == "" {
-				return nil, closers, fmt.Errorf("%s: missing accessKeyID field", filepath.Join(configDir, "objects.json"))
-			}
-			if objectsConfig.SecretAccessKey == "" {
-				return nil, closers, fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
-			}
-			objectStorage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
-				Endpoint:        objectsConfig.Endpoint,
-				Region:          objectsConfig.Region,
-				Bucket:          objectsConfig.Bucket,
-				AccessKeyID:     objectsConfig.AccessKeyID,
-				SecretAccessKey: objectsConfig.SecretAccessKey,
-				Logger:          nbrew.Logger,
+			dirFS, err := nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
+				RootDir: fsConfig.FilePath,
+				TempDir: fsConfig.TempDir,
 			})
 			if err != nil {
 				return nil, closers, err
 			}
-		default:
-			return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
-		}
-		databaseFS, err := nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
-			DB:            db,
-			Dialect:       dialect,
-			ErrorCode:     errorCode,
-			ObjectStorage: objectStorage,
-			Logger:        nbrew.Logger,
-		})
-		if err != nil {
-			return nil, closers, err
-		}
-		if nbrew.DB != nil {
-			databaseFS.UpdateStorageUsed = func(ctx context.Context, sitePrefix string, delta int64) error {
-				if delta == 0 {
+			filesystems = append(filesystems, dirFS)
+		case "database":
+			var dataSourceName string
+			var dialect string
+			var db *sql.DB
+			var errorCode func(error) string
+			switch fsConfig.Dialect {
+			case "sqlite":
+				if fsConfig.FilePath == "" {
+					fsConfig.FilePath = filepath.Join(dataDir, "notebrew-files.db")
+				}
+				fsConfig.FilePath, err = filepath.Abs(fsConfig.FilePath)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: sqlite: %w", filepath.Join(configDir, "files.json"), err)
+				}
+				dataSourceName = fsConfig.FilePath + "?" + sqliteQueryString(fsConfig.Params)
+				dialect = "sqlite"
+				db, err = sql.Open(sqliteDriverName, dataSourceName)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: sqlite: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
+				}
+				closers = append(closers, db)
+				errorCode = sqliteErrorCode
+			case "postgres":
+				values := make(url.Values)
+				for key, value := range fsConfig.Params {
+					switch key {
+					case "sslmode":
+						values.Set(key, value)
+					}
+				}
+				if _, ok := fsConfig.Params["sslmode"]; !ok {
+					values.Set("sslmode", "disable")
+				}
+				if fsConfig.Port == "" {
+					fsConfig.Port = "5432"
+				}
+				uri := url.URL{
+					Scheme:   "postgres",
+					User:     url.UserPassword(fsConfig.User, fsConfig.Password),
+					Host:     fsConfig.Host + ":" + fsConfig.Port,
+					Path:     fsConfig.DBName,
+					RawQuery: values.Encode(),
+				}
+				dataSourceName = uri.String()
+				dialect = "postgres"
+				db, err = sql.Open("pgx", dataSourceName)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: postgres: open %s: %w", filepath.Join(configDir, "files.json"), dataSourceName, err)
+				}
+				closers = append(closers, db)
+				errorCode = func(err error) string {
+					var pgErr *pgconn.PgError
+					if errors.As(err, &pgErr) {
+						return pgErr.Code
+					}
+					return ""
+				}
+			case "mysql":
+				values := make(url.Values)
+				for key, value := range fsConfig.Params {
+					switch key {
+					case "charset", "collation", "loc", "maxAllowedPacket",
+						"readTimeout", "rejectReadOnly", "serverPubKey", "timeout",
+						"tls", "writeTimeout", "connectionAttributes":
+						values.Set(key, value)
+					}
+				}
+				values.Set("multiStatements", "true")
+				values.Set("parseTime", "true")
+				if fsConfig.Port == "" {
+					fsConfig.Port = "3306"
+				}
+				config, err := mysql.ParseDSN(fmt.Sprintf("tcp(%s:%s)/%s?%s", fsConfig.Host, fsConfig.Port, url.PathEscape(fsConfig.DBName), values.Encode()))
+				if err != nil {
+					return nil, closers, err
+				}
+				// Set user and passwd manually to accomodate special characters.
+				// https://github.com/go-sql-driver/mysql/issues/1323
+				config.User = fsConfig.User
+				config.Passwd = fsConfig.Password
+				driver, err := mysql.NewConnector(config)
+				if err != nil {
+					return nil, closers, err
+				}
+				dataSourceName = config.FormatDSN()
+				dialect = "mysql"
+				db = sql.OpenDB(driver)
+				closers = append(closers, db)
+				errorCode = func(err error) string {
+					var mysqlErr *mysql.MySQLError
+					if errors.As(err, &mysqlErr) {
+						return strconv.FormatUint(uint64(mysqlErr.Number), 10)
+					}
+					return ""
+				}
+			default:
+				return nil, closers, fmt.Errorf("%s: unsupported dialect %q (possible values: sqlite, postgres, mysql)", filepath.Join(configDir, "files.json"), fsConfig.Dialect)
+			}
+			err = db.Ping()
+			if err != nil {
+				return nil, closers, fmt.Errorf("%s: %s: ping %s: %w", filepath.Join(configDir, "files.json"), dialect, dataSourceName, err)
+			}
+			if fsConfig.MaxOpenConns > 0 {
+				db.SetMaxOpenConns(fsConfig.MaxOpenConns)
+			}
+			if fsConfig.MaxIdleConns > 0 {
+				db.SetMaxIdleConns(fsConfig.MaxIdleConns)
+			}
+			if fsConfig.ConnMaxLifetime != "" {
+				duration, err := time.ParseDuration(fsConfig.ConnMaxLifetime)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: connMaxLifetime: %s: %w", filepath.Join(configDir, "files.json"), fsConfig.ConnMaxLifetime, err)
+				}
+				db.SetConnMaxLifetime(duration)
+			}
+			if fsConfig.ConnMaxIdleTime != "" {
+				duration, err := time.ParseDuration(fsConfig.ConnMaxIdleTime)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: connMaxIdleTime: %s: %w", filepath.Join(configDir, "files.json"), fsConfig.ConnMaxIdleTime, err)
+				}
+				db.SetConnMaxIdleTime(duration)
+			}
+			filesCatalog, err := nb10.FilesCatalog(dialect)
+			if err != nil {
+				return nil, closers, err
+			}
+			automigrateCmd := &ddl.AutomigrateCmd{
+				DB:             db,
+				Dialect:        dialect,
+				DestCatalog:    filesCatalog,
+				AcceptWarnings: true,
+				Stderr:         io.Discard,
+			}
+			err = automigrateCmd.Run()
+			if err != nil {
+				return nil, closers, err
+			}
+			if dialect == "sqlite" {
+				dbi := ddl.NewDatabaseIntrospector(dialect, db)
+				dbi.Tables = []string{"files_fts5"}
+				tables, err := dbi.GetTables()
+				if err != nil {
+					return nil, closers, err
+				}
+				if len(tables) == 0 {
+					_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
+					if err != nil {
+						return nil, closers, err
+					}
+				}
+				dbi.Tables = []string{"files"}
+				triggers, err := dbi.GetTriggers()
+				if err != nil {
+					return nil, closers, err
+				}
+				triggerNames := make(map[string]struct{})
+				for _, trigger := range triggers {
+					triggerNames[trigger.TriggerName] = struct{}{}
+				}
+				if _, ok := triggerNames["files_after_insert"]; !ok {
+					_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
+						"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
+						"\nEND;",
+					)
+					if err != nil {
+						return nil, closers, err
+					}
+				}
+				if _, ok := triggerNames["files_after_delete"]; !ok {
+					_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
+						"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
+						"\nEND;",
+					)
+					if err != nil {
+						return nil, closers, err
+					}
+				}
+				if _, ok := triggerNames["files_after_update"]; !ok {
+					_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
+						"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
+						"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
+						"\nEND;",
+					)
+					if err != nil {
+						return nil, closers, err
+					}
+				}
+			}
+
+			// Objects.
+			var objectStorage nb10.ObjectStorage
+			b, err = os.ReadFile(filepath.Join(configDir, "objects.json"))
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
+			}
+			b = bytes.TrimSpace(b)
+			var objectsConfig ObjectsConfig
+			if len(b) > 0 {
+				decoder := json.NewDecoder(bytes.NewReader(b))
+				decoder.DisallowUnknownFields()
+				err = decoder.Decode(&objectsConfig)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "objects.json"), err)
+				}
+			}
+			switch objectsConfig.Provider {
+			case "", "directory":
+				if objectsConfig.FilePath == "" {
+					objectsConfig.FilePath = filepath.Join(dataDir, "notebrew-objects")
+				} else {
+					objectsConfig.FilePath = filepath.Clean(objectsConfig.FilePath)
+				}
+				err := os.MkdirAll(objectsConfig.FilePath, 0755)
+				if err != nil {
+					return nil, closers, err
+				}
+				objectStorage, err = nb10.NewDirObjectStorage(objectsConfig.FilePath, os.TempDir())
+				if err != nil {
+					return nil, closers, err
+				}
+			case "s3":
+				if objectsConfig.Endpoint == "" {
+					return nil, closers, fmt.Errorf("%s: missing endpoint field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.Region == "" {
+					return nil, closers, fmt.Errorf("%s: missing region field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.Bucket == "" {
+					return nil, closers, fmt.Errorf("%s: missing bucket field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.AccessKeyID == "" {
+					return nil, closers, fmt.Errorf("%s: missing accessKeyID field", filepath.Join(configDir, "objects.json"))
+				}
+				if objectsConfig.SecretAccessKey == "" {
+					return nil, closers, fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
+				}
+				objectStorage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
+					Endpoint:        objectsConfig.Endpoint,
+					Region:          objectsConfig.Region,
+					Bucket:          objectsConfig.Bucket,
+					AccessKeyID:     objectsConfig.AccessKeyID,
+					SecretAccessKey: objectsConfig.SecretAccessKey,
+					Logger:          nbrew.Logger,
+				})
+				if err != nil {
+					return nil, closers, err
+				}
+			default:
+				return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, s3)", filepath.Join(configDir, "objects.json"), objectsConfig.Provider)
+			}
+			databaseFS, err := nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
+				DB:            db,
+				Dialect:       dialect,
+				ErrorCode:     errorCode,
+				ObjectStorage: objectStorage,
+				Logger:        nbrew.Logger,
+			})
+			if err != nil {
+				return nil, closers, err
+			}
+			if nbrew.DB != nil {
+				databaseFS.UpdateStorageUsed = func(ctx context.Context, sitePrefix string, delta int64) error {
+					if delta == 0 {
+						return nil
+					}
+					_, err = sq.Exec(ctx, nbrew.DB, sq.Query{
+						Dialect: nbrew.Dialect,
+						Format: "UPDATE site" +
+							" SET storage_used = CASE WHEN coalesce(storage_used, 0) + {delta} >= 0 THEN coalesce(storage_used, 0) + {delta} ELSE 0 END" +
+							" WHERE site_name = {siteName}",
+						Values: []any{
+							sq.Int64Param("delta", delta),
+							sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+						},
+					})
+					if err != nil {
+						return err
+					}
 					return nil
 				}
-				_, err = sq.Exec(ctx, nbrew.DB, sq.Query{
-					Dialect: nbrew.Dialect,
-					Format: "UPDATE site" +
-						" SET storage_used = CASE WHEN coalesce(storage_used, 0) + {delta} >= 0 THEN coalesce(storage_used, 0) + {delta} ELSE 0 END" +
-						" WHERE site_name = {siteName}",
-					Values: []any{
-						sq.Int64Param("delta", delta),
-						sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
-					},
-				})
-				if err != nil {
-					return err
-				}
-				return nil
 			}
-		}
-		nbrew.FS = databaseFS
-	case "sftp":
-		if filesConfig.FilePath == "" {
-			filesConfig.FilePath = "/notebrew-files"
-		} else {
-			if !strings.HasPrefix(filesConfig.FilePath, "/") {
-				return nil, closers, fmt.Errorf("%s: filePath %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.FilePath)
-			}
-		}
-		if filesConfig.TempDir == "" {
-			filesConfig.TempDir = "/tmp"
-		} else {
-			if !strings.HasPrefix(filesConfig.TempDir, "/") {
-				return nil, closers, fmt.Errorf("%s: tempDir %q is not an absolute path", filepath.Join(configDir, "files.json"), filesConfig.TempDir)
-			}
-		}
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, closers, err
-		}
-		hostKeyCallback, err := knownhosts.New(filepath.Join(homeDir, ".ssh", "known_hosts"))
-		if err != nil {
-			return nil, closers, err
-		}
-		sshClientConfig := &ssh.ClientConfig{
-			User:            filesConfig.User,
-			HostKeyCallback: hostKeyCallback,
-		}
-		switch filesConfig.AuthenticationMethod {
-		case "", "password":
-			sshClientConfig.Auth = []ssh.AuthMethod{
-				ssh.Password(filesConfig.Password),
-			}
-		case "publickey":
-			var privateKeyFileExists bool
-			_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa"))
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					return nil, closers, err
-				}
+			filesystems = append(filesystems, databaseFS)
+		case "sftp":
+			if fsConfig.FilePath == "" {
+				fsConfig.FilePath = "/notebrew-files"
 			} else {
-				privateKeyFileExists = true
-			}
-			var publicKeyFileExists bool
-			_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa.pub"))
-			if err != nil {
-				if !errors.Is(err, fs.ErrNotExist) {
-					return nil, closers, err
+				if !strings.HasPrefix(fsConfig.FilePath, "/") {
+					return nil, closers, fmt.Errorf("%s: filePath %q is not an absolute path", filepath.Join(configDir, "files.json"), fsConfig.FilePath)
 				}
+			}
+			if fsConfig.TempDir == "" {
+				fsConfig.TempDir = "/tmp"
 			} else {
-				publicKeyFileExists = true
-			}
-			if !privateKeyFileExists && !publicKeyFileExists {
-				rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
-				if err != nil {
-					return nil, closers, err
-				}
-				err = rsaPrivateKey.Validate()
-				if err != nil {
-					return nil, closers, err
-				}
-				privateKeyBytes := pem.EncodeToMemory(&pem.Block{
-					Type:    "RSA PRIVATE KEY",
-					Headers: nil,
-					Bytes:   x509.MarshalPKCS1PrivateKey(rsaPrivateKey),
-				})
-				publicKey, err := ssh.NewPublicKey(rsaPrivateKey.PublicKey)
-				if err != nil {
-					return nil, closers, err
-				}
-				publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
-				err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa"), privateKeyBytes, 0600)
-				if err != nil {
-					return nil, closers, err
-				}
-				err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa.pub"), publicKeyBytes, 0600)
-				if err != nil {
-					return nil, closers, err
+				if !strings.HasPrefix(fsConfig.TempDir, "/") {
+					return nil, closers, fmt.Errorf("%s: tempDir %q is not an absolute path", filepath.Join(configDir, "files.json"), fsConfig.TempDir)
 				}
 			}
-			pemBytes, err := os.ReadFile(filepath.Join(homeDir, ".ssh", "id_rsa"))
-			if err != nil {
-				if errors.Is(err, fs.ErrNotExist) {
-					return nil, closers, fmt.Errorf("%s does not exist", filepath.Join(homeDir, ".ssh", "id_rsa"))
-				}
-				return nil, closers, err
-			}
-			signer, err := ssh.ParsePrivateKey(pemBytes)
+			homeDir, err := os.UserHomeDir()
 			if err != nil {
 				return nil, closers, err
 			}
-			sshClientConfig.Auth = []ssh.AuthMethod{
-				ssh.PublicKeys(signer),
+			hostKeyCallback, err := knownhosts.New(filepath.Join(homeDir, ".ssh", "known_hosts"))
+			if err != nil {
+				return nil, closers, err
 			}
+			sshClientConfig := &ssh.ClientConfig{
+				User:            fsConfig.User,
+				HostKeyCallback: hostKeyCallback,
+			}
+			switch fsConfig.AuthenticationMethod {
+			case "", "password":
+				sshClientConfig.Auth = []ssh.AuthMethod{
+					ssh.Password(fsConfig.Password),
+				}
+			case "publickey":
+				var privateKeyFileExists bool
+				_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa"))
+				if err != nil {
+					if !errors.Is(err, fs.ErrNotExist) {
+						return nil, closers, err
+					}
+				} else {
+					privateKeyFileExists = true
+				}
+				var publicKeyFileExists bool
+				_, err = os.Stat(filepath.Join(homeDir, ".ssh", "id_rsa.pub"))
+				if err != nil {
+					if !errors.Is(err, fs.ErrNotExist) {
+						return nil, closers, err
+					}
+				} else {
+					publicKeyFileExists = true
+				}
+				if !privateKeyFileExists && !publicKeyFileExists {
+					rsaPrivateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+					if err != nil {
+						return nil, closers, err
+					}
+					err = rsaPrivateKey.Validate()
+					if err != nil {
+						return nil, closers, err
+					}
+					privateKeyBytes := pem.EncodeToMemory(&pem.Block{
+						Type:    "RSA PRIVATE KEY",
+						Headers: nil,
+						Bytes:   x509.MarshalPKCS1PrivateKey(rsaPrivateKey),
+					})
+					publicKey, err := ssh.NewPublicKey(rsaPrivateKey.PublicKey)
+					if err != nil {
+						return nil, closers, err
+					}
+					publicKeyBytes := ssh.MarshalAuthorizedKey(publicKey)
+					err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa"), privateKeyBytes, 0600)
+					if err != nil {
+						return nil, closers, err
+					}
+					err = os.WriteFile(filepath.Join(homeDir, ".ssh", "id_rsa.pub"), publicKeyBytes, 0600)
+					if err != nil {
+						return nil, closers, err
+					}
+				}
+				pemBytes, err := os.ReadFile(filepath.Join(homeDir, ".ssh", "id_rsa"))
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						return nil, closers, fmt.Errorf("%s does not exist", filepath.Join(homeDir, ".ssh", "id_rsa"))
+					}
+					return nil, closers, err
+				}
+				signer, err := ssh.ParsePrivateKey(pemBytes)
+				if err != nil {
+					return nil, closers, err
+				}
+				sshClientConfig.Auth = []ssh.AuthMethod{
+					ssh.PublicKeys(signer),
+				}
+			default:
+				return nil, closers, fmt.Errorf("%s: invalid authenticationMethod %q", filepath.Join(configDir, "files.json"), fsConfig.AuthenticationMethod)
+			}
+			var port string
+			if fsConfig.Port == "" {
+				port = ":22"
+			} else {
+				port = ":" + fsConfig.Port
+			}
+			sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
+				NewSSHClient: func() (*ssh.Client, error) {
+					sshClient, err := ssh.Dial("tcp", fsConfig.Host+port, sshClientConfig)
+					if err != nil {
+						return nil, stacktrace.New(err)
+					}
+					return sshClient, nil
+				},
+				RootDir:      fsConfig.FilePath,
+				TempDir:      fsConfig.TempDir,
+				MaxOpenConns: fsConfig.MaxOpenConns,
+			})
+			if err != nil {
+				return nil, closers, err
+			}
+			closers = append(closers, sftpFS)
+			filesystems = append(filesystems, sftpFS)
 		default:
-			return nil, closers, fmt.Errorf("%s: invalid authenticationMethod %q", filepath.Join(configDir, "files.json"), filesConfig.AuthenticationMethod)
+			return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), fsConfig.Provider)
 		}
-		sftpFS, err := nb10.NewSFTPFS(nb10.SFTPFSConfig{
-			NewSSHClient: func() (*ssh.Client, error) {
-				// TODO: complete this function.
-				// TODO: use stacktrace.New where required.
-				return nil, nil
-			},
-			RootDir:      filesConfig.FilePath,
-			TempDir:      filesConfig.TempDir,
-			MaxOpenConns: filesConfig.MaxOpenConns,
+	}
+	if len(filesystems) == 1 {
+		nbrew.FS = filesystems[0]
+	} else {
+		nbrew.FS, err = nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
+			Leader:                 filesystems[0],
+			Followers:              filesystems[1:],
+			SynchronousReplication: filesConfig.SynchronousReplication,
+			Logger:                 nbrew.Logger,
 		})
 		if err != nil {
 			return nil, closers, err
 		}
-		closers = append(closers, sftpFS)
-		nbrew.FS = sftpFS
-	default:
-		return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), filesConfig.Provider)
 	}
 	for _, dir := range []string{
 		"notes",

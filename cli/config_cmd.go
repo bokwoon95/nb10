@@ -962,26 +962,12 @@ const filesHelp = `# == files keys == #
 `
 
 type FilesConfig struct {
-	Provider               string            `json:"provider"`
-	AuthenticationMethod   string            `json:"authenticationMethod"`
-	TempDir                string            `json:"tempDir"`
-	Dialect                string            `json:"dialect"`
-	FilePath               string            `json:"filePath"`
-	User                   string            `json:"user"`
-	Password               string            `json:"password"`
-	Host                   string            `json:"host"`
-	Port                   string            `json:"port"`
-	DBName                 string            `json:"dbName"`
-	Params                 map[string]string `json:"params"`
-	MaxOpenConns           int               `json:"maxOpenConns"`
-	MaxIdleConns           int               `json:"maxIdleConns"`
-	ConnMaxLifetime        string            `json:"connMaxLifetime"`
-	ConnMaxIdleTime        string            `json:"connMaxIdleTime"`
-	Followers              []FollowerConfig  `json:"followers"`
-	SynchronousReplication bool              `json:"synchronousReplication"`
+	FSConfig
+	Followers              []FSConfig `json:"followers"`
+	SynchronousReplication bool       `json:"synchronousReplication"`
 }
 
-type FollowerConfig struct {
+type FSConfig struct {
 	Provider             string            `json:"provider"`
 	AuthenticationMethod string            `json:"authenticationMethod"`
 	TempDir              string            `json:"tempDir"`
