@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -48,6 +49,8 @@ type ConfigCmd struct {
 	Key       sql.NullString
 	Value     sql.NullString
 }
+
+var followerPattern = regexp.MustCompile(`^followers\[(?P<followerIndex>\d+)\](?:\.(?P<tail>\w+))?$`)
 
 func ConfigCommand(configDir string, args ...string) (*ConfigCmd, error) {
 	var cmd ConfigCmd
@@ -257,9 +260,84 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stdout, filesConfig.ConnMaxLifetime+"\n")
 			case "connMaxIdleTime":
 				io.WriteString(cmd.Stdout, filesConfig.ConnMaxIdleTime+"\n")
+			case "followers":
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				encoder.SetEscapeHTML(false)
+				err := encoder.Encode(filesConfig.Followers)
+				if err != nil {
+					return err
+				}
 			default:
-				io.WriteString(cmd.Stderr, filesHelp)
-				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+				matches := followerPattern.FindStringSubmatch(tail)
+				if len(matches) == 0 {
+					io.WriteString(cmd.Stderr, filesHelp)
+					return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+				}
+				followerIndex, err := strconv.Atoi(matches[followerPattern.SubexpIndex("followerIndex")])
+				if err != nil {
+					return fmt.Errorf("%s: %s: %s is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
+				}
+				if followerIndex < 0 {
+					return fmt.Errorf("%s: %s: follower index cannot be less than 0", cmd.Key.String, tail)
+				}
+				if followerIndex > 9 {
+					return fmt.Errorf("%s: %s: follower index cannot be greater than 9", cmd.Key.String, tail)
+				}
+				var fsConfig FSConfig
+				if followerIndex < len(filesConfig.Followers) {
+					fsConfig = filesConfig.Followers[followerIndex]
+				}
+				switch matches[followerPattern.SubexpIndex("tail")] {
+				case "":
+					io.WriteString(cmd.Stderr, filesHelp)
+					encoder := json.NewEncoder(cmd.Stdout)
+					encoder.SetIndent("", "  ")
+					encoder.SetEscapeHTML(false)
+					err := encoder.Encode(fsConfig)
+					if err != nil {
+						return err
+					}
+				case "provider":
+					io.WriteString(cmd.Stdout, fsConfig.Provider+"\n")
+				case "authenticationMethod":
+					io.WriteString(cmd.Stdout, fsConfig.AuthenticationMethod+"\n")
+				case "tempDir":
+					io.WriteString(cmd.Stdout, fsConfig.TempDir+"\n")
+				case "dialect":
+					io.WriteString(cmd.Stdout, fsConfig.Dialect+"\n")
+				case "filePath":
+					io.WriteString(cmd.Stdout, fsConfig.FilePath+"\n")
+				case "user":
+					io.WriteString(cmd.Stdout, fsConfig.User+"\n")
+				case "password":
+					io.WriteString(cmd.Stdout, fsConfig.Password+"\n")
+				case "host":
+					io.WriteString(cmd.Stdout, fsConfig.Host+"\n")
+				case "port":
+					io.WriteString(cmd.Stdout, fsConfig.Port+"\n")
+				case "dbName":
+					io.WriteString(cmd.Stdout, fsConfig.DBName+"\n")
+				case "params":
+					encoder := json.NewEncoder(cmd.Stdout)
+					encoder.SetIndent("", "  ")
+					encoder.SetEscapeHTML(false)
+					err := encoder.Encode(fsConfig.Params)
+					if err != nil {
+						return err
+					}
+				case "maxOpenConns":
+					io.WriteString(cmd.Stdout, strconv.Itoa(fsConfig.MaxOpenConns)+"\n")
+				case "maxIdleConns":
+					io.WriteString(cmd.Stdout, strconv.Itoa(fsConfig.MaxIdleConns)+"\n")
+				case "connMaxLifetime":
+					io.WriteString(cmd.Stdout, fsConfig.ConnMaxLifetime+"\n")
+				case "connMaxIdleTime":
+					io.WriteString(cmd.Stdout, fsConfig.ConnMaxIdleTime+"\n")
+				default:
+					io.WriteString(cmd.Stderr, filesHelp)
+					return fmt.Errorf("%s.followers[%d]: invalid key %q", cmd.Key.String, followerIndex, tail)
+				}
 			}
 		case "objects":
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "objects.json"))
@@ -503,11 +581,13 @@ func (cmd *ConfigCmd) Run() error {
 		switch tail {
 		case "":
 			var newDatabaseConfig DatabaseConfig
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&newDatabaseConfig)
-			if err != nil {
-				return fmt.Errorf("invalid value: %w", err)
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newDatabaseConfig)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
 			}
 			databaseConfig = newDatabaseConfig
 		case "dialect":
@@ -526,11 +606,13 @@ func (cmd *ConfigCmd) Run() error {
 			databaseConfig.DBName = cmd.Value.String
 		case "params":
 			var params map[string]string
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&params)
-			if err != nil {
-				return fmt.Errorf("invalid value: %w", err)
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&params)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
 			}
 			databaseConfig.Params = params
 		case "maxOpenConns":
@@ -586,14 +668,19 @@ func (cmd *ConfigCmd) Run() error {
 		if filesConfig.Params == nil {
 			filesConfig.Params = map[string]string{}
 		}
+		if filesConfig.Followers == nil {
+			filesConfig.Followers = []FSConfig{}
+		}
 		switch tail {
 		case "":
 			var newFilesConfig FilesConfig
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&newFilesConfig)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newFilesConfig)
+				if err != nil {
+					return err
+				}
 			}
 			filesConfig = newFilesConfig
 		case "provider":
@@ -618,11 +705,13 @@ func (cmd *ConfigCmd) Run() error {
 			filesConfig.DBName = cmd.Value.String
 		case "params":
 			var params map[string]string
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&params)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&params)
+				if err != nil {
+					return err
+				}
 			}
 			filesConfig.Params = params
 		case "maxOpenConns":
@@ -641,9 +730,115 @@ func (cmd *ConfigCmd) Run() error {
 			filesConfig.ConnMaxLifetime = cmd.Value.String
 		case "connMaxIdleTime":
 			filesConfig.ConnMaxIdleTime = cmd.Value.String
+		case "followers":
+			var newFollowers []FSConfig
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newFollowers)
+				if err != nil {
+					return err
+				}
+			}
+			filesConfig.Followers = newFollowers
 		default:
-			io.WriteString(cmd.Stderr, filesHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			matches := followerPattern.FindStringSubmatch(tail)
+			if len(matches) == 0 {
+				io.WriteString(cmd.Stderr, filesHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+			followerIndex, err := strconv.Atoi(matches[followerPattern.SubexpIndex("followerIndex")])
+			if err != nil {
+				return fmt.Errorf("%s: %s: %s is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
+			}
+			if followerIndex < 0 {
+				return fmt.Errorf("%s: %s: follower index cannot be less than 0", cmd.Key.String, tail)
+			}
+			if followerIndex > 9 {
+				return fmt.Errorf("%s: %s: follower index cannot be greater than 9", cmd.Key.String, tail)
+			}
+			if followerIndex >= len(filesConfig.Followers) {
+				if followerIndex >= cap(filesConfig.Followers) {
+					followers := make([]FSConfig, followerIndex+1)
+					copy(followers, filesConfig.Followers)
+					filesConfig.Followers = followers
+				} else {
+					filesConfig.Followers = filesConfig.Followers[:followerIndex]
+				}
+			}
+			if filesConfig.Followers[followerIndex].Params == nil {
+				filesConfig.Followers[followerIndex].Params = make(map[string]string)
+			}
+			switch matches[followerPattern.SubexpIndex("tail")] {
+			case "":
+				var newFSConfig FSConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newFSConfig)
+					if err != nil {
+						return err
+					}
+				}
+				filesConfig.Followers[followerIndex] = newFSConfig
+			case "provider":
+				filesConfig.Followers[followerIndex].Provider = cmd.Value.String
+			case "authenticationMethod":
+				filesConfig.Followers[followerIndex].AuthenticationMethod = cmd.Value.String
+			case "tempDir":
+				filesConfig.Followers[followerIndex].TempDir = cmd.Value.String
+			case "dialect":
+				filesConfig.Followers[followerIndex].Dialect = cmd.Value.String
+			case "filePath":
+				filesConfig.Followers[followerIndex].FilePath = cmd.Value.String
+			case "user":
+				filesConfig.Followers[followerIndex].User = cmd.Value.String
+			case "password":
+				filesConfig.Followers[followerIndex].Password = cmd.Value.String
+			case "host":
+				filesConfig.Followers[followerIndex].Host = cmd.Value.String
+			case "port":
+				filesConfig.Followers[followerIndex].Port = cmd.Value.String
+			case "dbName":
+				filesConfig.Followers[followerIndex].DBName = cmd.Value.String
+			case "params":
+				var params map[string]string
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&params)
+					if err != nil {
+						return err
+					}
+				}
+				filesConfig.Followers[followerIndex].Params = params
+			case "maxOpenConns":
+				maxOpenConns, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
+				filesConfig.Followers[followerIndex].MaxOpenConns = maxOpenConns
+			case "maxIdleConns":
+				maxIdleConns, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
+				filesConfig.Followers[followerIndex].MaxIdleConns = maxIdleConns
+			case "connMaxLifetime":
+				filesConfig.Followers[followerIndex].ConnMaxLifetime = cmd.Value.String
+			case "connMaxIdleTime":
+				filesConfig.Followers[followerIndex].ConnMaxIdleTime = cmd.Value.String
+			default:
+				io.WriteString(cmd.Stderr, filesHelp)
+				return fmt.Errorf("%s.followers[%d]: invalid key %q", cmd.Key.String, followerIndex, tail)
+			}
+		}
+		for last := len(filesConfig.Followers) - 1; last >= 0; last-- {
+			if filesConfig.Followers[last].IsZero() {
+				filesConfig.Followers = filesConfig.Followers[:last]
+				continue
+			}
+			break
 		}
 		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "files.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
@@ -678,11 +873,13 @@ func (cmd *ConfigCmd) Run() error {
 		switch tail {
 		case "":
 			var newObjectsConfig ObjectsConfig
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&newObjectsConfig)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newObjectsConfig)
+				if err != nil {
+					return err
+				}
 			}
 			objectsConfig = newObjectsConfig
 		case "provider":
@@ -736,11 +933,13 @@ func (cmd *ConfigCmd) Run() error {
 		switch tail {
 		case "":
 			var newCaptchaConfig CaptchaConfig
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&newCaptchaConfig)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newCaptchaConfig)
+				if err != nil {
+					return err
+				}
 			}
 			captchaConfig = newCaptchaConfig
 		case "widgetScriptSrc":
@@ -757,11 +956,13 @@ func (cmd *ConfigCmd) Run() error {
 			captchaConfig.SecretKey = cmd.Value.String
 		case "csp":
 			var csp map[string]string
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&csp)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&csp)
+				if err != nil {
+					return err
+				}
 			}
 			captchaConfig.CSP = csp
 		default:
@@ -803,27 +1004,37 @@ func (cmd *ConfigCmd) Run() error {
 		switch tail {
 		case "":
 			var newProxyConfig ProxyConfig
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&newProxyConfig)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newProxyConfig)
+				if err != nil {
+					return err
+				}
 			}
 			proxyConfig = newProxyConfig
 		case "realIPHeaders":
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&proxyConfig.RealIPHeaders)
-			if err != nil {
-				return err
+			var newRealIPHeaders map[string]string
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newRealIPHeaders)
+				if err != nil {
+					return err
+				}
 			}
+			proxyConfig.RealIPHeaders = newRealIPHeaders
 		case "proxies":
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&proxyConfig.ProxyIPs)
-			if err != nil {
-				return err
+			var newProxyIPs []string
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newProxyIPs)
+				if err != nil {
+					return err
+				}
 			}
+			proxyConfig.ProxyIPs = newProxyIPs
 		default:
 			io.WriteString(cmd.Stderr, proxyHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -861,11 +1072,13 @@ func (cmd *ConfigCmd) Run() error {
 		switch tail {
 		case "":
 			var newDNSConfig DNSConfig
-			decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&newDNSConfig)
-			if err != nil {
-				return err
+			if cmd.Value.String != "" {
+				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+				decoder.DisallowUnknownFields()
+				err := decoder.Decode(&newDNSConfig)
+				if err != nil {
+					return err
+				}
 			}
 			dnsConfig = newDNSConfig
 		case "provider":
@@ -969,7 +1182,7 @@ type FilesConfig struct {
 
 type FSConfig struct {
 	Provider             string            `json:"provider"`
-	AuthenticationMethod string            `json:"authenticationMethod"`
+	AuthenticationMethod string            `json:"authenticationMethod"` // password | publickey
 	TempDir              string            `json:"tempDir"`
 	Dialect              string            `json:"dialect"`
 	FilePath             string            `json:"filePath"`
@@ -983,6 +1196,27 @@ type FSConfig struct {
 	MaxIdleConns         int               `json:"maxIdleConns"`
 	ConnMaxLifetime      string            `json:"connMaxLifetime"`
 	ConnMaxIdleTime      string            `json:"connMaxIdleTime"`
+}
+
+func (c FSConfig) IsZero() bool {
+	if c.Provider == "" &&
+		c.AuthenticationMethod == "" &&
+		c.TempDir == "" &&
+		c.Dialect == "" &&
+		c.FilePath == "" &&
+		c.User == "" &&
+		c.Password == "" &&
+		c.Host == "" &&
+		c.Port == "" &&
+		c.DBName == "" &&
+		len(c.Params) == 0 &&
+		c.MaxOpenConns == 0 &&
+		c.MaxIdleConns == 0 &&
+		c.ConnMaxLifetime == "" &&
+		c.ConnMaxIdleTime == "" {
+		return true
+	}
+	return false
 }
 
 const objectsHelp = `# == objects keys == #
