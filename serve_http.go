@@ -61,6 +61,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: move this into a middleware that is called from main().
 	// Add request method and url to the logger.
 	logger := nbrew.Logger
 	if logger == nil {
@@ -72,6 +73,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
 
+	// TODO: move this into a middleware that is called from main().
 	// https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
 	w.Header().Add("X-Frame-Options", "DENY")
 	w.Header().Add("X-Content-Type-Options", "nosniff")

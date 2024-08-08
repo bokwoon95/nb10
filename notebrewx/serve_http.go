@@ -60,5 +60,4 @@ func securityHeaders(w http.ResponseWriter, cmsDomainHTTPS bool) {
 	if cmsDomainHTTPS {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
 	}
-
 }
