@@ -37,6 +37,7 @@ type Notebrewx struct {
 		Password string
 		Host     string
 		Port     string
+		MailFrom string
 	}
 
 	SMTPLimiter *rate.Limiter
@@ -83,6 +84,7 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 		nbrewx.SMTPConfig.Password = smtpConfig.Password
 		nbrewx.SMTPConfig.Host = smtpConfig.Host
 		nbrewx.SMTPConfig.Port = smtpConfig.Port
+		nbrewx.SMTPConfig.MailFrom = smtpConfig.MailFrom
 	}
 	return nbrewx, nil
 }
