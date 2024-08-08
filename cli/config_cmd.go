@@ -96,63 +96,179 @@ func (cmd *ConfigCmd) Run() error {
 		cmd.Value.String = ""
 	}
 	head, tail, _ := strings.Cut(cmd.Key.String, ".")
-	if !cmd.Value.Valid {
-		switch head {
-		case "":
-			return fmt.Errorf("key cannot be empty")
-		case "port":
+	switch head {
+	case "":
+		return fmt.Errorf("key cannot be empty")
+	case "port":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "port.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "port.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "cmsdomain":
+		}
+	case "cmsdomain":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "cmsdomain.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "cmsdomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "contentdomain":
+		}
+	case "contentdomain":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "contentdomain.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "contentdomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "cdndomain":
+		}
+	case "cdndomain":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "cdndomain.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "cdndomain.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "imgcmd":
+		}
+	case "imgcmd":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "imgcmd.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "imgcmd.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "maxminddb":
+		}
+	case "maxminddb":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "maxminddb.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "maxminddb.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		case "database":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		}
+	case "database":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var databaseConfig DatabaseConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&databaseConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "database.json"), err)
+			}
+		}
+		if databaseConfig.Params == nil {
+			databaseConfig.Params = map[string]string{}
+		}
+		if cmd.Value.Valid {
+			switch tail {
+			case "":
+				var newDatabaseConfig DatabaseConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newDatabaseConfig)
+					if err != nil {
+						return fmt.Errorf("invalid value: %w", err)
+					}
+				}
+				databaseConfig = newDatabaseConfig
+			case "dialect":
+				databaseConfig.Dialect = cmd.Value.String
+			case "filePath":
+				databaseConfig.FilePath = cmd.Value.String
+			case "user":
+				databaseConfig.User = cmd.Value.String
+			case "password":
+				databaseConfig.Password = cmd.Value.String
+			case "host":
+				databaseConfig.Host = cmd.Value.String
+			case "port":
+				databaseConfig.Port = cmd.Value.String
+			case "dbName":
+				databaseConfig.DBName = cmd.Value.String
+			case "params":
+				var params map[string]string
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&params)
+					if err != nil {
+						return fmt.Errorf("invalid value: %w", err)
+					}
+				}
+				databaseConfig.Params = params
+			case "maxOpenConns":
+				maxOpenConns, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
+				databaseConfig.MaxOpenConns = maxOpenConns
+			case "maxIdleConns":
+				maxIdleConns, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
+				databaseConfig.MaxIdleConns = maxIdleConns
+			case "connMaxLifetime":
+				databaseConfig.ConnMaxLifetime = cmd.Value.String
+			case "connMaxIdleTime":
+				databaseConfig.ConnMaxIdleTime = cmd.Value.String
+			default:
+				io.WriteString(cmd.Stderr, databaseHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "database.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
 				return err
 			}
-			var databaseConfig DatabaseConfig
-			if len(b) > 0 {
-				decoder := json.NewDecoder(bytes.NewReader(b))
-				decoder.DisallowUnknownFields()
-				err = decoder.Decode(&databaseConfig)
-				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "database.json"), err)
-				}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err = encoder.Encode(databaseConfig)
+			if err != nil {
+				return err
 			}
-			if databaseConfig.Params == nil {
-				databaseConfig.Params = map[string]string{}
+			err = file.Close()
+			if err != nil {
+				return err
 			}
+		} else {
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, databaseHelp)
@@ -197,23 +313,214 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, databaseHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
-		case "files":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "files.json"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return err
+		}
+	case "files":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "files.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var filesConfig FilesConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&filesConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "files.json"), err)
 			}
-			var filesConfig FilesConfig
-			if len(b) > 0 {
-				decoder := json.NewDecoder(bytes.NewReader(b))
-				decoder.DisallowUnknownFields()
-				err = decoder.Decode(&filesConfig)
+		}
+		if filesConfig.Params == nil {
+			filesConfig.Params = map[string]string{}
+		}
+		if filesConfig.Followers == nil {
+			filesConfig.Followers = []FSConfig{}
+		}
+		if cmd.Value.Valid {
+			switch tail {
+			case "":
+				var newFilesConfig FilesConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newFilesConfig)
+					if err != nil {
+						return err
+					}
+				}
+				filesConfig = newFilesConfig
+			case "provider":
+				filesConfig.Provider = cmd.Value.String
+			case "authenticationMethod":
+				filesConfig.AuthenticationMethod = cmd.Value.String
+			case "tempDir":
+				filesConfig.TempDir = cmd.Value.String
+			case "dialect":
+				filesConfig.Dialect = cmd.Value.String
+			case "filePath":
+				filesConfig.FilePath = cmd.Value.String
+			case "user":
+				filesConfig.User = cmd.Value.String
+			case "password":
+				filesConfig.Password = cmd.Value.String
+			case "host":
+				filesConfig.Host = cmd.Value.String
+			case "port":
+				filesConfig.Port = cmd.Value.String
+			case "dbName":
+				filesConfig.DBName = cmd.Value.String
+			case "params":
+				var params map[string]string
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&params)
+					if err != nil {
+						return err
+					}
+				}
+				filesConfig.Params = params
+			case "maxOpenConns":
+				maxOpenConns, err := strconv.Atoi(cmd.Value.String)
 				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "files.json"), err)
+					return fmt.Errorf("invalid value: %w", err)
+				}
+				filesConfig.MaxOpenConns = maxOpenConns
+			case "maxIdleConns":
+				maxIdleConns, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("invalid value: %w", err)
+				}
+				filesConfig.MaxIdleConns = maxIdleConns
+			case "connMaxLifetime":
+				filesConfig.ConnMaxLifetime = cmd.Value.String
+			case "connMaxIdleTime":
+				filesConfig.ConnMaxIdleTime = cmd.Value.String
+			case "followers":
+				var newFollowers []FSConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newFollowers)
+					if err != nil {
+						return err
+					}
+				}
+				filesConfig.Followers = newFollowers
+			default:
+				matches := followerPattern.FindStringSubmatch(tail)
+				if len(matches) == 0 {
+					io.WriteString(cmd.Stderr, filesHelp)
+					return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+				}
+				followerIndex, err := strconv.Atoi(matches[followerPattern.SubexpIndex("followerIndex")])
+				if err != nil {
+					return fmt.Errorf("%s: %s: %s is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
+				}
+				if followerIndex < 0 {
+					return fmt.Errorf("%s: %s: follower index cannot be less than 0", cmd.Key.String, tail)
+				}
+				if followerIndex > 9 {
+					return fmt.Errorf("%s: %s: follower index cannot be greater than 9", cmd.Key.String, tail)
+				}
+				if followerIndex >= len(filesConfig.Followers) {
+					if followerIndex >= cap(filesConfig.Followers) {
+						followers := make([]FSConfig, followerIndex+1)
+						copy(followers, filesConfig.Followers)
+						filesConfig.Followers = followers
+					} else {
+						filesConfig.Followers = filesConfig.Followers[:followerIndex]
+					}
+				}
+				if filesConfig.Followers[followerIndex].Params == nil {
+					filesConfig.Followers[followerIndex].Params = make(map[string]string)
+				}
+				switch matches[followerPattern.SubexpIndex("tail")] {
+				case "":
+					var newFSConfig FSConfig
+					if cmd.Value.String != "" {
+						decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+						decoder.DisallowUnknownFields()
+						err := decoder.Decode(&newFSConfig)
+						if err != nil {
+							return err
+						}
+					}
+					filesConfig.Followers[followerIndex] = newFSConfig
+				case "provider":
+					filesConfig.Followers[followerIndex].Provider = cmd.Value.String
+				case "authenticationMethod":
+					filesConfig.Followers[followerIndex].AuthenticationMethod = cmd.Value.String
+				case "tempDir":
+					filesConfig.Followers[followerIndex].TempDir = cmd.Value.String
+				case "dialect":
+					filesConfig.Followers[followerIndex].Dialect = cmd.Value.String
+				case "filePath":
+					filesConfig.Followers[followerIndex].FilePath = cmd.Value.String
+				case "user":
+					filesConfig.Followers[followerIndex].User = cmd.Value.String
+				case "password":
+					filesConfig.Followers[followerIndex].Password = cmd.Value.String
+				case "host":
+					filesConfig.Followers[followerIndex].Host = cmd.Value.String
+				case "port":
+					filesConfig.Followers[followerIndex].Port = cmd.Value.String
+				case "dbName":
+					filesConfig.Followers[followerIndex].DBName = cmd.Value.String
+				case "params":
+					var params map[string]string
+					if cmd.Value.String != "" {
+						decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+						decoder.DisallowUnknownFields()
+						err := decoder.Decode(&params)
+						if err != nil {
+							return err
+						}
+					}
+					filesConfig.Followers[followerIndex].Params = params
+				case "maxOpenConns":
+					maxOpenConns, err := strconv.Atoi(cmd.Value.String)
+					if err != nil {
+						return fmt.Errorf("invalid value: %w", err)
+					}
+					filesConfig.Followers[followerIndex].MaxOpenConns = maxOpenConns
+				case "maxIdleConns":
+					maxIdleConns, err := strconv.Atoi(cmd.Value.String)
+					if err != nil {
+						return fmt.Errorf("invalid value: %w", err)
+					}
+					filesConfig.Followers[followerIndex].MaxIdleConns = maxIdleConns
+				case "connMaxLifetime":
+					filesConfig.Followers[followerIndex].ConnMaxLifetime = cmd.Value.String
+				case "connMaxIdleTime":
+					filesConfig.Followers[followerIndex].ConnMaxIdleTime = cmd.Value.String
+				default:
+					io.WriteString(cmd.Stderr, filesHelp)
+					return fmt.Errorf("%s.followers[%d]: invalid key %q", cmd.Key.String, followerIndex, tail)
 				}
 			}
-			if filesConfig.Params == nil {
-				filesConfig.Params = map[string]string{}
+			for last := len(filesConfig.Followers) - 1; last >= 0; last-- {
+				if filesConfig.Followers[last].IsZero() {
+					filesConfig.Followers = filesConfig.Followers[:last]
+					continue
+				}
+				break
 			}
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "files.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err = encoder.Encode(filesConfig)
+			if err != nil {
+				return err
+			}
+			err = file.Close()
+			if err != nil {
+				return err
+			}
+		} else {
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, filesHelp)
@@ -339,20 +646,69 @@ func (cmd *ConfigCmd) Run() error {
 					return fmt.Errorf("%s.followers[%d]: invalid key %q", cmd.Key.String, followerIndex, tail)
 				}
 			}
-		case "objects":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "objects.json"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		}
+	case "objects":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "objects.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var objectsConfig ObjectsConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&objectsConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "objects.json"), err)
+			}
+		}
+		if cmd.Value.Valid {
+			switch tail {
+			case "":
+				var newObjectsConfig ObjectsConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newObjectsConfig)
+					if err != nil {
+						return err
+					}
+				}
+				objectsConfig = newObjectsConfig
+			case "provider":
+				objectsConfig.Provider = cmd.Value.String
+			case "filePath":
+				objectsConfig.FilePath = cmd.Value.String
+			case "endpoint":
+				objectsConfig.Endpoint = cmd.Value.String
+			case "region":
+				objectsConfig.Region = cmd.Value.String
+			case "bucket":
+				objectsConfig.Bucket = cmd.Value.String
+			case "accessKeyID":
+				objectsConfig.AccessKeyID = cmd.Value.String
+			case "secretAccessKey":
+				objectsConfig.SecretAccessKey = cmd.Value.String
+			default:
+				io.WriteString(cmd.Stderr, objectsHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "objects.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
 				return err
 			}
-			var objectsConfig ObjectsConfig
-			if len(b) > 0 {
-				decoder := json.NewDecoder(bytes.NewReader(b))
-				decoder.DisallowUnknownFields()
-				err = decoder.Decode(&objectsConfig)
-				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "objects.json"), err)
-				}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err = encoder.Encode(objectsConfig)
+			if err != nil {
+				return err
 			}
+			err = file.Close()
+			if err != nil {
+				return err
+			}
+		} else {
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, objectsHelp)
@@ -381,23 +737,81 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, objectsHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
-		case "captcha":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "captcha.json"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		}
+	case "captcha":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "captcha.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var captchaConfig CaptchaConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&captchaConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "captcha.json"), err)
+			}
+		}
+		if captchaConfig.CSP == nil {
+			captchaConfig.CSP = make(map[string]string)
+		}
+		if cmd.Value.Valid {
+			switch tail {
+			case "":
+				var newCaptchaConfig CaptchaConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newCaptchaConfig)
+					if err != nil {
+						return err
+					}
+				}
+				captchaConfig = newCaptchaConfig
+			case "widgetScriptSrc":
+				captchaConfig.WidgetScriptSrc = cmd.Value.String
+			case "widgetClass":
+				captchaConfig.WidgetClass = cmd.Value.String
+			case "verificationURL":
+				captchaConfig.VerificationURL = cmd.Value.String
+			case "responseTokenName":
+				captchaConfig.ResponseTokenName = cmd.Value.String
+			case "siteKey":
+				captchaConfig.SiteKey = cmd.Value.String
+			case "secretKey":
+				captchaConfig.SecretKey = cmd.Value.String
+			case "csp":
+				var csp map[string]string
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&csp)
+					if err != nil {
+						return err
+					}
+				}
+				captchaConfig.CSP = csp
+			default:
+				io.WriteString(cmd.Stderr, captchaHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "captcha.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
 				return err
 			}
-			var captchaConfig CaptchaConfig
-			if len(b) > 0 {
-				decoder := json.NewDecoder(bytes.NewReader(b))
-				decoder.DisallowUnknownFields()
-				err = decoder.Decode(&captchaConfig)
-				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "captcha.json"), err)
-				}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err = encoder.Encode(captchaConfig)
+			if err != nil {
+				return err
 			}
-			if captchaConfig.CSP == nil {
-				captchaConfig.CSP = make(map[string]string)
+			err = file.Close()
+			if err != nil {
+				return err
 			}
+		} else {
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, captchaHelp)
@@ -432,22 +846,79 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, captchaHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
-		case "proxy":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		}
+	case "proxy":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var proxyConfig ProxyConfig
+		proxyConfig.RealIPHeaders = map[string]string{}
+		proxyConfig.ProxyIPs = []string{}
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&proxyConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "proxy.json"), err)
+			}
+		}
+		if cmd.Value.Valid {
+			switch tail {
+			case "":
+				var newProxyConfig ProxyConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newProxyConfig)
+					if err != nil {
+						return err
+					}
+				}
+				proxyConfig = newProxyConfig
+			case "realIPHeaders":
+				var newRealIPHeaders map[string]string
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newRealIPHeaders)
+					if err != nil {
+						return err
+					}
+				}
+				proxyConfig.RealIPHeaders = newRealIPHeaders
+			case "proxies":
+				var newProxyIPs []string
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newProxyIPs)
+					if err != nil {
+						return err
+					}
+				}
+				proxyConfig.ProxyIPs = newProxyIPs
+			default:
+				io.WriteString(cmd.Stderr, proxyHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "proxy.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
 				return err
 			}
-			var proxyConfig ProxyConfig
-			proxyConfig.RealIPHeaders = map[string]string{}
-			proxyConfig.ProxyIPs = []string{}
-			if len(b) > 0 {
-				decoder := json.NewDecoder(bytes.NewReader(b))
-				decoder.DisallowUnknownFields()
-				err = decoder.Decode(&proxyConfig)
-				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "proxy.json"), err)
-				}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err = encoder.Encode(proxyConfig)
+			if err != nil {
+				return err
 			}
+			err = file.Close()
+			if err != nil {
+				return err
+			}
+		} else {
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, proxyHelp)
@@ -478,20 +949,65 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, proxyHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
-		case "dns":
-			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
-			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		}
+	case "dns":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var dnsConfig DNSConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&dnsConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
+			}
+		}
+		if cmd.Value.Valid {
+			switch tail {
+			case "":
+				var newDNSConfig DNSConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newDNSConfig)
+					if err != nil {
+						return err
+					}
+				}
+				dnsConfig = newDNSConfig
+			case "provider":
+				dnsConfig.Provider = cmd.Value.String
+			case "username":
+				dnsConfig.Username = cmd.Value.String
+			case "apiKey":
+				dnsConfig.APIKey = cmd.Value.String
+			case "apiToken":
+				dnsConfig.APIToken = cmd.Value.String
+			case "secretKey":
+				dnsConfig.SecretKey = cmd.Value.String
+			default:
+				io.WriteString(cmd.Stderr, dnsHelp)
+				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+			}
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "dns.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
 				return err
 			}
-			var dnsConfig DNSConfig
-			if len(b) > 0 {
-				decoder := json.NewDecoder(bytes.NewReader(b))
-				decoder.DisallowUnknownFields()
-				err = decoder.Decode(&dnsConfig)
-				if err != nil {
-					return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
-				}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err = encoder.Encode(dnsConfig)
+			if err != nil {
+				return err
 			}
+			err = file.Close()
+			if err != nil {
+				return err
+			}
+		} else {
 			switch tail {
 			case "":
 				io.WriteString(cmd.Stderr, dnsHelp)
@@ -516,605 +1032,19 @@ func (cmd *ConfigCmd) Run() error {
 				io.WriteString(cmd.Stderr, dnsHelp)
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
-		case "certmagic":
+		}
+	case "certmagic":
+		if cmd.Value.Valid {
+			err := os.WriteFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"), []byte(cmd.Value.String), 0644)
+			if err != nil {
+				return err
+			}
+		} else {
 			b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"))
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
 				return err
 			}
 			io.WriteString(cmd.Stdout, string(bytes.TrimSpace(b))+"\n")
-		default:
-			io.WriteString(cmd.Stderr, configHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, head)
-		}
-		return nil
-	}
-	switch head {
-	case "":
-		return fmt.Errorf("key cannot be empty")
-	case "port":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "port.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
-		}
-	case "cmsdomain":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "cmsdomain.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
-		}
-	case "contentdomain":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "contentdomain.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
-		}
-	case "cdndomain":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "cdndomain.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
-		}
-	case "imgcmd":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "imgcmd.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
-		}
-	case "maxminddb":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "maxminddb.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
-		}
-	case "database":
-		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "database.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		var databaseConfig DatabaseConfig
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&databaseConfig)
-			if err != nil && tail != "" {
-				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "database.json"), err)
-			}
-		}
-		if databaseConfig.Params == nil {
-			databaseConfig.Params = map[string]string{}
-		}
-		switch tail {
-		case "":
-			var newDatabaseConfig DatabaseConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newDatabaseConfig)
-				if err != nil {
-					return fmt.Errorf("invalid value: %w", err)
-				}
-			}
-			databaseConfig = newDatabaseConfig
-		case "dialect":
-			databaseConfig.Dialect = cmd.Value.String
-		case "filePath":
-			databaseConfig.FilePath = cmd.Value.String
-		case "user":
-			databaseConfig.User = cmd.Value.String
-		case "password":
-			databaseConfig.Password = cmd.Value.String
-		case "host":
-			databaseConfig.Host = cmd.Value.String
-		case "port":
-			databaseConfig.Port = cmd.Value.String
-		case "dbName":
-			databaseConfig.DBName = cmd.Value.String
-		case "params":
-			var params map[string]string
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&params)
-				if err != nil {
-					return fmt.Errorf("invalid value: %w", err)
-				}
-			}
-			databaseConfig.Params = params
-		case "maxOpenConns":
-			maxOpenConns, err := strconv.Atoi(cmd.Value.String)
-			if err != nil {
-				return fmt.Errorf("invalid value: %w", err)
-			}
-			databaseConfig.MaxOpenConns = maxOpenConns
-		case "maxIdleConns":
-			maxIdleConns, err := strconv.Atoi(cmd.Value.String)
-			if err != nil {
-				return fmt.Errorf("invalid value: %w", err)
-			}
-			databaseConfig.MaxIdleConns = maxIdleConns
-		case "connMaxLifetime":
-			databaseConfig.ConnMaxLifetime = cmd.Value.String
-		case "connMaxIdleTime":
-			databaseConfig.ConnMaxIdleTime = cmd.Value.String
-		default:
-			io.WriteString(cmd.Stderr, databaseHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
-		}
-		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "database.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		err = encoder.Encode(databaseConfig)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-	case "files":
-		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "files.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		var filesConfig FilesConfig
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&filesConfig)
-			if err != nil && tail != "" {
-				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "files.json"), err)
-			}
-		}
-		if filesConfig.Params == nil {
-			filesConfig.Params = map[string]string{}
-		}
-		if filesConfig.Followers == nil {
-			filesConfig.Followers = []FSConfig{}
-		}
-		switch tail {
-		case "":
-			var newFilesConfig FilesConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newFilesConfig)
-				if err != nil {
-					return err
-				}
-			}
-			filesConfig = newFilesConfig
-		case "provider":
-			filesConfig.Provider = cmd.Value.String
-		case "authenticationMethod":
-			filesConfig.AuthenticationMethod = cmd.Value.String
-		case "tempDir":
-			filesConfig.TempDir = cmd.Value.String
-		case "dialect":
-			filesConfig.Dialect = cmd.Value.String
-		case "filePath":
-			filesConfig.FilePath = cmd.Value.String
-		case "user":
-			filesConfig.User = cmd.Value.String
-		case "password":
-			filesConfig.Password = cmd.Value.String
-		case "host":
-			filesConfig.Host = cmd.Value.String
-		case "port":
-			filesConfig.Port = cmd.Value.String
-		case "dbName":
-			filesConfig.DBName = cmd.Value.String
-		case "params":
-			var params map[string]string
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&params)
-				if err != nil {
-					return err
-				}
-			}
-			filesConfig.Params = params
-		case "maxOpenConns":
-			maxOpenConns, err := strconv.Atoi(cmd.Value.String)
-			if err != nil {
-				return fmt.Errorf("invalid value: %w", err)
-			}
-			filesConfig.MaxOpenConns = maxOpenConns
-		case "maxIdleConns":
-			maxIdleConns, err := strconv.Atoi(cmd.Value.String)
-			if err != nil {
-				return fmt.Errorf("invalid value: %w", err)
-			}
-			filesConfig.MaxIdleConns = maxIdleConns
-		case "connMaxLifetime":
-			filesConfig.ConnMaxLifetime = cmd.Value.String
-		case "connMaxIdleTime":
-			filesConfig.ConnMaxIdleTime = cmd.Value.String
-		case "followers":
-			var newFollowers []FSConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newFollowers)
-				if err != nil {
-					return err
-				}
-			}
-			filesConfig.Followers = newFollowers
-		default:
-			matches := followerPattern.FindStringSubmatch(tail)
-			if len(matches) == 0 {
-				io.WriteString(cmd.Stderr, filesHelp)
-				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
-			}
-			followerIndex, err := strconv.Atoi(matches[followerPattern.SubexpIndex("followerIndex")])
-			if err != nil {
-				return fmt.Errorf("%s: %s: %s is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
-			}
-			if followerIndex < 0 {
-				return fmt.Errorf("%s: %s: follower index cannot be less than 0", cmd.Key.String, tail)
-			}
-			if followerIndex > 9 {
-				return fmt.Errorf("%s: %s: follower index cannot be greater than 9", cmd.Key.String, tail)
-			}
-			if followerIndex >= len(filesConfig.Followers) {
-				if followerIndex >= cap(filesConfig.Followers) {
-					followers := make([]FSConfig, followerIndex+1)
-					copy(followers, filesConfig.Followers)
-					filesConfig.Followers = followers
-				} else {
-					filesConfig.Followers = filesConfig.Followers[:followerIndex]
-				}
-			}
-			if filesConfig.Followers[followerIndex].Params == nil {
-				filesConfig.Followers[followerIndex].Params = make(map[string]string)
-			}
-			switch matches[followerPattern.SubexpIndex("tail")] {
-			case "":
-				var newFSConfig FSConfig
-				if cmd.Value.String != "" {
-					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-					decoder.DisallowUnknownFields()
-					err := decoder.Decode(&newFSConfig)
-					if err != nil {
-						return err
-					}
-				}
-				filesConfig.Followers[followerIndex] = newFSConfig
-			case "provider":
-				filesConfig.Followers[followerIndex].Provider = cmd.Value.String
-			case "authenticationMethod":
-				filesConfig.Followers[followerIndex].AuthenticationMethod = cmd.Value.String
-			case "tempDir":
-				filesConfig.Followers[followerIndex].TempDir = cmd.Value.String
-			case "dialect":
-				filesConfig.Followers[followerIndex].Dialect = cmd.Value.String
-			case "filePath":
-				filesConfig.Followers[followerIndex].FilePath = cmd.Value.String
-			case "user":
-				filesConfig.Followers[followerIndex].User = cmd.Value.String
-			case "password":
-				filesConfig.Followers[followerIndex].Password = cmd.Value.String
-			case "host":
-				filesConfig.Followers[followerIndex].Host = cmd.Value.String
-			case "port":
-				filesConfig.Followers[followerIndex].Port = cmd.Value.String
-			case "dbName":
-				filesConfig.Followers[followerIndex].DBName = cmd.Value.String
-			case "params":
-				var params map[string]string
-				if cmd.Value.String != "" {
-					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-					decoder.DisallowUnknownFields()
-					err := decoder.Decode(&params)
-					if err != nil {
-						return err
-					}
-				}
-				filesConfig.Followers[followerIndex].Params = params
-			case "maxOpenConns":
-				maxOpenConns, err := strconv.Atoi(cmd.Value.String)
-				if err != nil {
-					return fmt.Errorf("invalid value: %w", err)
-				}
-				filesConfig.Followers[followerIndex].MaxOpenConns = maxOpenConns
-			case "maxIdleConns":
-				maxIdleConns, err := strconv.Atoi(cmd.Value.String)
-				if err != nil {
-					return fmt.Errorf("invalid value: %w", err)
-				}
-				filesConfig.Followers[followerIndex].MaxIdleConns = maxIdleConns
-			case "connMaxLifetime":
-				filesConfig.Followers[followerIndex].ConnMaxLifetime = cmd.Value.String
-			case "connMaxIdleTime":
-				filesConfig.Followers[followerIndex].ConnMaxIdleTime = cmd.Value.String
-			default:
-				io.WriteString(cmd.Stderr, filesHelp)
-				return fmt.Errorf("%s.followers[%d]: invalid key %q", cmd.Key.String, followerIndex, tail)
-			}
-		}
-		for last := len(filesConfig.Followers) - 1; last >= 0; last-- {
-			if filesConfig.Followers[last].IsZero() {
-				filesConfig.Followers = filesConfig.Followers[:last]
-				continue
-			}
-			break
-		}
-		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "files.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		err = encoder.Encode(filesConfig)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-	case "objects":
-		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "objects.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		var objectsConfig ObjectsConfig
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&objectsConfig)
-			if err != nil && tail != "" {
-				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "objects.json"), err)
-			}
-		}
-		switch tail {
-		case "":
-			var newObjectsConfig ObjectsConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newObjectsConfig)
-				if err != nil {
-					return err
-				}
-			}
-			objectsConfig = newObjectsConfig
-		case "provider":
-			objectsConfig.Provider = cmd.Value.String
-		case "filePath":
-			objectsConfig.FilePath = cmd.Value.String
-		case "endpoint":
-			objectsConfig.Endpoint = cmd.Value.String
-		case "region":
-			objectsConfig.Region = cmd.Value.String
-		case "bucket":
-			objectsConfig.Bucket = cmd.Value.String
-		case "accessKeyID":
-			objectsConfig.AccessKeyID = cmd.Value.String
-		case "secretAccessKey":
-			objectsConfig.SecretAccessKey = cmd.Value.String
-		default:
-			io.WriteString(cmd.Stderr, objectsHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
-		}
-		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "objects.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		err = encoder.Encode(objectsConfig)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-	case "captcha":
-		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "captcha.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		var captchaConfig CaptchaConfig
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&captchaConfig)
-			if err != nil && tail != "" {
-				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "captcha.json"), err)
-			}
-		}
-		switch tail {
-		case "":
-			var newCaptchaConfig CaptchaConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newCaptchaConfig)
-				if err != nil {
-					return err
-				}
-			}
-			captchaConfig = newCaptchaConfig
-		case "widgetScriptSrc":
-			captchaConfig.WidgetScriptSrc = cmd.Value.String
-		case "widgetClass":
-			captchaConfig.WidgetClass = cmd.Value.String
-		case "verificationURL":
-			captchaConfig.VerificationURL = cmd.Value.String
-		case "responseTokenName":
-			captchaConfig.ResponseTokenName = cmd.Value.String
-		case "siteKey":
-			captchaConfig.SiteKey = cmd.Value.String
-		case "secretKey":
-			captchaConfig.SecretKey = cmd.Value.String
-		case "csp":
-			var csp map[string]string
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&csp)
-				if err != nil {
-					return err
-				}
-			}
-			captchaConfig.CSP = csp
-		default:
-			io.WriteString(cmd.Stderr, captchaHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
-		}
-		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "captcha.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		err = encoder.Encode(captchaConfig)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-	case "proxy":
-		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		var proxyConfig ProxyConfig
-		proxyConfig.RealIPHeaders = map[string]string{}
-		proxyConfig.ProxyIPs = []string{}
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&proxyConfig)
-			if err != nil && tail != "" {
-				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "proxy.json"), err)
-			}
-		}
-		switch tail {
-		case "":
-			var newProxyConfig ProxyConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newProxyConfig)
-				if err != nil {
-					return err
-				}
-			}
-			proxyConfig = newProxyConfig
-		case "realIPHeaders":
-			var newRealIPHeaders map[string]string
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newRealIPHeaders)
-				if err != nil {
-					return err
-				}
-			}
-			proxyConfig.RealIPHeaders = newRealIPHeaders
-		case "proxies":
-			var newProxyIPs []string
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newProxyIPs)
-				if err != nil {
-					return err
-				}
-			}
-			proxyConfig.ProxyIPs = newProxyIPs
-		default:
-			io.WriteString(cmd.Stderr, proxyHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
-		}
-		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "proxy.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		err = encoder.Encode(proxyConfig)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-	case "dns":
-		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "dns.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return err
-		}
-		var dnsConfig DNSConfig
-		if len(b) > 0 {
-			decoder := json.NewDecoder(bytes.NewReader(b))
-			decoder.DisallowUnknownFields()
-			err = decoder.Decode(&dnsConfig)
-			if err != nil && tail != "" {
-				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "dns.json"), err)
-			}
-		}
-		switch tail {
-		case "":
-			var newDNSConfig DNSConfig
-			if cmd.Value.String != "" {
-				decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
-				decoder.DisallowUnknownFields()
-				err := decoder.Decode(&newDNSConfig)
-				if err != nil {
-					return err
-				}
-			}
-			dnsConfig = newDNSConfig
-		case "provider":
-			dnsConfig.Provider = cmd.Value.String
-		case "username":
-			dnsConfig.Username = cmd.Value.String
-		case "apiKey":
-			dnsConfig.APIKey = cmd.Value.String
-		case "apiToken":
-			dnsConfig.APIToken = cmd.Value.String
-		case "secretKey":
-			dnsConfig.SecretKey = cmd.Value.String
-		default:
-			io.WriteString(cmd.Stderr, dnsHelp)
-			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
-		}
-		file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "dns.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		encoder := json.NewEncoder(file)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		err = encoder.Encode(dnsConfig)
-		if err != nil {
-			return err
-		}
-		err = file.Close()
-		if err != nil {
-			return err
-		}
-	case "certmagic":
-		err := os.WriteFile(filepath.Join(cmd.ConfigDir, "certmagic.txt"), []byte(cmd.Value.String), 0644)
-		if err != nil {
-			return err
 		}
 	default:
 		io.WriteString(cmd.Stderr, configHelp)
