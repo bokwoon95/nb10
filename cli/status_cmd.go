@@ -210,8 +210,43 @@ func (cmd *StatusCmd) Run() error {
 			fmt.Fprintf(cmd.Stdout, "files         = sftp (%s:%s/%s)\n", filesConfig.Host, filesConfig.Port, strings.TrimPrefix(filesConfig.FilePath, "/"))
 		}
 		if len(filesConfig.Followers) > 0 {
-			// TODO: need to make this a loop, up to index 9.
-			// fmt.Fprintf(cmd.Stdout, "followers[0]  = %s\n", filesConfig.Host)
+			for i, fsConfig := range filesConfig.Followers {
+				if i > 9 {
+					break
+				}
+				switch fsConfig.Provider {
+				case "directory":
+					var filePath string
+					if fsConfig.FilePath == "" {
+						filePath = filepath.Join(dataHomeDir, "notebrew-files")
+					} else {
+						fsConfig.FilePath = filepath.Clean(fsConfig.FilePath)
+						filePath, err = filepath.Abs(fsConfig.FilePath)
+						if err != nil {
+							filePath = fsConfig.FilePath
+						}
+					}
+					fmt.Fprintf(cmd.Stdout, "followers[%d]  = %s\n", i, filePath)
+				case "database":
+					if fsConfig.Dialect == "sqlite" {
+						var filePath string
+						if fsConfig.FilePath == "" {
+							filePath = filepath.Join(dataHomeDir, "notebrew-files.db")
+						} else {
+							fsConfig.FilePath = filepath.Clean(fsConfig.FilePath)
+							filePath, err = filepath.Abs(fsConfig.FilePath)
+							if err != nil {
+								filePath = fsConfig.FilePath
+							}
+						}
+						fmt.Fprintf(cmd.Stdout, "followers[%d]  = %s (%s)\n", i, fsConfig.Dialect, filePath)
+					} else {
+						fmt.Fprintf(cmd.Stdout, "followers[%d]  = %s (%s:%s/%s)\n", i, fsConfig.Dialect, fsConfig.Host, fsConfig.Port, fsConfig.DBName)
+					}
+				case "sftp":
+					fmt.Fprintf(cmd.Stdout, "followers[%d]  = sftp (%s:%s/%s)\n", i, fsConfig.Host, fsConfig.Port, strings.TrimPrefix(fsConfig.FilePath, "/"))
+				}
+			}
 		}
 	}
 
