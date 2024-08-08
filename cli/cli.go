@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
-	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/caddyserver/certmagic"
 	"github.com/go-sql-driver/mysql"
@@ -576,8 +576,11 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 		}
 	}
-	fsConfigs := make([]FSConfig, len(filesConfig.Followers)+1)
-	fsConfigs[0] = FSConfig{
+	if len(filesConfig.Followers) > 9 {
+		filesConfig.Followers = filesConfig.Followers[:9]
+	}
+	fsConfigs := make([]FSConfig, 0, len(filesConfig.Followers)+1)
+	fsConfigs = append(fsConfigs, FSConfig{
 		Provider:             filesConfig.Provider,
 		AuthenticationMethod: filesConfig.AuthenticationMethod,
 		TempDir:              filesConfig.TempDir,
@@ -593,8 +596,13 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		MaxIdleConns:         filesConfig.MaxIdleConns,
 		ConnMaxLifetime:      filesConfig.ConnMaxLifetime,
 		ConnMaxIdleTime:      filesConfig.ConnMaxIdleTime,
+	})
+	for _, fsConfig := range filesConfig.Followers {
+		if fsConfig.Provider == "" {
+			continue
+		}
+		fsConfigs = append(fsConfigs, fsConfig)
 	}
-	copy(fsConfigs[1:], filesConfig.Followers)
 	var filesystems []nb10.FS
 	for _, fsConfig := range fsConfigs {
 		switch fsConfig.Provider {
@@ -1021,7 +1029,9 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 			return nil, closers, fmt.Errorf("%s: unsupported provider %q (possible values: directory, database, sftp)", filepath.Join(configDir, "files.json"), fsConfig.Provider)
 		}
 	}
-	if len(filesystems) > 1 {
+	if len(filesystems) == 1 {
+		nbrew.FS = filesystems[0]
+	} else {
 		replicatedFS, err := nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
 			Leader:                 filesystems[0],
 			Followers:              filesystems[1:],
@@ -1033,8 +1043,6 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		}
 		closers = append(closers, replicatedFS)
 		nbrew.FS = replicatedFS
-	} else {
-		nbrew.FS = filesystems[0]
 	}
 	for _, dir := range []string{
 		"notes",
