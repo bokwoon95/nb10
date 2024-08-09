@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"mime"
 	"net/http"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"path"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
+	"github.com/bokwoon95/nb10/sq"
 )
 
 func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
@@ -186,10 +188,30 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		if response.Email == "" {
 			response.FormErrors.Add("email", "required")
 		} else {
-			// TODO: check if email is a valid email format.
+			_, err := mail.ParseAddress(response.Email)
+			if err != nil {
+				response.FormErrors.Add("email", "invalid email address")
+			}
 		}
 		if len(response.FormErrors) > 0 {
 			response.Error = "FormErrorsPresent"
+			writeResponse(w, r, response)
+			return
+		}
+		exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "SELECT 1 FROM users WHERE email = {email}",
+			Values: []any{
+				sq.StringParam("email", response.Email),
+			},
+		})
+		if err != nil {
+			getLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		if exists {
+			response.Error = "UserAlreadyExists"
 			writeResponse(w, r, response)
 			return
 		}
