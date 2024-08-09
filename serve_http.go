@@ -55,6 +55,8 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		urlPath = strings.Trim(path.Clean(r.URL.Path), "/")
 	}
 
+	// TODO: we just call `urlPath := strings.Trim(path.Clean(r.URL.Path), "/")` here, leave the redirection logic to another handler.
+
 	err := r.ParseForm()
 	if err != nil {
 		nbrew.BadRequest(w, r, err)
