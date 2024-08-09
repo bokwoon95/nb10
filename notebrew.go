@@ -36,8 +36,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/libdns"
 	"github.com/oschwald/maxminddb-golang"
@@ -166,10 +166,10 @@ type User struct {
 
 type contextKey struct{}
 
-var loggerKey = &contextKey{}
+var LoggerKey = &contextKey{}
 
 func getLogger(ctx context.Context) *slog.Logger {
-	if logger, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
+	if logger, ok := ctx.Value(LoggerKey).(*slog.Logger); ok {
 		return logger
 	}
 	return slog.Default()

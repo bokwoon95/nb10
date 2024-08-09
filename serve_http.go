@@ -71,7 +71,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		slog.String("method", r.Method),
 		slog.String("url", scheme+r.Host+r.URL.RequestURI()),
 	)
-	r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
+	r = r.WithContext(context.WithValue(r.Context(), LoggerKey, logger))
 
 	// TODO: move this into a middleware that is called from main().
 	// https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
@@ -323,7 +323,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			user = result.User
 			isAuthorizedForSite = result.IsAuthorizedForSite
 			logger := logger.With(slog.String("username", user.Username))
-			r = r.WithContext(context.WithValue(r.Context(), loggerKey, logger))
+			r = r.WithContext(context.WithValue(r.Context(), LoggerKey, logger))
 		}
 
 		if sitePrefix == "" {
