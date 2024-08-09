@@ -681,3 +681,17 @@ func (nbrew *Notebrew) RedirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "Use HTTPS", http.StatusBadRequest)
 }
+
+func (nbrew *Notebrew) SecurityHeaders(w http.ResponseWriter, r *http.Request) {
+	// https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
+	w.Header().Add("X-Frame-Options", "DENY")
+	w.Header().Add("X-Content-Type-Options", "nosniff")
+	w.Header().Add("Referrer-Policy", "strict-origin-when-cross-origin")
+	w.Header().Add("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
+	w.Header().Add("Cross-Origin-Opener-Policy", "same-origin")
+	w.Header().Add("Cross-Origin-Embedder-Policy", "credentialless")
+	w.Header().Add("Cross-Origin-Resource-Policy", "cross-origin")
+	if nbrew.CMSDomainHTTPS {
+		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+	}
+}

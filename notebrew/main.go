@@ -263,6 +263,10 @@ func main() {
 		if err != nil {
 			return err
 		}
+		server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			nbrew.SecurityHeaders(w, r)
+			nbrew.ServeHTTP(w, r)
+		})
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno

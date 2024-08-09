@@ -1326,11 +1326,11 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {
 	server := &http.Server{
 		ErrorLog: log.New(&LogFilter{Stderr: os.Stderr}, "", log.LstdFlags),
+		Handler:  nbrew,
 	}
 	switch nbrew.Port {
 	case 443:
 		server.Addr = ":443"
-		server.Handler = nbrew
 		server.ReadHeaderTimeout = 5 * time.Minute
 		server.WriteTimeout = 60 * time.Minute
 		server.IdleTimeout = 5 * time.Minute
@@ -1453,14 +1453,12 @@ func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {
 		}
 	case 80:
 		server.Addr = ":80"
-		server.Handler = nbrew
 	default:
 		if len(nbrew.ProxyConfig.RealIPHeaders) == 0 && len(nbrew.ProxyConfig.ProxyIPs) == 0 {
 			server.Addr = "localhost:" + strconv.Itoa(nbrew.Port)
 		} else {
 			server.Addr = ":" + strconv.Itoa(nbrew.Port)
 		}
-		server.Handler = nbrew
 	}
 	return server, nil
 }
