@@ -210,6 +210,12 @@ func (cmd *ConfigxCmd) Run() error {
 			} else {
 				io.WriteString(cmd.Stdout, smtpConfig.MailFrom+"\n")
 			}
+		case "replyTo":
+			if cmd.Value.Valid {
+				smtpConfig.ReplyTo = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.ReplyTo+"\n")
+			}
 		case "limitInterval":
 			if cmd.Value.Valid {
 				smtpConfig.LimitInterval = cmd.Value.String
@@ -270,6 +276,7 @@ type SMTPConfig struct {
 	Host          string `json:"host"`
 	Port          string `json:"port"`
 	MailFrom      string `json:"mailFrom"`
+	ReplyTo       string `json:"replyTo"`
 	LimitInterval string `json:"limitInterval"`
 	LimitBurst    int    `json:"limitBurst"`
 }

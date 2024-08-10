@@ -320,18 +320,23 @@ func main() {
 			}
 			urlPath := strings.Trim(r.URL.Path, "/")
 			head, tail, _ := strings.Cut(urlPath, "/")
-			if head == "users" {
+			switch head {
+			case "signup":
+				switch tail {
+				case "":
+					nbrewx.signup(w, r)
+					return
+				case "success":
+					nbrewx.signupSuccess(w, r)
+					return
+				}
+			case "users":
 				switch tail {
 				case "login":
 				case "profile":
 				case "resetpassword":
 				case "billing":
 				}
-			}
-			switch urlPath {
-			case "signup":
-				nbrewx.signup(w, r)
-				return
 			}
 			nbrew.ServeHTTP(w, r)
 		})

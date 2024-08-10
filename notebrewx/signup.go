@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"mime"
 	"net/http"
@@ -14,6 +19,7 @@ import (
 
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
+	"golang.org/x/crypto/blake2b"
 )
 
 func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +108,15 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/signup/", http.StatusFound)
 				return
 			}
-			http.Redirect(w, r, "/signupsuccess/", http.StatusFound)
+			err := nbrew.SetFlashSession(w, r, map[string]any{
+				"email": response.Email,
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			http.Redirect(w, r, "/signup/success/", http.StatusFound)
 		}
 
 		var request Request
@@ -215,12 +229,120 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, r, response)
 			return
 		}
+		// TODO: check if an invite link already exists for the given email.
 		if !nbrew.Mailer.Limiter.Allow() {
+			response.Error = "MailerRateLimited"
+			writeResponse(w, r, response)
+			return
 		}
-		// TODO: captcha passed, now check if email already exists for user account.
-		// TODO: if not exists, attempt to add the mail to the mail queue. If the mail queue rejects us, we set the response.Error to ServerBusyTryAgainLater
-		// TODO: if we successfully manage to dump the mail into the queue, respond with a redirect to /signupsuccess/. No guarantee how fast the mail will reach the user, let's just hope it's fast enough.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		err = nbrew.Mailer.Limiter.Wait(ctx)
+		if err != nil {
+			response.Error = "MailerRateLimited"
+			writeResponse(w, r, response)
+			return
+		}
+		var inviteTokenBytes [8 + 16]byte
+		binary.BigEndian.PutUint64(inviteTokenBytes[:8], uint64(time.Now().Unix()))
+		_, err = rand.Read(inviteTokenBytes[8:])
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		checksum := blake2b.Sum256(inviteTokenBytes[8:])
+		var inviteTokenHash [8 + blake2b.Size256]byte
+		copy(inviteTokenHash[:8], inviteTokenBytes[:8])
+		copy(inviteTokenHash[8:], checksum[:])
+		_, err = sq.Exec(context.Background(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "INSERT INTO invite (invite_token_hash, email, site_limit, storage_limit)" +
+				" VALUES ({inviteTokenHash}, {email}, {siteLimit}, {storageLimit})",
+			Values: []any{
+				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
+				sq.Param("email", response.Email),
+				sq.Param("siteLimit", 3),
+				sq.Param("storageLimit", 10_000_000),
+			},
+		})
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		scheme := "https://"
+		if !nbrew.CMSDomainHTTPS {
+			scheme = "http://"
+		}
+		mail := Mail{
+			RcptTo: response.Email,
+			Headers: []string{
+				"Reply-To", "bokwoon.c@gmail.com",
+				"Subject", "Welcome to notebrew!",
+				"Content-Type", "text/html; charset=utf-8",
+			},
+			Body: strings.NewReader(fmt.Sprintf(
+				"<p>Your notebrew invite link: <a href='%[1]s'>%[1]s</a></p>",
+				scheme+nbrew.CMSDomain+"/users/invite/?token="+strings.TrimLeft(hex.EncodeToString(inviteTokenBytes[:]), "0"),
+			)),
+		}
+		if nbrew.ReplyTo != "" {
+			mail.Headers = append(mail.Headers, "Reply-To", nbrew.ReplyTo)
+		}
+		nbrew.Mailer.C <- mail
+		writeResponse(w, r, response)
 	default:
 		nbrew.MethodNotAllowed(w, r)
 	}
+}
+
+func (nbrew *Notebrewx) signupSuccess(w http.ResponseWriter, r *http.Request) {
+	type Response struct {
+		Email string `json:"email"`
+	}
+	if r.Method != "GET" && r.Method != "HEAD" {
+		nbrew.MethodNotAllowed(w, r)
+		return
+	}
+	writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
+		if r.Form.Has("api") {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			if r.Method == "HEAD" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			encoder := json.NewEncoder(w)
+			encoder.SetIndent("", "  ")
+			encoder.SetEscapeHTML(false)
+			err := encoder.Encode(&response)
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+			}
+			return
+		}
+		funcMap := map[string]any{
+			"join":       path.Join,
+			"hasPrefix":  strings.HasPrefix,
+			"trimPrefix": strings.TrimPrefix,
+			"contains":   strings.Contains,
+			"stylesCSS":  func() template.CSS { return template.CSS(nb10.StylesCSS) },
+			"baselineJS": func() template.JS { return template.JS(nb10.BaselineJS) },
+			"referer":    func() string { return r.Referer() },
+		}
+		tmpl, err := template.New("signup_success.html").Funcs(funcMap).ParseFS(runtimeFS, "embed/signup_success.html")
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		w.Header().Set("Content-Security-Policy", nbrew.ContentSecurityPolicy)
+		nbrew.ExecuteTemplate(w, r, tmpl, &response)
+	}
+	var response Response
+	_, err := nbrew.GetFlashSession(w, r, &response)
+	if err != nil {
+		nbrew.GetLogger(r.Context()).Error(err.Error())
+	}
+	writeResponse(w, r, response)
 }

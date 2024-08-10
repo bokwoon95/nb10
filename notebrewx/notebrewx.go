@@ -30,6 +30,8 @@ type Notebrewx struct {
 	}
 
 	Mailer *Mailer
+
+	ReplyTo string
 }
 
 func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
@@ -75,6 +77,7 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 			MailFrom: smtpConfig.MailFrom,
 			Logger:   nbrew.Logger,
 		}
+		nbrewx.ReplyTo = smtpConfig.ReplyTo
 		if smtpConfig.LimitInterval == "" {
 			mailerConfig.LimitInterval = 12 * time.Second // 300 events per hour (3600 seconds) => 12 seconds between events
 		} else {
