@@ -886,12 +886,13 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 	}
 	var errmsg string
 	var callers []string
-	if e := new(stacktrace.Error); errors.As(serverErr, &e) {
-		errmsg = e.Err.Error()
-		callers = e.Callers
+	var stackTraceErr *stacktrace.Error
+	if errors.As(serverErr, &stackTraceErr) {
+		errmsg = stackTraceErr.Err.Error()
+		callers = stackTraceErr.Callers
 	} else {
 		errmsg = serverErr.Error()
-		var pc [50]uintptr
+		var pc [30]uintptr
 		n := runtime.Callers(2, pc[:]) // skip runtime.Callers + InternalServerError
 		callers = make([]string, 0, n)
 		frames := runtime.CallersFrames(pc[:n])

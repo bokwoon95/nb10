@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"mime"
@@ -229,9 +231,37 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, r, response)
 			return
 		}
-		// TODO: check if an invite link already exists for the given email.
+		lastInviteTime, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format:  "SELECT {*} FROM invite WHERE email = {email}",
+			Values: []any{
+				sq.StringParam("email", response.Email),
+			},
+		}, func(row *sq.Row) time.Time {
+			inviteTokenHash := row.Bytes(nil, "max(invite_token_hash)")
+			if len(inviteTokenHash) != 40 {
+				return time.Time{}
+			}
+			return time.Unix(int64(binary.BigEndian.Uint64(inviteTokenHash[:8])), 0).UTC()
+		})
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+		} else {
+			timeElapsed := time.Now().Sub(lastInviteTime)
+			if timeElapsed < 15*time.Minute {
+				timeLeft := 15*time.Minute - timeElapsed
+				response.Error = "InviteAlreadyExists"
+				response.FormErrors.Add("email", fmt.Sprintf("an invite has already been sent for this email. If you still do not receive in %d minutes, try signing up again.", int(timeLeft.Minutes())))
+				writeResponse(w, r, response)
+				return
+			}
+		}
 		if !nbrew.Mailer.Limiter.Allow() {
-			response.Error = "MailerRateLimited"
+			response.Error = "EmailRateLimited"
 			writeResponse(w, r, response)
 			return
 		}
@@ -239,7 +269,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		defer cancel()
 		err = nbrew.Mailer.Limiter.Wait(ctx)
 		if err != nil {
-			response.Error = "MailerRateLimited"
+			response.Error = "EmailRateLimited"
 			writeResponse(w, r, response)
 			return
 		}
@@ -255,7 +285,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		var inviteTokenHash [8 + blake2b.Size256]byte
 		copy(inviteTokenHash[:8], inviteTokenBytes[:8])
 		copy(inviteTokenHash[8:], checksum[:])
-		_, err = sq.Exec(context.Background(), nbrew.DB, sq.Query{
+		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO invite (invite_token_hash, email, site_limit, storage_limit)" +
 				" VALUES ({inviteTokenHash}, {email}, {siteLimit}, {storageLimit})",

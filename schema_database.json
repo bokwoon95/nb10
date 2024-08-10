@@ -251,7 +251,8 @@
         "column": "email",
         "type": {
           "default": "VARCHAR(500)"
-        }
+        },
+        "index": true
       },
       {
         "column": "site_limit",

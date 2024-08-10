@@ -60,9 +60,9 @@
   <div class='mv3'>
     <div><label for='username' class='b'>Username or Email:</label></div>
     <input id='username' name='username' value='{{ $.Username }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "username" }} b--invalid-red{{ end }}' autocomplete='on' required{{ if eq (index $.PostRedirectGet "from") "resetpassword" }} autofocus{{ end }}>
-    <ul>
-      {{- range $i, $error := index $.FormErrors "username" }}
-      <li class='f6 invalid-red list-style-disc'>{{ $error.Message }}</li>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "username" }}
+      <li>{{ $error }}</li>
       {{- end }}
     </ul>
   </div>
@@ -70,9 +70,9 @@
   <div class='mv3'>
     <div><label for='password' class='b'>Password:</label></div>
     <input id='password' type='password' name='password' class='w-100 pv1 ph2 br2 ba w-100{{ if index $.FormErrors "password" }} b--invalid-red{{ end }}' autocomplete='on' required>
-    <ul>
-      {{- range $i, $error := index $.FormErrors "password" }}
-      <li class='f6 invalid-red list-style-disc'>{{ $error.Message }}</li>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "password" }}
+      <li>{{ $error }}</li>
       {{- end }}
     </ul>
   </div>

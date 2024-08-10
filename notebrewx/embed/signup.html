@@ -25,29 +25,39 @@
   </div>
 </div>
 {{- else if eq $.Error "MailerRateLimited" }}
+<div class='w-80 w-70-m w-60-l center'>
+  <h1 class='f3 mv3 b tc'>Sign up (email rate limited)</h1>
+  <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
+    <div>Our servers are currently experiencing a high volume of email transactions, please try again later.</div>
+  </div>
+  <div class='mv3'>
+    <div><label for='email' class='b'>Email:</label></div>
+    <input id='email' type='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100' readonly>
+  </div>
+</div>
 {{- else }}
-  <form method='post' class='w-80 w-70-m w-60-l center' data-login-validation data-prevent-double-submit>
-    {{- if eq $.Error "CaptchaChallengeFailed" }}
-    <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
-      <div>Captcha challenge failed, please try again.</div>
-    </div>
-    {{- end }}
-    <h1 class='f3 mv3 b tc'>Sign up</h1>
-    <p>Enter your email address to receive an invite link.</p>
-    <div class='mv3'>
-      <div><label for='email' class='b'>Email:</label></div>
-      <input id='email' type='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' autocomplete='on' required autofocus>
-      <ul>
-        {{- range $i, $error := index $.FormErrors "email" }}
-        <li class='f6 invalid-red list-style-disc'>{{ $error.Message }}</li>
-        {{- end }}
-      </ul>
-    </div>
-    {{- if $.CaptchaSiteKey }}
-    <div class='b'>I'm not a bot:</div>
-    <div class='{{ $.CaptchaWidgetClass }}' data-sitekey='{{ $.CaptchaSiteKey }}'></div>
-    {{- end }}
-    <div role='status'></div>
-    <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>sign up</button>
-  </form>
+<form method='post' class='w-80 w-70-m w-60-l center' data-login-validation data-prevent-double-submit>
+  {{- if eq $.Error "CaptchaChallengeFailed" }}
+  <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
+    <div>Captcha challenge failed, please try again.</div>
+  </div>
+  {{- end }}
+  <h1 class='f3 mv3 b tc'>Sign up</h1>
+  <p>Enter your email address to receive an invite link.</p>
+  <div class='mv3'>
+    <div><label for='email' class='b'>Email:</label></div>
+    <input id='email' type='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "email" }} b--invalid-red{{ end }}' autocomplete='on' required autofocus>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "email" }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  {{- if $.CaptchaSiteKey }}
+  <div class='b'>I'm not a bot:</div>
+  <div class='{{ $.CaptchaWidgetClass }}' data-sitekey='{{ $.CaptchaSiteKey }}'></div>
+  {{- end }}
+  <div role='status'></div>
+  <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>sign up</button>
+</form>
 {{- end }}
