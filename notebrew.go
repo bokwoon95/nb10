@@ -175,6 +175,13 @@ func getLogger(ctx context.Context) *slog.Logger {
 	return slog.Default()
 }
 
+func (nbrew *Notebrew) GetLogger(ctx context.Context) *slog.Logger {
+	if logger, ok := ctx.Value(LoggerKey).(*slog.Logger); ok {
+		return logger
+	}
+	return nbrew.Logger
+}
+
 // SetFlashSession writes a value into the user's flash session.
 func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, value any) error {
 	buf := bufPool.Get().(*bytes.Buffer)
