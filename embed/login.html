@@ -56,7 +56,6 @@
     <div>Please log in.</div>
   </div>
   {{- end }}
-
   <div class='mv3'>
     <div><label for='username' class='b'>Username or Email:</label></div>
     <input id='username' name='username' value='{{ $.Username }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "username" }} b--invalid-red{{ end }}' autocomplete='on' required{{ if eq (index $.PostRedirectGet "from") "resetpassword" }} autofocus{{ end }}>
@@ -66,7 +65,6 @@
       {{- end }}
     </ul>
   </div>
-
   <div class='mv3'>
     <div><label for='password' class='b'>Password:</label></div>
     <input id='password' type='password' name='password' class='w-100 pv1 ph2 br2 ba w-100{{ if index $.FormErrors "password" }} b--invalid-red{{ end }}' autocomplete='on' required>
@@ -76,16 +74,15 @@
       {{- end }}
     </ul>
   </div>
-
+  {{- if $.PasswordResetURL }}
+  <div class='f6'><a href='{{ $.PasswordResetURL }}'>forgot password?</a></div>
+  {{- end }}
   {{- if $.Redirect }}
   <input type='hidden' name='$.Redirect' value='{{ $.Redirect }}'>
   {{- end }}
-
   {{- if $.RequireCaptcha }}
   <div class='{{ $.CaptchaWidgetClass }}' data-sitekey='{{ $.CaptchaSiteKey }}'></div>
   {{- end }}
-
   <div role='status' data-validation-status></div>
-
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>Log in</button>
 </form>

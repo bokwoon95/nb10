@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,8 +21,10 @@ import (
 
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/cli"
+	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/stripe/stripe-go/v79"
+	"golang.org/x/crypto/blake2b"
 )
 
 var (
@@ -331,8 +335,59 @@ func main() {
 					return
 				}
 			case "users":
+				var user nb10.User
+				var sessionToken string
+				header := r.Header.Get("Authorization")
+				if header != "" {
+					if strings.HasPrefix(header, "Bearer ") {
+						sessionToken = strings.TrimPrefix(header, "Bearer ")
+					}
+				} else {
+					cookie, _ := r.Cookie("session")
+					if cookie != nil {
+						sessionToken = cookie.Value
+					}
+				}
+				if sessionToken != "" {
+					sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
+					if err == nil && len(sessionTokenBytes) == 24 {
+						var sessionTokenHash [8 + blake2b.Size256]byte
+						checksum := blake2b.Sum256(sessionTokenBytes[8:])
+						copy(sessionTokenHash[:8], sessionTokenBytes[:8])
+						copy(sessionTokenHash[8:], checksum[:])
+						user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+							Dialect: nbrew.Dialect,
+							Format: "SELECT {*}" +
+								" FROM session" +
+								" JOIN users ON users.user_id = session.user_id" +
+								" WHERE session.session_token_hash = {sessionTokenHash}",
+							Values: []any{
+								sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+							},
+						}, func(row *sq.Row) nb10.User {
+							return nb10.User{
+								UserID:                row.UUID("users.user_id"),
+								Username:              row.String("users.username"),
+								Email:                 row.String("users.email"),
+								TimezoneOffsetSeconds: row.Int("users.timezone_offset_seconds"),
+								DisableReason:         row.String("users.disable_reason"),
+								SiteLimit:             row.Int64("coalesce(users.site_limit, -1)"),
+								StorageLimit:          row.Int64("coalesce(users.storage_limit, -1)"),
+							}
+						})
+						if err != nil {
+							if !errors.Is(err, sql.ErrNoRows) {
+								nbrew.GetLogger(r.Context()).Error(err.Error())
+								nbrew.InternalServerError(w, r, err)
+								return
+							}
+						}
+					}
+				}
 				switch tail {
 				case "login":
+					nbrew.Login(w, r, user, "/users/resetpassword/")
+					return
 				case "profile":
 				case "resetpassword":
 				case "billing":

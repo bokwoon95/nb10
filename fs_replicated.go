@@ -228,8 +228,7 @@ func (file *ReplicatedFileWriter) Close() error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {
@@ -318,8 +317,7 @@ func (fsys *ReplicatedFS) Mkdir(name string, perm fs.FileMode) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {
@@ -387,8 +385,7 @@ func (fsys *ReplicatedFS) MkdirAll(name string, perm fs.FileMode) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {
@@ -456,8 +453,7 @@ func (fsys *ReplicatedFS) Remove(name string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {
@@ -525,8 +521,7 @@ func (fsys *ReplicatedFS) RemoveAll(name string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {
@@ -594,8 +589,7 @@ func (fsys *ReplicatedFS) Rename(oldName, newName string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {
@@ -663,8 +657,7 @@ func (fsys *ReplicatedFS) Copy(srcName, destName string) error {
 			gracePeriodCtx, gracePeriodCancel := context.WithCancel(context.Background())
 			defer gracePeriodCancel()
 			go func() {
-				timer := time.NewTimer(0)
-				timer.Stop()
+				timer := time.NewTimer(-1)
 				defer timer.Stop()
 				for {
 					select {

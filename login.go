@@ -23,7 +23,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) {
+func (nbrew *Notebrew) Login(w http.ResponseWriter, r *http.Request, user User, passwordResetURL string) {
 	type Request struct {
 		Username        string `json:"username"`
 		Password        string `json:"password"`
@@ -37,6 +37,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		CaptchaSiteKey         string         `json:"captchaSiteKey"`
 		Error                  string         `json:"error"`
 		FormErrors             url.Values     `json:"formErrors"`
+		PasswordResetURL       template.URL   `json:"passwordResetURL"`
 		SessionToken           string         `json:"sessionToken"`
 		Redirect               string         `json:"redirect"`
 		PostRedirectGet        map[string]any `json:"postRedirectGet"`
@@ -138,6 +139,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
 		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
+		response.PasswordResetURL = template.URL(passwordResetURL)
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
