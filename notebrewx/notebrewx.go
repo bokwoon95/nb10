@@ -87,9 +87,5 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 	return nbrewx, nil
 }
 
-type contextKey struct{}
-
-var loggerKey = &contextKey{}
-
 func (nbrew *Notebrewx) Send() {
 }
