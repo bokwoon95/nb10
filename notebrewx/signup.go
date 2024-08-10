@@ -215,6 +215,8 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, r, response)
 			return
 		}
+		if !nbrew.Mailer.Limiter.Allow() {
+		}
 		// TODO: captcha passed, now check if email already exists for user account.
 		// TODO: if not exists, attempt to add the mail to the mail queue. If the mail queue rejects us, we set the response.Error to ServerBusyTryAgainLater
 		// TODO: if we successfully manage to dump the mail into the queue, respond with a redirect to /signupsuccess/. No guarantee how fast the mail will reach the user, let's just hope it's fast enough.
