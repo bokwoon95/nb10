@@ -41,7 +41,7 @@ type Mailer struct {
 	Logger        *slog.Logger
 	baseCtx       context.Context
 	baseCtxCancel func()
-	stopped          chan struct{}
+	stopped       chan struct{}
 }
 
 type Mail struct {
@@ -64,7 +64,17 @@ func NewMailer(config MailerConfig) (*Mailer, error) {
 		Logger:        config.Logger,
 		baseCtx:       baseCtx,
 		baseCtxCancel: baseCtxCancel,
-		stopped:          make(chan struct{}),
+		stopped:       make(chan struct{}),
+	}
+	if config.Host != "" {
+		client, err := mailer.NewClient()
+		if err != nil {
+			return nil, err
+		}
+		err = client.Quit()
+		if err != nil {
+			return nil, err
+		}
 	}
 	go mailer.start()
 	return mailer, nil
