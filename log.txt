@@ -88,7 +88,7 @@ TODO: rewrite config_cmd.go to put getter and setter operations right next to ea
     - TODO: if we remove mailer from the notebrewx struct, we might even be able to remove the Notebrewx struct entirely (since the only augmented feature will be /users/billing/ and /users/profile/, and we can create standalone functions that take in an existing *Notebrew instance for that).
 TODO: bring smtp functionality into base notebrew, implement password resets via email if the user configures a mailer.
     - TODO: rename package notebrewx to notebrewlive, as in notebrew live environment (stack traces look like this: github.com/bokwoon95/notebrewlive/main.go)
-    - TODO: remove mailer.go from notebrewx
+    - TODO: we can remove configx_cmd.go, mailer.go, notebrewx.go, stripe.go from notebrewlive
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/
