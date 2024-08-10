@@ -5,12 +5,15 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -275,7 +278,62 @@ func main() {
 		if err != nil {
 			return err
 		}
-		server.Handler = nbrewx
+		server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			scheme := "https://"
+			if r.TLS == nil {
+				scheme = "http://"
+			}
+			// Redirect the www subdomain to the bare domain.
+			if r.Host == "www."+nbrew.CMSDomain {
+				http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
+				return
+			}
+			// Redirect unclean paths to the cleaned path equivalent.
+			if r.Method == "GET" || r.Method == "HEAD" {
+				cleanedPath := path.Clean(r.URL.Path)
+				if cleanedPath != "/" {
+					_, ok := nb10.AllowedFileTypes[path.Ext(cleanedPath)]
+					if !ok {
+						cleanedPath += "/"
+					}
+				}
+				if cleanedPath != r.URL.Path {
+					cleanedURL := *r.URL
+					cleanedURL.Path = cleanedPath
+					http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
+					return
+				}
+			}
+			r = r.WithContext(context.WithValue(r.Context(), nb10.LoggerKey, nbrew.Logger.With(
+				slog.String("method", r.Method),
+				slog.String("url", scheme+r.Host+r.URL.RequestURI()),
+			)))
+			nbrew.AddSecurityHeaders(w)
+			if r.Host != nbrew.CMSDomain {
+				nbrew.ServeHTTP(w, r)
+				return
+			}
+			err := r.ParseForm()
+			if err != nil {
+				nbrew.BadRequest(w, r, err)
+				return
+			}
+			urlPath := strings.Trim(r.URL.Path, "/")
+			head, tail, _ := strings.Cut(urlPath, "/")
+			if head == "users" {
+				switch tail {
+				case "login":
+				case "profile":
+				case "billing":
+				}
+			}
+			switch urlPath {
+			case "signup":
+				nbrewx.signup(w, r)
+				return
+			}
+			nbrew.ServeHTTP(w, r)
+		})
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno
