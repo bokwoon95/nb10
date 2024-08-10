@@ -88,9 +88,9 @@ func (cmd *ConfigxCmd) Run() error {
 				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "stripe.json"), err)
 			}
 		}
-		if cmd.Value.Valid {
-			switch tail {
-			case "":
+		switch tail {
+		case "":
+			if cmd.Value.Valid {
 				var newStripeConfig StripeConfig
 				if cmd.Value.String != "" {
 					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
@@ -101,14 +101,32 @@ func (cmd *ConfigxCmd) Run() error {
 					}
 				}
 				stripeConfig = newStripeConfig
-			case "publishableKey":
-				stripeConfig.PublishableKey = cmd.Value.String
-			case "secretKey":
-				stripeConfig.SecretKey = cmd.Value.String
-			default:
+			} else {
 				io.WriteString(cmd.Stderr, stripeHelp)
-				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(stripeConfig)
+				if err != nil {
+					return err
+				}
 			}
+		case "publishableKey":
+			if cmd.Value.Valid {
+				stripeConfig.PublishableKey = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, stripeConfig.PublishableKey+"\n")
+			}
+		case "secretKey":
+			if cmd.Value.Valid {
+				stripeConfig.SecretKey = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, stripeConfig.SecretKey+"\n")
+			}
+		default:
+			io.WriteString(cmd.Stderr, stripeHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		if cmd.Value.Valid {
 			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "stripe.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
 				return err
@@ -123,24 +141,6 @@ func (cmd *ConfigxCmd) Run() error {
 			err = file.Close()
 			if err != nil {
 				return err
-			}
-		} else {
-			switch tail {
-			case "":
-				io.WriteString(cmd.Stderr, stripeHelp)
-				encoder := json.NewEncoder(cmd.Stdout)
-				encoder.SetIndent("", "  ")
-				err := encoder.Encode(stripeConfig)
-				if err != nil {
-					return err
-				}
-			case "publishableKey":
-				io.WriteString(cmd.Stdout, stripeConfig.PublishableKey+"\n")
-			case "secretKey":
-				io.WriteString(cmd.Stdout, stripeConfig.SecretKey+"\n")
-			default:
-				io.WriteString(cmd.Stderr, stripeHelp)
-				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		}
 	case "smtp":
@@ -157,9 +157,9 @@ func (cmd *ConfigxCmd) Run() error {
 				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "smtp.json"), err)
 			}
 		}
-		if cmd.Value.Valid {
-			switch tail {
-			case "":
+		switch tail {
+		case "":
+			if cmd.Value.Valid {
 				var newSMTPConfig SMTPConfig
 				if cmd.Value.String != "" {
 					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
@@ -170,20 +170,50 @@ func (cmd *ConfigxCmd) Run() error {
 					}
 				}
 				smtpConfig = newSMTPConfig
-			case "username":
-				smtpConfig.Username = cmd.Value.String
-			case "password":
-				smtpConfig.Password = cmd.Value.String
-			case "host":
-				smtpConfig.Host = cmd.Value.String
-			case "port":
-				smtpConfig.Port = cmd.Value.String
-			case "mailFrom":
-				smtpConfig.MailFrom = cmd.Value.String
-			default:
+			} else {
 				io.WriteString(cmd.Stderr, smtpHelp)
-				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(smtpConfig)
+				if err != nil {
+					return err
+				}
 			}
+		case "username":
+			if cmd.Value.Valid {
+				smtpConfig.Username = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Username+"\n")
+			}
+		case "password":
+			if cmd.Value.Valid {
+				smtpConfig.Password = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Password+"\n")
+			}
+		case "host":
+			if cmd.Value.Valid {
+				smtpConfig.Host = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Host+"\n")
+			}
+		case "port":
+			if cmd.Value.Valid {
+				smtpConfig.Port = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Port+"\n")
+			}
+		case "mailFrom":
+			if cmd.Value.Valid {
+				smtpConfig.MailFrom = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.MailFrom+"\n")
+			}
+		default:
+			io.WriteString(cmd.Stderr, smtpHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		if cmd.Value.Valid {
 			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "smtp.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
 				return err
@@ -198,30 +228,6 @@ func (cmd *ConfigxCmd) Run() error {
 			err = file.Close()
 			if err != nil {
 				return err
-			}
-		} else {
-			switch tail {
-			case "":
-				io.WriteString(cmd.Stderr, smtpHelp)
-				encoder := json.NewEncoder(cmd.Stdout)
-				encoder.SetIndent("", "  ")
-				err := encoder.Encode(smtpConfig)
-				if err != nil {
-					return err
-				}
-			case "username":
-				io.WriteString(cmd.Stdout, smtpConfig.Username+"\n")
-			case "password":
-				io.WriteString(cmd.Stdout, smtpConfig.Password+"\n")
-			case "host":
-				io.WriteString(cmd.Stdout, smtpConfig.Host+"\n")
-			case "port":
-				io.WriteString(cmd.Stdout, smtpConfig.Port+"\n")
-			case "mailFrom":
-				io.WriteString(cmd.Stdout, smtpConfig.MailFrom+"\n")
-			default:
-				io.WriteString(cmd.Stderr, smtpHelp)
-				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		}
 	default:

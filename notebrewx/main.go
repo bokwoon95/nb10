@@ -324,6 +324,7 @@ func main() {
 				switch tail {
 				case "login":
 				case "profile":
+				case "resetpassword":
 				case "billing":
 				}
 			}
