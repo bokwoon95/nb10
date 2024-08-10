@@ -22,11 +22,13 @@ import (
 func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		Token           string `json:"token"`
+		Email           string `json:"email"`
 		Password        string `json:"password"`
 		ConfirmPassword string `json:"confirmPassword"`
 	}
 	type Response struct {
 		Token      string     `json:"token"`
+		Email      string     `json:"email"`
 		Error      string     `json:"error"`
 		FormErrors url.Values `json:"formErrors"`
 	}
@@ -78,7 +80,11 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 		}
 		response.Token = r.Form.Get("token")
 		if response.Token == "" {
-			response.Error = "MissingResetToken"
+			if nbrew.Mailer == nil {
+				response.Error = "MissingResetToken"
+				writeResponse(w, r, response)
+				return
+			}
 			writeResponse(w, r, response)
 			return
 		}
@@ -196,7 +202,11 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			FormErrors: url.Values{},
 		}
 		if response.Token == "" {
-			response.Error = "MissingResetToken"
+			if nbrew.Mailer == nil {
+				response.Error = "MissingResetToken"
+				writeResponse(w, r, response)
+				return
+			}
 			writeResponse(w, r, response)
 			return
 		}

@@ -83,6 +83,8 @@ CREATE TABLE signup <-- for successful signups, keyed by email
 CREATE TABLE signup_error <-- for signup errors
 no email table, if the server restarts it just closes the events channel and completes existing smtp transactions before exiting. users will have to manually request again. it's fine because we
 
+TODO: rewrite
+TODO: bring smtp functionality into base notebrew, implement password resets via email if the user configures a mailer.
 TODO: signup.go
     TODO: /signup/
     TODO: /users/billing/

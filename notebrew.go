@@ -96,6 +96,10 @@ type Notebrew struct {
 		CSP               map[string]string
 	}
 
+	Mailer   *Mailer
+	MailFrom string
+	ReplyTo  string
+
 	ProxyConfig struct {
 		RealIPHeaders map[netip.Addr]string
 		ProxyIPs      map[netip.Addr]struct{}

@@ -847,6 +847,115 @@ func (cmd *ConfigCmd) Run() error {
 				return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
 			}
 		}
+	case "smtp":
+		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "smtp.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		var smtpConfig SMTPConfig
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			decoder.DisallowUnknownFields()
+			err = decoder.Decode(&smtpConfig)
+			if err != nil && tail != "" {
+				return fmt.Errorf("%s: %w", filepath.Join(cmd.ConfigDir, "smtp.json"), err)
+			}
+		}
+		switch tail {
+		case "":
+			if cmd.Value.Valid {
+				var newSMTPConfig SMTPConfig
+				if cmd.Value.String != "" {
+					decoder := json.NewDecoder(strings.NewReader(cmd.Value.String))
+					decoder.DisallowUnknownFields()
+					err := decoder.Decode(&newSMTPConfig)
+					if err != nil {
+						return err
+					}
+				}
+				smtpConfig = newSMTPConfig
+			} else {
+				io.WriteString(cmd.Stderr, smtpHelp)
+				encoder := json.NewEncoder(cmd.Stdout)
+				encoder.SetIndent("", "  ")
+				err := encoder.Encode(smtpConfig)
+				if err != nil {
+					return err
+				}
+			}
+		case "username":
+			if cmd.Value.Valid {
+				smtpConfig.Username = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Username+"\n")
+			}
+		case "password":
+			if cmd.Value.Valid {
+				smtpConfig.Password = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Password+"\n")
+			}
+		case "host":
+			if cmd.Value.Valid {
+				smtpConfig.Host = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Host+"\n")
+			}
+		case "port":
+			if cmd.Value.Valid {
+				smtpConfig.Port = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.Port+"\n")
+			}
+		case "mailFrom":
+			if cmd.Value.Valid {
+				smtpConfig.MailFrom = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.MailFrom+"\n")
+			}
+		case "replyTo":
+			if cmd.Value.Valid {
+				smtpConfig.ReplyTo = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.ReplyTo+"\n")
+			}
+		case "limitInterval":
+			if cmd.Value.Valid {
+				smtpConfig.LimitInterval = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.LimitInterval+"\n")
+			}
+		case "limitBurst":
+			if cmd.Value.Valid {
+				limitBurst, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("%s: %q is not an integer", cmd.Key.String, cmd.Value.String)
+				}
+				smtpConfig.LimitBurst = limitBurst
+			} else {
+				io.WriteString(cmd.Stdout, strconv.Itoa(smtpConfig.LimitBurst)+"\n")
+			}
+		default:
+			io.WriteString(cmd.Stderr, smtpHelp)
+			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
+		}
+		if cmd.Value.Valid {
+			file, err := os.OpenFile(filepath.Join(cmd.ConfigDir, "smtp.json"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			encoder := json.NewEncoder(file)
+			encoder.SetIndent("", "  ")
+			err = encoder.Encode(smtpConfig)
+			if err != nil {
+				return err
+			}
+			err = file.Close()
+			if err != nil {
+				return err
+			}
+		}
 	case "proxy":
 		b, err := os.ReadFile(filepath.Join(cmd.ConfigDir, "proxy.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -1191,6 +1300,28 @@ type CaptchaConfig struct {
 	SecretKey         string            `json:"secretKey"`
 	CSP               map[string]string `json:"csp"`
 }
+
+type SMTPConfig struct {
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	Host          string `json:"host"`
+	Port          string `json:"port"`
+	MailFrom      string `json:"mailFrom"`
+	ReplyTo       string `json:"replyTo"`
+	LimitInterval string `json:"limitInterval"`
+	LimitBurst    int    `json:"limitBurst"`
+}
+
+const smtpHelp = `# == smtp keys == #
+# username      - SMTP username.
+# password      - SMTP password.
+# host          - SMTP host.
+# port          - SMTP port.
+# mailFrom      - SMTP MAIL FROM address.
+# replyTo       - SMTP Reply-To address.
+# limitInterval - Interval for replenishing one token back to the rate limiter bucket. e.g 172.8s (500 emails per day), 12s (300 emails per hour), 1s (1 email per second)
+# limitBurst    - Maximum tokens that can be held by the rate limiter bucket at any time.
+`
 
 const proxyHelp = `# == proxy keys == #
 # Refer to ` + "`notebrew config`" + ` on how to get and set config values.

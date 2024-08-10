@@ -1249,6 +1249,54 @@ func Notebrew(configDir, dataDir string) (*nb10.Notebrew, []io.Closer, error) {
 		nbrew.CaptchaConfig.CSP = captchaConfig.CSP
 	}
 
+	// SMTP.
+	b, err = os.ReadFile(filepath.Join(configDir, "smtp.json"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
+	}
+	b = bytes.TrimSpace(b)
+	if len(b) > 0 {
+		var smtpConfig SMTPConfig
+		decoder := json.NewDecoder(bytes.NewReader(b))
+		decoder.DisallowUnknownFields()
+		err := decoder.Decode(&smtpConfig)
+		if err != nil {
+			return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
+		}
+		if smtpConfig.Host != "" && smtpConfig.Port != "" && smtpConfig.Username != "" && smtpConfig.Password != "" {
+			mailerConfig := nb10.MailerConfig{
+				Username: smtpConfig.Username,
+				Password: smtpConfig.Password,
+				Host:     smtpConfig.Host,
+				Port:     smtpConfig.Port,
+				Logger:   nbrew.Logger,
+			}
+			nbrew.MailFrom = smtpConfig.MailFrom
+			nbrew.ReplyTo = smtpConfig.ReplyTo
+			if smtpConfig.LimitInterval == "" {
+				// 300 emails per hour (3600 seconds) => 3600 / 200 = 12 seconds between emails
+				mailerConfig.LimitInterval = 12 * time.Second
+			} else {
+				limitInterval, err := time.ParseDuration(smtpConfig.LimitInterval)
+				if err != nil {
+					return nil, closers, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
+				}
+				mailerConfig.LimitInterval = limitInterval
+			}
+			if smtpConfig.LimitBurst <= 0 {
+				mailerConfig.LimitBurst = 200
+			} else {
+				mailerConfig.LimitBurst = smtpConfig.LimitBurst
+			}
+			mailer, err := nb10.NewMailer(mailerConfig)
+			if err != nil {
+				return nil, closers, err
+			}
+			closers = append(closers, mailer)
+			nbrew.Mailer = mailer
+		}
+	}
+
 	// Proxy.
 	b, err = os.ReadFile(filepath.Join(configDir, "proxy.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {

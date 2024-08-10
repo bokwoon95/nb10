@@ -386,10 +386,12 @@ func main() {
 				}
 				switch tail {
 				case "login":
+					// TODO: handled natively by notebrew
 					nbrew.Login(w, r, user, "/users/resetpassword/")
 					return
 				case "profile":
 				case "resetpassword":
+					// TODO: handled natively by notebrew
 				case "billing":
 				}
 			}
