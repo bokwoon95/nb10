@@ -168,13 +168,6 @@ type contextKey struct{}
 
 var LoggerKey = &contextKey{}
 
-func getLogger(ctx context.Context) *slog.Logger {
-	if logger, ok := ctx.Value(LoggerKey).(*slog.Logger); ok {
-		return logger
-	}
-	return slog.Default()
-}
-
 func (nbrew *Notebrew) GetLogger(ctx context.Context) *slog.Logger {
 	if logger, ok := ctx.Value(LoggerKey).(*slog.Logger); ok {
 		return logger

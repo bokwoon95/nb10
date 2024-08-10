@@ -23,72 +23,14 @@ import (
 )
 
 func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	scheme := "https://"
-	if r.TLS == nil {
-		scheme = "http://"
-	}
-
-	// Redirect the www subdomain to the bare domain.
-	if r.Host == "www."+nbrew.CMSDomain {
-		http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
-		return
-	}
-
-	// Clean the path and redirect if necessary.
-	var urlPath string
-	if r.Method == "GET" || r.Method == "HEAD" {
-		cleanedPath := path.Clean(r.URL.Path)
-		if cleanedPath != "/" {
-			_, ok := AllowedFileTypes[path.Ext(cleanedPath)]
-			if !ok {
-				cleanedPath += "/"
-			}
-		}
-		if cleanedPath != r.URL.Path {
-			cleanedURL := *r.URL
-			cleanedURL.Path = cleanedPath
-			http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
-			return
-		}
-		urlPath = strings.Trim(cleanedPath, "/")
-	} else {
-		urlPath = strings.Trim(path.Clean(r.URL.Path), "/")
-	}
-
-	// TODO: we just call `urlPath := strings.Trim(path.Clean(r.URL.Path), "/")` here, leave the redirection logic to another handler.
-
 	err := r.ParseForm()
 	if err != nil {
 		nbrew.BadRequest(w, r, err)
 		return
 	}
 
-	// TODO: move this into a middleware that is called from main().
-	// Add request method and url to the logger.
-	logger := nbrew.Logger
-	if logger == nil {
-		logger = slog.Default()
-	}
-	logger = logger.With(
-		slog.String("method", r.Method),
-		slog.String("url", scheme+r.Host+r.URL.RequestURI()),
-	)
-	r = r.WithContext(context.WithValue(r.Context(), LoggerKey, logger))
-
-	// TODO: move this into a middleware that is called from main().
-	// https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
-	w.Header().Add("X-Frame-Options", "DENY")
-	w.Header().Add("X-Content-Type-Options", "nosniff")
-	w.Header().Add("Referrer-Policy", "strict-origin-when-cross-origin")
-	w.Header().Add("Permissions-Policy", "geolocation=(), camera=(), microphone=()")
-	w.Header().Add("Cross-Origin-Opener-Policy", "same-origin")
-	w.Header().Add("Cross-Origin-Embedder-Policy", "credentialless")
-	w.Header().Add("Cross-Origin-Resource-Policy", "cross-origin")
-	if nbrew.CMSDomainHTTPS {
-		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-	}
-
 	// Handle the /users/* route on the CMS domain.
+	urlPath := strings.Trim(path.Clean(r.URL.Path), "/")
 	head, tail, _ := strings.Cut(urlPath, "/")
 	if r.Host == nbrew.CMSDomain && head == "users" {
 		if nbrew.DB == nil {
@@ -137,7 +79,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil {
 					if !errors.Is(err, sql.ErrNoRows) {
-						logger.Error(err.Error())
+						nbrew.GetLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
 						return
 					}
@@ -311,7 +253,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					logger.Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -324,8 +266,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			user = result.User
 			isAuthorizedForSite = result.IsAuthorizedForSite
-			logger := logger.With(slog.String("username", user.Username))
-			r = r.WithContext(context.WithValue(r.Context(), LoggerKey, logger))
+			r = r.WithContext(context.WithValue(r.Context(), LoggerKey, nbrew.GetLogger(r.Context()).With(
+				slog.String("username", user.Username),
+			)))
 		}
 
 		if sitePrefix == "" {
@@ -500,7 +443,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "404 Not Found", http.StatusNotFound)
 					return
 				}
-				logger.Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -519,7 +462,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			_, err = io.Copy(w, reader)
 			if err != nil {
-				logger.Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
@@ -534,6 +477,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ext := path.Ext(urlPath)
 	if ext == "" {
 		if subdomain == "www" {
+			scheme := "https://"
+			if r.TLS == nil {
+				scheme = "http://"
+			}
 			http.Redirect(w, r, scheme+nbrew.ContentDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
 			return
 		}
@@ -562,14 +509,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			custom404(w, r, nbrew.FS, sitePrefix)
 			return
 		}
-		logger.Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer file.Close()
 	fileInfo, err := file.Stat()
 	if err != nil {
-		logger.Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -700,7 +647,7 @@ func (nbrew *Notebrew) RedirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Use HTTPS", http.StatusBadRequest)
 }
 
-func (nbrew *Notebrew) SecurityHeaders(w http.ResponseWriter, r *http.Request) {
+func (nbrew *Notebrew) AddSecurityHeaders(w http.ResponseWriter) {
 	// https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html
 	w.Header().Add("X-Frame-Options", "DENY")
 	w.Header().Add("X-Content-Type-Options", "nosniff")
