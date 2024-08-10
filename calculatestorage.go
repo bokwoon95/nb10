@@ -94,7 +94,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 	}
 	err := group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
@@ -104,7 +104,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 		},
 	})
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}

@@ -68,7 +68,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -84,7 +84,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 			}
 			tmpl, err := template.New("applytheme.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/applytheme.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -95,7 +95,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 		var response Response
 		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 		}
 		response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 		response.SitePrefix = sitePrefix
@@ -127,7 +127,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				writeResponse(w, r, response)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -239,7 +239,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 		})
 		err = group.Wait()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -257,14 +257,14 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetFlashSession(w, r, &response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -278,7 +278,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				"regenerationStats": response.RegenerationStats,
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -346,7 +346,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 				writeResponse(w, r, response)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -381,7 +381,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return path.Base(row.String("file_path"))
 				})
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -397,7 +397,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return nil
 				})
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -416,7 +416,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					writeResponse(w, r, response)
 					return
 				}
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -430,7 +430,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -686,7 +686,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 		}
 		err = group.Wait()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}

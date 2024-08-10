@@ -81,7 +81,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
@@ -234,7 +234,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		}
 		tmpl, err := template.New("directory.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/directory.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -255,7 +255,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	var response Response
 	_, err := nbrew.GetFlashSession(w, r, &response)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.CDNDomain = nbrew.CDNDomain
@@ -438,7 +438,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	if !ok {
 		dirEntries, err := nbrew.FS.WithContext(r.Context()).ReadDir(path.Join(sitePrefix, filePath))
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -446,7 +446,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		for _, dirEntry := range dirEntries {
 			fileInfo, err := dirEntry.Info()
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -2118,7 +2118,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	}
 	err = group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}

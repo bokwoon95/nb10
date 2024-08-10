@@ -44,7 +44,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -59,7 +59,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 			}
 			tmpl, err := template.New("signup.html").Funcs(funcMap).ParseFS(runtimeFS, "embed/signup.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -69,7 +69,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		var response Response
 		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 		}
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
@@ -88,14 +88,14 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetFlashSession(w, r, &response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -158,7 +158,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := client.Post(nbrew.CaptchaConfig.VerificationURL, "application/x-www-form-urlencoded", strings.NewReader(values.Encode()))
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -166,7 +166,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		result := make(map[string]any)
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -174,9 +174,9 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		if value == nil {
 			b, err := json.Marshal(result)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 			} else {
-				getLogger(r.Context()).Error(string(b))
+				nbrew.GetLogger(r.Context()).Error(string(b))
 			}
 		}
 		success, _ := value.(bool)
@@ -206,7 +206,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}

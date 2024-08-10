@@ -2,13 +2,11 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
-	"log/slog"
 	"net/smtp"
 	"os"
 	"path/filepath"
@@ -92,13 +90,6 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 type contextKey struct{}
 
 var loggerKey = &contextKey{}
-
-func getLogger(ctx context.Context) *slog.Logger {
-	if logger, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
-		return logger
-	}
-	return slog.Default()
-}
 
 func (nbrew *Notebrewx) Send() {
 }

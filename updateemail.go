@@ -42,7 +42,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -58,7 +58,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 			}
 			tmpl, err := template.New("updateemail.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/updateemail.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -69,7 +69,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 		var response Response
 		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 		}
 		response.UserID = user.UserID
 		response.Username = user.Username
@@ -97,14 +97,14 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetFlashSession(w, r, &response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -117,7 +117,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -173,7 +173,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 				return row.Bytes(nil, "password_hash")
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -200,7 +200,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 					},
 				})
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -223,7 +223,7 @@ func (nbrew *Notebrew) updateemail(w http.ResponseWriter, r *http.Request, user 
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}

@@ -46,7 +46,7 @@ func (nbrew *Notebrew) createsession(w http.ResponseWriter, r *http.Request, use
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -62,7 +62,7 @@ func (nbrew *Notebrew) createsession(w http.ResponseWriter, r *http.Request, use
 			}
 			tmpl, err := template.New("createsession.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/createsession.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -72,7 +72,7 @@ func (nbrew *Notebrew) createsession(w http.ResponseWriter, r *http.Request, use
 		var response Response
 		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 		}
 		response.UserID = user.UserID
 		response.Username = user.Username
@@ -91,13 +91,13 @@ func (nbrew *Notebrew) createsession(w http.ResponseWriter, r *http.Request, use
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			err := nbrew.SetFlashSession(w, r, &response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -193,7 +193,7 @@ func (nbrew *Notebrew) createsession(w http.ResponseWriter, r *http.Request, use
 		binary.BigEndian.PutUint64(sessionTokenBytes[:8], uint64(time.Now().Unix()))
 		_, err := rand.Read(sessionTokenBytes[8:])
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -212,7 +212,7 @@ func (nbrew *Notebrew) createsession(w http.ResponseWriter, r *http.Request, use
 			},
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}

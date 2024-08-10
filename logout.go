@@ -50,7 +50,7 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 		}
 		tmpl, err := template.New("logout.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/logout.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -72,7 +72,7 @@ func (nbrew *Notebrew) logout(w http.ResponseWriter, r *http.Request, user User)
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}

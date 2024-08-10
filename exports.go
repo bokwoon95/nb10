@@ -68,13 +68,13 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				nbrew.NotFound(w, r)
 				return
 			}
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		fileInfo, err := file.Stat()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -89,7 +89,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 			encoder.SetEscapeHTML(false)
 			err := encoder.Encode(&response)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 			}
 			return
 		}
@@ -174,7 +174,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 		}
 		tmpl, err := template.New("exports.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/exports.html")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -184,14 +184,14 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 
 	fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, "exports"))
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
 	var response Response
 	_, err = nbrew.GetFlashSession(w, r, &response)
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 	}
 	response.ContentBaseURL = nbrew.ContentBaseURL(sitePrefix)
 	response.CDNDomain = nbrew.CDNDomain
@@ -376,7 +376,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	}
 	err = group.Wait()
 	if err != nil {
-		getLogger(r.Context()).Error(err.Error())
+		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
 	}

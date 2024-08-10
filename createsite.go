@@ -93,7 +93,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
@@ -110,7 +110,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			}
 			tmpl, err := template.New("createsite.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/createsite.html")
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -121,7 +121,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		var response Response
 		_, err := nbrew.GetFlashSession(w, r, &response)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 		}
 		response.ContentDomain = nbrew.ContentDomain
 		response.ValidateCustomDomain = nbrew.Port == 443
@@ -135,7 +135,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -159,14 +159,14 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				encoder.SetEscapeHTML(false)
 				err := encoder.Encode(&response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 				}
 				return
 			}
 			if response.Error != "" {
 				err := nbrew.SetFlashSession(w, r, &response)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -184,7 +184,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -232,7 +232,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		userSiteNames, maxSitesReached, err := getUserSiteInfo(user.Username)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -276,7 +276,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			if nbrew.Port == 443 {
 				ips, err := net.DefaultResolver.LookupIPAddr(r.Context(), response.SiteName)
 				if err != nil {
-					getLogger(r.Context()).Error(err.Error())
+					nbrew.GetLogger(r.Context()).Error(err.Error())
 					nbrew.InternalServerError(w, r, err)
 					return
 				}
@@ -304,7 +304,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		if nbrew.DB != nil {
 			tx, err := nbrew.DB.Begin()
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -328,7 +328,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 						return
 					}
 				}
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -342,7 +342,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -356,20 +356,20 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				},
 			})
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 			err = tx.Commit()
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
 		}
 		err = nbrew.FS.Mkdir(sitePrefix, 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -386,7 +386,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		for _, dir := range dirs {
 			err = nbrew.FS.Mkdir(path.Join(sitePrefix, dir), 0755)
 			if err != nil && !errors.Is(err, fs.ErrExist) {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
@@ -403,13 +403,13 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		writer, err := nbrew.FS.WithContext(r.Context()).OpenWriter(path.Join(sitePrefix, "site.json"), 0644)
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -429,13 +429,13 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			"TimezoneOffset": fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
 		err = writer.Close()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -447,7 +447,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			SitePrefix:         sitePrefix,
 		})
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -456,23 +456,23 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.json"), 0644)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			defer writer.Close()
 			_, err = writer.Write(b)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			err = writer.Close()
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			return nil
@@ -481,29 +481,29 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/index.html"), 0644)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			defer writer.Close()
 			_, err = writer.Write(b)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			err = writer.Close()
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			creationTime := time.Now()
 			err = siteGen.GeneratePage(groupctx, "pages/index.html", string(b), creationTime, creationTime)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			return nil
@@ -512,29 +512,29 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "pages/404.html"), 0644)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			defer writer.Close()
 			_, err = writer.Write(b)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			err = writer.Close()
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			creationTime := time.Now()
 			err = siteGen.GeneratePage(groupctx, "pages/404.html", string(b), creationTime, creationTime)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			return nil
@@ -543,23 +543,23 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/post.html"), 0644)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			defer writer.Close()
 			_, err = writer.Write(b)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			err = writer.Close()
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			return nil
@@ -568,40 +568,40 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			writer, err := nbrew.FS.WithContext(groupctx).OpenWriter(path.Join(sitePrefix, "posts/postlist.html"), 0644)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			defer writer.Close()
 			_, err = writer.Write(b)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			err = writer.Close()
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			tmpl, err := siteGen.PostListTemplate(context.Background(), "")
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
 			if err != nil {
-				getLogger(groupctx).Error(err.Error())
+				nbrew.GetLogger(groupctx).Error(err.Error())
 				return nil
 			}
 			return nil
 		})
 		err = group.Wait()
 		if err != nil {
-			getLogger(r.Context()).Error(err.Error())
+			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
@@ -610,7 +610,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			certConfig.Storage = nbrew.CertStorage
 			err := certConfig.ObtainCertSync(r.Context(), response.SiteName)
 			if err != nil {
-				getLogger(r.Context()).Error(err.Error())
+				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
