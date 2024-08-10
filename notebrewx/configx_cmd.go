@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -209,6 +210,22 @@ func (cmd *ConfigxCmd) Run() error {
 			} else {
 				io.WriteString(cmd.Stdout, smtpConfig.MailFrom+"\n")
 			}
+		case "limitInterval":
+			if cmd.Value.Valid {
+				smtpConfig.LimitInterval = cmd.Value.String
+			} else {
+				io.WriteString(cmd.Stdout, smtpConfig.LimitInterval+"\n")
+			}
+		case "limitBurst":
+			if cmd.Value.Valid {
+				limitBurst, err := strconv.Atoi(cmd.Value.String)
+				if err != nil {
+					return fmt.Errorf("%s: %q is not an integer", cmd.Key.String, cmd.Value.String)
+				}
+				smtpConfig.LimitBurst = limitBurst
+			} else {
+				io.WriteString(cmd.Stdout, strconv.Itoa(smtpConfig.LimitBurst)+"\n")
+			}
 		default:
 			io.WriteString(cmd.Stderr, smtpHelp)
 			return fmt.Errorf("%s: invalid key %q", cmd.Key.String, tail)
@@ -248,17 +265,21 @@ const stripeHelp = `# == stripe keys == #
 `
 
 type SMTPConfig struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Host     string `json:"host"`
-	Port     string `json:"port"`
-	MailFrom string `json:"mailFrom"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	Host          string `json:"host"`
+	Port          string `json:"port"`
+	MailFrom      string `json:"mailFrom"`
+	LimitInterval string `json:"limitInterval"`
+	LimitBurst    int    `json:"limitBurst"`
 }
 
 const smtpHelp = `# == smtp keys == #
-# username - SMTP username.
-# password - SMTP password.
-# host     - SMTP host.
-# port     - SMTP port.
-# mailFrom - SMTP MAIL FROM address
+# username      - SMTP username.
+# password      - SMTP password.
+# host          - SMTP host.
+# port          - SMTP port.
+# mailFrom      - SMTP MAIL FROM address.
+# limitInterval - Interval between replenishing one token back to the rate limiter bucket.
+# limitBurst    - Maximum tokens that can be held by the rate limiter bucket at any time.
 `

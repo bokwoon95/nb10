@@ -413,7 +413,7 @@ func (cmd *ConfigCmd) Run() error {
 				}
 				followerIndex, err := strconv.Atoi(matches[followerPattern.SubexpIndex("followerIndex")])
 				if err != nil {
-					return fmt.Errorf("%s: %s: %s is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
+					return fmt.Errorf("%s: %s: %q is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
 				}
 				if followerIndex < 0 {
 					return fmt.Errorf("%s: %s: follower index cannot be less than 0", cmd.Key.String, tail)
@@ -583,7 +583,7 @@ func (cmd *ConfigCmd) Run() error {
 				}
 				followerIndex, err := strconv.Atoi(matches[followerPattern.SubexpIndex("followerIndex")])
 				if err != nil {
-					return fmt.Errorf("%s: %s: %s is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
+					return fmt.Errorf("%s: %s: %q is not an integer", cmd.Key.String, tail, matches[followerPattern.SubexpIndex("followerIndex")])
 				}
 				if followerIndex < 0 {
 					return fmt.Errorf("%s: %s: follower index cannot be less than 0", cmd.Key.String, tail)

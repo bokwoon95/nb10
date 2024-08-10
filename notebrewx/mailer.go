@@ -4,18 +4,21 @@ import (
 	"database/sql"
 	"io"
 	"net/smtp"
+	"time"
 
 	"golang.org/x/time/rate"
 )
 
 type MailerConfig struct {
-	Username string
-	Password string
-	Host     string
-	Port     string
-	MailFrom string
-	DB       *sql.DB
-	Dialect  string
+	Username      string
+	Password      string
+	Host          string
+	Port          string
+	MailFrom      string
+	DB            *sql.DB
+	Dialect       string
+	LimitInterval time.Duration
+	LimitBurst    int
 }
 
 type Mailer struct {
