@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/bokwoon95/nb10"
 )
 
 func (nbrew *Notebrewx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +31,7 @@ func (nbrew *Notebrewx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		slog.String("method", r.Method),
 		slog.String("url", scheme+r.Host+r.URL.RequestURI()),
 	)
-	loggerCtx := context.WithValue(r.Context(), loggerKey, logger)
+	loggerCtx := context.WithValue(r.Context(), nb10.LoggerKey, logger)
 	urlPath := strings.Trim(r.URL.Path, "/")
 	if urlPath == "signup" {
 		securityHeaders(w, nbrew.CMSDomainHTTPS)
