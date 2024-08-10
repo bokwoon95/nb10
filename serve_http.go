@@ -28,7 +28,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		nbrew.BadRequest(w, r, err)
 		return
 	}
-
 	// Handle the /users/* route on the CMS domain.
 	urlPath := strings.Trim(path.Clean(r.URL.Path), "/")
 	head, tail, _ := strings.Cut(urlPath, "/")
@@ -128,7 +127,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 	// Handle the /files/* route on the CMS domain.
 	if r.Host == nbrew.CMSDomain && head == "files" {
 		urlPath := tail
@@ -163,7 +161,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ServeFile(w, r, path.Base(urlPath), fileInfo.Size(), fileType, file, "max-age=31536000, immutable" /* 1 year */)
 			return
 		}
-
 		// Figure out the sitePrefix of the site we are serving.
 		var sitePrefix string
 		if strings.HasPrefix(head, "@") {
@@ -180,7 +177,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-
 		// If the users database is present, check if the user is authorized to
 		// access the files for this site.
 		user := User{
@@ -270,7 +266,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				slog.String("username", user.Username),
 			)))
 		}
-
 		if sitePrefix == "" {
 			switch urlPath {
 			case "":
@@ -287,12 +282,10 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-
 		if !isAuthorizedForSite {
 			nbrew.NotAuthorized(w, r)
 			return
 		}
-
 		switch head {
 		case "":
 			nbrew.rootdirectory(w, r, user, sitePrefix, time.Time{})
@@ -308,7 +301,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			fileType := AllowedFileTypes[path.Ext(urlPath)]
 			if fileType.Has(AttributeImg) {
-				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(".", sitePrefix, urlPath))
+				fileInfo, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, urlPath))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
 						nbrew.NotFound(w, r)
@@ -325,7 +318,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				nbrew.image(w, r, user, sitePrefix, urlPath, fileInfo)
 				return
 			}
-			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(".", sitePrefix, urlPath))
+			file, err := nbrew.FS.WithContext(r.Context()).Open(path.Join(sitePrefix, urlPath))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					nbrew.NotFound(w, r)
@@ -358,7 +351,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			nbrew.exports(w, r, user, sitePrefix, tail)
 			return
 		}
-
 		switch urlPath {
 		case "site.json":
 			nbrew.siteJSON(w, r, user, sitePrefix)
@@ -410,14 +402,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 	// If we reach here, we are serving generated site content. Only GET and
 	// HEAD requests are allowed.
 	if r.Method != "GET" && r.Method != "HEAD" {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	// Figure out the sitePrefix of the site we have to serve.
 	var sitePrefix string
 	var subdomain string
@@ -470,7 +460,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if r.Host != nbrew.ContentDomain {
 		sitePrefix = r.Host
 	}
-
 	var ok bool
 	var filePath string
 	var fileType FileType
