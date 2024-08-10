@@ -41,7 +41,7 @@ type Mailer struct {
 	Logger        *slog.Logger
 	baseCtx       context.Context
 	baseCtxCancel func()
-	stop          chan struct{}
+	stopped          chan struct{}
 }
 
 type Mail struct {
@@ -64,10 +64,7 @@ func NewMailer(config MailerConfig) (*Mailer, error) {
 		Logger:        config.Logger,
 		baseCtx:       baseCtx,
 		baseCtxCancel: baseCtxCancel,
-		stop:          make(chan struct{}),
-	}
-	if mailer.Port == "" {
-		mailer.Port = "587"
+		stopped:          make(chan struct{}),
 	}
 	go mailer.start()
 	return mailer, nil
@@ -107,7 +104,7 @@ func (mailer *Mailer) NewClient() (*smtp.Client, error) {
 }
 
 func (mailer *Mailer) start() {
-	defer close(mailer.stop)
+	defer close(mailer.stopped)
 	timer := time.NewTimer(-1)
 	defer timer.Stop()
 	var buf bytes.Buffer
@@ -198,6 +195,6 @@ func (mailer *Mailer) start() {
 
 func (mailer *Mailer) Close() error {
 	mailer.baseCtxCancel()
-	<-mailer.stop
+	<-mailer.stopped
 	return nil
 }

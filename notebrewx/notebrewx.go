@@ -7,12 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"net/smtp"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/bokwoon95/nb10"
-	"golang.org/x/time/rate"
 )
 
 var (
@@ -30,17 +29,7 @@ type Notebrewx struct {
 		SecretKey      string
 	}
 
-	SMTPConfig struct {
-		Username string
-		Password string
-		Host     string
-		Port     string
-		MailFrom string
-	}
-
-	SMTPLimiter *rate.Limiter
-
-	SMTPClient *smtp.Client
+	Mailer *Mailer
 }
 
 func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
@@ -78,14 +67,33 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
 		}
-		nbrewx.SMTPConfig.Username = smtpConfig.Username
-		nbrewx.SMTPConfig.Password = smtpConfig.Password
-		nbrewx.SMTPConfig.Host = smtpConfig.Host
-		nbrewx.SMTPConfig.Port = smtpConfig.Port
-		nbrewx.SMTPConfig.MailFrom = smtpConfig.MailFrom
+		mailerConfig := MailerConfig{
+			Username: smtpConfig.Username,
+			Password: smtpConfig.Password,
+			Host:     smtpConfig.Host,
+			Port:     smtpConfig.Port,
+			MailFrom: smtpConfig.MailFrom,
+			Logger:   nbrew.Logger,
+		}
+		if smtpConfig.LimitInterval == "" {
+			mailerConfig.LimitInterval = 12 * time.Second // 300 events per hour (3600 seconds) => 12 seconds between events
+		} else {
+			limitInterval, err := time.ParseDuration(smtpConfig.LimitInterval)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
+			}
+			mailerConfig.LimitInterval = limitInterval
+		}
+		if smtpConfig.LimitBurst <= 0 {
+			mailerConfig.LimitBurst = 150
+		} else {
+			mailerConfig.LimitBurst = smtpConfig.LimitBurst
+		}
+		mailer, err := NewMailer(mailerConfig)
+		if err != nil {
+			return nil, err
+		}
+		nbrewx.Mailer = mailer
 	}
 	return nbrewx, nil
-}
-
-func (nbrew *Notebrewx) Send() {
 }
