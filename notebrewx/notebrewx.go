@@ -85,7 +85,7 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 			mailerConfig.LimitInterval = limitInterval
 		}
 		if smtpConfig.LimitBurst <= 0 {
-			mailerConfig.LimitBurst = 150
+			mailerConfig.LimitBurst = 200
 		} else {
 			mailerConfig.LimitBurst = smtpConfig.LimitBurst
 		}
