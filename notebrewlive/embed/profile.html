@@ -95,7 +95,7 @@
     <tfoot>
       <tr>
         <td class='pa2 b tr'>Storage Used:</td>
-        <td class='pa2'>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} &frasl; {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
+        <td class='pa2'>{{ humanReadableFileSize $.StorageUsed }}{{ if gt $.StorageLimit 0 }} / {{ humanReadableFileSize $.StorageLimit }}{{ end }}</td>
       </tr>
     </tfoot>
   </table>
