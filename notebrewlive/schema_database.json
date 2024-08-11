@@ -1,0 +1,27 @@
+[
+  {
+    "table": "stripe_customer",
+    "columns": [
+      {
+        "column": "user_id",
+        "type": {
+          "default": "BINARY(16)",
+          "postgres": "UUID"
+        },
+        "primarykey": true,
+        "references": {
+          "table": "user",
+          "column": "user_id"
+        }
+      },
+      {
+        "column": "customer_id",
+        "type": {
+          "default": "VARCHAR(500)"
+        },
+        "unique": true,
+        "notnull": true
+      }
+    ]
+  }
+]

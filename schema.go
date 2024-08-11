@@ -50,17 +50,17 @@ type rawTable struct {
 var filesSchemaBytes []byte
 
 func FilesCatalog(dialect string) (*ddl.Catalog, error) {
-	return unmarshalCatalog(dialect, filesSchemaBytes)
+	return UnmarshalCatalog(dialect, filesSchemaBytes)
 }
 
 //go:embed schema_database.json
 var databaseSchemaBytes []byte
 
 func DatabaseCatalog(dialect string) (*ddl.Catalog, error) {
-	return unmarshalCatalog(dialect, databaseSchemaBytes)
+	return UnmarshalCatalog(dialect, databaseSchemaBytes)
 }
 
-func unmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
+func UnmarshalCatalog(dialect string, b []byte) (*ddl.Catalog, error) {
 	var rawTables []rawTable
 	decoder := json.NewDecoder(bytes.NewReader(b))
 	decoder.DisallowUnknownFields()

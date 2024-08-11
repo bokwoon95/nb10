@@ -60,6 +60,8 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+CREATE TABLE stripe_customer (user_id BINARY(16), customer_id VARCHAR(500))
+
 moderator.notebrew.com/ => package moderator
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites

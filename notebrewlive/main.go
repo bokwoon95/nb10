@@ -10,6 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net"
@@ -44,6 +45,8 @@ var (
 	//go:embed embed
 	embedFS   embed.FS
 	RuntimeFS fs.FS = embedFS
+	//go:embed schema_database.json
+	databaseSchemaBytes []byte
 )
 
 type StripeConfig struct {
@@ -120,6 +123,23 @@ func main() {
 			return err
 		}
 		defer nbrew.Close()
+		if nbrew.DB != nil {
+			databaseCatalog, err := nb10.UnmarshalCatalog(nbrew.Dialect, databaseSchemaBytes)
+			if err != nil {
+				return err
+			}
+			automigrateCmd := &ddl.AutomigrateCmd{
+				DB:             nbrew.DB,
+				Dialect:        nbrew.Dialect,
+				DestCatalog:    databaseCatalog,
+				AcceptWarnings: true,
+				Stderr:         io.Discard,
+			}
+			err = automigrateCmd.Run()
+			if err != nil {
+				return err
+			}
+		}
 		if nbrew.DB != nil && nbrew.Dialect == "sqlite" {
 			_, err := nbrew.DB.ExecContext(context.Background(), "PRAGMA optimize(0x10002)")
 			if err != nil {
