@@ -24,11 +24,11 @@
     <input id='email' type='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100' readonly>
   </div>
 </div>
-{{- else if eq $.Error "MailerRateLimited" }}
+{{- else if eq $.Error "EmailRateLimited" }}
 <div class='w-80 w-70-m w-60-l center'>
   <h1 class='f3 mv3 b tc'>Sign up (email rate limited)</h1>
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
-    <div>Our servers are currently experiencing a high volume of email transactions, please try again later.</div>
+    <div>Our mail servers are currently at maximum capacity, please try again later.</div>
   </div>
   <div class='mv3'>
     <div><label for='email' class='b'>Email:</label></div>

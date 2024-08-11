@@ -5,7 +5,6 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
-<script type="module" src="/admin/static/login.js"></script>
 {{- if $.RequireCaptcha }}
 <script src='{{ $.CaptchaWidgetScriptSrc }}' async defer></script>
 {{- end }}
@@ -23,7 +22,11 @@
   {{- end }}
   {{- if eq (index $.PostRedirectGet "from") "resetpassword" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
+    {{- if index $.PostRedirectGet "emailSent" }}
+    <div>Password reset email sent, please check your spam folder.</div>
+    {{- else }}
     <div>Password reset successfully, please log in using your new credentials.</div>
+    {{- end }}
   </div>
   {{- end }}
   {{- if eq (index $.PostRedirectGet "from") "changepassword" }}

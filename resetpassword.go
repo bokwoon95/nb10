@@ -1,6 +1,8 @@
 package nb10
 
 import (
+	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +10,7 @@ import (
 	"html/template"
 	"mime"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"path"
 	"strings"
@@ -154,7 +157,8 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 			}
 			err := nbrew.SetFlashSession(w, r, map[string]any{
 				"postRedirectGet": map[string]any{
-					"from": "resetpassword",
+					"from":      "resetpassword",
+					"emailSent": response.Token == "",
 				},
 			})
 			if err != nil {
@@ -190,6 +194,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				}
 			}
 			request.Token = r.Form.Get("token")
+			request.Email = r.Form.Get("email")
 			request.Password = r.Form.Get("password")
 			request.ConfirmPassword = r.Form.Get("confirmPassword")
 		default:
@@ -199,6 +204,7 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 
 		response := Response{
 			Token:      request.Token,
+			Email:      request.Email,
 			FormErrors: url.Values{},
 		}
 		if response.Token == "" {
@@ -206,6 +212,90 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				response.Error = "MissingResetToken"
 				writeResponse(w, r, response)
 				return
+			}
+			if response.Email == "" {
+				response.FormErrors.Add("email", "required")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
+			}
+			_, err := mail.ParseAddress(response.Email)
+			if err != nil {
+				response.FormErrors.Add("email", "invalid email address")
+				response.Error = "FormErrorsPresent"
+				writeResponse(w, r, response)
+				return
+			}
+			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "SELECT 1 FROM users WHERE email = {email}",
+				Values: []any{
+					sq.StringParam("email", response.Email),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			if !exists {
+				response.Error = "FormErrorsPresent"
+				response.FormErrors.Add("email", "no such user with this email exists")
+				writeResponse(w, r, response)
+				return
+			}
+			if !nbrew.Mailer.Limiter.Allow() {
+				response.Error = "EmailRateLimited"
+				writeResponse(w, r, response)
+				return
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			err = nbrew.Mailer.Limiter.Wait(ctx)
+			if err != nil {
+				response.Error = "EmailRateLimited"
+				writeResponse(w, r, response)
+				return
+			}
+			var resetTokenBytes [8 + 16]byte
+			binary.BigEndian.PutUint64(resetTokenBytes[:8], uint64(time.Now().Unix()))
+			_, err = rand.Read(resetTokenBytes[8:])
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			checksum := blake2b.Sum256(resetTokenBytes[8:])
+			var resetTokenHash [8 + blake2b.Size256]byte
+			copy(resetTokenHash[:8], resetTokenBytes[:8])
+			copy(resetTokenHash[8:], checksum[:])
+			_, err = sq.Exec(context.Background(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format:  "UPDATE users SET reset_token_hash = {resetTokenHash} WHERE email = {email}",
+				Values: []any{
+					sq.BytesParam("resetTokenHash", resetTokenHash[:]),
+					sq.StringParam("email", response.Email),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			scheme := "https://"
+			if !nbrew.CMSDomainHTTPS {
+				scheme = "http://"
+			}
+			nbrew.Mailer.C <- Mail{
+				RcptTo: response.Email,
+				Headers: []string{
+					"Subject", "Notebrew password reset",
+					"Content-Type", "text/html; charset=utf-8",
+				},
+				Body: strings.NewReader(fmt.Sprintf(
+					"<p>Your notebrew password reset link: <a href='%[1]s'>%[1]s</a></p>",
+					scheme+nbrew.CMSDomain+"/users/resetpassword/?token="+url.QueryEscape(strings.TrimLeft(hex.EncodeToString(resetTokenBytes[:]), "0")),
+				)),
 			}
 			writeResponse(w, r, response)
 			return

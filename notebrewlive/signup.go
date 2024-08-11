@@ -305,10 +305,9 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 		if !nbrew.CMSDomainHTTPS {
 			scheme = "http://"
 		}
-		mail := nb10.Mail{
+		nbrew.Mailer.C <- nb10.Mail{
 			RcptTo: response.Email,
 			Headers: []string{
-				"Reply-To", "bokwoon.c@gmail.com",
 				"Subject", "Welcome to notebrew!",
 				"Content-Type", "text/html; charset=utf-8",
 			},
@@ -317,10 +316,6 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 				scheme+nbrew.CMSDomain+"/users/invite/?token="+strings.TrimLeft(hex.EncodeToString(inviteTokenBytes[:]), "0"),
 			)),
 		}
-		if nbrew.ReplyTo != "" {
-			mail.Headers = append(mail.Headers, "Reply-To", nbrew.ReplyTo)
-		}
-		nbrew.Mailer.C <- mail
 		writeResponse(w, r, response)
 	default:
 		nbrew.MethodNotAllowed(w, r)
