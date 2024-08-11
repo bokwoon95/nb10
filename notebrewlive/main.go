@@ -466,9 +466,10 @@ func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
 					}
 				}
 			}
-			_ = user
 			switch tail {
 			case "profile":
+				profile(nbrew, w, r, user)
+				return
 			case "billing":
 			}
 		}

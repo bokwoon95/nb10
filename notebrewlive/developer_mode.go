@@ -14,5 +14,5 @@ func init() {
 	if !ok {
 		panic("developer mode enabled but cannot determine source file location.")
 	}
-	runtimeFS = os.DirFS(filepath.Dir(file))
+	RuntimeFS = os.DirFS(filepath.Dir(file))
 }
