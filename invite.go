@@ -403,22 +403,22 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 					response.FormErrors.Add("siteName", "cannot exceed 30 characters")
 				}
 			}
-		}
-		if !response.FormErrors.Has("siteName") {
-			exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
-				Values: []any{
-					sq.StringParam("siteName", response.SiteName),
-				},
-			})
-			if err != nil {
-				nbrew.GetLogger(r.Context()).Error(err.Error())
-				nbrew.InternalServerError(w, r, err)
-				return
-			}
-			if exists {
-				response.FormErrors.Add("siteName", "site name already in use")
+			if !response.FormErrors.Has("siteName") {
+				exists, err := sq.FetchExists(r.Context(), nbrew.DB, sq.Query{
+					Dialect: nbrew.Dialect,
+					Format:  "SELECT 1 FROM site WHERE site_name = {siteName}",
+					Values: []any{
+						sq.StringParam("siteName", response.SiteName),
+					},
+				})
+				if err != nil {
+					nbrew.GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				}
+				if exists {
+					response.FormErrors.Add("siteName", "site name already in use")
+				}
 			}
 		}
 		if len(response.FormErrors) > 0 {
@@ -447,20 +447,6 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		}
 		_, err = sq.Exec(r.Context(), tx, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO site (site_id, site_name)" +
-				" VALUES ({siteID}, {siteName})",
-			Values: []any{
-				sq.UUIDParam("siteID", NewID()),
-				sq.StringParam("siteName", response.SiteName),
-			},
-		})
-		if err != nil {
-			nbrew.GetLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
-		}
-		_, err = sq.Exec(r.Context(), tx, sq.Query{
-			Dialect: nbrew.Dialect,
 			Format: "INSERT INTO users (user_id, username, email, password_hash, timezone_offset_seconds, site_limit, storage_limit)" +
 				" VALUES ({userID}, {username}, {email}, {passwordHash}, {timezoneOffsetSeconds}, {siteLimit}, {storageLimit})",
 			Values: []any{
@@ -478,38 +464,58 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-		_, err = sq.Exec(r.Context(), tx, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO site_user (site_id, user_id)" +
-				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
-			Values: []any{
-				sq.StringParam("siteName", response.SiteName),
-				sq.StringParam("username", response.Username),
-			},
-		})
-		if err != nil {
-			nbrew.GetLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
-		}
-		_, err = sq.Exec(r.Context(), tx, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO site_owner (site_id, user_id)" +
-				" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
-			Values: []any{
-				sq.StringParam("siteName", response.SiteName),
-				sq.StringParam("username", response.Username),
-			},
-		})
-		if err != nil {
-			nbrew.GetLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
+		if response.SiteName != "" {
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "INSERT INTO site (site_id, site_name)" +
+					" VALUES ({siteID}, {siteName})",
+				Values: []any{
+					sq.UUIDParam("siteID", NewID()),
+					sq.StringParam("siteName", response.SiteName),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "INSERT INTO site_user (site_id, user_id)" +
+					" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
+				Values: []any{
+					sq.StringParam("siteName", response.SiteName),
+					sq.StringParam("username", response.Username),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), tx, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "INSERT INTO site_owner (site_id, user_id)" +
+					" VALUES ((SELECT site_id FROM site WHERE site_name = {siteName}), (SELECT user_id FROM users WHERE username = {username}))",
+				Values: []any{
+					sq.StringParam("siteName", response.SiteName),
+					sq.StringParam("username", response.Username),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
 		}
 		err = tx.Commit()
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		if response.SiteName == "" {
+			writeResponse(w, r, response)
 			return
 		}
 		sitePrefix := "@" + response.SiteName
