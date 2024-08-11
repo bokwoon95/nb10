@@ -193,7 +193,6 @@ func (mailer *Mailer) start() {
 }
 
 func (mailer *Mailer) Close() error {
-	close(mailer.C)
 	mailer.baseCtxCancel()
 	<-mailer.stop
 	return nil
