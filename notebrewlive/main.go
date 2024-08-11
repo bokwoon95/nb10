@@ -46,6 +46,11 @@ var (
 	runtimeFS fs.FS = embedFS
 )
 
+type StripeConfig struct {
+	PublishableKey string `json:"publishableKey"`
+	SecretKey      string `json:"secretKey"`
+}
+
 func main() {
 	err := func() error {
 		homeDir, err := os.UserHomeDir()
@@ -85,16 +90,6 @@ func main() {
 			switch args[0] {
 			case "config":
 				cmd, err := cli.ConfigCommand(configDir, args[1:]...)
-				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
-				}
-				err = cmd.Run()
-				if err != nil {
-					return fmt.Errorf("%s: %w", args[0], err)
-				}
-				return nil
-			case "configx":
-				cmd, err := ConfigxCommand(configDir, args[1:]...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
