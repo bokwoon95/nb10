@@ -77,7 +77,7 @@ Free Plan: 1 site / 10 MB
 6 GB Plan: 10 sites / 6 GB
 
 TODO: /billing/
-    - TODO: okay we try to add a basic stripe plan first
+    - TODO: okay we try to add a basic stripe plan first and then change our billing to it.
 TODO: signup.go
     TODO: /signup/
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
