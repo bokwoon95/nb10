@@ -72,9 +72,14 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
+Free Plan: 1 site / 10 MB
+1 GB Plan: 3 sites / 1 GB
+6 GB Plan: 10 sites / 6 GB
+
+TODO: /billing/
+    - TODO: okay we try to add a basic stripe plan first
 TODO: signup.go
     TODO: /signup/
-    TODO: /users/billing/
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
