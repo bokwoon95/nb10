@@ -1,4 +1,4 @@
-package nb10
+package main
 
 import (
 	"bytes"
@@ -12,17 +12,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sync/errgroup"
 )
 
-func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User) {
+func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user nb10.User) {
 	type Site struct {
-		SiteID      ID     `json:"siteID"`
-		SiteName    string `json:"siteName"`
-		StorageUsed int64  `json:"storageUsed"`
+		SiteID      nb10.ID `json:"siteID"`
+		SiteName    string  `json:"siteName"`
+		StorageUsed int64   `json:"storageUsed"`
 	}
 	type Session struct {
 		sessionTokenHash   []byte    `json:"-"`
@@ -32,7 +33,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		Current            bool      `json:"current"`
 	}
 	type Response struct {
-		UserID                ID             `json:"userID"`
+		UserID                nb10.ID        `json:"userID"`
 		Username              string         `json:"username"`
 		Email                 string         `json:"email"`
 		TimezoneOffsetSeconds int            `json:"timezoneOffsetSeconds"`
@@ -70,9 +71,9 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 			"hasSuffix":             strings.HasSuffix,
 			"trimPrefix":            strings.TrimPrefix,
 			"trimSuffix":            strings.TrimSuffix,
-			"humanReadableFileSize": HumanReadableFileSize,
-			"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
-			"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
+			"humanReadableFileSize": nb10.HumanReadableFileSize,
+			"stylesCSS":             func() template.CSS { return template.CSS(nb10.StylesCSS) },
+			"baselineJS":            func() template.JS { return template.JS(nb10.BaselineJS) },
 			"referer":               func() string { return referer },
 			"safeHTML":              func(s string) template.HTML { return template.HTML(s) },
 			"float64ToInt64":        func(n float64) int64 { return int64(n) },

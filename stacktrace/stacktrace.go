@@ -47,7 +47,7 @@ func New(err error) error {
 }
 
 // RecoverPanic converts a panic into an error containing a stack trace of
-// where the panic occurred and writes it into the pointer.
+// where the panic occurred and writes it into the error pointer.
 func RecoverPanic(err *error) {
 	if err == nil {
 		return

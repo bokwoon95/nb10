@@ -43,7 +43,7 @@ var (
 var (
 	//go:embed embed
 	embedFS   embed.FS
-	runtimeFS fs.FS = embedFS
+	RuntimeFS fs.FS = embedFS
 )
 
 type StripeConfig struct {

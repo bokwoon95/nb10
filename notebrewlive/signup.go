@@ -65,7 +65,7 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 				"baselineJS": func() template.JS { return template.JS(nb10.BaselineJS) },
 				"referer":    func() string { return r.Referer() },
 			}
-			tmpl, err := template.New("signup.html").Funcs(funcMap).ParseFS(runtimeFS, "embed/signup.html")
+			tmpl, err := template.New("signup.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/signup.html")
 			if err != nil {
 				nbrew.GetLogger(r.Context()).Error(err.Error())
 				nbrew.InternalServerError(w, r, err)
@@ -355,7 +355,7 @@ func signupSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request)
 			"baselineJS": func() template.JS { return template.JS(nb10.BaselineJS) },
 			"referer":    func() string { return r.Referer() },
 		}
-		tmpl, err := template.New("signup_success.html").Funcs(funcMap).ParseFS(runtimeFS, "embed/signup_success.html")
+		tmpl, err := template.New("signup_success.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/signup_success.html")
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
