@@ -74,8 +74,8 @@
       {{- end }}
     </ul>
   </div>
-  {{- if $.PasswordResetURL }}
-  <div class='f6'><a href='{{ $.PasswordResetURL }}'>forgot password?</a></div>
+  {{- if $.HasMailer }}
+  <div class='f6'><a href='/users/resetpassword/'>forgot password?</a></div>
   {{- end }}
   {{- if $.Redirect }}
   <input type='hidden' name='$.Redirect' value='{{ $.Redirect }}'>

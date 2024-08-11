@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,13 +11,6 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10"
-)
-
-var (
-	//go:embed embed
-	embedFS embed.FS
-
-	runtimeFS fs.FS = embedFS
 )
 
 type Notebrewx struct {
@@ -38,25 +30,8 @@ func NewNotebrewx(configDir string, nbrew *nb10.Notebrew) (*Notebrewx, error) {
 	nbrewx := &Notebrewx{
 		Notebrew: nbrew,
 	}
-	// Stripe.
-	b, err := os.ReadFile(filepath.Join(configDir, "stripe.json"))
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
-	}
-	b = bytes.TrimSpace(b)
-	if len(b) > 0 {
-		var stripeConfig StripeConfig
-		decoder := json.NewDecoder(bytes.NewReader(b))
-		decoder.DisallowUnknownFields()
-		err := decoder.Decode(&stripeConfig)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
-		}
-		nbrewx.StripeConfig.PublishableKey = stripeConfig.PublishableKey
-		nbrewx.StripeConfig.SecretKey = stripeConfig.SecretKey
-	}
 	// SMTP.
-	b, err = os.ReadFile(filepath.Join(configDir, "smtp.json"))
+	b, err := os.ReadFile(filepath.Join(configDir, "smtp.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, fmt.Errorf("%s: %w", filepath.Join(configDir, "smtp.json"), err)
 	}

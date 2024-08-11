@@ -24,7 +24,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
+func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 	type Request struct {
 		CaptchaResponse string
 		Email           string
@@ -305,7 +305,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 		if !nbrew.CMSDomainHTTPS {
 			scheme = "http://"
 		}
-		mail := Mail{
+		mail := nb10.Mail{
 			RcptTo: response.Email,
 			Headers: []string{
 				"Reply-To", "bokwoon.c@gmail.com",
@@ -327,7 +327,7 @@ func (nbrew *Notebrewx) signup(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (nbrew *Notebrewx) signupSuccess(w http.ResponseWriter, r *http.Request) {
+func signupSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 	type Response struct {
 		Email string `json:"email"`
 	}

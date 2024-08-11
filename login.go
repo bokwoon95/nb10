@@ -23,13 +23,14 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func (nbrew *Notebrew) Login(w http.ResponseWriter, r *http.Request, user User, passwordResetURL string) {
+func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) {
 	type Request struct {
 		Username        string `json:"username"`
 		Password        string `json:"password"`
 		CaptchaResponse string `json:"captchaResponse"`
 	}
 	type Response struct {
+		HasMailer              bool           `json:"hasMailer"`
 		Username               string         `json:"username"`
 		RequireCaptcha         bool           `json:"requireCaptcha"`
 		CaptchaWidgetScriptSrc template.URL   `json:"captchaWidgetScriptSrc"`
@@ -37,7 +38,6 @@ func (nbrew *Notebrew) Login(w http.ResponseWriter, r *http.Request, user User, 
 		CaptchaSiteKey         string         `json:"captchaSiteKey"`
 		Error                  string         `json:"error"`
 		FormErrors             url.Values     `json:"formErrors"`
-		PasswordResetURL       template.URL   `json:"passwordResetURL"`
 		SessionToken           string         `json:"sessionToken"`
 		Redirect               string         `json:"redirect"`
 		PostRedirectGet        map[string]any `json:"postRedirectGet"`
@@ -136,10 +136,10 @@ func (nbrew *Notebrew) Login(w http.ResponseWriter, r *http.Request, user User, 
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
+		response.HasMailer = nbrew.Mailer != nil
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
 		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
-		response.PasswordResetURL = template.URL(passwordResetURL)
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
