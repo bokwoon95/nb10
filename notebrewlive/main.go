@@ -120,116 +120,6 @@ func main() {
 			return err
 		}
 		defer nbrew.Close()
-		serveHTTP := func(w http.ResponseWriter, r *http.Request) {
-			scheme := "https://"
-			if r.TLS == nil {
-				scheme = "http://"
-			}
-			// Redirect the www subdomain to the bare domain.
-			if r.Host == "www."+nbrew.CMSDomain {
-				http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
-				return
-			}
-			// Redirect unclean paths to the cleaned path equivalent.
-			if r.Method == "GET" || r.Method == "HEAD" {
-				cleanedPath := path.Clean(r.URL.Path)
-				if cleanedPath != "/" {
-					_, ok := nb10.AllowedFileTypes[path.Ext(cleanedPath)]
-					if !ok {
-						cleanedPath += "/"
-					}
-				}
-				if cleanedPath != r.URL.Path {
-					cleanedURL := *r.URL
-					cleanedURL.Path = cleanedPath
-					http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
-					return
-				}
-			}
-			nbrew.AddSecurityHeaders(w)
-			r = r.WithContext(context.WithValue(r.Context(), nb10.LoggerKey, nbrew.Logger.With(
-				slog.String("method", r.Method),
-				slog.String("url", scheme+r.Host+r.URL.RequestURI()),
-			)))
-			if r.Host != nbrew.CMSDomain {
-				nbrew.ServeHTTP(w, r)
-				return
-			}
-			err := r.ParseForm()
-			if err != nil {
-				nbrew.BadRequest(w, r, err)
-				return
-			}
-			urlPath := strings.Trim(r.URL.Path, "/")
-			head, tail, _ := strings.Cut(urlPath, "/")
-			switch head {
-			case "signup":
-				switch tail {
-				case "":
-					signup(nbrew, w, r)
-					return
-				case "success":
-					signupSuccess(nbrew, w, r)
-					return
-				}
-			case "users":
-				var user nb10.User
-				var sessionToken string
-				header := r.Header.Get("Authorization")
-				if header != "" {
-					if strings.HasPrefix(header, "Bearer ") {
-						sessionToken = strings.TrimPrefix(header, "Bearer ")
-					}
-				} else {
-					cookie, _ := r.Cookie("session")
-					if cookie != nil {
-						sessionToken = cookie.Value
-					}
-				}
-				if sessionToken != "" {
-					sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
-					if err == nil && len(sessionTokenBytes) == 24 {
-						var sessionTokenHash [8 + blake2b.Size256]byte
-						checksum := blake2b.Sum256(sessionTokenBytes[8:])
-						copy(sessionTokenHash[:8], sessionTokenBytes[:8])
-						copy(sessionTokenHash[8:], checksum[:])
-						user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-							Dialect: nbrew.Dialect,
-							Format: "SELECT {*}" +
-								" FROM session" +
-								" JOIN users ON users.user_id = session.user_id" +
-								" WHERE session.session_token_hash = {sessionTokenHash}",
-							Values: []any{
-								sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
-							},
-						}, func(row *sq.Row) nb10.User {
-							return nb10.User{
-								UserID:                row.UUID("users.user_id"),
-								Username:              row.String("users.username"),
-								Email:                 row.String("users.email"),
-								TimezoneOffsetSeconds: row.Int("users.timezone_offset_seconds"),
-								DisableReason:         row.String("users.disable_reason"),
-								SiteLimit:             row.Int64("coalesce(users.site_limit, -1)"),
-								StorageLimit:          row.Int64("coalesce(users.storage_limit, -1)"),
-							}
-						})
-						if err != nil {
-							if !errors.Is(err, sql.ErrNoRows) {
-								nbrew.GetLogger(r.Context()).Error(err.Error())
-								nbrew.InternalServerError(w, r, err)
-								return
-							}
-						}
-					}
-				}
-				_ = user
-				switch tail {
-				case "profile":
-				case "billing":
-				}
-			}
-			nbrew.ServeHTTP(w, r)
-		}
 		if nbrew.DB != nil && nbrew.Dialect == "sqlite" {
 			_, err := nbrew.DB.ExecContext(context.Background(), "PRAGMA optimize(0x10002)")
 			if err != nil {
@@ -373,7 +263,7 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
-				cmd.Handler = http.HandlerFunc(serveHTTP)
+				cmd.Handler = ServeHTTP(nbrew)
 				err = cmd.Run()
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
@@ -410,7 +300,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		server.Handler = http.HandlerFunc(serveHTTP)
+		server.Handler = ServeHTTP(nbrew)
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno
@@ -470,5 +360,118 @@ func main() {
 			fmt.Println(migrationErr.Contents)
 		}
 		exit(err)
+	}
+}
+
+func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scheme := "https://"
+		if r.TLS == nil {
+			scheme = "http://"
+		}
+		// Redirect the www subdomain to the bare domain.
+		if r.Host == "www."+nbrew.CMSDomain {
+			http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
+			return
+		}
+		// Redirect unclean paths to the cleaned path equivalent.
+		if r.Method == "GET" || r.Method == "HEAD" {
+			cleanedPath := path.Clean(r.URL.Path)
+			if cleanedPath != "/" {
+				_, ok := nb10.AllowedFileTypes[path.Ext(cleanedPath)]
+				if !ok {
+					cleanedPath += "/"
+				}
+			}
+			if cleanedPath != r.URL.Path {
+				cleanedURL := *r.URL
+				cleanedURL.Path = cleanedPath
+				http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
+				return
+			}
+		}
+		nbrew.AddSecurityHeaders(w)
+		r = r.WithContext(context.WithValue(r.Context(), nb10.LoggerKey, nbrew.Logger.With(
+			slog.String("method", r.Method),
+			slog.String("url", scheme+r.Host+r.URL.RequestURI()),
+		)))
+		if r.Host != nbrew.CMSDomain {
+			nbrew.ServeHTTP(w, r)
+			return
+		}
+		err := r.ParseForm()
+		if err != nil {
+			nbrew.BadRequest(w, r, err)
+			return
+		}
+		urlPath := strings.Trim(r.URL.Path, "/")
+		head, tail, _ := strings.Cut(urlPath, "/")
+		switch head {
+		case "signup":
+			switch tail {
+			case "":
+				signup(nbrew, w, r)
+				return
+			case "success":
+				signupSuccess(nbrew, w, r)
+				return
+			}
+		case "users":
+			var user nb10.User
+			var sessionToken string
+			header := r.Header.Get("Authorization")
+			if header != "" {
+				if strings.HasPrefix(header, "Bearer ") {
+					sessionToken = strings.TrimPrefix(header, "Bearer ")
+				}
+			} else {
+				cookie, _ := r.Cookie("session")
+				if cookie != nil {
+					sessionToken = cookie.Value
+				}
+			}
+			if sessionToken != "" {
+				sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
+				if err == nil && len(sessionTokenBytes) == 24 {
+					var sessionTokenHash [8 + blake2b.Size256]byte
+					checksum := blake2b.Sum256(sessionTokenBytes[8:])
+					copy(sessionTokenHash[:8], sessionTokenBytes[:8])
+					copy(sessionTokenHash[8:], checksum[:])
+					user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+						Dialect: nbrew.Dialect,
+						Format: "SELECT {*}" +
+							" FROM session" +
+							" JOIN users ON users.user_id = session.user_id" +
+							" WHERE session.session_token_hash = {sessionTokenHash}",
+						Values: []any{
+							sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+						},
+					}, func(row *sq.Row) nb10.User {
+						return nb10.User{
+							UserID:                row.UUID("users.user_id"),
+							Username:              row.String("users.username"),
+							Email:                 row.String("users.email"),
+							TimezoneOffsetSeconds: row.Int("users.timezone_offset_seconds"),
+							DisableReason:         row.String("users.disable_reason"),
+							SiteLimit:             row.Int64("coalesce(users.site_limit, -1)"),
+							StorageLimit:          row.Int64("coalesce(users.storage_limit, -1)"),
+						}
+					})
+					if err != nil {
+						if !errors.Is(err, sql.ErrNoRows) {
+							nbrew.GetLogger(r.Context()).Error(err.Error())
+							nbrew.InternalServerError(w, r, err)
+							return
+						}
+					}
+				}
+			}
+			_ = user
+			switch tail {
+			case "profile":
+			case "billing":
+			}
+		}
+		nbrew.ServeHTTP(w, r)
 	}
 }

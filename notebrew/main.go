@@ -99,39 +99,6 @@ func main() {
 			return err
 		}
 		defer nbrew.Close()
-		serveHTTP := func(w http.ResponseWriter, r *http.Request) {
-			scheme := "https://"
-			if r.TLS == nil {
-				scheme = "http://"
-			}
-			// Redirect the www subdomain to the bare domain.
-			if r.Host == "www."+nbrew.CMSDomain {
-				http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
-				return
-			}
-			// Redirect unclean paths to the cleaned path equivalent.
-			if r.Method == "GET" || r.Method == "HEAD" {
-				cleanedPath := path.Clean(r.URL.Path)
-				if cleanedPath != "/" {
-					_, ok := nb10.AllowedFileTypes[path.Ext(cleanedPath)]
-					if !ok {
-						cleanedPath += "/"
-					}
-				}
-				if cleanedPath != r.URL.Path {
-					cleanedURL := *r.URL
-					cleanedURL.Path = cleanedPath
-					http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
-					return
-				}
-			}
-			r = r.WithContext(context.WithValue(r.Context(), nb10.LoggerKey, nbrew.Logger.With(
-				slog.String("method", r.Method),
-				slog.String("url", scheme+r.Host+r.URL.RequestURI()),
-			)))
-			nbrew.AddSecurityHeaders(w)
-			nbrew.ServeHTTP(w, r)
-		}
 		if nbrew.DB != nil && nbrew.Dialect == "sqlite" {
 			_, err := nbrew.DB.ExecContext(context.Background(), "PRAGMA optimize(0x10002)")
 			if err != nil {
@@ -262,7 +229,7 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
-				cmd.Handler = http.HandlerFunc(serveHTTP)
+				cmd.Handler = ServeHTTP(nbrew)
 				err = cmd.Run()
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
@@ -299,7 +266,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		server.Handler = http.HandlerFunc(serveHTTP)
+		server.Handler = ServeHTTP(nbrew)
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno
@@ -359,5 +326,41 @@ func main() {
 			fmt.Println(migrationErr.Contents)
 		}
 		exit(err)
+	}
+}
+
+func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		scheme := "https://"
+		if r.TLS == nil {
+			scheme = "http://"
+		}
+		// Redirect the www subdomain to the bare domain.
+		if r.Host == "www."+nbrew.CMSDomain {
+			http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
+			return
+		}
+		// Redirect unclean paths to the cleaned path equivalent.
+		if r.Method == "GET" || r.Method == "HEAD" {
+			cleanedPath := path.Clean(r.URL.Path)
+			if cleanedPath != "/" {
+				_, ok := nb10.AllowedFileTypes[path.Ext(cleanedPath)]
+				if !ok {
+					cleanedPath += "/"
+				}
+			}
+			if cleanedPath != r.URL.Path {
+				cleanedURL := *r.URL
+				cleanedURL.Path = cleanedPath
+				http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
+				return
+			}
+		}
+		nbrew.AddSecurityHeaders(w)
+		r = r.WithContext(context.WithValue(r.Context(), nb10.LoggerKey, nbrew.Logger.With(
+			slog.String("method", r.Method),
+			slog.String("url", scheme+r.Host+r.URL.RequestURI()),
+		)))
+		nbrew.ServeHTTP(w, r)
 	}
 }
