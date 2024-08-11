@@ -49,9 +49,6 @@ func New(err error) error {
 // RecoverPanic converts a panic into an error containing a stack trace of
 // where the panic occurred and writes it into the error pointer.
 func RecoverPanic(err *error) {
-	if err == nil {
-		return
-	}
 	if v := recover(); v != nil {
 		var pc [30]uintptr
 		n := runtime.Callers(2, pc[:])
@@ -60,9 +57,11 @@ func RecoverPanic(err *error) {
 		for frame, more := frames.Next(); more; frame, more = frames.Next() {
 			callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
 		}
-		*err = &Error{
-			Err:     fmt.Errorf("panic: %v", v),
-			Callers: callers,
+		if err != nil {
+			*err = &Error{
+				Err:     fmt.Errorf("panic: %v", v),
+				Callers: callers,
+			}
 		}
 	}
 }
