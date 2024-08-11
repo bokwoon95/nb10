@@ -292,7 +292,7 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 			Values: []any{
 				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
 				sq.Param("email", response.Email),
-				sq.Param("siteLimit", 3),
+				sq.Param("siteLimit", 1),
 				sq.Param("storageLimit", 10_000_000),
 			},
 		})
