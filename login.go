@@ -36,6 +36,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		CaptchaWidgetScriptSrc template.URL   `json:"captchaWidgetScriptSrc"`
 		CaptchaWidgetClass     string         `json:"captchaWidgetClass"`
 		CaptchaSiteKey         string         `json:"captchaSiteKey"`
+		CaptchaResponseName    string         `json:"captchaResponseName"`
 		Error                  string         `json:"error"`
 		FormErrors             url.Values     `json:"formErrors"`
 		SessionToken           string         `json:"sessionToken"`
@@ -140,6 +141,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
 		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
+		response.CaptchaResponseName = nbrew.CaptchaConfig.ResponseTokenName
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return

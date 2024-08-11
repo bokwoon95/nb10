@@ -5,6 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
+<script type='module' src='/files/static/login-6bf19fed.js'></script>
 {{- if $.RequireCaptcha }}
 <script src='{{ $.CaptchaWidgetScriptSrc }}' async defer></script>
 {{- end }}
@@ -13,7 +14,7 @@
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
   <a href='/files/' class='ma2 white'>🖋️☕ notebrew</a>
 </nav>
-<form method='post' class='w-80 w-70-m w-60-l center' data-login-validation data-prevent-double-submit>
+<form method='post' class='w-80 w-70-m w-60-l center' data-login-validation>
   <h1 class='f3 mv3 b tc'>Login</h1>
   {{- if eq (index $.PostRedirectGet "from") "invite" }}
   <div role='alert' class='w-100 br2 ph3 pv2 ba alert'>
@@ -84,8 +85,8 @@
   <input type='hidden' name='$.Redirect' value='{{ $.Redirect }}'>
   {{- end }}
   {{- if $.RequireCaptcha }}
-  <div class='{{ $.CaptchaWidgetClass }}' data-sitekey='{{ $.CaptchaSiteKey }}'></div>
+  <div class='{{ $.CaptchaWidgetClass }}' data-sitekey='{{ $.CaptchaSiteKey }}' data-captcha-response-name='{{ $.CaptchaResponseName }}'></div>
   {{- end }}
-  <div role='status' data-validation-status></div>
+  <div role='status'></div>
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>Log in</button>
 </form>
