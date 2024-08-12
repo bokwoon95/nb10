@@ -103,7 +103,7 @@ func main() {
 			"connect-src": "https://*.stripe.com/",
 			"frame-src":   "https://*.stripe.com/",
 			"script-src":  "https://*.stripe.com/",
-			"img-src":  "https://*.stripe.com/",
+			"img-src":     "https://*.stripe.com/",
 			"form-action": "https://*.stripe.com/",
 		})
 		defer func() {
