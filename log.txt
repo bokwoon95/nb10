@@ -74,11 +74,6 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
-configure stripe to send notification emails when a payment declines
-then on our end, we just listen for subscription cancellation events (either the ones where cancel_at_period_end is set or when stripe automatically marks a subscription as cancelled after all payment retries have failed).
-subscription_error = 2001-02-03 16:05:06 payment declined
-
-TODO: /stripe/checkout/success/ should set a flash session notifying the user that they purchased a plan successfully.
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
