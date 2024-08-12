@@ -78,6 +78,26 @@ Free Plan: 1 site / 10 MB
 1 GB Plan: 3 sites / 1 GB
 6 GB Plan: 10 sites / 6 GB
 
+Site Limit: 1
+Storage Limit: 10 MB
+[change plan]
+
+<given the customer ID, retrieve if they have any current subscriptions>
+<if no subscriptions, *then* show them the currently available products (notebrew.com 1GB vs notebrew.com 6GB)>
+
+{
+    "stripePublishableKey": "",
+    "stripeSecretKey": "",
+    "products": [
+        {
+            "name": "",
+            "price": "",
+            "priceID": "",
+            "description": ""
+        }
+    ]
+}
+
 TODO: /billing/
     - TODO: okay we try to add a basic stripe plan first and then change our billing to it.
 TODO: signup.go
