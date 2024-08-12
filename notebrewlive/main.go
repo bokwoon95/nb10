@@ -178,23 +178,21 @@ func main() {
 				}
 			}()
 		}
-		// Stripe.
-		b, err := os.ReadFile(filepath.Join(configDir, "stripe.json"))
+		// Billing.
+		var billingConfig BillingConfig
+		b, err := os.ReadFile(filepath.Join(configDir, "billing.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "billing.json"), err)
 		}
 		b = bytes.TrimSpace(b)
 		if len(b) > 0 {
-			var stripeConfig StripeConfig
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&stripeConfig)
+			err := decoder.Decode(&billingConfig)
 			if err != nil {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "billing.json"), err)
 			}
-			_ = stripeConfig.PublishableKey
-			_ = stripeConfig.SecretKey
-			stripe.Key = stripeConfig.SecretKey
+			stripe.Key = billingConfig.StripeSecretKey
 		}
 		if len(args) > 0 {
 			switch args[0] {
@@ -490,7 +488,7 @@ func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
 			case "profile":
 				profile(nbrew, w, r, user)
 				return
-			case "billing":
+			case "checkout":
 			}
 		}
 		nbrew.ServeHTTP(w, r)

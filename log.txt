@@ -85,10 +85,11 @@ Storage Limit: 10 MB
 <given the customer ID, retrieve if they have any current subscriptions>
 <if no subscriptions, *then* show them the currently available products (notebrew.com 1GB vs notebrew.com 6GB)>
 
+billing.json
 {
     "stripePublishableKey": "",
     "stripeSecretKey": "",
-    "products": [
+    "plans": [
         {
             "name": "notebrew 1GB plan",
             "siteLimit": 3,
