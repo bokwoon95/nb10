@@ -221,7 +221,7 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 		return
 	}
 	switch event.Type {
-	case "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted":
+	case "customer.subscription.created":
 		var subscription stripe.Subscription
 		err := json.Unmarshal(event.Data.Raw, &subscription)
 		if err != nil {
@@ -229,10 +229,46 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			return
 		}
 		var siteLimit, storageLimit int64
-		if event.Type == "customer.subscription.deleted" {
-			siteLimit = 1
-			storageLimit = 10_000_000
-		} else {
+		for _, subscriptionItem := range subscription.Items.Data {
+			if subscriptionItem.Price == nil {
+				continue
+			}
+			for _, plan := range stripeConfig.Plans {
+				if plan.PriceID == subscriptionItem.Price.ID {
+					siteLimit = plan.SiteLimit
+					storageLimit = plan.StorageLimit
+					break
+				}
+			}
+			if siteLimit != 0 && storageLimit != 0 {
+				break
+			}
+		}
+		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "UPDATE users" +
+				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
+				"WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+			Values: []any{
+				sq.Int64Param("siteLimit", siteLimit),
+				sq.Int64Param("storageLimit", storageLimit),
+				sq.StringParam("customerID", subscription.Customer.ID),
+			},
+		})
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+	case "customer.subscription.updated":
+		var subscription stripe.Subscription
+		err := json.Unmarshal(event.Data.Raw, &subscription)
+		if err != nil {
+			nbrew.BadRequest(w, r, err)
+			return
+		}
+		var siteLimit, storageLimit int64
+		if subscription.Status == stripe.SubscriptionStatusActive {
 			for _, subscriptionItem := range subscription.Items.Data {
 				if subscriptionItem.Price == nil {
 					continue
@@ -248,6 +284,9 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 					break
 				}
 			}
+		} else {
+			siteLimit = 1
+			storageLimit = 10_000_000
 		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
@@ -257,6 +296,29 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			Values: []any{
 				sq.Int64Param("siteLimit", siteLimit),
 				sq.Int64Param("storageLimit", storageLimit),
+				sq.StringParam("customerID", subscription.Customer.ID),
+			},
+		})
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+	case "customer.subscription.deleted":
+		var subscription stripe.Subscription
+		err := json.Unmarshal(event.Data.Raw, &subscription)
+		if err != nil {
+			nbrew.BadRequest(w, r, err)
+			return
+		}
+		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "UPDATE users" +
+				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
+				"WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+			Values: []any{
+				sq.Int64Param("siteLimit", 1),
+				sq.Int64Param("storageLimit", 10_000_000),
 				sq.StringParam("customerID", subscription.Customer.ID),
 			},
 		})
