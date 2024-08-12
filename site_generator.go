@@ -28,8 +28,8 @@ import (
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/bokwoon95/nb10/internal/highlighting"
 	"github.com/bokwoon95/nb10/internal/markdownmath"
-	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/davecgh/go-spew/spew"
 	fences "github.com/stefanfritsch/goldmark-fences"
 	"github.com/yuin/goldmark"
@@ -195,7 +195,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	case interface{ As(any) bool }:
 		ok = v.As(&databaseFS)
 	}
-	if ok {
+	if !ok {
 		return siteGen, nil
 	}
 	extFilter := sq.Expr("1 = 1")
@@ -214,6 +214,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		extFilter = sq.Expr(b.String(), args...)
 	}
 	cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
+		Debug:   true,
 		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
@@ -2082,17 +2083,17 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 							uri.Host = siteGen.cdnDomain
 							if strings.HasPrefix(uri.Path, "/") {
 								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
+								fmt.Printf("got here!1 %q\n", filePath)
 								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
 									uri.Path = "/" + fileID.String() + path.Ext(filePath)
 									rewrittenVal = []byte(uri.String())
 								}
 							} else {
-								if urlPath != "" {
-									filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
-									if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-										uri.Path = "/" + fileID.String() + path.Ext(filePath)
-										rewrittenVal = []byte(uri.String())
-									}
+								filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
+								fmt.Printf("got here!2 %q\n", filePath)
+								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
+									uri.Path = "/" + fileID.String() + path.Ext(filePath)
+									rewrittenVal = []byte(uri.String())
 								}
 							}
 						}
