@@ -144,16 +144,14 @@
   </table>
 </form>
 <h2 class='mb0 mh2 underline'>Plans</h2>
-{{- if gt $.SiteLimit 0 }}
 <div class='ma2'>
   <div class='b'>Current site limit:</div>
-  <div>{{ $.SiteLimit }}</div>
+  <div>{{ if gt $.SiteLimit }}{{ $.SiteLimit }}{{ else }}-{{ end }}</div>
 </div>
-{{- end }}
 {{- if gt $.StorageLimit 0 }}
 <div class='ma2'>
   <div class='b'>Current storage limit:</div>
-  <div>{{ humanReadableFileSize $.StorageLimit }}</div>
+  <div>{{ if gt $.StorageLimit 0 }}{{ humanReadableFileSize $.StorageLimit }}{{ else }}-{{ end }}</div>
 </div>
 {{- end }}
 {{- if $.HasSubcription }}
