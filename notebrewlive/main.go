@@ -100,9 +100,11 @@ func main() {
 			}
 		}
 		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir, map[string]string{
-			"script-src":  "https://js.stripe.com/",
-			"frame-src":   "https://js.stripe.com/",
-			"form-action": "https://checkout.stripe.com/ https://billing.stripe.com/",
+			"connect-src": "https://*.stripe.com/",
+			"frame-src":   "https://*.stripe.com/",
+			"script-src":  "https://*.stripe.com/",
+			"img-src":  "https://*.stripe.com/",
+			"form-action": "https://*.stripe.com/",
 		})
 		defer func() {
 			for i := len(closers) - 1; i >= 0; i-- {
