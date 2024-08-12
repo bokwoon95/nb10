@@ -214,7 +214,6 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		extFilter = sq.Expr(b.String(), args...)
 	}
 	cursor, err := sq.FetchCursor(ctx, databaseFS.DB, sq.Query{
-		Debug:   true,
 		Dialect: databaseFS.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
