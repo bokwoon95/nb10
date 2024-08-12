@@ -660,7 +660,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				if !fileType.Has(AttributeEditable) && !fileType.Has(AttributeImg) && !fileType.Has(AttributeFont) {
 					continue
 				}
-				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
+				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.SizeLimit))
 				if err != nil {
 					return err
 				}
@@ -679,7 +679,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				if tail == "" && (tgzFileName == "posts.html" || tgzFileName == "themes.html") {
 					continue
 				}
-				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
+				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.SizeLimit))
 				if err != nil {
 					return err
 				}
@@ -706,7 +706,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				if fileType.Ext != ".md" && baseName != "postlist.json" && baseName != "postlist.html" && baseName != "post.html" {
 					continue
 				}
-				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
+				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.SizeLimit))
 				if err != nil {
 					return err
 				}
@@ -723,7 +723,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				if !fileType.Has(AttributeEditable) && !fileType.Has(AttributeImg) && !fileType.Has(AttributeFont) {
 					continue
 				}
-				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
+				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.SizeLimit))
 				if err != nil {
 					return err
 				}
@@ -734,7 +734,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				if header.Name != "site.json" {
 					continue
 				}
-				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.Limit))
+				err := writeFile(ctx, path.Join(sitePrefix, header.Name), modTime, creationTime, caption, isPinned, io.LimitReader(tarReader, fileType.SizeLimit))
 				if err != nil {
 					return err
 				}

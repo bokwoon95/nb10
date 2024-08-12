@@ -21,8 +21,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 )
 
 var wildcardReplacer = strings.NewReplacer(`%`, `\%`, `_`, `\_`, `\`, `\\`)

@@ -18,8 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -285,7 +285,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		switch head {
 		case "notes":
 			if fileType.Has(AttributeEditable) || fileType.Has(AttributeImg) || fileType.Has(AttributeFont) {
-				err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+				err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 				if err != nil {
 					var maxBytesErr *http.MaxBytesError
 					if errors.As(err, &maxBytesErr) {
@@ -309,7 +309,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				continue
 			}
 			var b strings.Builder
-			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, fileType.Limit))
+			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 			if err != nil {
 				var maxBytesErr *http.MaxBytesError
 				if errors.As(err, &maxBytesErr) {
@@ -342,7 +342,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		case "posts":
 			if fileType.Ext != ".md" {
 				if fileName == "postlist.json" || fileName == "postlist.html" || fileName == "post.html" {
-					err := writeFile(groupctx, filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+					err := writeFile(groupctx, filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 					if err != nil {
 						nbrew.GetLogger(r.Context()).Error(err.Error())
 						nbrew.InternalServerError(w, r, err)
@@ -352,7 +352,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				continue
 			}
 			var b strings.Builder
-			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, fileType.Limit))
+			_, err := io.Copy(&b, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 			if err != nil {
 				var maxBytesErr *http.MaxBytesError
 				if errors.As(err, &maxBytesErr) {
@@ -395,7 +395,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 			})
 		case "output":
 			if fileType.Has(AttributeEditable) || fileType.Has(AttributeFont) {
-				err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+				err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 				if err != nil {
 					var maxBytesErr *http.MaxBytesError
 					if errors.As(err, &maxBytesErr) {
@@ -412,7 +412,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 				}
 			} else if fileType.Has(AttributeImg) {
 				if !fileType.Has(AttributeObject) {
-					err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+					err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 					if err != nil {
 						var maxBytesErr *http.MaxBytesError
 						if errors.As(err, &maxBytesErr) {
@@ -429,7 +429,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					}
 				} else {
 					if nbrew.ImgCmd == "" {
-						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 						if err != nil {
 							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
@@ -474,7 +474,7 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 								return
 							}
 						}
-						_, err = io.Copy(input, http.MaxBytesReader(nil, part, fileType.Limit))
+						_, err = io.Copy(input, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 						if err != nil {
 							os.Remove(inputPath)
 							var maxBytesErr *http.MaxBytesError

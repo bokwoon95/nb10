@@ -680,7 +680,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					}
 					filePath := path.Join(outputDir, fileName)
 					if !fileType.Has(AttributeObject) {
-						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+						err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 						if err != nil {
 							var maxBytesErr *http.MaxBytesError
 							if errors.As(err, &maxBytesErr) {
@@ -697,7 +697,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 						}
 					} else {
 						if nbrew.ImgCmd == "" {
-							err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+							err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 							if err != nil {
 								var maxBytesErr *http.MaxBytesError
 								if errors.As(err, &maxBytesErr) {
@@ -742,7 +742,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 									return
 								}
 							}
-							_, err = io.Copy(input, http.MaxBytesReader(nil, part, fileType.Limit))
+							_, err = io.Copy(input, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 							if err != nil {
 								os.Remove(inputPath)
 								var maxBytesErr *http.MaxBytesError
@@ -790,7 +790,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					}
 				} else {
 					filePath := path.Join(outputDir, fileName)
-					err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.Limit))
+					err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 					if err != nil {
 						var maxBytesErr *http.MaxBytesError
 						if errors.As(err, &maxBytesErr) {

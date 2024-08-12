@@ -39,7 +39,7 @@ type Mailer struct {
 	Logger        *slog.Logger
 	baseCtx       context.Context
 	baseCtxCancel func()
-	stop       chan struct{}
+	stop          chan struct{}
 }
 
 type Mail struct {
@@ -61,7 +61,7 @@ func NewMailer(config MailerConfig) (*Mailer, error) {
 		Logger:        config.Logger,
 		baseCtx:       baseCtx,
 		baseCtxCancel: baseCtxCancel,
-		stop:       make(chan struct{}),
+		stop:          make(chan struct{}),
 	}
 	if mailer.Host != "" && mailer.Port != "" && mailer.Username != "" && mailer.Password != "" {
 		client, err := mailer.NewClient()
