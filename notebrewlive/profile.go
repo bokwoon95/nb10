@@ -47,7 +47,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 		Sessions              []Session      `json:"sessions"`
 		Plans                 []Plan         `json:"plans"`
 		CustomerID            string         `json:"customerID"`
-		HasSubcription        bool           `json:"hasSubscription"`
+		HasSubscription        bool           `json:"hasSubscription"`
 		PostRedirectGet       map[string]any `json:"postRedirectGet"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
@@ -225,7 +225,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 				Customer: &user.CustomerID,
 			})
 			for iter.Next() {
-				response.HasSubcription = true
+				response.HasSubscription = true
 				break
 			}
 			err = iter.Err()

@@ -148,13 +148,11 @@
   <div class='b'>Current site limit:</div>
   <div>{{ if gt $.SiteLimit }}{{ $.SiteLimit }}{{ else }}-{{ end }}</div>
 </div>
-{{- if gt $.StorageLimit 0 }}
 <div class='ma2'>
   <div class='b'>Current storage limit:</div>
   <div>{{ if gt $.StorageLimit 0 }}{{ humanReadableFileSize $.StorageLimit }}{{ else }}-{{ end }}</div>
 </div>
-{{- end }}
-{{- if $.HasSubcription }}
+{{- if $.HasSubscription }}
 <form method='post' action='/stripe/portal/'>
   <button type='submit' class='button ba br2 b--black ph2 pv1'>manage subscription</button>
 </form>
