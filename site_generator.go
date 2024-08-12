@@ -2083,14 +2083,12 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 							uri.Host = siteGen.cdnDomain
 							if strings.HasPrefix(uri.Path, "/") {
 								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
-								fmt.Printf("got here!1 %q\n", filePath)
 								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
 									uri.Path = "/" + fileID.String() + path.Ext(filePath)
 									rewrittenVal = []byte(uri.String())
 								}
 							} else {
 								filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
-								fmt.Printf("got here!2 %q\n", filePath)
 								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
 									uri.Path = "/" + fileID.String() + path.Ext(filePath)
 									rewrittenVal = []byte(uri.String())
