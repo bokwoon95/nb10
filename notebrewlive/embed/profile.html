@@ -146,7 +146,7 @@
 <h2 class='mb0 mh2 underline'>Plans</h2>
 <div class='ma2'>
   <div class='b'>Current site limit:</div>
-  <div>{{ if gt $.SiteLimit }}{{ $.SiteLimit }}{{ else }}-{{ end }}</div>
+  <div>{{ if gt $.SiteLimit 0 }}{{ $.SiteLimit }}{{ else }}-{{ end }}</div>
 </div>
 <div class='ma2'>
   <div class='b'>Current storage limit:</div>
