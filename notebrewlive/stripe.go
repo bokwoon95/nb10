@@ -1,13 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/stripe/stripe-go/v79"
 	portalsession "github.com/stripe/stripe-go/v79/billingportal/session"
 	"github.com/stripe/stripe-go/v79/checkout/session"
@@ -53,7 +53,10 @@ func stripeCheckout(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request
 		CancelURL:  stripe.String(scheme + nbrew.CMSDomain + "/users/profile/"),
 	})
 	if err != nil {
-		spew.Dump(err)
+		var stripeErr *stripe.Error
+		if errors.As(err, &stripeErr) {
+			fmt.Println(stripeErr.Code)
+		}
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
@@ -75,7 +78,10 @@ func stripeCheckoutSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.
 	sessionID := r.Form.Get("sessionID")
 	checkoutSession, err := session.Get(sessionID, nil)
 	if err != nil {
-		spew.Dump(err)
+		var stripeErr *stripe.Error
+		if errors.As(err, &stripeErr) {
+			fmt.Println(stripeErr.Code)
+		}
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
@@ -162,7 +168,10 @@ func stripePortal(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, 
 		ReturnURL: stripe.String(scheme + nbrew.CMSDomain + "/users/profile/"),
 	})
 	if err != nil {
-		spew.Dump(err)
+		var stripeErr *stripe.Error
+		if errors.As(err, &stripeErr) {
+			fmt.Println(stripeErr.Code)
+		}
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
 		return
