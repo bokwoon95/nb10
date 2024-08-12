@@ -71,7 +71,10 @@ func stripeCheckout(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		var stripeErr *stripe.Error
 		if errors.As(err, &stripeErr) {
-			nbrew.GetLogger(r.Context()).Error(string(stripeErr.Code))
+			if stripeErr.Code == stripe.ErrorCodeResourceMissing {
+				nbrew.BadRequest(w, r, fmt.Errorf("invalid customerID %q", user.CustomerID))
+				return
+			}
 		}
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
@@ -98,7 +101,10 @@ func stripeCheckoutSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.
 	if err != nil {
 		var stripeErr *stripe.Error
 		if errors.As(err, &stripeErr) {
-			nbrew.GetLogger(r.Context()).Error(string(stripeErr.Code))
+			if stripeErr.Code == stripe.ErrorCodeResourceMissing {
+				nbrew.BadRequest(w, r, fmt.Errorf("invalid sessionID %q", sessionID))
+				return
+			}
 		}
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
@@ -194,7 +200,10 @@ func stripePortal(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, 
 	if err != nil {
 		var stripeErr *stripe.Error
 		if errors.As(err, &stripeErr) {
-			nbrew.GetLogger(r.Context()).Error(string(stripeErr.Code))
+			if stripeErr.Code == stripe.ErrorCodeResourceMissing {
+				nbrew.BadRequest(w, r, fmt.Errorf("invalid customerID %q", user.CustomerID))
+				return
+			}
 		}
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 		nbrew.InternalServerError(w, r, err)
@@ -248,7 +257,7 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			Dialect: nbrew.Dialect,
 			Format: "UPDATE users" +
 				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
-				"WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+				" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
 			Values: []any{
 				sq.Int64Param("siteLimit", siteLimit),
 				sq.Int64Param("storageLimit", storageLimit),
@@ -292,7 +301,7 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			Dialect: nbrew.Dialect,
 			Format: "UPDATE users" +
 				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
-				"WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+				" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
 			Values: []any{
 				sq.Int64Param("siteLimit", siteLimit),
 				sq.Int64Param("storageLimit", storageLimit),
@@ -315,7 +324,7 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			Dialect: nbrew.Dialect,
 			Format: "UPDATE users" +
 				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
-				"WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+				" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
 			Values: []any{
 				sq.Int64Param("siteLimit", 1),
 				sq.Int64Param("storageLimit", 10_000_000),
