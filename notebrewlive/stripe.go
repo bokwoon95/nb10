@@ -47,14 +47,16 @@ func stripeCheckout(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request
 	if r.TLS == nil {
 		scheme = "http://"
 	}
-	var customerID *string
+	var customerID, email *string
 	if user.CustomerID != "" {
 		customerID = &user.CustomerID
+	} else {
+		email = &user.Email
 	}
 	expiresAt := time.Now().Add(30 * time.Minute)
 	checkoutSession, err := session.New(&stripe.CheckoutSessionParams{
 		Customer:      customerID,
-		CustomerEmail: stripe.String(user.Email),
+		CustomerEmail: email,
 		ExpiresAt:     stripe.Int64(expiresAt.Unix()),
 		Mode:          stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
