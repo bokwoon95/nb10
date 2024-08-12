@@ -21,7 +21,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user User, plans []Plan) {
+func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user User, stripeConfig StripeConfig) {
 	type Site struct {
 		SiteID      nb10.ID `json:"siteID"`
 		SiteName    string  `json:"siteName"`
@@ -136,7 +136,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 	response.DisableReason = user.DisableReason
 	response.SiteLimit = user.SiteLimit
 	response.StorageLimit = user.StorageLimit
-	response.Plans = plans
+	response.Plans = stripeConfig.Plans
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() (err error) {
 		defer stacktrace.RecoverPanic(&err)

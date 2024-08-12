@@ -20,11 +20,11 @@ type Plan struct {
 	PriceID      string `json:"priceID"`
 }
 
-type BillingConfig struct {
-	StripePublishableKey string `json:"stripePublishableKey"`
-	StripeSecretKey      string `json:"stripeSecretKey"`
-	StripeWebhookSecret  string `json:"stripeWebhookSecret"`
-	Plans                []Plan `json:"plans"`
+type StripeConfig struct {
+	PublishableKey string `json:"publishableKey"`
+	SecretKey      string `json:"secretKey"`
+	WebhookSecret  string `json:"webhookSecret"`
+	Plans          []Plan `json:"plans"`
 }
 
 var (

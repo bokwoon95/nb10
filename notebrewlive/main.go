@@ -171,27 +171,23 @@ func main() {
 				}
 			}()
 		}
-		// Billing.
-		var billingConfig BillingConfig
-		b, err := os.ReadFile(filepath.Join(configDir, "billing.json"))
+		// Stripe.
+		var stripeConfig StripeConfig
+		b, err := os.ReadFile(filepath.Join(configDir, "stripe.json"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "billing.json"), err)
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
 		}
 		b = bytes.TrimSpace(b)
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
 			decoder.DisallowUnknownFields()
-			err := decoder.Decode(&billingConfig)
+			err := decoder.Decode(&stripeConfig)
 			if err != nil {
-				return fmt.Errorf("%s: %w", filepath.Join(configDir, "billing.json"), err)
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "stripe.json"), err)
 			}
-			stripe.Key = billingConfig.StripeSecretKey
+			stripe.Key = stripeConfig.SecretKey
 		}
 		// Signup.
-		b, err = os.ReadFile(filepath.Join(configDir, "billing.json"))
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("%s: %w", filepath.Join(configDir, "billing.json"), err)
-		}
 		b, err = os.ReadFile(filepath.Join(configDir, "signupdisabled.txt"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "signupdisabled.txt"), err)
@@ -284,7 +280,7 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
-				cmd.Handler = ServeHTTP(nbrew, billingConfig, signupDisabled)
+				cmd.Handler = ServeHTTP(nbrew, stripeConfig, signupDisabled)
 				err = cmd.Run()
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
@@ -321,7 +317,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		server.Handler = ServeHTTP(nbrew, billingConfig, signupDisabled)
+		server.Handler = ServeHTTP(nbrew, stripeConfig, signupDisabled)
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno
@@ -384,7 +380,7 @@ func main() {
 	}
 }
 
-func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig, signupDisabled bool) http.HandlerFunc {
+func ServeHTTP(nbrew *nb10.Notebrew, stripeConfig StripeConfig, signupDisabled bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		scheme := "https://"
 		if r.TLS == nil {
@@ -477,13 +473,15 @@ func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig, signupDisabled
 				nbrew.InternalServerError(w, r, err)
 				return
 			}
-			profile(nbrew, w, r, user, billingConfig.Plans)
+			profile(nbrew, w, r, user, stripeConfig)
 			return
 		case "stripe/webhook":
 			if nbrew.DB == nil {
 				nbrew.NotFound(w, r)
 				return
 			}
+			stripeWebhook(nbrew, w, r, stripeConfig)
+			return
 		}
 		head, tail, _ := strings.Cut(urlPath, "/")
 		switch head {
@@ -552,10 +550,10 @@ func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig, signupDisabled
 			}
 			switch tail {
 			case "checkout":
-				stripeCheckout(nbrew, w, r, user)
+				stripeCheckout(nbrew, w, r, user, stripeConfig)
 				return
 			case "checkout/success":
-				stripeCheckoutSuccess(nbrew, w, r, user)
+				stripeCheckoutSuccess(nbrew, w, r, user, stripeConfig)
 				return
 			case "portal":
 				stripePortal(nbrew, w, r, user)
