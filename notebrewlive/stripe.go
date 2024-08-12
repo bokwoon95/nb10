@@ -278,6 +278,17 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 		}
 		var siteLimit, storageLimit int64
 		if subscription.Status == stripe.SubscriptionStatusActive {
+			if subscription.CancelAtPeriodEnd {
+				// If we reach here it means that the customer canceled the
+				// subscription, but it only kicks in at the end of the billing
+				// period. Once that happens we will receive another webhook
+				// event, this time where the subscription status ==
+				// "canceled". So, there is nothing to do right now and the
+				// customer gets to keep using their currently active
+				// subscription (at least until the end of the billing period).
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 			for _, subscriptionItem := range subscription.Items.Data {
 				if subscriptionItem.Price == nil {
 					continue
