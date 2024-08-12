@@ -90,10 +90,11 @@ Storage Limit: 10 MB
     "stripeSecretKey": "",
     "products": [
         {
-            "name": "",
+            "name": "notebrew 1GB plan",
+            "siteLimit": 3,
+            "storageLimit": 10000000,
             "price": "",
-            "priceID": "",
-            "description": ""
+            "priceID": ""
         }
     ]
 }

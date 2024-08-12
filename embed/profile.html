@@ -126,7 +126,7 @@
     <tbody>
       {{- range $session := $.Sessions }}
       <tr class='bb tc'>
-        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='sessionTokenPrefix' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</th>
+        <td class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='sessionTokenPrefix' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</td>
         <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPrefix }}&hellip;</td>
         <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
         <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>

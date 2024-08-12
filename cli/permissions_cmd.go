@@ -88,8 +88,8 @@ func (cmd *PermissionsCmd) Run() error {
 			Dialect: cmd.Notebrew.Dialect,
 			Format: "SELECT {*}" +
 				" FROM site_user" +
-				" JOIN users ON users.user_id = site_user.user_id" +
-				" JOIN site ON site.site_id = site_user.site_id" +
+				" RIGHT JOIN users ON users.user_id = site_user.user_id" +
+				" RIGHT JOIN site ON site.site_id = site_user.site_id" +
 				" LEFT JOIN site_owner ON site_owner.site_id = site.site_id" +
 				" LEFT JOIN users AS owner ON owner.user_id = site_owner.user_id" +
 				" ORDER BY users.user_id, site.site_id",

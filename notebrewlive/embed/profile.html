@@ -126,7 +126,7 @@
     <tbody>
       {{- range $session := $.Sessions }}
       <tr class='bb tc'>
-        <th class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='sessionTokenPrefix' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</th>
+        <td class='pa2'>{{ if $session.Current }}{{ else }}<input type='checkbox' name='sessionTokenPrefix' value='{{ $session.SessionTokenPrefix }}' data-checkbox-follower>{{ end }}</td>
         <td class='pa2{{ if $session.Current}} b{{ end }}'>{{ $session.SessionTokenPrefix }}&hellip;</td>
         <td class='pa2'>{{ if $session.Label }}{{ $session.Label }}{{ else }}<em>- empty -</em>{{ end }}</td>
         <td class='pa2'>{{ formatTime $session.CreationTime "2006-01-02 15:04:05 -07:00" $.TimezoneOffsetSeconds }}</td>
@@ -142,7 +142,55 @@
     </tbody>
   </table>
 </form>
-<h2 class='mb0 mh2 underline'>Billing</h2>
+<h2 class='mb0 mh2 underline'>Plans</h2>
+{{- if gt $.SiteLimit 0 }}
+<div class='ma2'>
+  <div class='b'>Current site limit:</div>
+  <div>{{ $.SiteLimit }}</div>
+</div>
+{{- end }}
+{{- if gt $.StorageLimit 0 }}
+<div class='ma2'>
+  <div class='b'>Current storage limit:</div>
+  <div>{{ humanReadableFileSize $.StorageLimit }}</div>
+</div>
+{{- end }}
+<div class='overflow-x-auto'>
+  <table class='mv2 collapse'>
+    <thead>
+      <tr class='bb h2'>
+        <th class='pa2'>Name</th>
+        <th class='pa2'>Site limit</th>
+        <th class='pa2'>Storage limit</th>
+        <th class='pa2'>Choose plan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class='bb tc'>
+        <td class='pa2'>1GB plan</td>
+        <td class='pa2'>3</td>
+        <td class='pa2'>1 GB</td>
+        <td class='pa2'>
+          <form method='post' action='/checkout/'>
+            <input type='hidden' name='priceID' value=''>
+            <button type='submit' class='button ba br2 b--black ph2 pv1'>$1/month, paid annually</button>
+          </form>
+        </td>
+      </tr>
+      <tr class='bb tc'>
+        <td class='pa2'>6GB plan</td>
+        <td class='pa2'>10</td>
+        <td class='pa2'>6 GB</td>
+        <td class='pa2'>
+          <form method='post' action='/checkout/'>
+            <input type='hidden' name='priceID' value=''>
+            <button type='submit' class='button ba br2 b--black ph2 pv1'>$4/month, paid annually</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 {{- define "octicons-plus" }}
 <svg aria-hidden='true' height='16' viewBox='0 0 16 16' version='1.1' width='16' data-view-component='true' class='octicon octicon-plus'>
