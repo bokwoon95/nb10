@@ -65,8 +65,9 @@ func stripeCheckout(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request
 				Quantity: stripe.Int64(1),
 			},
 		},
-		SuccessURL: stripe.String(scheme + nbrew.CMSDomain + "/stripe/checkout/success/?sessionID={CHECKOUT_SESSION_ID}"),
-		CancelURL:  stripe.String(scheme + nbrew.CMSDomain + "/users/profile/"),
+		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{},
+		SuccessURL:       stripe.String(scheme + nbrew.CMSDomain + "/stripe/checkout/success/?sessionID={CHECKOUT_SESSION_ID}"),
+		CancelURL:        stripe.String(scheme + nbrew.CMSDomain + "/users/profile/"),
 	})
 	if err != nil {
 		var stripeErr *stripe.Error
@@ -235,6 +236,10 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 		err := json.Unmarshal(event.Data.Raw, &subscription)
 		if err != nil {
 			nbrew.BadRequest(w, r, err)
+			return
+		}
+		if subscription.Status != stripe.SubscriptionStatusActive {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		var siteLimit, storageLimit int64

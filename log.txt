@@ -78,10 +78,7 @@ configure stripe to send notification emails when a payment declines
 then on our end, we just listen for subscription cancellation events (either the ones where cancel_at_period_end is set or when stripe automatically marks a subscription as cancelled after all payment retries have failed).
 subscription_error = 2001-02-03 16:05:06 payment declined
 
-TODO: add webhooks | figure out what webhooks we need to listen to in the first place.
-    TODO: once we have added webhooks, try subscribing to a plan and checking if the webhook updates the user's site_limit and storage_limit correctly.
-    TODO: upon checkout success, we should immediately update the user's site_limit and storage_limit based on the sessionID (retrieve the session's priceID, then check the current plans to see which plan it is).
-    TODO: /stripe/checkout/success/ should set a flash session notifying the user that they purchased a plan successfully.
+TODO: /stripe/checkout/success/ should set a flash session notifying the user that they purchased a plan successfully.
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
