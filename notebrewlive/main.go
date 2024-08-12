@@ -19,6 +19,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -186,6 +187,16 @@ func main() {
 			}
 			stripe.Key = billingConfig.StripeSecretKey
 		}
+		// Signup.
+		b, err = os.ReadFile(filepath.Join(configDir, "billing.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "billing.json"), err)
+		}
+		b, err = os.ReadFile(filepath.Join(configDir, "signupdisabled.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "signupdisabled.txt"), err)
+		}
+		signupDisabled, _ := strconv.ParseBool(string(bytes.TrimSpace(b)))
 		if len(args) > 0 {
 			switch args[0] {
 			case "createinvite":
@@ -273,7 +284,7 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
-				cmd.Handler = ServeHTTP(nbrew, billingConfig)
+				cmd.Handler = ServeHTTP(nbrew, billingConfig, signupDisabled)
 				err = cmd.Run()
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
@@ -310,7 +321,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		server.Handler = ServeHTTP(nbrew, billingConfig)
+		server.Handler = ServeHTTP(nbrew, billingConfig, signupDisabled)
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno
@@ -373,7 +384,7 @@ func main() {
 	}
 }
 
-func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig) http.HandlerFunc {
+func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig, signupDisabled bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		scheme := "https://"
 		if r.TLS == nil {
@@ -477,7 +488,7 @@ func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig) http.HandlerFu
 		head, tail, _ := strings.Cut(urlPath, "/")
 		switch head {
 		case "signup":
-			if nbrew.DB == nil || nbrew.Mailer == nil {
+			if nbrew.DB == nil || nbrew.Mailer == nil || signupDisabled {
 				nbrew.NotFound(w, r)
 				return
 			}
