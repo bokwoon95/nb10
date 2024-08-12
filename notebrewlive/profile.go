@@ -15,11 +15,13 @@ import (
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/nb10/stacktrace"
+	"github.com/stripe/stripe-go/v79"
+	"github.com/stripe/stripe-go/v79/subscription"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/sync/errgroup"
 )
 
-func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user nb10.User) {
+func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user User, plans []Plan) {
 	type Site struct {
 		SiteID      nb10.ID `json:"siteID"`
 		SiteName    string  `json:"siteName"`
@@ -43,6 +45,9 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 		StorageUsed           int64          `json:"storageUsed"`
 		Sites                 []Site         `json:"sites"`
 		Sessions              []Session      `json:"sessions"`
+		Plans                 []Plan         `json:"plans"`
+		CustomerID            string         `json:"customerID"`
+		HasSubcription        bool           `json:"hasSubscription"`
 		PostRedirectGet       map[string]any `json:"postRedirectGet"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
@@ -123,6 +128,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 	if err != nil {
 		nbrew.GetLogger(r.Context()).Error(err.Error())
 	}
+	response.CustomerID = user.CustomerID
 	response.UserID = user.UserID
 	response.Username = user.Username
 	response.Email = user.Email
@@ -130,6 +136,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 	response.DisableReason = user.DisableReason
 	response.SiteLimit = user.SiteLimit
 	response.StorageLimit = user.StorageLimit
+	response.Plans = plans
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() (err error) {
 		defer stacktrace.RecoverPanic(&err)
@@ -211,6 +218,23 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 		response.Sessions = sessions
 		return nil
 	})
+	if user.CustomerID != "" {
+		group.Go(func() (err error) {
+			defer stacktrace.RecoverPanic(&err)
+			iter := subscription.List(&stripe.SubscriptionListParams{
+				Customer: &user.CustomerID,
+			})
+			for iter.Next() {
+				response.HasSubcription = true
+				break
+			}
+			err = iter.Err()
+			if err != nil {
+				return stacktrace.New(err)
+			}
+			return nil
+		})
+	}
 	err = group.Wait()
 	if err != nil {
 		nbrew.GetLogger(r.Context()).Error(err.Error())

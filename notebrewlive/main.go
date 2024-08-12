@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
-	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -40,19 +39,6 @@ var (
 		os.Exit(1)
 	}
 )
-
-var (
-	//go:embed embed
-	embedFS   embed.FS
-	RuntimeFS fs.FS = embedFS
-	//go:embed schema_database.json
-	databaseSchemaBytes []byte
-)
-
-type StripeConfig struct {
-	PublishableKey string `json:"publishableKey"`
-	SecretKey      string `json:"secretKey"`
-}
 
 func main() {
 	err := func() error {
@@ -113,7 +99,11 @@ func main() {
 				return nil
 			}
 		}
-		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir)
+		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir, map[string]string{
+			"script-src":  "https://js.stripe.com/v3/",
+			"frame-src":   "https://js.stripe.com/",
+			"form-action": "https://checkout.stripe.com/ https://billing.stripe.com/",
+		})
 		defer func() {
 			for i := len(closers) - 1; i >= 0; i-- {
 				closers[i].Close()
@@ -281,7 +271,7 @@ func main() {
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
-				cmd.Handler = ServeHTTP(nbrew)
+				cmd.Handler = ServeHTTP(nbrew, billingConfig)
 				err = cmd.Run()
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
@@ -318,7 +308,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		server.Handler = ServeHTTP(nbrew)
+		server.Handler = ServeHTTP(nbrew, billingConfig)
 		listener, err := net.Listen("tcp", server.Addr)
 		if err != nil {
 			var errno syscall.Errno
@@ -381,7 +371,7 @@ func main() {
 	}
 }
 
-func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
+func ServeHTTP(nbrew *nb10.Notebrew, billingConfig BillingConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		scheme := "https://"
 		if r.TLS == nil {
@@ -423,9 +413,72 @@ func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
 			return
 		}
 		urlPath := strings.Trim(r.URL.Path, "/")
+		switch urlPath {
+		case "users/profile":
+			if nbrew.DB == nil {
+				nbrew.NotFound(w, r)
+				return
+			}
+			cookie, _ := r.Cookie("session")
+			if cookie == nil || cookie.Value == "" {
+				nbrew.NotAuthenticated(w, r)
+				return
+			}
+			sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+			if err != nil || len(sessionTokenBytes) != 24 {
+				nbrew.NotAuthenticated(w, r)
+				return
+			}
+			var sessionTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(sessionTokenBytes[8:])
+			copy(sessionTokenHash[:8], sessionTokenBytes[:8])
+			copy(sessionTokenHash[8:], checksum[:])
+			user, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "SELECT {*}" +
+					" FROM session" +
+					" JOIN users ON users.user_id = session.user_id" +
+					" LEFT JOIN customer ON customer.user_id = session.user_id" +
+					" WHERE session.session_token_hash = {sessionTokenHash}",
+				Values: []any{
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+				},
+			}, func(row *sq.Row) User {
+				var user User
+				user.UserID = row.UUID("users.user_id")
+				user.Username = row.String("users.username")
+				user.Email = row.String("users.email")
+				user.TimezoneOffsetSeconds = row.Int("users.timezone_offset_seconds")
+				user.DisableReason = row.String("users.disable_reason")
+				user.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
+				user.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
+				user.CustomerID = row.String("customer.customer_id")
+				return user
+			})
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					nbrew.NotAuthenticated(w, r)
+					return
+				}
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			profile(nbrew, w, r, user, billingConfig.Plans)
+			return
+		case "stripe/webhook":
+			if nbrew.DB == nil {
+				nbrew.NotFound(w, r)
+				return
+			}
+		}
 		head, tail, _ := strings.Cut(urlPath, "/")
 		switch head {
 		case "signup":
+			if nbrew.DB == nil || nbrew.Mailer == nil {
+				nbrew.NotFound(w, r)
+				return
+			}
 			switch tail {
 			case "":
 				signup(nbrew, w, r)
@@ -434,61 +487,66 @@ func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
 				signupSuccess(nbrew, w, r)
 				return
 			}
-		case "users":
-			var user nb10.User
-			var sessionToken string
-			header := r.Header.Get("Authorization")
-			if header != "" {
-				if strings.HasPrefix(header, "Bearer ") {
-					sessionToken = strings.TrimPrefix(header, "Bearer ")
-				}
-			} else {
-				cookie, _ := r.Cookie("session")
-				if cookie != nil {
-					sessionToken = cookie.Value
-				}
+		case "stripe":
+			if nbrew.DB == nil {
+				nbrew.NotFound(w, r)
+				return
 			}
-			if sessionToken != "" {
-				sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", sessionToken))
-				if err == nil && len(sessionTokenBytes) == 24 {
-					var sessionTokenHash [8 + blake2b.Size256]byte
-					checksum := blake2b.Sum256(sessionTokenBytes[8:])
-					copy(sessionTokenHash[:8], sessionTokenBytes[:8])
-					copy(sessionTokenHash[8:], checksum[:])
-					user, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
-						Dialect: nbrew.Dialect,
-						Format: "SELECT {*}" +
-							" FROM session" +
-							" JOIN users ON users.user_id = session.user_id" +
-							" WHERE session.session_token_hash = {sessionTokenHash}",
-						Values: []any{
-							sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
-						},
-					}, func(row *sq.Row) nb10.User {
-						return nb10.User{
-							UserID:                row.UUID("users.user_id"),
-							Username:              row.String("users.username"),
-							Email:                 row.String("users.email"),
-							TimezoneOffsetSeconds: row.Int("users.timezone_offset_seconds"),
-							DisableReason:         row.String("users.disable_reason"),
-							SiteLimit:             row.Int64("coalesce(users.site_limit, -1)"),
-							StorageLimit:          row.Int64("coalesce(users.storage_limit, -1)"),
-						}
-					})
-					if err != nil {
-						if !errors.Is(err, sql.ErrNoRows) {
-							nbrew.GetLogger(r.Context()).Error(err.Error())
-							nbrew.InternalServerError(w, r, err)
-							return
-						}
-					}
+			cookie, _ := r.Cookie("session")
+			if cookie == nil || cookie.Value == "" {
+				nbrew.NotAuthenticated(w, r)
+				return
+			}
+			sessionTokenBytes, err := hex.DecodeString(fmt.Sprintf("%048s", cookie.Value))
+			if err != nil || len(sessionTokenBytes) != 24 {
+				nbrew.NotAuthenticated(w, r)
+				return
+			}
+			var sessionTokenHash [8 + blake2b.Size256]byte
+			checksum := blake2b.Sum256(sessionTokenBytes[8:])
+			copy(sessionTokenHash[:8], sessionTokenBytes[:8])
+			copy(sessionTokenHash[8:], checksum[:])
+			user, err := sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "SELECT {*}" +
+					" FROM session" +
+					" JOIN users ON users.user_id = session.user_id" +
+					" LEFT JOIN customer ON customer.user_id = session.user_id" +
+					" WHERE session.session_token_hash = {sessionTokenHash}",
+				Values: []any{
+					sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
+				},
+			}, func(row *sq.Row) User {
+				var user User
+				user.UserID = row.UUID("users.user_id")
+				user.Username = row.String("users.username")
+				user.Email = row.String("users.email")
+				user.TimezoneOffsetSeconds = row.Int("users.timezone_offset_seconds")
+				user.DisableReason = row.String("users.disable_reason")
+				user.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
+				user.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
+				user.CustomerID = row.String("customer.customer_id")
+				return user
+			})
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					nbrew.NotAuthenticated(w, r)
+					return
 				}
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
 			}
 			switch tail {
-			case "profile":
-				profile(nbrew, w, r, user)
-				return
 			case "checkout":
+				stripeCheckout(nbrew, w, r, user)
+				return
+			case "checkout/success":
+				stripeCheckoutSuccess(nbrew, w, r, user)
+				return
+			case "portal":
+				stripePortal(nbrew, w, r, user)
+				return
 			}
 		}
 		nbrew.ServeHTTP(w, r)

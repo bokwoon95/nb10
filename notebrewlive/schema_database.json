@@ -1,26 +1,26 @@
 [
   {
-    "table": "stripe_customer",
+    "table": "customer",
     "columns": [
+      {
+        "column": "customer_id",
+        "type": {
+          "default": "VARCHAR(500)"
+        },
+        "primarykey": true
+      },
       {
         "column": "user_id",
         "type": {
           "default": "BINARY(16)",
           "postgres": "UUID"
         },
-        "primarykey": true,
+        "unique": true,
+        "notnull": true,
         "references": {
-          "table": "user",
+          "table": "users",
           "column": "user_id"
         }
-      },
-      {
-        "column": "customer_id",
-        "type": {
-          "default": "VARCHAR(500)"
-        },
-        "unique": true,
-        "notnull": true
       }
     ]
   }

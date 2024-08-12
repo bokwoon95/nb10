@@ -5,6 +5,7 @@
 <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>☕</text></svg>'>
 <style>{{ stylesCSS }}</style>
 <script type='module'>{{ baselineJS }}</script>
+<script src="https://js.stripe.com/v3/"></script>
 <title>profile{{ if $.Username }} - {{ $.Username }}{{ end }}</title>
 <body class='centered-body'>
 <nav class='mv2 bg-dark-cyan white flex flex-wrap items-center'>
@@ -155,6 +156,11 @@
   <div>{{ humanReadableFileSize $.StorageLimit }}</div>
 </div>
 {{- end }}
+{{- if $.HasSubcription }}
+<form method='post' action='/stripe/portal/'>
+  <button type='submit' class='button ba br2 b--black ph2 pv1'>manage subscription</button>
+</form>
+{{- else }}
 <div class='overflow-x-auto'>
   <table class='mv2 collapse'>
     <thead>
@@ -166,31 +172,23 @@
       </tr>
     </thead>
     <tbody>
+      {{- range $plan := $.Plans }}
       <tr class='bb tc'>
-        <td class='pa2'>1GB plan</td>
-        <td class='pa2'>3</td>
-        <td class='pa2'>1 GB</td>
+        <td class='pa2'>{{ $plan.Name }}</td>
+        <td class='pa2'>{{ $plan.SiteLimit }}</td>
+        <td class='pa2'>{{ humanReadableFileSize $plan.StorageLimit }}</td>
         <td class='pa2'>
-          <form method='post' action='/checkout/'>
-            <input type='hidden' name='priceID' value=''>
-            <button type='submit' class='button ba br2 b--black ph2 pv1'>$1/month, paid annually</button>
+          <form method='post' action='/stripe/checkout/'>
+            <input type='hidden' name='priceID' value='{{ $plan.PriceID }}'>
+            <button type='submit' class='button ba br2 b--black ph2 pv1'>{{ $plan.Price }}</button>
           </form>
         </td>
       </tr>
-      <tr class='bb tc'>
-        <td class='pa2'>6GB plan</td>
-        <td class='pa2'>10</td>
-        <td class='pa2'>6 GB</td>
-        <td class='pa2'>
-          <form method='post' action='/checkout/'>
-            <input type='hidden' name='priceID' value=''>
-            <button type='submit' class='button ba br2 b--black ph2 pv1'>$4/month, paid annually</button>
-          </form>
-        </td>
-      </tr>
+      {{- end }}
     </tbody>
   </table>
 </div>
+{{- end }}
 
 {{- define "octicons-plus" }}
 <svg aria-hidden='true' height='16' viewBox='0 0 16 16' version='1.1' width='16' data-view-component='true' class='octicon octicon-plus'>

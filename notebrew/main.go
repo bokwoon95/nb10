@@ -89,7 +89,7 @@ func main() {
 				return nil
 			}
 		}
-		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir)
+		nbrew, closers, err := cli.Notebrew(configDir, dataHomeDir, nil)
 		defer func() {
 			for i := len(closers) - 1; i >= 0; i-- {
 				closers[i].Close()

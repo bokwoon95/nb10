@@ -257,6 +257,12 @@ func (cmd *StatusCmd) Run() error {
 		fmt.Fprintf(cmd.Stdout, "captcha       = %s\n", cmd.Notebrew.CaptchaConfig.WidgetScriptSrc)
 	}
 
+	if cmd.Notebrew.Mailer == nil {
+		fmt.Fprintf(cmd.Stdout, "smtp          = <not configured>\n")
+	} else {
+		fmt.Fprintf(cmd.Stdout, "smtp          = %s\n", cmd.Notebrew.Mailer.Host)
+	}
+
 	// Proxy.
 	var proxies []string
 	seen := make(map[netip.Addr]bool)
