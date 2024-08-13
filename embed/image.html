@@ -88,9 +88,9 @@
     {{- end }}
   </div>
   {{- if and $.CDNDomain $.IsDatabaseFS }}
-  <img src='//{{ $.CDNDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' class='object-cover' style='max-height: 100%; max-width: 100%;' loading='lazy'>
+  <img src='//{{ $.CDNDomain }}/{{ $.FileID }}{{ ext $.FilePath }}' alt='{{ $.AltText }}' class='object-cover db center' style='max-height: 100%; max-width: 100%;' loading='lazy'>
   {{- else }}
-  <img src='?raw' alt='{{ $.AltText }}' class='object-cover' style='max-height: 100%; max-width: 100%;' loading='lazy'>
+  <img src='?raw' alt='{{ $.AltText }}' class='object-cover db center' style='max-height: 100%; max-width: 100%;' loading='lazy'>
   {{- end }}
   <div class='flex flex-wrap items-center break-word mv2'>
     {{- if $.PreviousImageName }}
