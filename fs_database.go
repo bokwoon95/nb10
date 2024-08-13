@@ -45,7 +45,7 @@ type DatabaseFSConfig struct {
 	ErrorCode         func(error) string
 	ObjectStorage     ObjectStorage
 	Logger            *slog.Logger
-	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	UpdateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 }
 
 type DatabaseFS struct {
@@ -54,7 +54,7 @@ type DatabaseFS struct {
 	ErrorCode         func(error) string
 	ObjectStorage     ObjectStorage
 	Logger            *slog.Logger
-	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	UpdateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 	ctx               context.Context
 	values            map[string]any // modTime time.Time, creationTime time.Time, caption string
 }
@@ -353,7 +353,7 @@ type DatabaseFileWriter struct {
 	dialect           string
 	objectStorage     ObjectStorage
 	logger            *slog.Logger
-	updateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	updateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 
 	ctx                 context.Context
 	fileType            FileType
@@ -772,7 +772,7 @@ func (file *DatabaseFileWriter) Close() error {
 			sitePrefix = head
 		}
 		delta := file.size - file.initialSize
-		err := file.updateStorageUsed(file.ctx, sitePrefix, delta)
+		err := file.updateStorageUsed(file.ctx, strings.TrimPrefix(sitePrefix, "@"), delta)
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1128,7 +1128,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -totalSize)
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1249,7 +1249,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -totalSize)
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1500,7 +1500,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 				sitePrefix = head
 			}
-			err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, size)
+			err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), size)
 			if err != nil {
 				return stacktrace.New(err)
 			}
@@ -1678,7 +1678,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), totalSize)
 		if err != nil {
 			return err
 		}
