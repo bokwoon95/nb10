@@ -161,6 +161,7 @@ func (nbrew *Notebrew) login(w http.ResponseWriter, r *http.Request, user User) 
 	case "POST":
 		if !user.UserID.IsZero() {
 			http.Redirect(w, r, "/"+path.Join("files")+"/", http.StatusFound)
+			return
 		}
 		writeResponse := func(w http.ResponseWriter, r *http.Request, response Response) {
 			if response.Error == "IncorrectLoginCredentials" || response.Error == "ErrUserNotFound" {
