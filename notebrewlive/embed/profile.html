@@ -162,7 +162,7 @@
   <div>{{ if gt $.StorageLimit 0 }}{{ humanReadableFileSize $.StorageLimit }}{{ else }}-{{ end }}</div>
 </div>
 {{- if $.HasSubscription }}
-<form method='post' action='/stripe/portal/'>
+<form method='post' action='/stripe/portal/' class='ma2'>
   <button type='submit' class='button ba ph3 br2 b--black pv1'>manage subscription</button>
 </form>
 {{- else }}
