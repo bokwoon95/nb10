@@ -183,7 +183,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	}
 	file.isFulltextIndexed = IsFulltextIndexed(file.info.FilePath)
 	if fileType.Has(AttributeObject) {
-		file.readCloser, err = file.objectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
+		file.readCloser, err = fsys.ObjectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
 			return nil, stacktrace.New(err)
 		}
