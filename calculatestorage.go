@@ -115,6 +115,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 					siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
 				}
 				_, err = sq.Exec(r.Context(), databaseFS.DB, sq.Query{
+					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "UPDATE files" +
 						" SET size = (SELECT sum(coalesce(f.size, 0)) FROM files AS f WHERE f.file_path LIKE replace(files.file_path, '%', '\\%') || '/%' ESCAPE '\\')" +
