@@ -55,9 +55,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		From                  string            `json:"from"`
 		FromEdited            string            `json:"fromEdited"`
 		FromCreated           string            `json:"fromCreated"`
+		FromSize              int64             `json:"fromSize"`
 		Before                string            `json:"before"`
 		BeforeEdited          string            `json:"beforeEdited"`
 		BeforeCreated         string            `json:"beforeCreated"`
+		BeforeSize            int64             `json:"beforeSize"`
 		Limit                 int               `json:"limit"`
 		PreviousURL           string            `json:"previousURL"`
 		NextURL               string            `json:"nextURL"`
@@ -188,7 +190,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat))
+						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+						"&fromSize=" + strconv.FormatInt(firstFile.Size, 10)
 				}
 				return template.URL(queryParams)
 			},
@@ -201,7 +204,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 					firstFile := response.Files[0]
 					queryParams += "&from=" + url.QueryEscape(firstFile.Name) +
 						"&fromEdited=" + url.QueryEscape(firstFile.ModTime.UTC().Format(zuluTimeFormat)) +
-						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat))
+						"&fromCreated=" + url.QueryEscape(firstFile.CreationTime.UTC().Format(zuluTimeFormat)) +
+						"&fromSize=" + strconv.FormatInt(firstFile.Size, 10)
 				}
 				return template.URL(queryParams)
 			},
@@ -220,6 +224,9 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				if response.FromCreated != "" {
 					b.WriteString("&fromCreated=" + url.QueryEscape(response.FromCreated))
 				}
+				if response.FromSize != 0 {
+					b.WriteString("&fromSize=" + strconv.FormatInt(response.FromSize, 10))
+				}
 				if response.Before != "" {
 					b.WriteString("&before=" + url.QueryEscape(response.Before))
 				}
@@ -228,6 +235,9 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 				if response.BeforeCreated != "" {
 					b.WriteString("&beforeCreated=" + url.QueryEscape(response.BeforeCreated))
+				}
+				if response.BeforeSize != 0 {
+					b.WriteString("&beforeSize=" + strconv.FormatInt(response.BeforeSize, 10))
 				}
 				return template.URL(b.String())
 			},
@@ -301,7 +311,7 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		response.Sort = sortCookie.Value
 	}
 	switch response.Sort {
-	case "name", "edited", "created":
+	case "name", "edited", "created", "size":
 		break
 	default:
 		if head == "notes" {
@@ -502,6 +512,25 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				}
 			})
 		case "created":
+			slices.SortFunc(response.Files, func(a, b File) int {
+				if a.CreationTime.Equal(b.CreationTime) {
+					return strings.Compare(a.Name, b.Name)
+				}
+				if a.CreationTime.Before(b.CreationTime) {
+					if response.Order == "asc" {
+						return -1
+					} else {
+						return 1
+					}
+				} else {
+					if response.Order == "asc" {
+						return 1
+					} else {
+						return -1
+					}
+				}
+			})
+		case "size":
 			slices.SortFunc(response.Files, func(a, b File) int {
 				if a.CreationTime.Equal(b.CreationTime) {
 					return strings.Compare(a.Name, b.Name)

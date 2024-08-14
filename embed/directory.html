@@ -264,6 +264,9 @@
         <div class='ma2 tr'><a href='{{ sortBy "name" }}' class='nowrap{{ if eq $.Sort "name" }} arrow-before{{ end }}'>name</a></div>
         <div class='ma2 tr'><a href='{{ sortBy "created" }}' class='nowrap{{ if eq $.Sort "created" }} arrow-before{{ end }}'>date created</a></div>
         <div class='ma2 tr'><a href='{{ sortBy "edited" }}' class='nowrap{{ if eq $.Sort "edited" }} arrow-before{{ end }}'>date edited</a></div>
+        {{- if $.IsDatabaseFS }}
+        <div class='ma2 tr'><a href='{{ sortBy "size" }}' class='nowrap{{ if eq $.Sort "size" }} arrow-before{{ end }}'>size</a></div>
+        {{- end }}
         <hr>
         <div class='ma2 tr'><a href='{{ orderBy "asc" }}' class='nowrap{{ if eq $.Order "asc" }} arrow-before{{ end }}'>ascending</a></div>
         <div class='ma2 tr'><a href='{{ orderBy "desc" }}' class='nowrap{{ if eq $.Order "desc" }} arrow-before{{ end }}'>descending</a></div>
