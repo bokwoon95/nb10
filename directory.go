@@ -557,6 +557,10 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	var fromEdited, beforeEdited, fromCreated, beforeCreated time.Time
 	response.From = r.Form.Get("from")
 	response.Before = r.Form.Get("before")
+	fromSize, _ := strconv.ParseInt(r.Form.Get("fromSize"), 10, 64)
+	beforeSize, _ := strconv.ParseInt(r.Form.Get("beforeSize"), 10, 64)
+	// TODO:
+	_, _ = fromSize, beforeSize
 	if s := r.Form.Get("fromEdited"); s != "" {
 		if len(s) == len(dateFormat) {
 			fromEdited, err = time.ParseInLocation(dateFormat, s, time.UTC)
