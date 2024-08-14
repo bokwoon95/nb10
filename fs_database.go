@@ -1389,7 +1389,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 					sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
 				},
 			}, func(row *sq.Row) int64 {
-				return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
+				return row.Int64("CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END")
 			})
 			if err != nil {
 				return stacktrace.New(err)
