@@ -1380,7 +1380,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			return stacktrace.New(err)
 		}
 		if result.isDir {
-			totalSize, err = sq.FetchOne(fsys.ctx, tx, sq.Query{
+			cursor, err := sq.FetchCursor(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\' RETURNING {*}",
 				Values: []any{
@@ -1391,6 +1391,18 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}, func(row *sq.Row) int64 {
 				return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 			})
+			if err != nil {
+				return stacktrace.New(err)
+			}
+			defer cursor.Close()
+			for cursor.Next() {
+				size, err := cursor.Result()
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				totalSize += size
+			}
+			err = cursor.Close()
 			if err != nil {
 				return stacktrace.New(err)
 			}
