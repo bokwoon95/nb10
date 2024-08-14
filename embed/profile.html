@@ -100,11 +100,12 @@
     </tfoot>
   </table>
 </div>
-<form method='post' action='/files/calculatestorage/' class='ma2' data-prevent-double-submit>
+<form method='post' action='/files/calculatestorage/' class='ma2' data-prevent-double-submit='{"statusText":"recalculating..."}'>
   {{- range $site := $.Sites }}
   <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
   {{- end }}
   <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
+  <div role='status'></div>
 </form>
 <h2 class='mb0 mh2 underline'>Sessions</h2>
 <div>
