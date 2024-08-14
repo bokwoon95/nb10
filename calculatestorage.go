@@ -325,39 +325,3 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 	}
 	return storageUsed.Load(), nil
 }
-
-func oldV2(ctx context.Context, databaseFS *DatabaseFS, siteName string) error {
-	var siteFilter sq.Expression
-	if siteName == "" {
-		siteFilter = sq.Expr("(" +
-			"file_path LIKE 'notes/%' ESCAPE '\\'" +
-			" OR file_path LIKE 'pages/%' ESCAPE '\\'" +
-			" OR file_path LIKE 'posts/%' ESCAPE '\\'" +
-			" OR file_path LIKE 'output/%' ESCAPE '\\'" +
-			")",
-		)
-	} else {
-		var sitePrefix string
-		if strings.Contains(siteName, ".") {
-			sitePrefix = siteName
-		} else {
-			sitePrefix = "@" + siteName
-		}
-		siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
-	}
-	_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
-		Debug:   true,
-		Dialect: databaseFS.Dialect,
-		Format: "UPDATE files" +
-			" SET size = (SELECT sum(CASE WHEN is_dir OR f.size IS NULL THEN 0 ELSE f.size END) FROM files AS f WHERE f.file_path LIKE replace(replace(files.file_path, '%', '\\%'), '_', '\\_') || '/%' ESCAPE '\\')" +
-			" WHERE {siteFilter}" +
-			" AND is_dir",
-		Values: []any{
-			sq.Param("siteFilter", siteFilter),
-		},
-	})
-	if err != nil {
-		return stacktrace.New(err)
-	}
-	return nil
-}
