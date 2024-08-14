@@ -118,7 +118,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 					Debug:   true,
 					Dialect: databaseFS.Dialect,
 					Format: "UPDATE files" +
-						" SET size = (SELECT sum(coalesce(f.size, 0)) FROM files AS f WHERE f.file_path LIKE replace(files.file_path, '%', '\\%') || '/%' ESCAPE '\\')" +
+						" SET size = (SELECT sum(CASE WHEN is_dir OR f.size IS NULL THEN 0 ELSE f.size END) FROM files AS f WHERE f.file_path LIKE replace(replace(files.file_path, '%', '\\%'), '_', '\\_') || '/%' ESCAPE '\\')" +
 						" WHERE {siteFilter}" +
 						" AND is_dir",
 					Values: []any{
