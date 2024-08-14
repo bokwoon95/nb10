@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -43,29 +44,27 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 	siteNames := r.Form["siteName"]
 	for _, siteName := range siteNames {
 		siteName := siteName
+		exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "SELECT 1" +
+				" FROM site_owner" +
+				" WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})" +
+				" AND user_id = (SELECT user_id FROM users WHERE username = {username})",
+			Values: []any{
+				sq.StringParam("siteName", siteName),
+				sq.StringParam("username", user.Username),
+			},
+		})
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		if !exists {
+			continue
+		}
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
-			exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format: "SELECT 1" +
-					" FROM site_owner" +
-					" WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})" +
-					" AND user_id = (SELECT user_id FROM users WHERE username = {username})",
-				Values: []any{
-					sq.StringParam("siteName", siteName),
-					sq.StringParam("username", user.Username),
-				},
-			})
-			if err != nil {
-				return err
-			}
-			if !exists {
-				return nil
-			}
+			defer stacktrace.RecoverPanic(&err)
 			var root string
 			if siteName == "" {
 				root = "."
@@ -84,6 +83,41 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 				Values: []any{
 					sq.Int64Param("storageUsed", storageUsed),
 					sq.StringParam("siteName", siteName),
+				},
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		group.Go(func() (err error) {
+			defer stacktrace.RecoverPanic(&err)
+			var siteFilter sq.Expression
+			if siteName == "" {
+				siteFilter = sq.Expr("(" +
+					"file_path LIKE 'notes/%' ESCAPE '\\'" +
+					" OR file_path LIKE 'pages/%' ESCAPE '\\'" +
+					" OR file_path LIKE 'posts/%' ESCAPE '\\'" +
+					" OR file_path LIKE 'output/%' ESCAPE '\\'" +
+					")",
+				)
+			} else {
+				var sitePrefix string
+				if strings.Contains(siteName, ".") {
+					sitePrefix = siteName
+				} else {
+					sitePrefix = "@" + siteName
+				}
+				siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
+			}
+			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "UPDATE files" +
+					" SET size = (SELECT sum(coalesce(f.size, 0)) FROM files AS f WHERE f.file_path LIKE replace(files.file_path, '%', '\\%') || '/%' ESCAPE '\\')" +
+					" WHERE {siteFilter}" +
+					" AND is_dir",
+				Values: []any{
+					sq.Param("siteFilter", siteFilter),
 				},
 			})
 			if err != nil {
