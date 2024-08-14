@@ -75,6 +75,8 @@ the admin page needs to:
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
 TODO: implement pagination by file size.
+    TODO: directory.go: replace all debug.Stack() with stacktrace.New()
+    TODO: add fromSize and beforeSize to all Previous/Next RawQueries.
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
