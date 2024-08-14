@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"io/fs"
 	"mime"
@@ -116,19 +117,79 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 					}
 					siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
 				}
-				_, err = sq.Exec(r.Context(), databaseFS.DB, sq.Query{
-					Debug:   true,
+				cursor, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
-					Format: "UPDATE files" +
-						" SET size = (SELECT sum(CASE WHEN is_dir OR f.size IS NULL THEN 0 ELSE f.size END) FROM files AS f WHERE f.file_path LIKE replace(replace(files.file_path, '%', '\\%'), '_', '\\_') || '/%' ESCAPE '\\')" +
-						" WHERE {siteFilter}" +
-						" AND is_dir",
+					Format:  "SELECT {*} FROM files WHERE {siteFilter} AND NOT is_dir",
 					Values: []any{
 						sq.Param("siteFilter", siteFilter),
 					},
+				}, func(row *sq.Row) (result struct {
+					FilePath string
+					Size     int64
+				}) {
+					result.FilePath = row.String("file_path")
+					result.Size = row.Int64("size")
+					return result
 				})
 				if err != nil {
 					return stacktrace.New(err)
+				}
+				defer cursor.Close()
+				dirSizes := make(map[string]*int64)
+				for cursor.Next() {
+					result, err := cursor.Result()
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					for dir := path.Dir(result.FilePath); dir != "."; dir = path.Dir(dir) {
+						size := dirSizes[dir]
+						if size == nil {
+							size = new(int64)
+							dirSizes[dir] = size
+						}
+						*size += result.Size
+					}
+				}
+				err = cursor.Close()
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				var db sq.DB
+				if databaseFS.Dialect == "sqlite" {
+					db = databaseFS.DB
+				} else {
+					var conn *sql.Conn
+					conn, err = databaseFS.DB.Conn(groupctx)
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					defer conn.Close()
+					db = conn
+				}
+				preparedExec, err := sq.PrepareExec(groupctx, db, sq.Query{
+					Dialect: nbrew.Dialect,
+					Format:  "UPDATE files SET size = {size} WHERE file_path = {dir} AND is_dir",
+					Values: []any{
+						sq.Int64Param("size", 0),
+						sq.StringParam("dir", ""),
+					},
+				})
+				defer preparedExec.Close()
+				subgroup, subctx := errgroup.WithContext(groupctx)
+				for dir, size := range dirSizes {
+					dir, size := dir, size
+					subgroup.Go(func() (err error) {
+						defer stacktrace.RecoverPanic(&err)
+						_, err = preparedExec.Exec(subctx, sq.Int64Param("size", *size), sq.StringParam("dir", dir))
+						if err != nil {
+							return stacktrace.New(err)
+						}
+						return nil
+					})
+				}
+				err = subgroup.Wait()
+				if err != nil {
+					return err
 				}
 				return nil
 			})
@@ -263,4 +324,40 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		}
 	}
 	return storageUsed.Load(), nil
+}
+
+func oldV2(ctx context.Context, databaseFS *DatabaseFS, siteName string) error {
+	var siteFilter sq.Expression
+	if siteName == "" {
+		siteFilter = sq.Expr("(" +
+			"file_path LIKE 'notes/%' ESCAPE '\\'" +
+			" OR file_path LIKE 'pages/%' ESCAPE '\\'" +
+			" OR file_path LIKE 'posts/%' ESCAPE '\\'" +
+			" OR file_path LIKE 'output/%' ESCAPE '\\'" +
+			")",
+		)
+	} else {
+		var sitePrefix string
+		if strings.Contains(siteName, ".") {
+			sitePrefix = siteName
+		} else {
+			sitePrefix = "@" + siteName
+		}
+		siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
+	}
+	_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
+		Debug:   true,
+		Dialect: databaseFS.Dialect,
+		Format: "UPDATE files" +
+			" SET size = (SELECT sum(CASE WHEN is_dir OR f.size IS NULL THEN 0 ELSE f.size END) FROM files AS f WHERE f.file_path LIKE replace(replace(files.file_path, '%', '\\%'), '_', '\\_') || '/%' ESCAPE '\\')" +
+			" WHERE {siteFilter}" +
+			" AND is_dir",
+		Values: []any{
+			sq.Param("siteFilter", siteFilter),
+		},
+	})
+	if err != nil {
+		return stacktrace.New(err)
+	}
+	return nil
 }
