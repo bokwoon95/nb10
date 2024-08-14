@@ -55,11 +55,11 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 		From                  string            `json:"from"`
 		FromEdited            string            `json:"fromEdited"`
 		FromCreated           string            `json:"fromCreated"`
-		FromSize              int64             `json:"fromSize"`
+		FromSize              string            `json:"fromSize"`
 		Before                string            `json:"before"`
 		BeforeEdited          string            `json:"beforeEdited"`
 		BeforeCreated         string            `json:"beforeCreated"`
-		BeforeSize            int64             `json:"beforeSize"`
+		BeforeSize            string            `json:"beforeSize"`
 		Limit                 int               `json:"limit"`
 		PreviousURL           string            `json:"previousURL"`
 		NextURL               string            `json:"nextURL"`
@@ -224,8 +224,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				if response.FromCreated != "" {
 					b.WriteString("&fromCreated=" + url.QueryEscape(response.FromCreated))
 				}
-				if response.FromSize != 0 {
-					b.WriteString("&fromSize=" + strconv.FormatInt(response.FromSize, 10))
+				if response.FromSize != "" {
+					b.WriteString("&fromSize=" + url.QueryEscape(response.FromSize))
 				}
 				if response.Before != "" {
 					b.WriteString("&before=" + url.QueryEscape(response.Before))
@@ -236,8 +236,8 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				if response.BeforeCreated != "" {
 					b.WriteString("&beforeCreated=" + url.QueryEscape(response.BeforeCreated))
 				}
-				if response.BeforeSize != 0 {
-					b.WriteString("&beforeSize=" + strconv.FormatInt(response.BeforeSize, 10))
+				if response.BeforeSize != "" {
+					b.WriteString("&beforeSize=" + url.QueryEscape(response.BeforeSize))
 				}
 				return template.URL(b.String())
 			},
