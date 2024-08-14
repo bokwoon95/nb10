@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/nb10/stacktrace"
@@ -43,6 +44,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 	case interface{ As(any) bool }:
 		isDatabaseFS = v.As(&databaseFS)
 	}
+	startedAt := time.Now()
 	group, groupctx := errgroup.WithContext(r.Context())
 	siteNames := r.Form["siteName"]
 	for _, siteName := range siteNames {
@@ -138,9 +140,11 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
+	timeTaken := time.Since(startedAt)
 	err = nbrew.SetFlashSession(w, r, map[string]any{
 		"postRedirectGet": map[string]any{
-			"from": "calculatestorage",
+			"from":      "calculatestorage",
+			"timeTaken": timeTaken.String(),
 		},
 	})
 	if err != nil {
