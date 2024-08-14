@@ -1413,7 +1413,9 @@ func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {
 					Logger:    certmagic.DefaultACME.Logger,
 					HTTPProxy: certmagic.DefaultACME.HTTPProxy,
 					DNS01Solver: &certmagic.DNS01Solver{
-						DNSProvider: nbrew.DNSProvider,
+						DNSManager: certmagic.DNSManager{
+							DNSProvider: nbrew.DNSProvider,
+						},
 					},
 				}),
 			}

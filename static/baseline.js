@@ -169,6 +169,7 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
     if (statusElement) {
       statusElement.textContent = statusText;
     }
+    // Include the submit button's value if it exists.
     if (event.submitter && event.submitter.name) {
       const input = document.createElement("input");
       input.setAttribute("type", "hidden");
@@ -180,17 +181,19 @@ for (const dataPreventDoubleSubmit of document.querySelectorAll("[data-prevent-d
   });
 }
 
-for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
-  const statusElement = dataAjaxUpload.querySelector("[role=status]");
-  for (const fileInput of dataAjaxUpload.querySelectorAll("input[type=file]")) {
+for (const dataUploadFile of document.querySelectorAll("[data-upload-file]")) {
+  const statusElement = dataUploadFile.querySelector("[role=status]");
+  let uploadSize = 0;
+  for (const fileInput of dataUploadFile.querySelectorAll("input[type=file]")) {
     fileInput.addEventListener("input", function() {
-      const formData = new FormData(dataAjaxUpload);
+      const formData = new FormData(dataUploadFile);
       let size = 0;
       for (const [_, value] of formData.entries()) {
         if (value instanceof Blob) {
           size += value.size;
         }
       }
+      uploadSize = size;
       if (statusElement) {
         if (size == 0) {
           statusElement.textContent = "";
@@ -200,14 +203,30 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       }
     });
   }
-  dataAjaxUpload.addEventListener("submit", function(event) {
+  dataUploadFile.addEventListener("submit", function(event) {
     event.preventDefault();
-    if (dataAjaxUpload.classList.contains("submitting")) {
+    if (dataUploadFile.classList.contains("submitting")) {
       return;
     }
-    dataAjaxUpload.classList.add("submitting", "o-70");
+    dataUploadFile.classList.add("submitting", "o-70");
+    // If no files to upload, submit the form the traditional way.
+    if (uploadSize == 0) {
+      if (statusElement) {
+        statusElement.textContent = "submitting...";
+      }
+      // Include the submit button's value if it exists.
+      if (event.submitter && event.submitter.name) {
+        const input = document.createElement("input");
+        input.setAttribute("type", "hidden");
+        input.setAttribute("name", event.submitter.name);
+        input.setAttribute("value", event.submitter.value);
+        dataUploadFile.appendChild(input);
+      }
+      dataUploadFile.submit();
+      return;
+    }
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", dataAjaxUpload.action, true);
+    xhr.open("POST", dataUploadFile.action, true);
     xhr.upload.onprogress = function(event) {
       if (statusElement) {
         const percentage = event.loaded == event.total ? "100%" : ((event.loaded / event.total) * 100).toFixed(3) + "%";
@@ -218,16 +237,16 @@ for (const dataAjaxUpload of document.querySelectorAll("[data-ajax-upload]")) {
       if (statusElement) {
         statusElement.textContent = "";
       }
-      dataAjaxUpload.classList.remove("submitting", "o-70");
+      dataUploadFile.classList.remove("submitting", "o-70");
       history.pushState({}, "", xhr.responseURL);
       document.open();
       document.write(xhr.response);
       document.close();
-      if (typeof globalThis.initializeEditors == "function") {
-        globalThis.initializeEditors();
+      if (typeof globalThis.init == "function") {
+        globalThis.init();
       }
     }
-    const formData = new FormData(dataAjaxUpload);
+    const formData = new FormData(dataUploadFile);
     if (event.submitter && event.submitter.name) {
       formData.append(event.submitter.name, event.submitter.value);
     }
