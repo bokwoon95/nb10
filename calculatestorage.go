@@ -3,12 +3,10 @@ package nb10
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync/atomic"
 
@@ -39,6 +37,11 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 			nbrew.BadRequest(w, r, err)
 			return
 		}
+	}
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		isDatabaseFS = v.As(&databaseFS)
 	}
 	group, groupctx := errgroup.WithContext(r.Context())
 	siteNames := r.Form["siteName"]
@@ -75,7 +78,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 			}
 			storageUsed, err := calculateStorageUsed(r.Context(), nbrew.FS, root)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -86,45 +89,47 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 				},
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		})
-		group.Go(func() (err error) {
-			defer stacktrace.RecoverPanic(&err)
-			var siteFilter sq.Expression
-			if siteName == "" {
-				siteFilter = sq.Expr("(" +
-					"file_path LIKE 'notes/%' ESCAPE '\\'" +
-					" OR file_path LIKE 'pages/%' ESCAPE '\\'" +
-					" OR file_path LIKE 'posts/%' ESCAPE '\\'" +
-					" OR file_path LIKE 'output/%' ESCAPE '\\'" +
-					")",
-				)
-			} else {
-				var sitePrefix string
-				if strings.Contains(siteName, ".") {
-					sitePrefix = siteName
+		if isDatabaseFS {
+			group.Go(func() (err error) {
+				defer stacktrace.RecoverPanic(&err)
+				var siteFilter sq.Expression
+				if siteName == "" {
+					siteFilter = sq.Expr("(" +
+						"file_path LIKE 'notes/%' ESCAPE '\\'" +
+						" OR file_path LIKE 'pages/%' ESCAPE '\\'" +
+						" OR file_path LIKE 'posts/%' ESCAPE '\\'" +
+						" OR file_path LIKE 'output/%' ESCAPE '\\'" +
+						")",
+					)
 				} else {
-					sitePrefix = "@" + siteName
+					var sitePrefix string
+					if strings.Contains(siteName, ".") {
+						sitePrefix = siteName
+					} else {
+						sitePrefix = "@" + siteName
+					}
+					siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
 				}
-				siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
-			}
-			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format: "UPDATE files" +
-					" SET size = (SELECT sum(coalesce(f.size, 0)) FROM files AS f WHERE f.file_path LIKE replace(files.file_path, '%', '\\%') || '/%' ESCAPE '\\')" +
-					" WHERE {siteFilter}" +
-					" AND is_dir",
-				Values: []any{
-					sq.Param("siteFilter", siteFilter),
-				},
+				_, err = sq.Exec(r.Context(), databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format: "UPDATE files" +
+						" SET size = (SELECT sum(coalesce(f.size, 0)) FROM files AS f WHERE f.file_path LIKE replace(files.file_path, '%', '\\%') || '/%' ESCAPE '\\')" +
+						" WHERE {siteFilter}" +
+						" AND is_dir",
+					Values: []any{
+						sq.Param("siteFilter", siteFilter),
+					},
+				})
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				return nil
 			})
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+		}
 	}
 	err := group.Wait()
 	if err != nil {
@@ -199,7 +204,7 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 			return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		return storageUsed, nil
 	}
@@ -209,14 +214,14 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		if dirEntry.IsDir() {
 			return nil
 		}
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		storageUsed.Add(fileInfo.Size())
 		return nil
@@ -234,11 +239,7 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		} {
 			root := root
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				err = fs.WalkDir(fsys.WithContext(groupctx), root, walkDirFunc)
 				if err != nil {
 					return err
