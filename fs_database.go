@@ -765,14 +765,37 @@ func (file *DatabaseFileWriter) Close() error {
 			}
 		}
 	}
+	delta := file.size - file.initialSize
+	if delta == 0 {
+		return nil
+	}
 	if file.updateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(file.filePath, "/")
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		delta := file.size - file.initialSize
 		err := file.updateStorageUsed(file.ctx, strings.TrimPrefix(sitePrefix, "@"), delta)
+		if err != nil {
+			return stacktrace.New(err)
+		}
+	}
+	ancestors := make([]string, 0, strings.Count(file.filePath, "/"))
+	for dir := path.Dir(file.filePath); dir != "."; dir = path.Dir(dir) {
+		ancestors = append(ancestors, dir)
+	}
+	if len(ancestors) > 0 {
+		_, err := sq.Exec(file.ctx, file.db, sq.Query{
+			Dialect: file.dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({ancestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", delta),
+				sq.Param("ancestors", ancestors),
+			},
+		})
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1100,14 +1123,14 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
-	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
+	size, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
-		Format:  "SELECT {*} files WHERE file_path = {name}",
+		Format:  "SELECT {*} FROM files WHERE file_path = {name}",
 		Values: []any{
 			sq.StringParam("name", name),
 		},
 	}, func(row *sq.Row) int64 {
-		return row.Int64("sum(coalesce(size, 0))")
+		return row.Int64("coalesce(size, 0)")
 	})
 	if err != nil {
 		return stacktrace.New(err)
@@ -1122,13 +1145,36 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
+	if file.isDir {
+		return nil
+	}
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(name, "/")
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -size)
+		if err != nil {
+			return stacktrace.New(err)
+		}
+	}
+	ancestors := make([]string, 0, strings.Count(name, "/"))
+	for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
+		ancestors = append(ancestors, dir)
+	}
+	if len(ancestors) > 0 {
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({ancestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", -size),
+				sq.Param("ancestors", ancestors),
+			},
+		})
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1227,7 +1273,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			sq.StringParam("pattern", pattern),
 		},
 	}, func(row *sq.Row) int64 {
-		return row.Int64("sum(coalesce(size, 0))")
+		return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 	})
 	if err != nil {
 		return stacktrace.New(err)
@@ -1250,6 +1296,26 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			sitePrefix = head
 		}
 		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -totalSize)
+		if err != nil {
+			return stacktrace.New(err)
+		}
+	}
+	ancestors := make([]string, 0, strings.Count(name, "/"))
+	for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
+		ancestors = append(ancestors, dir)
+	}
+	if len(ancestors) > 0 {
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({ancestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", -totalSize),
+				sq.Param("ancestors", ancestors),
+			},
+		})
 		if err != nil {
 			return stacktrace.New(err)
 		}

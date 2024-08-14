@@ -1182,7 +1182,7 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 				sq.Param("condition", condition),
 			},
 		}, func(row *sq.Row) int64 {
-			return row.Int64("sum(coalesce(files.size, 0))")
+			return row.Int64("sum(CASE WHEN files.is_dir OR files.size IS NULL THEN 0 ELSE files.size END)")
 		})
 		if err != nil {
 			return 0, err
@@ -1608,7 +1608,7 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 				sq.Param("condition", condition),
 			},
 		}, func(row *sq.Row) int64 {
-			return row.Int64("sum(coalesce(files.size, 0))")
+			return row.Int64("sum(CASE WHEN files.is_dir OR files.size IS NULL THEN 0 ELSE files.size END)")
 		})
 		if err != nil {
 			return 0, err

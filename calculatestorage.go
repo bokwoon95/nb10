@@ -162,7 +162,7 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 				sq.Param("filter", filter),
 			},
 		}, func(row *sq.Row) int64 {
-			return row.Int64("sum(coalesce(size, 0))")
+			return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 		})
 		if err != nil {
 			return 0, err
