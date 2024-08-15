@@ -60,7 +60,7 @@
   <div class='pv1'>
     <div>
       🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
-      {{ if $deleteErrors }} ({{ $deleteErrors }} error{{ if ne $deleteErrors 1 }}s{{ end }}){{ end }}
+      {{ if $deleteErrors }} ({{ len $deleteErrors }} error{{ if ne (len $deleteErrors) 1 }}s{{ end }}){{ end }}
       {{ if $.RegenerationStats.Count }} (regenerated {{ $.RegenerationStats.Count }} file{{ if ne $.RegenerationStats.Count 1 }}s{{ end }} in {{ $.RegenerationStats.TimeTaken }}){{ end }}
     </div>
     {{- if $deleteErrors }}
