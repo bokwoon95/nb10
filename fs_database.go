@@ -1357,6 +1357,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		extFilter = sq.Expr(b.String(), args...)
 	}
 	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
+		Debug:   true,
 		Dialect: fsys.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
