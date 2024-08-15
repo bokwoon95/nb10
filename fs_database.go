@@ -14,7 +14,6 @@ import (
 	"log/slog"
 	"os"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"syscall"
@@ -39,26 +38,75 @@ var gzipWriterPool = sync.Pool{
 	},
 }
 
+// DatabaseFSConfig holds the parameters needed to construct a DatabaseFS.
 type DatabaseFSConfig struct {
-	DB                *sql.DB
-	Dialect           string
-	ErrorCode         func(error) string
-	ObjectStorage     ObjectStorage
-	Logger            *slog.Logger
+	// (Required) DB is the sql database.
+	DB *sql.DB
+
+	// (Required) Dialect is the database dialect. Currently, the only dialects
+	// supported are "sqlite", "postgres" and "mysql".
+	Dialect string
+
+	// ErrorCode converts an error returned by a database query into a
+	// dialect-specific error code.
+	ErrorCode func(error) string
+
+	// (Required) ObjectStorage is used for storage of binary objects.
+	ObjectStorage ObjectStorage
+
+	// (Required) Logger is used for reporting errors that cannot be handled
+	// and are thrown away.
+	Logger *slog.Logger
+
+	// UpdateStorageUsed is called whenever the storage used by a site changes
+	// (delta being the number of bytes that have been added or removed).
+	// Specifically, this happens on calls to OpenWriter, Remove, RemoveAll and
+	// Copy.
 	UpdateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 }
 
+// DatabaseFS implements a writeable filesystem using a database and an
+// ObjectStorage provider.
 type DatabaseFS struct {
-	DB                *sql.DB
-	Dialect           string
-	ErrorCode         func(error) string
-	ObjectStorage     ObjectStorage
-	Logger            *slog.Logger
+	// DB is the sql database.
+	DB *sql.DB
+
+	// Dialect is the database dialect. Currently, the only dialects supported
+	// are "sqlite", "postgres" and "mysql".
+	Dialect string
+
+	// ErrorCode converts an error returned by a database query into a
+	// dialect-specific error code.
+	ErrorCode func(error) string
+
+	// ObjectStorage is used for storage of binary objects.
+	ObjectStorage ObjectStorage
+
+	// Logger is used for reporting errors that cannot be handled and are
+	// thrown away.
+	Logger *slog.Logger
+
+	// UpdateStorageUsed is called whenever the storage used by a site changes
+	// (delta being the number of bytes that have been added or removed).
+	// Specifically, this happens on calls to OpenWriter, Remove, RemoveAll and
+	// Copy.
 	UpdateStorageUsed func(ctx context.Context, siteName string, delta int64) error
-	ctx               context.Context
-	values            map[string]any // modTime time.Time, creationTime time.Time, caption string
+
+	// ctx provides the context of all operations called on the DatabaseFS.
+	ctx context.Context
+
+	// values is a key-value store containing values used by some filesystem
+	// operations. Currently, the following values are recognized:
+	//
+	// - "modTime"      => time.Time (sets the modTime for files created by OpenWriter/Mkdir/MkdirAll)
+	//
+	// - "creationTime" => time.Time (sets the creationTime for files created by OpenWriter/Mkdir/MkdirAll)
+	//
+	// - "caption"      => string    (sets the caption for images created by OpenWriter)
+	values map[string]any
 }
 
+// NewDatabaseFS constructs a new DatabaseFS.
 func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 	databaseFS := &DatabaseFS{
 		DB:                config.DB,
@@ -72,6 +120,8 @@ func NewDatabaseFS(config DatabaseFSConfig) (*DatabaseFS, error) {
 	return databaseFS, nil
 }
 
+// As writes the current databaseFS into the target if it is a valid DatabaseFS
+// pointer.
 func (fsys *DatabaseFS) As(target any) bool {
 	switch target := target.(type) {
 	case *DatabaseFS:
@@ -85,6 +135,7 @@ func (fsys *DatabaseFS) As(target any) bool {
 	}
 }
 
+// WithContext returns a new DatabaseFS with the given context.
 func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 	return &DatabaseFS{
 		DB:                fsys.DB,
@@ -98,6 +149,20 @@ func (fsys *DatabaseFS) WithContext(ctx context.Context) FS {
 	}
 }
 
+// WithValues returns a new DatabaseFS with the given values.
+//
+// Currently, the following values are recognized:
+//
+// - "modTime"      => time.Time (sets the modTime for files created by OpenWriter/Mkdir/MkdirAll)
+//
+// - "creationTime" => time.Time (sets the creationTime for files created by OpenWriter/Mkdir/MkdirAll)
+//
+// - "caption"      => string    (sets the caption for images created by OpenWriter)
+//
+// These values will apply to *all* filesystem operations, so if you only want
+// to set the modTime or creationTime for a specific file you will have to
+// create a new instance of a DatabaseFS using WithValues(), create that file,
+// then throw the DatabaseFS instance away.
 func (fsys *DatabaseFS) WithValues(values map[string]any) FS {
 	return &DatabaseFS{
 		DB:                fsys.DB,
@@ -111,6 +176,7 @@ func (fsys *DatabaseFS) WithValues(values map[string]any) FS {
 	}
 }
 
+// DatabaseFileInfo describes a file returned by DatabaseFS.
 type DatabaseFileInfo struct {
 	FileID       ID
 	FilePath     string
@@ -120,17 +186,37 @@ type DatabaseFileInfo struct {
 	CreationTime time.Time
 }
 
+// DatabaseFile represents a readable instance of a file returned by
+// DatabaseFS.
 type DatabaseFile struct {
-	ctx               context.Context
-	fileType          FileType
+	// ctx provides the context of all operations called on the DatabaseFile.
+	ctx context.Context
+
+	// FileType of the DatabaseFile.
+	fileType FileType
+
+	// FileInfo of the DatabaseFile.
+	info *DatabaseFileInfo
+
+	// Whether the file is fulltext indexed.
 	isFulltextIndexed bool
-	objectStorage     ObjectStorage
-	info              *DatabaseFileInfo
-	buf               *bytes.Buffer
-	gzipReader        *gzip.Reader
-	readCloser        io.ReadCloser
+
+	// buf holds the raw bytes of the DatabaseFile. It may be gzipped,
+	// depending on whether the file is gzippable and is not fulltext indexed.
+	buf *bytes.Buffer
+
+	// If the file is gzippable and is not fulltext indexed, the raw bytes of
+	// the file are gzipped and Read operations should read from the gzipReader
+	// instead (which in turn reads from the raw bytes inside the buffer).
+	gzipReader *gzip.Reader
+
+	// If the file is an object, it is not stored by the database but rather by
+	// the filesystem's ObjectStorage provider. In which case, readCloser would
+	// be a reference to the object.
+	readCloser io.ReadCloser
 }
 
+// Open implements the Open FS operation for DatabaseFS.
 func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -139,11 +225,13 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") {
 		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrInvalid}
 	}
+	// If we are opening the root dir, return a hardcoded DatabaseFile
+	// representing the root (the root directory is not stored in a database
+	// FS, it is an implicit construct).
 	if name == "." {
 		file := &DatabaseFile{
-			ctx:           fsys.ctx,
-			objectStorage: fsys.ObjectStorage,
-			info:          &DatabaseFileInfo{FilePath: ".", isDir: true},
+			ctx:  fsys.ctx,
+			info: &DatabaseFileInfo{FilePath: ".", isDir: true},
 		}
 		return file, nil
 	}
@@ -159,10 +247,9 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 		},
 	}, func(row *sq.Row) *DatabaseFile {
 		file := &DatabaseFile{
-			ctx:           fsys.ctx,
-			fileType:      fileType,
-			objectStorage: fsys.ObjectStorage,
-			info:          &DatabaseFileInfo{},
+			ctx:      fsys.ctx,
+			fileType: fileType,
+			info:     &DatabaseFileInfo{},
 		}
 		file.info.FileID = row.UUID("file_id")
 		file.info.FilePath = row.String("file_path")
@@ -222,6 +309,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
+// Stat implements the fs.StatFS interface.
 func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -258,20 +346,28 @@ func (fsys *DatabaseFS) Stat(name string) (fs.FileInfo, error) {
 	return fileInfo, nil
 }
 
+// Base name of the file.
 func (fileInfo *DatabaseFileInfo) Name() string { return path.Base(fileInfo.FilePath) }
 
+// Size of the file in bytes.
 func (fileInfo *DatabaseFileInfo) Size() int64 { return fileInfo.size }
 
+// Modification time.
 func (fileInfo *DatabaseFileInfo) ModTime() time.Time { return fileInfo.modTime }
 
+// Whether the file is a directory.
 func (fileInfo *DatabaseFileInfo) IsDir() bool { return fileInfo.isDir }
 
+// Sys always returns nil.
 func (fileInfo *DatabaseFileInfo) Sys() any { return nil }
 
+// Type bits (needed to implement fs.DirEntry).
 func (fileInfo *DatabaseFileInfo) Type() fs.FileMode { return fileInfo.Mode().Type() }
 
+// Returns the file info (needed to implement fs.DirEntry).
 func (fileInfo *DatabaseFileInfo) Info() (fs.FileInfo, error) { return fileInfo, nil }
 
+// File mode bits.
 func (fileInfo *DatabaseFileInfo) Mode() fs.FileMode {
 	if fileInfo.isDir {
 		return fs.ModeDir
@@ -279,10 +375,14 @@ func (fileInfo *DatabaseFileInfo) Mode() fs.FileMode {
 	return 0
 }
 
+// Stat returns the file info describing the file.
 func (file *DatabaseFile) Stat() (fs.FileInfo, error) {
 	return file.info, nil
 }
 
+// Read reads up to len(b) bytes from the DatabaseFile and stores them in b. It
+// returns the number of bytes read and any error encountered. At end of file,
+// Read returns 0, io.EOF.
 func (file *DatabaseFile) Read(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
@@ -302,12 +402,7 @@ func (file *DatabaseFile) Read(p []byte) (n int, err error) {
 	}
 }
 
-type emptyReader struct{}
-
-var empty = (*emptyReader)(nil)
-
-func (empty *emptyReader) Read(p []byte) (n int, err error) { return 0, io.EOF }
-
+// Close closes the DatabaseFile from reading.
 func (file *DatabaseFile) Close() error {
 	if file.info.isDir {
 		return nil
@@ -326,7 +421,7 @@ func (file *DatabaseFile) Close() error {
 			if file.gzipReader == nil {
 				return fs.ErrClosed
 			}
-			file.gzipReader.Reset(empty)
+			file.gzipReader.Reset(bytes.NewReader(nil))
 			gzipReaderPool.Put(file.gzipReader)
 			file.gzipReader = nil
 			if file.buf.Cap() <= maxPoolableBufferCapacity {
@@ -348,32 +443,87 @@ func (file *DatabaseFile) Close() error {
 	return nil
 }
 
+// DatabaseFileWriter represents a writable file on a DatabaseFS.
 type DatabaseFileWriter struct {
-	db                *sql.DB
-	dialect           string
-	objectStorage     ObjectStorage
-	logger            *slog.Logger
+	// database connection.
+	db *sql.DB
+
+	// dialect of the database.
+	dialect string
+
+	// objectStorage is only used for deleting the object from object storage
+	// in case the database write fails (we don't want a bunch of partial
+	// writes to bloat the object storage with objects that have no database
+	// record).
+	objectStorage ObjectStorage
+
+	// logger is used for reporting errors that cannot be handled and are
+	// thrown away.
+	logger *slog.Logger
+
+	// updateStorageUsed is used to update the storage used by the site after
+	// the file has been fully written.
 	updateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 
-	ctx                 context.Context
-	fileType            FileType
-	isFulltextIndexed   bool
-	exists              bool
-	fileID              ID
-	parentID            ID
-	filePath            string
-	initialSize         int64
-	size                int64
-	buf                 *bytes.Buffer
-	gzipWriter          *gzip.Writer
-	modTime             time.Time
-	creationTime        time.Time
-	caption             string
+	// ctx provides the context of all operations called on the DatabaseFileWriter.
+	ctx context.Context
+
+	// fileType of file.
+	fileType FileType
+
+	// Whether the file is fulltext indexed.
+	isFulltextIndexed bool
+
+	// Whether we are writing to an existing file or creating a new one.
+	exists bool
+
+	// fileID of the file.
+	fileID ID
+
+	// fileID of the file's parent.
+	parentID ID
+
+	// filePath of the file.
+	filePath string
+
+	// The file's initial size (if it exists).
+	initialSize int64
+
+	// The file's size after being written.
+	size int64
+
+	// buf holds the raw bytes of the DatabaseFileWriter. It may have first
+	// gone through the gzipWriter, depending on whether the file is gzippable
+	// and is not fulltext indexed.
+	buf *bytes.Buffer
+
+	// If the file is gzippable and is not fulltext indexed, all writes to the
+	// file first go through the gzipWriter before going into the buffer.
+	gzipWriter *gzip.Writer
+
+	// The value of the modTime to be set for the file.
+	modTime time.Time
+
+	// The value of the creationTime to be set for the file.
+	creationTime time.Time
+
+	// The value of the caption to be set for the image file. Images are stored
+	// in object storage so we can use the database's text field for storing
+	// captions.
+	caption string
+
+	// objectStorageWriter writes to the object in object storage.
 	objectStorageWriter *io.PipeWriter
+
+	// objectStorageResult holds the result of writing to the object in object
+	// storage.
 	objectStorageResult chan error
-	writeFailed         bool
+
+	// writeFailed records if any writes to the DatabaseFileWriter failed.
+	writeFailed bool
 }
 
+// OpenWriter implements the OpenWriter FS operation for DatabaseFS.
 func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -391,22 +541,16 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	}
 	now := time.Now().UTC()
 	modTime := now
-	if value := fsys.values["modTime"]; value != nil {
-		if value, ok := value.(time.Time); ok {
-			modTime = value
-		}
+	if value, ok := fsys.values["modTime"].(time.Time); ok {
+		modTime = value
 	}
 	creationTime := now
-	if value := fsys.values["creationTime"]; value != nil {
-		if value, ok := value.(time.Time); ok {
-			creationTime = value
-		}
+	if value, ok := fsys.values["creationTime"].(time.Time); ok {
+		creationTime = value
 	}
 	caption := ""
-	if value := fsys.values["caption"]; value != nil {
-		if value, ok := value.(string); ok {
-			caption = value
-		}
+	if value, ok := fsys.values["caption"].(string); ok {
+		caption = value
 	}
 	file := &DatabaseFileWriter{
 		db:                fsys.DB,
@@ -422,10 +566,12 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 		creationTime:      creationTime,
 		caption:           caption,
 	}
-	// If parentDir is the root directory, just fetch the file information.
-	// Otherwise fetch both the parent and file information.
+	// Get the fileID as well as the parentID (if the file exists).
 	parentDir := path.Dir(file.filePath)
 	if parentDir == "." {
+		// If parentDir is the root directory ".", it doesn't exist in the
+		// database (it exists implicitly) so we don't have to fetch the
+		// parentID.
 		result, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -501,18 +647,14 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 			file.fileID = NewID()
 		}
 	}
+	// Prepare the underlying writers.
 	if fileType.Has(AttributeObject) {
 		pipeReader, pipeWriter := io.Pipe()
 		file.objectStorageWriter = pipeWriter
 		file.objectStorageResult = make(chan error, 1)
 		go func() {
-			defer func() {
-				if v := recover(); v != nil {
-					file.objectStorageResult <- stacktrace.New(fmt.Errorf("panic: %v", v))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			file.objectStorageResult <- fsys.ObjectStorage.Put(file.ctx, file.fileID.String()+path.Ext(file.filePath), pipeReader)
-			close(file.objectStorageResult)
 		}()
 	} else {
 		if file.fileType.Has(AttributeGzippable) && !file.isFulltextIndexed {
@@ -526,6 +668,9 @@ func (fsys *DatabaseFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, 
 	return file, nil
 }
 
+// Write writes len(b) bytes from b to the DatabaseFileWriter. It returns the
+// number of bytes written and an error, if any. Write returns a non-nil error
+// when n != len(b).
 func (file *DatabaseFileWriter) Write(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
@@ -557,6 +702,7 @@ func (file *DatabaseFileWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// ReadFrom implements io.ReaderFrom.
 func (file *DatabaseFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
@@ -588,6 +734,8 @@ func (file *DatabaseFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, nil
 }
 
+// Close saves the contents of the DatabaseFileWriter into the database and
+// closes the DatabaseFileWriter.
 func (file *DatabaseFileWriter) Close() error {
 	if file.fileType.Has(AttributeObject) {
 		if file.objectStorageWriter == nil {
@@ -710,11 +858,7 @@ func (file *DatabaseFileWriter) Close() error {
 			})
 			if err != nil {
 				go func() {
-					defer func() {
-						if v := recover(); v != nil {
-							file.logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					// This is a cleanup operation - don't pass in the file.ctx
 					// because file.ctx may be canceled and prevent the
 					// cleanup.
@@ -769,6 +913,7 @@ func (file *DatabaseFileWriter) Close() error {
 	if delta == 0 {
 		return nil
 	}
+	// Update the site's storage used.
 	if file.updateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(file.filePath, "/")
@@ -780,6 +925,7 @@ func (file *DatabaseFileWriter) Close() error {
 			return stacktrace.New(err)
 		}
 	}
+	// Update the size of all ancestor directories.
 	ancestors := make([]string, 0, strings.Count(file.filePath, "/"))
 	for dir := path.Dir(file.filePath); dir != "."; dir = path.Dir(dir) {
 		ancestors = append(ancestors, dir)
@@ -803,6 +949,7 @@ func (file *DatabaseFileWriter) Close() error {
 	return nil
 }
 
+// ReadDir implements the ReadDir FS operation for DatabaseFS.
 func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -845,6 +992,7 @@ func (fsys *DatabaseFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return dirEntries, nil
 }
 
+// Mkdir implements the Mkdir FS operation for DatabaseFS.
 func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -858,16 +1006,12 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	}
 	now := time.Now().UTC()
 	modTime := now
-	if value := fsys.values["modTime"]; value != nil {
-		if value, ok := value.(time.Time); ok {
-			modTime = value
-		}
+	if value, ok := fsys.values["modTime"].(time.Time); ok {
+		modTime = value
 	}
 	creationTime := now
-	if value := fsys.values["creationTime"]; value != nil {
-		if value, ok := value.(time.Time); ok {
-			creationTime = value
-		}
+	if value, ok := fsys.values["creationTime"].(time.Time); ok {
+		creationTime = value
 	}
 	parentDir := path.Dir(name)
 	if parentDir == "." {
@@ -934,6 +1078,7 @@ func (fsys *DatabaseFS) Mkdir(name string, _ fs.FileMode) error {
 	return nil
 }
 
+// MkdirAll implements the MkdirAll FS operation for DatabaseFS.
 func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -954,16 +1099,12 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	// Insert the top level directory (no parent), ignoring duplicates.
 	now := time.Now().UTC()
 	modTime := now
-	if value := fsys.values["modTime"]; value != nil {
-		if value, ok := value.(time.Time); ok {
-			modTime = value
-		}
+	if value, ok := fsys.values["modTime"].(time.Time); ok {
+		modTime = value
 	}
 	creationTime := now
-	if value := fsys.values["creationTime"]; value != nil {
-		if value, ok := value.(time.Time); ok {
-			creationTime = value
-		}
+	if value, ok := fsys.values["creationTime"].(time.Time); ok {
+		creationTime = value
 	}
 	segments := strings.Split(name, "/")
 	switch fsys.Dialect {
@@ -1071,6 +1212,7 @@ func (fsys *DatabaseFS) MkdirAll(name string, _ fs.FileMode) error {
 	return nil
 }
 
+// Remove implements the Remove FS operation for DatabaseFS.
 func (fsys *DatabaseFS) Remove(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -1106,13 +1248,15 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if file.hasChildren {
 		return &fs.PathError{Op: "remove", Path: name, Err: syscall.ENOTEMPTY}
 	}
+	// Delete the underlying object from object storage.
 	fileType := AllowedFileTypes[path.Ext(name)]
 	if fileType.Has(AttributeObject) {
 		err = fsys.ObjectStorage.Delete(fsys.ctx, file.fileID.String()+path.Ext(file.filePath))
 		if err != nil {
-			return stacktrace.New(err)
+			fsys.Logger.Error(stacktrace.New(err).Error())
 		}
 	}
+	// Delete any pinned files.
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM pinned_file WHERE (SELECT file_id FROM files WHERE file_path = {name}) IN (parent_id, file_id)",
@@ -1123,6 +1267,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
+	// Get the size of the file being removed.
 	size, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {name}",
@@ -1135,6 +1280,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
+	// Delete the file.
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name}",
@@ -1148,6 +1294,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if file.isDir {
 		return nil
 	}
+	// Subtract the file's size from the site's storage used.
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(name, "/")
@@ -1159,6 +1306,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 			return stacktrace.New(err)
 		}
 	}
+	// Subtract the file size from all ancestor directories.
 	ancestors := make([]string, 0, strings.Count(name, "/"))
 	for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
 		ancestors = append(ancestors, dir)
@@ -1182,6 +1330,7 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	return nil
 }
 
+// RemoveAll implements the RemoveAll FS operation for DatabaseFS.
 func (fsys *DatabaseFS) RemoveAll(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -1190,14 +1339,18 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	if !fs.ValidPath(name) || strings.Contains(name, "\\") || name == "." {
 		return &fs.PathError{Op: "removeall", Path: name, Err: fs.ErrInvalid}
 	}
+	// Delete the underlying objects from object storage.
 	pattern := wildcardReplacer.Replace(name) + "/%"
 	extFilter := sq.Expr("1 <> 1")
-	if len(imgExts) > 0 {
+	if len(objectExts) > 0 {
 		var b strings.Builder
-		args := make([]any, 0, len(imgExts)+1)
-		b.WriteString("(file_path LIKE '%.tgz' ESCAPE '\\'")
-		for _, ext := range imgExts {
-			b.WriteString(" OR file_path LIKE {} ESCAPE '\\'")
+		args := make([]any, 0, len(objectExts))
+		b.WriteString("(")
+		for _, ext := range objectExts {
+			if b.Len() > 0 {
+				b.WriteString(" OR ")
+			}
+			b.WriteString("file_path LIKE {} ESCAPE '\\'")
 			args = append(args, "%"+wildcardReplacer.Replace(ext))
 		}
 		b.WriteString(")")
@@ -1252,6 +1405,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		return err
 	}
 	waitGroup.Wait()
+	// Delete any pinned files.
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format: "DELETE FROM pinned_file WHERE EXISTS (" +
@@ -1265,6 +1419,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			sq.StringParam("pattern", pattern),
 		},
 	})
+	// Get the total size of the files being removed.
 	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
@@ -1278,6 +1433,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
+	// Delete the files.
 	_, err = sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "DELETE FROM files WHERE file_path = {name} OR file_path LIKE {pattern} ESCAPE '\\'",
@@ -1289,6 +1445,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
+	// Subtract the files' total size from the site's storage used.
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(name, "/")
@@ -1300,6 +1457,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			return stacktrace.New(err)
 		}
 	}
+	// Subtract the files' total size from all ancestor directories.
 	ancestors := make([]string, 0, strings.Count(name, "/"))
 	for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
 		ancestors = append(ancestors, dir)
@@ -1323,6 +1481,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 	return nil
 }
 
+// Rename implements the Rename FS operation for DatabaseFS.
 func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -1334,6 +1493,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	if !fs.ValidPath(newName) || strings.Contains(newName, "\\") {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrInvalid}
 	}
+	// newName must not exist.
 	exists, err := sq.FetchExists(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT 1 FROM files WHERE file_path = {newName}",
@@ -1344,6 +1504,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	if exists {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
 	}
+	// totalSize of the files being renamed/moved.
 	var totalSize int64
 	tx, err := fsys.DB.BeginTx(fsys.ctx, nil)
 	if err != nil {
@@ -1356,6 +1517,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 		if path.Dir(oldName) != path.Dir(newName) {
 			reparent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
 		}
+		// Rename the file, retrieving the file size at the same time.
 		result, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{reparent} WHERE file_path = {oldName} RETURNING {*}",
@@ -1380,6 +1542,9 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			return stacktrace.New(err)
 		}
 		if result.isDir {
+			// If the file is a directory, rename the directory prefix for all
+			// descendants. Retrieve the descendants' total size at the same
+			// time.
 			cursor, err := sq.FetchCursor(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\' RETURNING {*}",
@@ -1413,6 +1578,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}
 		}
 	case "mysql":
+		// Retrieve the file size.
 		result, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {oldName}",
@@ -1433,6 +1599,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}
 			return stacktrace.New(err)
 		}
+		// Rename the file.
 		var reparent sq.Expression
 		if path.Dir(oldName) != path.Dir(newName) {
 			reparent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
@@ -1451,6 +1618,8 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			return stacktrace.New(err)
 		}
 		if result.isDir {
+			// If the file is a directory, retrieve the descendants' total
+			// size.
 			totalSize, err = sq.FetchOne(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\'",
@@ -1460,6 +1629,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}, func(row *sq.Row) int64 {
 				return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 			})
+			// Rename the directory prefix for all descendants.
 			_, err = sq.Exec(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
@@ -1481,13 +1651,20 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	default:
 		return stacktrace.New(fmt.Errorf("unsupported dialect %q", fsys.Dialect))
 	}
+	err = tx.Commit()
+	if err != nil {
+		return stacktrace.New(err)
+	}
+	// If the files changed parents, need to update the size of all ancestor
+	// directories accordingly.
 	if path.Dir(oldName) != path.Dir(newName) {
+		// Subtract the files' total size from all old ancestor directories.
 		oldAncestors := make([]string, 0, strings.Count(oldName, "/"))
 		for dir := path.Dir(oldName); dir != "."; dir = path.Dir(dir) {
 			oldAncestors = append(oldAncestors, dir)
 		}
 		if len(oldAncestors) > 0 {
-			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
+			_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 				Dialect: fsys.Dialect,
 				Format: "UPDATE files" +
 					" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
@@ -1502,12 +1679,13 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 				return stacktrace.New(err)
 			}
 		}
+		// Add the files' total size to all new ancestor directories.
 		newAncestors := make([]string, 0, strings.Count(newName, "/"))
 		for dir := path.Dir(newName); dir != "."; dir = path.Dir(dir) {
 			newAncestors = append(newAncestors, dir)
 		}
 		if len(newAncestors) > 0 {
-			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
+			_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
 				Dialect: fsys.Dialect,
 				Format: "UPDATE files" +
 					" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
@@ -1523,13 +1701,10 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}
 		}
 	}
-	err = tx.Commit()
-	if err != nil {
-		return stacktrace.New(err)
-	}
 	return nil
 }
 
+// Copy implements the Copy FS operation for DatabaseFS.
 func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -1573,13 +1748,16 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			destExists = true
 		}
 	}
+	// srcName must exist.
 	if srcFileID.IsZero() {
 		return fs.ErrNotExist
 	}
+	// destName must not exist.
 	if destExists {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
 	}
 	if !srcIsDir {
+		// If src file is not a directory, just copy the file and we are done.
 		destFileID := NewID()
 		size, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 			Dialect: fsys.Dialect,
@@ -1627,6 +1805,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 				fsys.Logger.Error(stacktrace.New(err).Error())
 			}
 		}
+		// Add the file size to the site's storage used.
 		if fsys.UpdateStorageUsed != nil {
 			var sitePrefix string
 			head, _, _ := strings.Cut(srcName, "/")
@@ -1638,6 +1817,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 				return stacktrace.New(err)
 			}
 		}
+		// Add the file size to all dest ancestor directories.
 		destAncestors := make([]string, 0, strings.Count(destName, "/"))
 		for dir := path.Dir(destName); dir != "."; dir = path.Dir(dir) {
 			destAncestors = append(destAncestors, dir)
@@ -1660,6 +1840,11 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		}
 		return nil
 	}
+	// If we reach here, that means src file is a directory and we need to copy
+	// files recursively.
+	//
+	// First, grab a list of all files we need to copy so that we can generate
+	// new file IDs for their cloned versions.
 	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
 		Format:  "SELECT {*} FROM files WHERE file_path = {srcName} OR file_path LIKE {pattern} ESCAPE '\\' ORDER BY file_path",
@@ -1683,9 +1868,13 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		return err
 	}
 	defer cursor.Close()
+	// Then, generate a JSON array containing new file IDs (for the new files
+	// that will be copied). We will unmarshal this JSON payload on the
+	// database-side using dialect-specific SQL and join it with the existing
+	// files table in order to do a bulk cloning of files in one query.
 	var wg sync.WaitGroup
 	var totalSize int64
-	var items [][4]string // destFileID, destParentID, destParent, srcFilePath
+	var items [][4]string // [destFileID, destParentID, destParent, srcFilePath]
 	fileIDs := make(map[string]ID)
 	objectCtx, cancelObjectCtx := context.WithCancel(fsys.ctx)
 	defer cancelObjectCtx()
@@ -1700,6 +1889,9 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		var item [4]string
 		item[0] = destFileID.String()
 		destParent := path.Dir(destFilePath)
+		// We are guaranteed to see a parent before its children, because we
+		// `ORDER BY file_path`. So a file's parent ID will always be in the
+		// map except for the very first file in the loop.
 		if destParentID, ok := fileIDs[destParent]; ok {
 			item[1] = destParentID.String()
 		} else {
@@ -1707,26 +1899,25 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		}
 		item[3] = srcFile.FilePath
 		items = append(items, item)
-		if srcFile.IsDir {
-			continue
-		}
-		totalSize += srcFile.Size
-		ext := path.Ext(srcFile.FilePath)
-		fileType := AllowedFileTypes[ext]
-		if fileType.Has(AttributeObject) {
-			wg.Add(1)
-			go func() {
-				defer func() {
-					if v := recover(); v != nil {
-						fmt.Println("panic:\n" + string(debug.Stack()))
+		if !srcFile.IsDir {
+			totalSize += srcFile.Size
+			ext := path.Ext(srcFile.FilePath)
+			fileType := AllowedFileTypes[ext]
+			if fileType.Has(AttributeObject) {
+				wg.Add(1)
+				go func() {
+					defer func() {
+						if v := recover(); v != nil {
+							fsys.Logger.Error(stacktrace.New(fmt.Errorf("panic: %v", v)).Error())
+						}
+					}()
+					defer wg.Done()
+					err := fsys.ObjectStorage.Copy(objectCtx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
+					if err != nil {
+						fsys.Logger.Error(stacktrace.New(err).Error())
 					}
 				}()
-				defer wg.Done()
-				err := fsys.ObjectStorage.Copy(objectCtx, hex.EncodeToString(srcFile.FileID[:])+ext, hex.EncodeToString(destFileID[:])+ext)
-				if err != nil {
-					fsys.Logger.Error(stacktrace.New(err).Error())
-				}
-			}()
+			}
 		}
 	}
 	err = cursor.Close()
@@ -1825,6 +2016,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	default:
 		return fmt.Errorf("unsupported dialect %q", fsys.Dialect)
 	}
+	// Add the files' total size from the site's storage used.
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(destName, "/")
@@ -1836,6 +2028,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			return err
 		}
 	}
+	// Add the files' total size to all dest ancestor directories.
 	destAncestors := make([]string, 0, strings.Count(destName, "/"))
 	for dir := path.Dir(destName); dir != "."; dir = path.Dir(dir) {
 		destAncestors = append(destAncestors, dir)
@@ -1860,6 +2053,9 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 	return nil
 }
 
+// IsKeyViolation returns true if the provided errorCode matches the
+// dialect-specific code for representing a primary key/unique constraint
+// violation.
 func IsKeyViolation(dialect string, errorCode string) bool {
 	switch dialect {
 	case "sqlite":
@@ -1875,6 +2071,8 @@ func IsKeyViolation(dialect string, errorCode string) bool {
 	}
 }
 
+// IsForeignKeyViolation returns true if the provided errorCode matches the
+// dialect-specific code for representing a foreign key constraint violation.
 func IsForeignKeyViolation(dialect string, errorCode string) bool {
 	switch dialect {
 	case "sqlite":
@@ -1890,6 +2088,15 @@ func IsForeignKeyViolation(dialect string, errorCode string) bool {
 	}
 }
 
+// IsFulltextIndexed reports whether a file is eligible for fulltext indexing
+// by virtue of its position within the filesystem. For example, html files in
+// the pages directory are fulltext indexed but not html files in the output
+// directory because those are generated by notebrew itself (we don't want to
+// index generated files, only user source files).
+//
+// If a file is not fulltext-indexed, it is stored in a DatabaseFS in gzipped
+// form to save space and also to save CPU cycles as we don't have to gzip
+// again when serving it later.
 func IsFulltextIndexed(filePath string) bool {
 	fileType, ok := AllowedFileTypes[path.Ext(filePath)]
 	if !ok {

@@ -754,7 +754,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					reader := readerPool.Get().(*bufio.Reader)
 					reader.Reset(file)
 					defer func() {
-						reader.Reset(empty)
+						reader.Reset(bytes.NewReader(nil))
 						readerPool.Put(reader)
 					}()
 					done := false

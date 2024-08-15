@@ -197,6 +197,7 @@ var (
 	editableExts []string // do not modify! only read
 	imgExts      []string // do not modify! only read
 	fontExts     []string // do not modify! only read
+	objectExts   []string // do not modify! only read
 	populateExts = sync.OnceFunc(func() {
 		for _, fileType := range AllowedFileTypes {
 			if fileType.Has(AttributeEditable) {
@@ -208,9 +209,13 @@ var (
 			if fileType.Has(AttributeFont) {
 				fontExts = append(fontExts, fileType.Ext)
 			}
+			if fileType.Has(AttributeObject) {
+				objectExts = append(objectExts, fileType.Ext)
+			}
 		}
 		slices.Sort(editableExts)
 		slices.Sort(imgExts)
 		slices.Sort(fontExts)
+		slices.Sort(objectExts)
 	})
 )

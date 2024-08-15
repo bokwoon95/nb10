@@ -2,6 +2,7 @@ package nb10
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"database/sql"
@@ -417,7 +418,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 		}
 	}
 	defer func() {
-		gzipReader.Reset(empty)
+		gzipReader.Reset(bytes.NewReader(nil))
 		gzipReaderPool.Put(gzipReader)
 	}()
 	tarReader := tar.NewReader(gzipReader)

@@ -853,7 +853,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
 		defer func() {
 			if gzipReader != nil {
-				gzipReader.Reset(empty)
+				gzipReader.Reset(bytes.NewReader(nil))
 				gzipReaderPool.Put(gzipReader)
 			}
 		}()
@@ -1262,7 +1262,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
 		defer func() {
 			if gzipReader != nil {
-				gzipReader.Reset(empty)
+				gzipReader.Reset(bytes.NewReader(nil))
 				gzipReaderPool.Put(gzipReader)
 			}
 		}()
@@ -1698,7 +1698,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 					gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
 					defer func() {
 						if gzipReader != nil {
-							gzipReader.Reset(empty)
+							gzipReader.Reset(bytes.NewReader(nil))
 							gzipReaderPool.Put(gzipReader)
 						}
 					}()
@@ -1985,7 +1985,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 		gzipReader, _ := gzipReaderPool.Get().(*gzip.Reader)
 		defer func() {
 			if gzipReader != nil {
-				gzipReader.Reset(empty)
+				gzipReader.Reset(bytes.NewReader(nil))
 				gzipReaderPool.Put(gzipReader)
 			}
 		}()
