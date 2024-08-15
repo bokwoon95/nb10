@@ -345,6 +345,7 @@
     {{- end }}
     <span class='ml2 f6 mid-gray'>{{ $.CreationTime.Format "2006-01-02" }}</span>
     <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}?from={{ base $.FilePath }}&fromEdited={{ $.ModTime.UTC.Format "2006-01-02T150405.999999999Z" }}&fromCreated={{ $.CreationTime.UTC.Format "2006-01-02T150405.999999999Z" }}&limit=1' class='ml2 f6'>view in folder</a>
+    <a href='?raw' class='ml2 f6'>view raw</a>
     <div class='flex-grow-1'></div>
     <label for='wordwrap' class='pointer flex items-center mh2'>
       <input id='wordwrap' type='checkbox' class='pointer'>

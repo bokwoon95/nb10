@@ -148,6 +148,18 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			response.IsDatabaseFS = v.As(&DatabaseFS{})
 		}
 
+		if r.Form.Has("raw") {
+			fileType, ok := AllowedFileTypes[path.Ext(filePath)]
+			if !ok {
+				nbrew.NotFound(w, r)
+				return
+			}
+			if fileType.Ext == ".html" {
+				fileType.ContentType = "text/plain; charset=utf-8"
+			}
+			ServeFile(w, r, path.Base(filePath), fileInfo.Size(), fileType, file, "no-cache")
+			return
+		}
 		if isEditable {
 			var b strings.Builder
 			b.Grow(int(fileInfo.Size()))
