@@ -25,7 +25,7 @@
 {{- end }}
 {{- if eq (index $.PostRedirectGet "from") "calculatestorage" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
-  <div class='pv1'>recalculated storage</div>
+  <div class='pv1'>recalculated storage in {{ index $.PostRedirectGet "timeTaken" }}</div>
   <div class='flex-grow-1'></div>
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
@@ -110,11 +110,12 @@
     </tfoot>
   </table>
 </div>
-<form method='post' action='/files/calculatestorage/' class='ma2' data-prevent-double-submit>
+<form method='post' action='/files/calculatestorage/' class='ma2' data-prevent-double-submit='{"statusText":"recalculating..."}'>
   {{- range $site := $.Sites }}
   <input type='hidden' name='siteName' value='{{ $site.SiteName }}'>
   {{- end }}
   <button type='submit' class='button ba ph3 br2 b--black pv1'>recalculate</button>
+  <div role='status'></div>
 </form>
 <h2 class='mb0 mh2 underline'>Sessions</h2>
 <div>
@@ -162,11 +163,11 @@
   <div>{{ if gt $.StorageLimit 0 }}{{ humanReadableFileSize $.StorageLimit }}{{ else }}-{{ end }}</div>
 </div>
 {{- if $.HasSubscription }}
-<form method='post' action='/stripe/portal/'>
-  <button type='submit' class='button ba br2 b--black ph2 pv1'>manage subscription</button>
+<form method='post' action='/stripe/portal/' class='ma2 mb4'>
+  <button type='submit' class='button ba ph3 br2 b--black pv1'>manage subscription</button>
 </form>
 {{- else }}
-<div class='overflow-x-auto'>
+<div class='overflow-x-auto mb4'>
   <table class='mv2 collapse'>
     <thead>
       <tr class='bb h2'>

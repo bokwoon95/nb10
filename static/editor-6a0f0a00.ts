@@ -12,7 +12,7 @@ import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
 import { javascript } from "@codemirror/lang-javascript";
 
-globalThis.initializeEditors = function() {
+function initDataEditor() {
   globalThis.editors = [];
   for (const [index, dataEditor] of document.querySelectorAll<HTMLElement>("[data-editor]").entries()) {
     globalThis.editors.push(null);
@@ -318,4 +318,13 @@ globalThis.initializeEditors = function() {
     }
   }
 };
-globalThis.initializeEditors();
+initDataEditor();
+if (typeof globalThis.init == "function") {
+  const previousInit = globalThis.init;
+  globalThis.init = function() {
+    previousInit();
+    initDataEditor();
+  }
+} else {
+  globalThis.init = initDataEditor;
+}

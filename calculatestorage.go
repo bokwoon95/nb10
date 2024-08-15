@@ -2,17 +2,18 @@ package nb10
 
 import (
 	"context"
+	"database/sql"
 	"errors"
-	"fmt"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -39,33 +40,37 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 	}
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
+	switch v := nbrew.FS.(type) {
+	case interface{ As(any) bool }:
+		isDatabaseFS = v.As(&databaseFS)
+	}
+	startedAt := time.Now()
 	group, groupctx := errgroup.WithContext(r.Context())
 	siteNames := r.Form["siteName"]
 	for _, siteName := range siteNames {
 		siteName := siteName
+		exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
+			Dialect: nbrew.Dialect,
+			Format: "SELECT 1" +
+				" FROM site_owner" +
+				" WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})" +
+				" AND user_id = (SELECT user_id FROM users WHERE username = {username})",
+			Values: []any{
+				sq.StringParam("siteName", siteName),
+				sq.StringParam("username", user.Username),
+			},
+		})
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		if !exists {
+			continue
+		}
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
-			exists, err := sq.FetchExists(groupctx, nbrew.DB, sq.Query{
-				Dialect: nbrew.Dialect,
-				Format: "SELECT 1" +
-					" FROM site_owner" +
-					" WHERE site_id = (SELECT site_id FROM site WHERE site_name = {siteName})" +
-					" AND user_id = (SELECT user_id FROM users WHERE username = {username})",
-				Values: []any{
-					sq.StringParam("siteName", siteName),
-					sq.StringParam("username", user.Username),
-				},
-			})
-			if err != nil {
-				return err
-			}
-			if !exists {
-				return nil
-			}
+			defer stacktrace.RecoverPanic(&err)
 			var root string
 			if siteName == "" {
 				root = "."
@@ -76,7 +81,7 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 			}
 			storageUsed, err := calculateStorageUsed(r.Context(), nbrew.FS, root)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -87,10 +92,108 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 				},
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		})
+		if isDatabaseFS {
+			group.Go(func() (err error) {
+				defer stacktrace.RecoverPanic(&err)
+				var siteFilter sq.Expression
+				if siteName == "" {
+					siteFilter = sq.Expr("(" +
+						"file_path LIKE 'notes/%' ESCAPE '\\'" +
+						" OR file_path LIKE 'pages/%' ESCAPE '\\'" +
+						" OR file_path LIKE 'posts/%' ESCAPE '\\'" +
+						" OR file_path LIKE 'output/%' ESCAPE '\\'" +
+						")",
+					)
+				} else {
+					var sitePrefix string
+					if strings.Contains(siteName, ".") {
+						sitePrefix = siteName
+					} else {
+						sitePrefix = "@" + siteName
+					}
+					siteFilter = sq.Expr("file_path LIKE {} ESCAPE '\\'", wildcardReplacer.Replace(sitePrefix)+"/%")
+				}
+				cursor, err := sq.FetchCursor(groupctx, databaseFS.DB, sq.Query{
+					Dialect: databaseFS.Dialect,
+					Format:  "SELECT {*} FROM files WHERE {siteFilter} AND NOT is_dir",
+					Values: []any{
+						sq.Param("siteFilter", siteFilter),
+					},
+				}, func(row *sq.Row) (result struct {
+					FilePath string
+					Size     int64
+				}) {
+					result.FilePath = row.String("file_path")
+					result.Size = row.Int64("size")
+					return result
+				})
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				defer cursor.Close()
+				dirSizes := make(map[string]*int64)
+				for cursor.Next() {
+					result, err := cursor.Result()
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					for dir := path.Dir(result.FilePath); dir != "."; dir = path.Dir(dir) {
+						size := dirSizes[dir]
+						if size == nil {
+							size = new(int64)
+							dirSizes[dir] = size
+						}
+						*size += result.Size
+					}
+				}
+				err = cursor.Close()
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				var db sq.DB
+				if databaseFS.Dialect == "sqlite" {
+					db = databaseFS.DB
+				} else {
+					var conn *sql.Conn
+					conn, err = databaseFS.DB.Conn(groupctx)
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					defer conn.Close()
+					db = conn
+				}
+				preparedExec, err := sq.PrepareExec(groupctx, db, sq.Query{
+					Dialect: nbrew.Dialect,
+					Format:  "UPDATE files SET size = {size} WHERE file_path = {dir} AND is_dir",
+					Values: []any{
+						sq.Int64Param("size", 0),
+						sq.StringParam("dir", ""),
+					},
+				})
+				defer preparedExec.Close()
+				subgroup, subctx := errgroup.WithContext(groupctx)
+				for dir, size := range dirSizes {
+					dir, size := dir, size
+					subgroup.Go(func() (err error) {
+						defer stacktrace.RecoverPanic(&err)
+						_, err = preparedExec.Exec(subctx, sq.Int64Param("size", *size), sq.StringParam("dir", dir))
+						if err != nil {
+							return stacktrace.New(err)
+						}
+						return nil
+					})
+				}
+				err = subgroup.Wait()
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}
 	}
 	err := group.Wait()
 	if err != nil {
@@ -98,9 +201,11 @@ func (nbrew *Notebrew) calculatestorage(w http.ResponseWriter, r *http.Request, 
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
+	timeTaken := time.Since(startedAt)
 	err = nbrew.SetFlashSession(w, r, map[string]any{
 		"postRedirectGet": map[string]any{
-			"from": "calculatestorage",
+			"from":      "calculatestorage",
+			"timeTaken": timeTaken.String(),
 		},
 	})
 	if err != nil {
@@ -162,10 +267,10 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 				sq.Param("filter", filter),
 			},
 		}, func(row *sq.Row) int64 {
-			return row.Int64("sum(coalesce(size, 0))")
+			return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		return storageUsed, nil
 	}
@@ -175,14 +280,14 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		if dirEntry.IsDir() {
 			return nil
 		}
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		storageUsed.Add(fileInfo.Size())
 		return nil
@@ -200,11 +305,7 @@ func calculateStorageUsed(ctx context.Context, fsys FS, root string) (int64, err
 		} {
 			root := root
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				err = fs.WalkDir(fsys.WithContext(groupctx), root, walkDirFunc)
 				if err != nil {
 					return err

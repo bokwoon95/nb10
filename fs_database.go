@@ -45,7 +45,7 @@ type DatabaseFSConfig struct {
 	ErrorCode         func(error) string
 	ObjectStorage     ObjectStorage
 	Logger            *slog.Logger
-	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	UpdateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 }
 
 type DatabaseFS struct {
@@ -54,7 +54,7 @@ type DatabaseFS struct {
 	ErrorCode         func(error) string
 	ObjectStorage     ObjectStorage
 	Logger            *slog.Logger
-	UpdateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	UpdateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 	ctx               context.Context
 	values            map[string]any // modTime time.Time, creationTime time.Time, caption string
 }
@@ -183,7 +183,7 @@ func (fsys *DatabaseFS) Open(name string) (fs.File, error) {
 	}
 	file.isFulltextIndexed = IsFulltextIndexed(file.info.FilePath)
 	if fileType.Has(AttributeObject) {
-		file.readCloser, err = file.objectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
+		file.readCloser, err = fsys.ObjectStorage.Get(file.ctx, file.info.FileID.String()+path.Ext(file.info.FilePath))
 		if err != nil {
 			return nil, stacktrace.New(err)
 		}
@@ -353,7 +353,7 @@ type DatabaseFileWriter struct {
 	dialect           string
 	objectStorage     ObjectStorage
 	logger            *slog.Logger
-	updateStorageUsed func(ctx context.Context, sitePrefix string, delta int64) error
+	updateStorageUsed func(ctx context.Context, siteName string, delta int64) error
 
 	ctx                 context.Context
 	fileType            FileType
@@ -765,14 +765,37 @@ func (file *DatabaseFileWriter) Close() error {
 			}
 		}
 	}
+	delta := file.size - file.initialSize
+	if delta == 0 {
+		return nil
+	}
 	if file.updateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(file.filePath, "/")
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		delta := file.size - file.initialSize
-		err := file.updateStorageUsed(file.ctx, sitePrefix, delta)
+		err := file.updateStorageUsed(file.ctx, strings.TrimPrefix(sitePrefix, "@"), delta)
+		if err != nil {
+			return stacktrace.New(err)
+		}
+	}
+	ancestors := make([]string, 0, strings.Count(file.filePath, "/"))
+	for dir := path.Dir(file.filePath); dir != "."; dir = path.Dir(dir) {
+		ancestors = append(ancestors, dir)
+	}
+	if len(ancestors) > 0 {
+		_, err := sq.Exec(file.ctx, file.db, sq.Query{
+			Dialect: file.dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({ancestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", delta),
+				sq.Param("ancestors", ancestors),
+			},
+		})
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1100,14 +1123,14 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
-	totalSize, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
+	size, err := sq.FetchOne(fsys.ctx, fsys.DB, sq.Query{
 		Dialect: fsys.Dialect,
-		Format:  "SELECT {*} files WHERE file_path = {name}",
+		Format:  "SELECT {*} FROM files WHERE file_path = {name}",
 		Values: []any{
 			sq.StringParam("name", name),
 		},
 	}, func(row *sq.Row) int64 {
-		return row.Int64("sum(coalesce(size, 0))")
+		return row.Int64("CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END")
 	})
 	if err != nil {
 		return stacktrace.New(err)
@@ -1122,13 +1145,36 @@ func (fsys *DatabaseFS) Remove(name string) error {
 	if err != nil {
 		return stacktrace.New(err)
 	}
+	if file.isDir {
+		return nil
+	}
 	if fsys.UpdateStorageUsed != nil {
 		var sitePrefix string
 		head, _, _ := strings.Cut(name, "/")
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -size)
+		if err != nil {
+			return stacktrace.New(err)
+		}
+	}
+	ancestors := make([]string, 0, strings.Count(name, "/"))
+	for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
+		ancestors = append(ancestors, dir)
+	}
+	if len(ancestors) > 0 {
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({ancestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", -size),
+				sq.Param("ancestors", ancestors),
+			},
+		})
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1227,7 +1273,7 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 			sq.StringParam("pattern", pattern),
 		},
 	}, func(row *sq.Row) int64 {
-		return row.Int64("sum(coalesce(size, 0))")
+		return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
 	})
 	if err != nil {
 		return stacktrace.New(err)
@@ -1249,7 +1295,27 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, -totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), -totalSize)
+		if err != nil {
+			return stacktrace.New(err)
+		}
+	}
+	ancestors := make([]string, 0, strings.Count(name, "/"))
+	for dir := path.Dir(name); dir != "."; dir = path.Dir(dir) {
+		ancestors = append(ancestors, dir)
+	}
+	if len(ancestors) > 0 {
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({ancestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", -totalSize),
+				sq.Param("ancestors", ancestors),
+			},
+		})
 		if err != nil {
 			return stacktrace.New(err)
 		}
@@ -1278,6 +1344,7 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	if exists {
 		return &fs.PathError{Op: "rename", Path: newName, Err: fs.ErrExist}
 	}
+	var totalSize int64
 	tx, err := fsys.DB.BeginTx(fsys.ctx, nil)
 	if err != nil {
 		return stacktrace.New(err)
@@ -1285,22 +1352,26 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 	defer tx.Rollback()
 	switch fsys.Dialect {
 	case "sqlite", "postgres":
-		var updateParent sq.Expression
+		var reparent sq.Expression
 		if path.Dir(oldName) != path.Dir(newName) {
-			// If the parent changes, also update the parent_id.
-			updateParent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
+			reparent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
 		}
-		oldNameIsDir, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
+		result, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
 			Dialect: fsys.Dialect,
-			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{updateParent} WHERE file_path = {oldName} RETURNING {*}",
+			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{reparent} WHERE file_path = {oldName} RETURNING {*}",
 			Values: []any{
 				sq.StringParam("newName", newName),
 				sq.TimeParam("modTime", time.Now().UTC()),
-				sq.Param("updateParent", updateParent),
+				sq.Param("reparent", reparent),
 				sq.StringParam("oldName", oldName),
 			},
-		}, func(row *sq.Row) bool {
-			return row.Bool("is_dir")
+		}, func(row *sq.Row) (result struct {
+			isDir bool
+			size  int64
+		}) {
+			result.isDir = row.Bool("is_dir")
+			result.size = row.Int64("CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END")
+			return result
 		})
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -1308,18 +1379,92 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 			}
 			return stacktrace.New(err)
 		}
-		if oldNameIsDir {
-			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
+		if result.isDir {
+			cursor, err := sq.FetchCursor(fsys.ctx, tx, sq.Query{
+				Dialect: fsys.Dialect,
+				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\' RETURNING {*}",
+				Values: []any{
+					sq.Param("filePath", sq.Expr("{} || substring(file_path, {})", newName, utf8.RuneCountInString(oldName)+1)),
+					sq.TimeParam("modTime", time.Now().UTC()),
+					sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
+				},
+			}, func(row *sq.Row) int64 {
+				return row.Int64("CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END")
+			})
+			if err != nil {
+				return stacktrace.New(err)
+			}
+			defer cursor.Close()
+			for cursor.Next() {
+				size, err := cursor.Result()
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				totalSize += size
+			}
+			err = cursor.Close()
+			if err != nil {
+				return stacktrace.New(err)
+			}
+		} else {
+			totalSize = result.size
+			if path.Ext(oldName) != path.Ext(newName) {
+				return fmt.Errorf("file extension cannot be changed")
+			}
+		}
+	case "mysql":
+		result, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
+			Dialect: fsys.Dialect,
+			Format:  "SELECT {*} FROM files WHERE file_path = {oldName}",
+			Values: []any{
+				sq.StringParam("oldName", oldName),
+			},
+		}, func(row *sq.Row) (result struct {
+			isDir bool
+			size  int64
+		}) {
+			result.isDir = row.Bool("is_dir")
+			result.size = row.Int64("CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END")
+			return result
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
+			}
+			return stacktrace.New(err)
+		}
+		var reparent sq.Expression
+		if path.Dir(oldName) != path.Dir(newName) {
+			reparent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
+		}
+		_, err = sq.Exec(fsys.ctx, tx, sq.Query{
+			Dialect: fsys.Dialect,
+			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{reparent} WHERE file_path = {oldName}",
+			Values: []any{
+				sq.StringParam("newName", newName),
+				sq.TimeParam("modTime", time.Now().UTC()),
+				sq.Param("reparent", reparent),
+				sq.StringParam("oldName", oldName),
+			},
+		})
+		if err != nil {
+			return stacktrace.New(err)
+		}
+		if result.isDir {
+			totalSize, err = sq.FetchOne(fsys.ctx, tx, sq.Query{
+				Dialect: fsys.Dialect,
+				Format:  "SELECT {*} FROM files WHERE file_path LIKE {pattern} ESCAPE '\\'",
+				Values: []any{
+					sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
+				},
+			}, func(row *sq.Row) int64 {
+				return row.Int64("sum(CASE WHEN is_dir OR size IS NULL THEN 0 ELSE size END)")
+			})
+			_, err = sq.Exec(fsys.ctx, tx, sq.Query{
 				Dialect: fsys.Dialect,
 				Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
 				Values: []any{
-					sq.Param("filePath", sq.DialectExpression{
-						Default: sq.Expr("{} || substring(file_path, {})", newName, utf8.RuneCountInString(oldName)+1),
-						Cases: []sq.DialectCase{{
-							Dialect: "mysql",
-							Result:  sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1),
-						}},
-					}),
+					sq.Param("filePath", sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1)),
 					sq.TimeParam("modTime", time.Now().UTC()),
 					sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
 				},
@@ -1328,67 +1473,55 @@ func (fsys *DatabaseFS) Rename(oldName, newName string) error {
 				return stacktrace.New(err)
 			}
 		} else {
+			totalSize = result.size
 			if path.Ext(oldName) != path.Ext(newName) {
-				return stacktrace.New(fmt.Errorf("file extension cannot be changed"))
+				return fmt.Errorf("file extension cannot be changed")
 			}
-		}
-	case "mysql":
-		oldNameIsDir, err := sq.FetchOne(fsys.ctx, tx, sq.Query{
-			Dialect: fsys.Dialect,
-			Format:  "SELECT {*} FROM files WHERE file_path = {oldName}",
-			Values: []any{
-				sq.StringParam("oldName", oldName),
-			},
-		}, func(row *sq.Row) bool {
-			return row.Bool("is_dir")
-		})
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return &fs.PathError{Op: "rename", Path: oldName, Err: fs.ErrNotExist}
-			}
-			return stacktrace.New(err)
-		}
-		if !oldNameIsDir && path.Ext(oldName) != path.Ext(newName) {
-			return stacktrace.New(fmt.Errorf("file extension cannot be changed"))
-		}
-		var updateParent sq.Expression
-		if path.Dir(oldName) != path.Dir(newName) {
-			// If the parent changes, also update the parent_id.
-			updateParent = sq.Expr(", parent_id = (SELECT file_id FROM files WHERE file_path = {})", path.Dir(newName))
-		}
-		_, err = sq.Exec(fsys.ctx, tx, sq.Query{
-			Dialect: fsys.Dialect,
-			Format:  "UPDATE files SET file_path = {newName}, mod_time = {modTime}{updateParent} WHERE file_path = {oldName}",
-			Values: []any{
-				sq.StringParam("newName", newName),
-				sq.TimeParam("modTime", time.Now().UTC()),
-				sq.Param("updateParent", updateParent),
-				sq.StringParam("oldName", oldName),
-			},
-		})
-		if err != nil {
-			return stacktrace.New(err)
-		}
-		_, err = sq.Exec(fsys.ctx, tx, sq.Query{
-			Dialect: fsys.Dialect,
-			Format:  "UPDATE files SET file_path = {filePath}, mod_time = {modTime} WHERE file_path LIKE {pattern} ESCAPE '\\'",
-			Values: []any{
-				sq.Param("filePath", sq.DialectExpression{
-					Default: sq.Expr("{} || substring(file_path, {})", newName, utf8.RuneCountInString(oldName)+1),
-					Cases: []sq.DialectCase{{
-						Dialect: "mysql",
-						Result:  sq.Expr("concat({}, substring(file_path, {}))", newName, utf8.RuneCountInString(oldName)+1),
-					}},
-				}),
-				sq.TimeParam("modTime", time.Now().UTC()),
-				sq.StringParam("pattern", wildcardReplacer.Replace(oldName)+"/%"),
-			},
-		})
-		if err != nil {
-			return stacktrace.New(err)
 		}
 	default:
 		return stacktrace.New(fmt.Errorf("unsupported dialect %q", fsys.Dialect))
+	}
+	if path.Dir(oldName) != path.Dir(newName) {
+		oldAncestors := make([]string, 0, strings.Count(oldName, "/"))
+		for dir := path.Dir(oldName); dir != "."; dir = path.Dir(dir) {
+			oldAncestors = append(oldAncestors, dir)
+		}
+		if len(oldAncestors) > 0 {
+			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
+				Dialect: fsys.Dialect,
+				Format: "UPDATE files" +
+					" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+					" WHERE file_path IN ({oldAncestors})" +
+					" AND is_dir",
+				Values: []any{
+					sq.Int64Param("delta", -totalSize),
+					sq.Param("oldAncestors", oldAncestors),
+				},
+			})
+			if err != nil {
+				return stacktrace.New(err)
+			}
+		}
+		newAncestors := make([]string, 0, strings.Count(newName, "/"))
+		for dir := path.Dir(newName); dir != "."; dir = path.Dir(dir) {
+			newAncestors = append(newAncestors, dir)
+		}
+		if len(newAncestors) > 0 {
+			_, err := sq.Exec(fsys.ctx, tx, sq.Query{
+				Dialect: fsys.Dialect,
+				Format: "UPDATE files" +
+					" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+					" WHERE file_path IN ({newAncestors})" +
+					" AND is_dir",
+				Values: []any{
+					sq.Int64Param("delta", totalSize),
+					sq.Param("newAncestors", newAncestors),
+				},
+			})
+			if err != nil {
+				return stacktrace.New(err)
+			}
+		}
 	}
 	err = tx.Commit()
 	if err != nil {
@@ -1500,7 +1633,27 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 				sitePrefix = head
 			}
-			err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, size)
+			err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), size)
+			if err != nil {
+				return stacktrace.New(err)
+			}
+		}
+		destAncestors := make([]string, 0, strings.Count(destName, "/"))
+		for dir := path.Dir(destName); dir != "."; dir = path.Dir(dir) {
+			destAncestors = append(destAncestors, dir)
+		}
+		if len(destAncestors) > 0 {
+			_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+				Dialect: fsys.Dialect,
+				Format: "UPDATE files" +
+					" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+					" WHERE file_path IN ({destAncestors})" +
+					" AND is_dir",
+				Values: []any{
+					sq.Int64Param("delta", size),
+					sq.Param("destAncestors", destAncestors),
+				},
+			})
 			if err != nil {
 				return stacktrace.New(err)
 			}
@@ -1610,7 +1763,7 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 			},
 		})
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	case "postgres":
 		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
@@ -1678,9 +1831,29 @@ func (fsys *DatabaseFS) Copy(srcName, destName string) error {
 		if strings.HasPrefix(head, "@") || strings.Contains(head, ".") {
 			sitePrefix = head
 		}
-		err := fsys.UpdateStorageUsed(fsys.ctx, sitePrefix, totalSize)
+		err := fsys.UpdateStorageUsed(fsys.ctx, strings.TrimPrefix(sitePrefix, "@"), totalSize)
 		if err != nil {
 			return err
+		}
+	}
+	destAncestors := make([]string, 0, strings.Count(destName, "/"))
+	for dir := path.Dir(destName); dir != "."; dir = path.Dir(dir) {
+		destAncestors = append(destAncestors, dir)
+	}
+	if len(destAncestors) > 0 {
+		_, err := sq.Exec(fsys.ctx, fsys.DB, sq.Query{
+			Dialect: fsys.Dialect,
+			Format: "UPDATE files" +
+				" SET size = CASE WHEN coalesce(size, 0) + {delta} >= 0 THEN coalesce(size, 0) + {delta} ELSE 0 END" +
+				" WHERE file_path IN ({destAncestors})" +
+				" AND is_dir",
+			Values: []any{
+				sq.Int64Param("delta", totalSize),
+				sq.Param("destAncestors", destAncestors),
+			},
+		})
+		if err != nil {
+			return stacktrace.New(err)
 		}
 	}
 	wg.Wait()

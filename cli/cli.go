@@ -885,7 +885,7 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 				return nil, closers, err
 			}
 			if nbrew.DB != nil {
-				databaseFS.UpdateStorageUsed = func(ctx context.Context, sitePrefix string, delta int64) error {
+				databaseFS.UpdateStorageUsed = func(ctx context.Context, siteName string, delta int64) error {
 					if delta == 0 {
 						return nil
 					}
@@ -896,7 +896,7 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 							" WHERE site_name = {siteName}",
 						Values: []any{
 							sq.Int64Param("delta", delta),
-							sq.StringParam("siteName", strings.TrimPrefix(sitePrefix, "@")),
+							sq.StringParam("siteName", siteName),
 						},
 					})
 					if err != nil {
@@ -1413,7 +1413,9 @@ func NewServer(nbrew *nb10.Notebrew) (*http.Server, error) {
 					Logger:    certmagic.DefaultACME.Logger,
 					HTTPProxy: certmagic.DefaultACME.HTTPProxy,
 					DNS01Solver: &certmagic.DNS01Solver{
-						DNSProvider: nbrew.DNSProvider,
+						DNSManager: certmagic.DNSManager{
+							DNSProvider: nbrew.DNSProvider,
+						},
 					},
 				}),
 			}

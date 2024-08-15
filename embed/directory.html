@@ -264,6 +264,9 @@
         <div class='ma2 tr'><a href='{{ sortBy "name" }}' class='nowrap{{ if eq $.Sort "name" }} arrow-before{{ end }}'>name</a></div>
         <div class='ma2 tr'><a href='{{ sortBy "created" }}' class='nowrap{{ if eq $.Sort "created" }} arrow-before{{ end }}'>date created</a></div>
         <div class='ma2 tr'><a href='{{ sortBy "edited" }}' class='nowrap{{ if eq $.Sort "edited" }} arrow-before{{ end }}'>date edited</a></div>
+        {{- if $.IsDatabaseFS }}
+        <div class='ma2 tr'><a href='{{ sortBy "size" }}' class='nowrap{{ if eq $.Sort "size" }} arrow-before{{ end }}'>size</a></div>
+        {{- end }}
         <hr>
         <div class='ma2 tr'><a href='{{ orderBy "asc" }}' class='nowrap{{ if eq $.Order "asc" }} arrow-before{{ end }}'>ascending</a></div>
         <div class='ma2 tr'><a href='{{ orderBy "desc" }}' class='nowrap{{ if eq $.Order "desc" }} arrow-before{{ end }}'>descending</a></div>
@@ -317,7 +320,7 @@
         <div class='ma2 tr'><a href='/{{ join "files" $.SitePrefix "createfolder" }}?parent={{ $.FilePath }}' class='nowrap'>📂 create folder</a></div>
         {{- end }}
         <hr>
-        <form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "uploadfile" }}/' class='pa2' data-ajax-upload>
+        <form method='post' enctype='multipart/form-data' action='/{{ join "files" $.SitePrefix "uploadfile" }}/' class='pa2' data-upload-file>
           <input type='hidden' name='parent' value='{{ $.FilePath }}'>
           <input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple>
           <input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'>
@@ -397,7 +400,7 @@
             {{- end }}
           {{- end }}
           <a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ if eq $file.Parent $.FilePath }}{{ $file.Name }}{{ else }}/{{ join $file.Parent $file.Name }}{{ end }}{{ if $file.IsDir }}/{{ end }}</a>
-          {{- if not $file.IsDir }}
+          {{- if or (not $file.IsDir) $.IsDatabaseFS }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
           <span class='ml2 f6 mid-gray'>{{ formatTime $file.CreationTime "2006-01-02" $.TimezoneOffsetSeconds }}</span>
@@ -477,7 +480,7 @@
             {{- end }}
           {{- end }}
           <a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
-          {{- if not $file.IsDir }}
+          {{- if or (not $file.IsDir) $.IsDatabaseFS }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
           <span class='ml2 f6 mid-gray'>{{ formatTime $file.CreationTime "2006-01-02" $.TimezoneOffsetSeconds }}</span>

@@ -115,7 +115,8 @@
         "column": "size",
         "type": {
           "default": "BIGINT"
-        }
+        },
+        "index": true
       },
       {
         "column": "mod_time",
