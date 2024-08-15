@@ -56,7 +56,7 @@
 {{- if eq (index $.PostRedirectGet "from") "delete" }}
 <div role='alert' class='alert mv2 pa2 br2 flex items-start'>
   {{- $numDeleted := index $.PostRedirectGet "numDeleted" }}
-  {{- $deleteErrors := len (index $.PostRedirectGet "deleteErrors") }}
+  {{- $deleteErrors := index $.PostRedirectGet "deleteErrors" }}
   <div class='pv1'>
     <div>
       🗑️ deleted {{ $numDeleted }} file{{ if ne $numDeleted 1.0 }}s{{ end }}
