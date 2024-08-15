@@ -1346,8 +1346,8 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		var b strings.Builder
 		args := make([]any, 0, len(objectExts))
 		b.WriteString("(")
-		for _, ext := range objectExts {
-			if b.Len() > 0 {
+		for i, ext := range objectExts {
+			if i > 0 {
 				b.WriteString(" OR ")
 			}
 			b.WriteString("file_path LIKE {} ESCAPE '\\'")
@@ -1357,7 +1357,6 @@ func (fsys *DatabaseFS) RemoveAll(name string) error {
 		extFilter = sq.Expr(b.String(), args...)
 	}
 	cursor, err := sq.FetchCursor(fsys.ctx, fsys.DB, sq.Query{
-		Debug:   true,
 		Dialect: fsys.Dialect,
 		Format: "SELECT {*}" +
 			" FROM files" +
