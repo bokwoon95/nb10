@@ -63,15 +63,13 @@ func NewMailer(config MailerConfig) (*Mailer, error) {
 		baseCtxCancel: baseCtxCancel,
 		stop:          make(chan struct{}),
 	}
-	if mailer.Host != "" && mailer.Port != "" && mailer.Username != "" && mailer.Password != "" {
-		client, err := mailer.NewClient()
-		if err != nil {
-			return nil, err
-		}
-		err = client.Quit()
-		if err != nil {
-			return nil, err
-		}
+	client, err := mailer.NewClient()
+	if err != nil {
+		return nil, err
+	}
+	err = client.Quit()
+	if err != nil {
+		return nil, err
 	}
 	go mailer.start()
 	return mailer, nil
