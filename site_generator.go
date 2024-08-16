@@ -47,7 +47,6 @@ type SiteGenerator struct {
 	contentDomain      string
 	contentDomainHTTPS bool
 	cdnDomain          string
-	port               int
 	markdown           goldmark.Markdown
 	funcMap            map[string]any
 	mutex              sync.RWMutex
