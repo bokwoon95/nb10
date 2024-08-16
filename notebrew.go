@@ -41,8 +41,8 @@ import (
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/libdns"
 	"github.com/oschwald/maxminddb-golang"
-	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"golang.org/x/crypto/blake2b"
 )
@@ -325,7 +325,7 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 
 var base32Encoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)
 
-func markdownTextOnly(markdown goldmark.Markdown, src []byte) string {
+func markdownTextOnly(parser parser.Parser, src []byte) string {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
 		if buf.Cap() <= maxPoolableBufferCapacity {
@@ -335,7 +335,7 @@ func markdownTextOnly(markdown goldmark.Markdown, src []byte) string {
 	}()
 	var node ast.Node
 	nodes := []ast.Node{
-		markdown.Parser().Parse(text.NewReader(src)),
+		parser.Parse(text.NewReader(src)),
 	}
 	for len(nodes) > 0 {
 		node, nodes = nodes[len(nodes)-1], nodes[:len(nodes)-1]

@@ -341,7 +341,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 							markdown := goldmark.New(
 								goldmark.WithParserOptions(parser.WithAttribute()),
 							)
-							response.Name = filenameSafe(markdownTextOnly(markdown, []byte(line)))
+							response.Name = filenameSafe(markdownTextOnly(markdown.Parser(), []byte(line)))
 						} else {
 							response.Name = filenameSafe(line)
 						}
@@ -414,7 +414,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					if response.Name == "" {
 						continue
 					}
-					response.Name = urlSafe(markdownTextOnly(markdown, []byte(response.Name)))
+					response.Name = urlSafe(markdownTextOnly(markdown.Parser(), []byte(response.Name)))
 					if response.Name == "" {
 						continue
 					}
