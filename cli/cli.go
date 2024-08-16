@@ -305,10 +305,10 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 	}
 	if !contentDomainIsIP {
 		if nbrew.ContentDomain == nbrew.CMSDomain {
-			nbrew.Domains = append(nbrew.Domains, "img."+nbrew.ContentDomain)
+			nbrew.Domains = append(nbrew.Domains, "cdn."+nbrew.ContentDomain, "storage."+nbrew.ContentDomain)
 			nbrew.ContentDomainHTTPS = nbrew.CMSDomainHTTPS
 		} else {
-			nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "www."+nbrew.ContentDomain, "img."+nbrew.ContentDomain)
+			nbrew.Domains = append(nbrew.Domains, nbrew.ContentDomain, "www."+nbrew.ContentDomain, "cdn."+nbrew.ContentDomain, "storage."+nbrew.ContentDomain)
 			nbrew.ContentDomainHTTPS = !strings.HasPrefix(nbrew.ContentDomain, "localhost:")
 		}
 	}
