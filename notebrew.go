@@ -1374,7 +1374,7 @@ func init() {
 	BaselineJS = string(b)
 	BaselineJSHash = "'sha256-" + base64.StdEncoding.EncodeToString(hash[:]) + "'"
 	// common passwords
-	file, err := RuntimeFS.Open("embed/top-10000-passwords.txt")
+	file, err := RuntimeFS.Open("embed/top_10000_passwords.txt")
 	if err != nil {
 		panic(err)
 	}
