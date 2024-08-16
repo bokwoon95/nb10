@@ -354,6 +354,7 @@ func markdownTextOnly(parser parser.Parser, src []byte) string {
 	// Manually escape backslashes (goldmark may be able to do this,
 	// investigate).
 	var b strings.Builder
+	b.Grow(buf.Len())
 	output := buf.Bytes()
 	// Jump to the location of each backslash found in the output.
 	for i := bytes.IndexByte(output, '\\'); i >= 0; i = bytes.IndexByte(output, '\\') {
