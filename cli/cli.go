@@ -1279,8 +1279,7 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 			nbrew.MailFrom = smtpConfig.MailFrom
 			nbrew.ReplyTo = smtpConfig.ReplyTo
 			if smtpConfig.LimitInterval == "" {
-				// 300 emails per hour (3600 seconds) => 3600 / 200 = 12 seconds between emails
-				mailerConfig.LimitInterval = 12 * time.Second
+				mailerConfig.LimitInterval = 3 * time.Minute
 			} else {
 				limitInterval, err := time.ParseDuration(smtpConfig.LimitInterval)
 				if err != nil {
@@ -1289,7 +1288,7 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 				mailerConfig.LimitInterval = limitInterval
 			}
 			if smtpConfig.LimitBurst <= 0 {
-				mailerConfig.LimitBurst = 200
+				mailerConfig.LimitBurst = 20
 			} else {
 				mailerConfig.LimitBurst = smtpConfig.LimitBurst
 			}
