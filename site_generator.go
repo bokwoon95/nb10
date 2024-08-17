@@ -40,43 +40,110 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// SiteGenerator is used to generate pages and posts for a particular site.
 type SiteGenerator struct {
-	Site               Site
-	fsys               FS
-	sitePrefix         string
-	contentDomain      string
+	// Site information.
+	Site Site
+
+	// fsys is the FS to generate pages and posts in.
+	fsys FS
+
+	// sitePrefix is the site prefix.
+	sitePrefix string
+
+	// contentDomain is the domain that the site's generated content is served
+	// on.
+	contentDomain string
+
+	// contentDomainHTTPS indicates whether the content domain is served over
+	// HTTPS.
 	contentDomainHTTPS bool
-	cdnDomain          string
-	markdown           goldmark.Markdown
-	funcMap            map[string]any
-	mutex              sync.RWMutex
-	templateCache      map[string]*template.Template
+
+	// cdnDomain is the domain of the CDN that is used for hosting images.
+	cdnDomain string
+
+	// markdown is the goldmark parser and renderer used to generate from the
+	// site's markdown files.
+	markdown goldmark.Markdown
+
+	// funcMap stores the template funcMap used by the site's templates.
+	funcMap map[string]any
+
+	// mutex is used to guard access to templateCache, templateInProgress and
+	// imgFileIDs.
+	mutex sync.RWMutex
+
+	// templateCache caches already-parsed templates, keyed by their file path
+	// (relative to the sitePrefix).
+	templateCache map[string]*template.Template
+
+	// templateInProgress stores wait channels of the templates whose parsing
+	// are currently in progress. If a wait channel is present, all code
+	// looking to parse a template should wait until the channel returns, then
+	// check the template cache for the already-parsed template. This ensures
+	// that goroutines do not parse the same template twice -- one goroutine
+	// will always parse the templates first, the rest will wait for the result
+	// and fetch it from the templateCache map.
 	templateInProgress map[string]chan struct{}
-	imgFileIDs         map[string]ID
+
+	// imgFileIDs stores a mapping of image file paths to their file IDs. This
+	// is used for rewriting image URLs into their CDN links, which references
+	// images by their file IDs.
+	imgFileIDs map[string]ID
 }
 
+// NavigationLink represents a navigation link to be displayed in the site's
+// navigation menu.
 type NavigationLink struct {
+	// Name of the link.
 	Name string
-	URL  template.URL
+
+	// URL of the link.
+	URL template.URL
 }
 
+// Site holds the global properties of a site.
 type Site struct {
-	LanguageCode          string
-	Title                 string
-	Favicon               template.URL
+	// Language code of the site.
+	LanguageCode string
+
+	// Title of the site.
+	Title string
+
+	// Favicon of the site.
+	Favicon template.URL
+
+	// The site's timezone offset in seconds.
 	TimezoneOffsetSeconds int
-	Description           string
-	NavigationLinks       []NavigationLink
+
+	// Description of the site.
+	Description string
+
+	// NavigationLinks of the site.
+	NavigationLinks []NavigationLink
 }
 
+// SiteGeneratorConfig holds the parameters needed to construct a new SiteGenerator.
 type SiteGeneratorConfig struct {
-	FS                 FS
-	ContentDomain      string
+	// FS is the filesystem that holds the site content.
+	FS FS
+
+	// ContentDomain is the domain that the site's generated content is served
+	// on.
+	ContentDomain string
+
+	// ContentDomainHTTPS indicates whether the content domain is served over
+	// HTTPS.
 	ContentDomainHTTPS bool
-	CDNDomain          string
-	SitePrefix         string
+
+	// CDNDomain is the domain of the CDN that is used for hosting images.
+	CDNDomain string
+
+	// SitePrefix is the site prefix of the site.
+	SitePrefix string
 }
 
+// NewSiteGenerator constructs a new SiteGenerator.
 func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*SiteGenerator, error) {
 	siteGen := &SiteGenerator{
 		fsys:               siteGenConfig.FS,
@@ -99,6 +166,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		Description     string
 		NavigationLinks []NavigationLink
 	}
+	// Read from the site's site.json.
 	b, err := fs.ReadFile(siteGen.fsys, path.Join(siteGen.sitePrefix, "site.json"))
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, stacktrace.New(err)
@@ -133,6 +201,8 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 		config.Favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>" + emoji + "</text></svg>"
 	}
+	// Prepare the site's markdown parser and renderer based on their code
+	// syntax highlighter style.
 	siteGen.markdown = goldmark.New(
 		goldmark.WithParserOptions(
 			parser.WithAttribute(),
@@ -140,7 +210,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		goldmark.WithExtensions(
 			highlighting.NewHighlighting(
 				highlighting.WithStyle(config.CodeStyle),
-				highlighting.WithFormatOptions(chromahtml.TabWidth(4)),
+				highlighting.WithFormatOptions(chromahtml.TabWidth(2)),
 			),
 			extension.Footnote,
 			extension.CJK,
@@ -194,12 +264,12 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	if siteGen.cdnDomain == "" {
 		return siteGen, nil
 	}
-	databaseFS, ok := &DatabaseFS{}, false
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		ok = v.As(&databaseFS)
+		isDatabaseFS = v.As(&databaseFS)
 	}
-	if !ok {
+	if !isDatabaseFS {
 		return siteGen, nil
 	}
 	extFilter := sq.Expr("1 = 1")
@@ -254,10 +324,16 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	return siteGen, nil
 }
 
+// ParseTemplate parses text as a template body for name. Template references
+// starting with "/themes/" and ending in ".html" will be looked for in the
+// site's themes folder.
 func (siteGen *SiteGenerator) ParseTemplate(ctx context.Context, name, text string) (*template.Template, error) {
 	return siteGen.parseTemplate(ctx, name, text, nil)
 }
 
+// parseTemplate is the auxiliary recursive function that ParseTemplate calls.
+// The callers argument is used to keep track of the templates responsible for
+// calling parseTemplate each time, so that we can detect if we are in a loop.
 func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text string, callers []string) (*template.Template, error) {
 	currentTemplate, err := template.New(name).Funcs(siteGen.funcMap).Parse(text)
 	if err != nil {
@@ -276,7 +352,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			}
 		}
 	}
-
 	// Get the list of external templates referenced by the current template.
 	var externalNames []string
 	var node parse.Node
@@ -311,10 +386,10 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			}
 		}
 	}
-	// sort | uniq deduplication.
+	// Sort the list of external template names so that looping through them
+	// becomes deterministic.
 	slices.Sort(externalNames)
 	externalNames = slices.Compact(externalNames)
-
 	group, groupctx := errgroup.WithContext(ctx)
 	externalTemplates := make([]*template.Template, len(externalNames))
 	for i, externalName := range externalNames {
@@ -328,7 +403,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 					ErrorMessage: "circular template reference: " + strings.Join(callers[n:], "=>") + " => " + externalName,
 				}
 			}
-
 			// If a template is currently being parsed, wait for it to finish
 			// before checking the templateCache for the result.
 			siteGen.mutex.RLock()
@@ -352,7 +426,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 				externalTemplates[i] = cachedTemplate
 				return nil
 			}
-
 			// We put a nil pointer into the templateCache first. This is to
 			// indicate that we have already seen this template. If parsing
 			// succeeds, we simply overwrite the nil entry with the parsed
@@ -374,7 +447,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 				close(wait)
 				siteGen.mutex.Unlock()
 			}()
-
 			file, err := siteGen.fsys.WithContext(groupctx).Open(path.Join(siteGen.sitePrefix, "output", externalName))
 			if err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
@@ -428,7 +500,6 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 	if err != nil {
 		return nil, err
 	}
-
 	finalTemplate := template.New(name).Funcs(siteGen.funcMap)
 	for i, externalTemplate := range externalTemplates {
 		for _, tmpl := range externalTemplate.Templates() {
@@ -453,37 +524,73 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 	return finalTemplate.Lookup(name), nil
 }
 
+// PageData is the data used to render a page.
 type PageData struct {
-	Site             Site
-	Parent           string
-	Name             string
-	ChildPages       []Page
-	ContentMap       map[string]string
-	Images           []Image
-	ModificationTime time.Time
-	CreationTime     time.Time
-}
+	// Site information.
+	Site Site
 
-type Page struct {
+	// Parent URL of the page.
 	Parent string
-	Name   string
-	Title  string
+
+	// Name of the page.
+	Name string
+
+	// ChildPages of the page.
+	ChildPages []Page
+
+	// ContentMap of markdown file names to their file contents. Convert it to
+	// HTML using the markdownToHTML template function.
+	ContentMap map[string]string
+
+	// Images belonging to the page.
+	Images []Image
+
+	// ModificationTime of the page.
+	ModificationTime time.Time
+
+	// CreationTime of the page.
+	CreationTime time.Time
 }
 
+// Page contains metadata about a page.
+type Page struct {
+	// Parent URL of the page.
+	Parent string
+
+	// Name of the page.
+	Name string
+
+	// Title of the page.
+	Title string
+}
+
+// Image contains metadata about an image.
 type Image struct {
-	Parent  string
-	Name    string
+	// Parent URL of the image.
+	Parent string
+
+	// Name of the image.
+	Name string
+
+	// AltText of the image.
 	AltText string
+
+	// Caption of the image.
 	Caption string
 }
 
+// GeneratePage generates a page. filePath is the file path to the source .html
+// page in the pages/ directory, text is the source text of the page, modTime
+// and creationTime are when the page was modified and created.
 func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text string, modTime, creationTime time.Time) error {
+	// urlPath is the URL of the resultant page.
 	urlPath := strings.TrimPrefix(filePath, "pages/")
 	if urlPath == "index.html" {
 		urlPath = ""
 	} else {
 		urlPath = strings.TrimSuffix(urlPath, path.Ext(urlPath))
 	}
+	// outputDir is where we will render the page output to.
 	outputDir := path.Join(siteGen.sitePrefix, "output", urlPath)
 	pageData := PageData{
 		Site:             siteGen.Site,
@@ -504,6 +611,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	var err error
 	var tmpl *template.Template
 	group, groupctx := errgroup.WithContext(ctx)
+	// Parse the page template.
 	group.Go(func() (err error) {
 		defer stacktrace.RecoverPanic(&err)
 		tmpl, err = siteGen.ParseTemplate(groupctx, "/"+filePath, text)
@@ -512,15 +620,16 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 		return nil
 	})
+	// Fetch all the images and markdown files that belong to the page.
 	group.Go(func() (err error) {
 		defer stacktrace.RecoverPanic(&err)
 		markdownMu := sync.Mutex{}
-		databaseFS, ok := &DatabaseFS{}, false
+		databaseFS, isDatabaseFS := &DatabaseFS{}, false
 		switch v := siteGen.fsys.(type) {
 		case interface{ As(any) bool }:
-			ok = v.As(&databaseFS)
+			isDatabaseFS = v.As(&databaseFS)
 		}
-		if ok {
+		if isDatabaseFS {
 			var b strings.Builder
 			args := make([]any, 0, len(imgExts)+1)
 			b.WriteString("(file_path LIKE '%.md' ESCAPE '\\'")
@@ -663,15 +772,16 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 		return nil
 	})
+	// Fetch the child pages of the page.
 	group.Go(func() (err error) {
 		defer stacktrace.RecoverPanic(&err)
 		pageDir := path.Join(siteGen.sitePrefix, "pages", urlPath)
-		databaseFS, ok := &DatabaseFS{}, false
+		databaseFS, isDatabaseFS := &DatabaseFS{}, false
 		switch v := siteGen.fsys.(type) {
 		case interface{ As(any) bool }:
-			ok = v.As(&databaseFS)
+			isDatabaseFS = v.As(&databaseFS)
 		}
-		if ok {
+		if isDatabaseFS {
 			pageData.ChildPages, err = sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -803,6 +913,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	if pageData.ChildPages == nil {
 		pageData.ChildPages = []Page{}
 	}
+	// Prepare the writer.
 	writer, err := siteGen.fsys.WithContext(ctx).OpenWriter(path.Join(outputDir, "index.html"), 0644)
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
@@ -818,6 +929,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 		}
 	}
 	defer writer.Close()
+	// Write the necessary HTML boilerplate for every page.
 	_, err = io.Copy(writer, strings.NewReader("<!DOCTYPE html>\n"+
 		"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 		"<meta charset='utf-8'>\n"+
@@ -832,6 +944,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	case interface{ As(any) bool }:
 		isDatabaseFS = v.As(&DatabaseFS{})
 	}
+	// Execute the page template into the writer.
 	if siteGen.cdnDomain != "" && isDatabaseFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
@@ -869,17 +982,36 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	return nil
 }
 
+// PostData is the data used to render a post.
 type PostData struct {
-	Site             Site
-	Category         string
-	Name             string
-	Title            string
-	Content          string
-	Images           []Image
-	CreationTime     time.Time
+	// Site information.
+	Site Site
+
+	// Category of the post.
+	Category string
+
+	// Name of the post.
+	Name string
+
+	// Title of the post.
+	Title string
+
+	// Content of the post.
+	Content string
+
+	// Images belonging to the post that are not already explicitly included in
+	// the post content.
+	Images []Image
+
+	// CreationTime of the post.
+	CreationTime time.Time
+
+	// ModificationTime of the post.
 	ModificationTime time.Time
 }
 
+// GeneratePost generates a post. filePath is the file path to the source post
+// in the posts/ directory and text is the text of the source post.
 func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text string, modTime, creationTime time.Time, tmpl *template.Template) error {
 	timestampPrefix, _, _ := strings.Cut(path.Base(filePath), "-")
 	if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
@@ -969,12 +1101,12 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 		}
 	}
 	// Images.
-	databaseFS, ok := &DatabaseFS{}, false
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		ok = v.As(&databaseFS)
+		isDatabaseFS = v.As(&databaseFS)
 	}
-	if ok {
+	if isDatabaseFS {
 		extFilter := sq.Expr("1 = 1")
 		if len(imgExts) > 0 {
 			var b strings.Builder
@@ -1104,11 +1236,6 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	if err != nil {
 		return stacktrace.New(err)
 	}
-	var isDatabaseFS bool
-	switch v := siteGen.fsys.(type) {
-	case interface{ As(any) bool }:
-		isDatabaseFS = v.As(&DatabaseFS{})
-	}
 	if siteGen.cdnDomain != "" && isDatabaseFS {
 		pipeReader, pipeWriter := io.Pipe()
 		result := make(chan error, 1)
@@ -1146,13 +1273,14 @@ func (siteGen *SiteGenerator) GeneratePost(ctx context.Context, filePath, text s
 	return nil
 }
 
+// GeneratePosts generates all posts for a given category.
 func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string, tmpl *template.Template) (int64, error) {
-	databaseFS, ok := &DatabaseFS{}, false
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		ok = v.As(&databaseFS)
+		isDatabaseFS = v.As(&databaseFS)
 	}
-	if ok {
+	if isDatabaseFS {
 		type File struct {
 			FilePath     string
 			Text         string
@@ -1266,26 +1394,57 @@ func (siteGen *SiteGenerator) GeneratePosts(ctx context.Context, category string
 	return count.Load(), nil
 }
 
+// Post contains metadata about a post.
 type Post struct {
-	Category         string
-	Name             string
-	Title            string
-	Preview          string
-	HasMore          bool
-	Content          string
-	Images           []Image
-	CreationTime     time.Time
+	// Category of the post.
+	Category string
+
+	// Name of the post.
+	Name string
+
+	// Title of the post.
+	Title string
+
+	// Preview of the post.
+	Preview string
+
+	// Whether the post has more text after the preview.
+	HasMore bool
+
+	// Content of the post.
+	Content string
+
+	// Images belonging to the post.
+	Images []Image
+
+	// CreationTime of the post.
+	CreationTime time.Time
+
+	// ModificationTime of the post.
 	ModificationTime time.Time
-	text             []byte // nil slice == no value, empty slice == empty value
+
+	// text of the post. nil slice means no value, empty slice means empty
+	// value.
+	text []byte
 }
 
+// PostListData is the data used to render a post list page.
 type PostListData struct {
-	Site       Site
-	Category   string
+	// Site information.
+	Site Site
+
+	// Category of the post list.
+	Category string
+
+	// Pagination information for the post list.
 	Pagination Pagination
-	Posts      []Post
+
+	// The lists of posts for the current page of the post list.
+	Posts []Post
 }
 
+// GeneratePostList generates the post list for a category, which contain one
+// or more post list pages.
 func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category string, tmpl *template.Template) (int64, error) {
 	var config struct {
 		PostsPerPage int
@@ -1306,12 +1465,13 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 	if config.PostsPerPage <= 0 {
 		config.PostsPerPage = 100
 	}
-	databaseFS, ok := &DatabaseFS{}, false
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		ok = v.As(&databaseFS)
+		isDatabaseFS = v.As(&databaseFS)
 	}
-	if ok {
+	page := 1
+	if isDatabaseFS {
 		count, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format: "SELECT {*}" +
@@ -1445,126 +1605,127 @@ func (siteGen *SiteGenerator) GeneratePostList(ctx context.Context, category str
 				return int64(page), err
 			}
 		}
-		return int64(page), nil
-	}
-	dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
-	if err != nil {
-		return 0, stacktrace.New(err)
-	}
-	n := 0
-	for _, dirEntry := range dirEntries {
-		if dirEntry.IsDir() {
-			continue
-		}
-		if !strings.HasSuffix(dirEntry.Name(), ".md") {
-			continue
-		}
-		dirEntries[n] = dirEntry
-		n++
-	}
-	dirEntries = dirEntries[:n]
-	slices.Reverse(dirEntries)
-	lastPage := int(math.Ceil(float64(len(dirEntries)) / float64(config.PostsPerPage)))
-	group, groupctx := errgroup.WithContext(ctx)
-	group.Go(func() (err error) {
-		defer stacktrace.RecoverPanic(&err)
-		dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(path.Join(siteGen.sitePrefix, "output/posts", category))
+	} else {
+		dirEntries, err := siteGen.fsys.WithContext(ctx).ReadDir(path.Join(siteGen.sitePrefix, "posts", category))
 		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return nil
-			}
-			return stacktrace.New(err)
+			return 0, stacktrace.New(err)
 		}
-		subgroup, subctx := errgroup.WithContext(groupctx)
+		n := 0
 		for _, dirEntry := range dirEntries {
-			dirEntry := dirEntry
-			if !dirEntry.IsDir() {
+			if dirEntry.IsDir() {
 				continue
 			}
-			n, err := strconv.ParseInt(dirEntry.Name(), 10, 64)
-			if err != nil {
+			if !strings.HasSuffix(dirEntry.Name(), ".md") {
 				continue
 			}
-			if int(n) <= lastPage {
-				continue
-			}
-			subgroup.Go(func() (err error) {
-				defer stacktrace.RecoverPanic(&err)
-				err = siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.FormatInt(n, 10)))
-				if err != nil {
-					return stacktrace.New(err)
-				}
-				return nil
-			})
+			dirEntries[n] = dirEntry
+			n++
 		}
-		err = subgroup.Wait()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	page := 1
-	batch := make([]Post, 0, config.PostsPerPage)
-	var absoluteDir string
-	switch v := siteGen.fsys.(type) {
-	case interface{ As(any) bool }:
-		var directoryFS *DirectoryFS
-		if v.As(&directoryFS) {
-			absoluteDir = path.Join(directoryFS.RootDir, siteGen.sitePrefix, "posts", category)
-		}
-	}
-	for _, dirEntry := range dirEntries {
-		fileInfo, err := dirEntry.Info()
-		if err != nil {
-			return int64(page), stacktrace.New(err)
-		}
-		name := fileInfo.Name()
-		creationTime := CreationTime(path.Join(absoluteDir, name), fileInfo)
-		timestampPrefix, _, _ := strings.Cut(name, "-")
-		if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
-			b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
-			if len(b) == 5 && err == nil {
-				var timestamp [8]byte
-				copy(timestamp[len(timestamp)-5:], b)
-				creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0).UTC()
-			}
-		}
-		batch = append(batch, Post{
-			Category:         category,
-			Name:             strings.TrimSuffix(name, path.Ext(name)),
-			CreationTime:     creationTime,
-			ModificationTime: fileInfo.ModTime(),
-		})
-		if len(batch) >= config.PostsPerPage {
-			currentPage := page
-			page++
-			posts := slices.Clone(batch)
-			batch = batch[:0]
-			group.Go(func() (err error) {
-				defer stacktrace.RecoverPanic(&err)
-				return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, currentPage, posts)
-			})
-		}
-	}
-	if len(batch) > 0 {
+		dirEntries = dirEntries[:n]
+		slices.Reverse(dirEntries)
+		lastPage := int(math.Ceil(float64(len(dirEntries)) / float64(config.PostsPerPage)))
+		group, groupctx := errgroup.WithContext(ctx)
 		group.Go(func() (err error) {
 			defer stacktrace.RecoverPanic(&err)
-			return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, page, batch)
+			dirEntries, err := siteGen.fsys.WithContext(groupctx).ReadDir(path.Join(siteGen.sitePrefix, "output/posts", category))
+			if err != nil {
+				if errors.Is(err, fs.ErrNotExist) {
+					return nil
+				}
+				return stacktrace.New(err)
+			}
+			subgroup, subctx := errgroup.WithContext(groupctx)
+			for _, dirEntry := range dirEntries {
+				dirEntry := dirEntry
+				if !dirEntry.IsDir() {
+					continue
+				}
+				n, err := strconv.ParseInt(dirEntry.Name(), 10, 64)
+				if err != nil {
+					continue
+				}
+				if int(n) <= lastPage {
+					continue
+				}
+				subgroup.Go(func() (err error) {
+					defer stacktrace.RecoverPanic(&err)
+					err = siteGen.fsys.WithContext(subctx).RemoveAll(path.Join(siteGen.sitePrefix, "output/posts", category, strconv.FormatInt(n, 10)))
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					return nil
+				})
+			}
+			err = subgroup.Wait()
+			if err != nil {
+				return err
+			}
+			return nil
 		})
-	}
-	err = group.Wait()
-	if err != nil {
-		return int64(page), err
-	}
-	if page == 1 && len(batch) == 0 {
-		err := siteGen.GeneratePostListPage(ctx, category, tmpl, 1, 1, []Post{})
+		batch := make([]Post, 0, config.PostsPerPage)
+		var absoluteDir string
+		switch v := siteGen.fsys.(type) {
+		case interface{ As(any) bool }:
+			var directoryFS *DirectoryFS
+			if v.As(&directoryFS) {
+				absoluteDir = path.Join(directoryFS.RootDir, siteGen.sitePrefix, "posts", category)
+			}
+		}
+		for _, dirEntry := range dirEntries {
+			fileInfo, err := dirEntry.Info()
+			if err != nil {
+				return int64(page), stacktrace.New(err)
+			}
+			name := fileInfo.Name()
+			creationTime := CreationTime(path.Join(absoluteDir, name), fileInfo)
+			timestampPrefix, _, _ := strings.Cut(name, "-")
+			if len(timestampPrefix) > 0 && len(timestampPrefix) <= 8 {
+				b, err := base32Encoding.DecodeString(fmt.Sprintf("%08s", timestampPrefix))
+				if len(b) == 5 && err == nil {
+					var timestamp [8]byte
+					copy(timestamp[len(timestamp)-5:], b)
+					creationTime = time.Unix(int64(binary.BigEndian.Uint64(timestamp[:])), 0).UTC()
+				}
+			}
+			batch = append(batch, Post{
+				Category:         category,
+				Name:             strings.TrimSuffix(name, path.Ext(name)),
+				CreationTime:     creationTime,
+				ModificationTime: fileInfo.ModTime(),
+			})
+			if len(batch) >= config.PostsPerPage {
+				currentPage := page
+				page++
+				posts := slices.Clone(batch)
+				batch = batch[:0]
+				group.Go(func() (err error) {
+					defer stacktrace.RecoverPanic(&err)
+					return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, currentPage, posts)
+				})
+			}
+		}
+		if len(batch) > 0 {
+			group.Go(func() (err error) {
+				defer stacktrace.RecoverPanic(&err)
+				return siteGen.GeneratePostListPage(groupctx, category, tmpl, lastPage, page, batch)
+			})
+		}
+		err = group.Wait()
 		if err != nil {
 			return int64(page), err
+		}
+		if page == 1 && len(batch) == 0 {
+			err := siteGen.GeneratePostListPage(ctx, category, tmpl, 1, 1, []Post{})
+			if err != nil {
+				return int64(page), err
+			}
 		}
 	}
 	return int64(page), nil
 }
 
+// GeneratePostListPage generates a singular page of the post list for a
+// category.
 func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category string, tmpl *template.Template, lastPage, currentPage int, posts []Post) error {
 	groupA, groupctxA := errgroup.WithContext(ctx)
 	for i := range posts {
@@ -1627,12 +1788,12 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 		groupA.Go(func() (err error) {
 			defer stacktrace.RecoverPanic(&err)
 			outputDir := path.Join(siteGen.sitePrefix, "output/posts", posts[i].Category, posts[i].Name)
-			databaseFS, ok := &DatabaseFS{}, false
+			databaseFS, isDatabaseFS := &DatabaseFS{}, false
 			switch v := siteGen.fsys.(type) {
 			case interface{ As(any) bool }:
-				ok = v.As(&databaseFS)
+				isDatabaseFS = v.As(&databaseFS)
 			}
-			if ok {
+			if isDatabaseFS {
 				extFilter := sq.Expr("1 = 1")
 				if len(imgExts) > 0 {
 					var b strings.Builder
@@ -1972,12 +2133,22 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 	return nil
 }
 
+// TemplateError is used to represent an error when parsing or executing a
+// template.
 type TemplateError struct {
-	Name         string `json:"name"`
-	Line         int    `json:"line"`
+	// Name of the template that caused the error.
+	Name string `json:"name"`
+
+	// Line number in the template that caused the error.
+	Line int `json:"line"`
+
+	// ErrorMessage of the error.
 	ErrorMessage string `json:"errorMessage"`
 }
 
+// NewTemplateError constructs a new TemplateError from an error returned by
+// the html/template package by parsing the error string, which is
+// unfortunately the only way we can extract the template name and line number.
 func NewTemplateError(err error) error {
 	sections := strings.SplitN(err.Error(), ":", 4)
 	if len(sections) < 4 || strings.TrimSpace(sections[0]) != "template" {
@@ -2002,6 +2173,7 @@ func NewTemplateError(err error) error {
 	}
 }
 
+// Error implements the error interface.
 func (templateErr TemplateError) Error() string {
 	if templateErr.Name == "" {
 		return templateErr.ErrorMessage
@@ -2012,6 +2184,9 @@ func (templateErr TemplateError) Error() string {
 	return templateErr.Name + ":" + strconv.Itoa(templateErr.Line) + ": " + templateErr.ErrorMessage
 }
 
+// rewriteURLs parses a stream of incoming HTML from a reader and writes it
+// into a writer, rewriting any image URLs it finds to use the CDN domain
+// instead.
 func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, urlPath string) error {
 	tokenizer := html.NewTokenizer(reader)
 	for {
@@ -2118,6 +2293,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	}
 }
 
+// baseFuncMap is the base funcMap used for all user templates.
 var baseFuncMap = map[string]any{
 	"dump": func(x any) template.HTML {
 		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(x)) + "</pre>")
@@ -2164,11 +2340,11 @@ var baseFuncMap = map[string]any{
 			if layout, ok := layout.(string); ok {
 				switch offset := offset.(type) {
 				case int:
-					return t.In(time.FixedZone("", offset)).Format(toString(layout))
+					return t.In(time.FixedZone("", offset)).Format(layout)
 				case int64:
-					return t.In(time.FixedZone("", int(offset))).Format(toString(layout))
+					return t.In(time.FixedZone("", int(offset))).Format(layout)
 				case float64:
-					return t.In(time.FixedZone("", int(offset))).Format(toString(layout))
+					return t.In(time.FixedZone("", int(offset))).Format(layout)
 				default:
 					return fmt.Sprintf("not a number: %#v", offset)
 				}
@@ -2178,7 +2354,6 @@ var baseFuncMap = map[string]any{
 		return fmt.Sprintf("not a time.Time: %#v", t)
 	},
 	"htmlHeadings": func(x any) ([]Heading, error) {
-		// TODO: reconsider this.
 		switch x := x.(type) {
 		case string:
 			return tableOfContentsHeadings(strings.NewReader(x))
@@ -2518,30 +2693,23 @@ var baseFuncMap = map[string]any{
 	},
 }
 
-func toString(v any) string {
-	switch v := v.(type) {
-	case nil:
-		return ""
-	case string:
-		return v
-	case int:
-		return strconv.Itoa(v)
-	case int64:
-		return strconv.FormatInt(v, 10)
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	default:
-		return fmt.Sprint(v)
-	}
-}
-
+// Heading represents a markdown heading.
 type Heading struct {
-	ID          string
-	Title       string
-	Level       int
+	// ID of the heading.
+	ID string
+
+	// Title of the heading.
+	Title string
+
+	// Level of the heading i.e. for h1 - h6.
+	Level int
+
+	// Subheadings of the heading.
 	Subheadings []Heading
 }
 
+// tableOfContentsHeadings parses a stream of HTML from a reader and returns a
+// list of top-level headings that have an id defined on them.
 func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 	var headingLevel int
 	var headingID string
@@ -2639,15 +2807,28 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 	}
 }
 
+// Pagination represents the pagination information for a post list.
 type Pagination struct {
-	First    int
+	// First page.
+	First int
+
+	// Previous page.
 	Previous int
-	Current  int
-	Next     int
-	Last     int
-	Numbers  []int
+
+	// Current page.
+	Current int
+
+	// Next page.
+	Next int
+
+	// Last page.
+	Last int
+
+	// Numbers is the list of page numbers to display.
+	Numbers []int
 }
 
+// NewPagination constructs a new pagination for a given range of pages.
 func NewPagination(currentPage, lastPage, visiblePages int) Pagination {
 	const numConsecutiveNeighbours = 2
 	if visiblePages%2 == 0 {
@@ -2803,6 +2984,7 @@ func NewPagination(currentPage, lastPage, visiblePages int) Pagination {
 	return pagination
 }
 
+// AtomFeed represents an atom feed (i.e. a list of posts).
 type AtomFeed struct {
 	XMLName xml.Name    `xml:"feed"`
 	Xmlns   string      `xml:"xmlns,attr"`
@@ -2813,6 +2995,7 @@ type AtomFeed struct {
 	Entry   []AtomEntry `xml:"entry"`
 }
 
+// AtomEntry represents an atom entry (i.e. a post).
 type AtomEntry struct {
 	ID        string     `xml:"id"`
 	Title     string     `xml:"title"`
@@ -2823,33 +3006,37 @@ type AtomEntry struct {
 	Content   AtomCDATA  `xml:"content"`
 }
 
+// AtomLink represents an atom link.
 type AtomLink struct {
 	Href string `xml:"href,attr"`
 	Rel  string `xml:"rel,attr"`
 }
 
+// AtomText represents some text in atom.
 type AtomText struct {
 	Type    string `xml:"type,attr"`
 	Content string `xml:",chardata"`
 }
 
+// AtomCDATA represents CDATA in atom.
 type AtomCDATA struct {
 	Type    string `xml:"type,attr"`
 	Content string `xml:",cdata"`
 }
 
+// PostTemplate returns the post template for a category.
 func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string) (*template.Template, error) {
 	if strings.Contains(category, "/") {
 		return nil, stacktrace.New(fmt.Errorf("invalid post category"))
 	}
 	var text string
 	var found bool
-	databaseFS, ok := &DatabaseFS{}, false
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		ok = v.As(&databaseFS)
+		isDatabaseFS = v.As(&databaseFS)
 	}
-	if ok {
+	if isDatabaseFS {
 		result, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -2918,6 +3105,7 @@ func (siteGen *SiteGenerator) PostTemplate(ctx context.Context, category string)
 	return tmpl, nil
 }
 
+// PostListTemplate returns the post list template for a category.
 func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category string) (*template.Template, error) {
 	if strings.Contains(category, "/") {
 		return nil, stacktrace.New(fmt.Errorf("invalid post category"))
@@ -2925,12 +3113,12 @@ func (siteGen *SiteGenerator) PostListTemplate(ctx context.Context, category str
 	var err error
 	var text string
 	var found bool
-	databaseFS, ok := &DatabaseFS{}, false
+	databaseFS, isDatabaseFS := &DatabaseFS{}, false
 	switch v := siteGen.fsys.(type) {
 	case interface{ As(any) bool }:
-		ok = v.As(&databaseFS)
+		isDatabaseFS = v.As(&databaseFS)
 	}
-	if ok {
+	if isDatabaseFS {
 		result, err := sq.FetchOne(ctx, databaseFS.DB, sq.Query{
 			Dialect: databaseFS.Dialect,
 			Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
