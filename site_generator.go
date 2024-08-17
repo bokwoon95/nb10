@@ -2803,14 +2803,6 @@ func NewPagination(currentPage, lastPage, visiblePages int) Pagination {
 	return pagination
 }
 
-func (p Pagination) All() []int {
-	numbers := make([]int, 0, p.Last)
-	for page := 1; page <= p.Last; page++ {
-		numbers = append(numbers, page)
-	}
-	return numbers
-}
-
 type AtomFeed struct {
 	XMLName xml.Name    `xml:"feed"`
 	Xmlns   string      `xml:"xmlns,attr"`
