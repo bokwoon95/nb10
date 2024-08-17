@@ -287,7 +287,8 @@ func (nbrew *Notebrew) resetpassword(w http.ResponseWriter, r *http.Request, use
 				scheme = "http://"
 			}
 			nbrew.Mailer.C <- Mail{
-				RcptTo: response.Email,
+				MailFrom: nbrew.MailFrom,
+				RcptTo:   response.Email,
 				Headers: []string{
 					"Subject", "Notebrew password reset",
 					"Content-Type", "text/html; charset=utf-8",

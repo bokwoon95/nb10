@@ -306,7 +306,8 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 			scheme = "http://"
 		}
 		nbrew.Mailer.C <- nb10.Mail{
-			RcptTo: response.Email,
+			MailFrom: nbrew.MailFrom,
+			RcptTo:   response.Email,
 			Headers: []string{
 				"Subject", "Welcome to notebrew!",
 				"Content-Type", "text/html; charset=utf-8",
