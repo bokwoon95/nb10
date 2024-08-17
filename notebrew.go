@@ -49,28 +49,6 @@ import (
 
 // Notebrew represents a notebrew instance.
 type Notebrew struct {
-	CMSDomain string // localhost:6444, example.com
-
-	CMSDomainHTTPS bool
-
-	ContentDomain string // localhost:6444, example.com
-
-	ContentDomainHTTPS bool
-
-	CDNDomain string
-
-	ImgCmd string
-
-	Port int
-
-	IP4 netip.Addr
-
-	IP6 netip.Addr
-
-	Domains []string
-
-	ManagingDomains []string
-
 	// FS is the file system associated with the notebrew instance.
 	FS FS
 
@@ -86,25 +64,112 @@ type Notebrew struct {
 	// implementation is provided, ErrorCode should return an empty string.
 	ErrorCode func(error) string
 
+	// CMSDomain is the domain that the notebrew is using to serve the CMS.
+	// Examples: localhost:6444, notebrew.com
+	CMSDomain string
+
+	// CMSDomainHTTPS indicates whether the CMS domain is currently being
+	// served over HTTPS.
+	CMSDomainHTTPS bool
+
+	// ContentDomain is the domain that the notebrew instance is using to serve
+	// the static generated content. Examples: localhost:6444, nbrew.net.
+	ContentDomain string
+
+	// ContentDomainHTTPS indicates whether the content domain is currently
+	// being served over HTTPS.
+	ContentDomainHTTPS bool
+
+	// CDNDomain is the domain of the CDN that notebrew is using to host its
+	// images. Examples: cdn.nbrew.net, nbrewcdn.net.
+	CDNDomain string
+
+	// ImgCmd is the command (must reside in $PATH) used to preprocess images
+	// for the web before they are saved to the FS. Images in the notes folder
+	// are never prerpocessed and are uploaded as-is. This serves as an a
+	// escape hatch for users who wish to upload their images without any image
+	// preprocessing, as they can upload images to the notes folder first
+	// before moving it elsewhere.
+	//
+	// ImgCmd should take in arguments in the form of `<ImgCmd> $INPUT_PATH
+	// $OUTPUT_PATH`, where $INPUT_PATH is the input path to the raw image and
+	// $OUTPUT_PATH is output path where ImgCmd should save the preprocessed
+	// image.
+	ImgCmd string
+
+	// (Required) Port is port that notebrew is listening on.
+	Port int
+
+	// IP4 is the IPv4 address of the current machine, if notebrew is currently
+	// serving either port 80 (HTTP) or 443 (HTTPS).
+	IP4 netip.Addr
+
+	// IP6 is the IPv6 address of the current machine, if notebrew is currently
+	// serving either port 80 (HTTP) or 443 (HTTPS).
+	IP6 netip.Addr
+
+	// Domains is the list of domains that need to point at notebrew for it to
+	// work. Does not include user-created domains.
+	Domains []string
+
+	// ManagingDomains is the list of domains that the current instance of
+	// notebrew is managing SSL certificates for.
+	ManagingDomains []string
+
+	// Captcha configuration.
 	CaptchaConfig struct {
-		WidgetScriptSrc   template.URL
-		WidgetClass       string
-		VerificationURL   string
+		// Captcha widget's script src. e.g. https://js.hcaptcha.com/1/api.js,
+		// https://challenges.cloudflare.com/turnstile/v0/api.js
+		WidgetScriptSrc template.URL
+
+		// Captcha widget's container div class. e.g. h-captcha, cf-turnstile
+		WidgetClass string
+
+		// Captcha verification URL to make POST requests to. e.g.
+		// https://api.hcaptcha.com/siteverify,
+		// https://challenges.cloudflare.com/turnstile/v0/siteverify
+		VerificationURL string
+
+		// Captcha response token name. e.g. h-captcha-response,
+		// cf-turnstile-response
 		ResponseTokenName string
-		SiteKey           string
-		SecretKey         string
-		CSP               map[string]string
+
+		// Captcha site key.
+		SiteKey string
+
+		// Captcha secret key.
+		SecretKey string
+
+		// CSP contains the Content-Security-Policy directive names and values
+		// required for the captcha widget to work.
+		CSP map[string]string
 	}
 
-	Mailer   *Mailer
+	// Mailer is used to send out transactional emails e.g. password reset
+	// emails.
+	Mailer *Mailer
+
+	// The default value for the SMTP MAIL FROM instruction.
 	MailFrom string
-	ReplyTo  string
 
+	// The default value for the SMTP Reply-To header.
+	ReplyTo string
+
+	// Proxy configuration.
 	ProxyConfig struct {
+		// RealIPHeaders contains trusted IP addresses to HTTP headers that
+		// they are known to populate the real client IP with. e.g. X-Real-IP,
+		// True-Client-IP.
 		RealIPHeaders map[netip.Addr]string
-		ProxyIPs      map[netip.Addr]struct{}
+
+		// Contains the set of trusted proxy IP addresses. This is used when
+		// resolving the real client IP from the X-Forwarded-For HTTP header
+		// chain from right (most trusted) to left (most accurate).
+		ProxyIPs map[netip.Addr]struct{}
 	}
 
+	// DNS provider (required for using wildcard certificates with
+	// LetsEncrypt).
 	DNSProvider interface {
 		libdns.RecordAppender
 		libdns.RecordDeleter
@@ -112,21 +177,36 @@ type Notebrew struct {
 		libdns.RecordSetter
 	}
 
+	// CertStorage is the magic (certmagic) that automatically provisions SSL
+	// certificates for notebrew.
 	CertStorage certmagic.Storage
 
+	// ContentSecurityPolicy is the Content-Security-Policy HTTP header set for
+	// every HTML response served on the CMS domain.
 	ContentSecurityPolicy string
 
+	// Logger is used for reporting errors that cannot be handled and are
+	// thrown away.
 	Logger *slog.Logger
 
+	// MaxMindDBReader is the maxmind database reader used to reolve IP
+	// addresses to their countries using a maxmind GeoIP database.
 	MaxMindDBReader *maxminddb.Reader
 
-	// baseCtx is associated with this struct. When Close() is called, the baseCtx is
-	// canceled.
-	baseCtx          context.Context
-	baseCtxCancel    func()
+	// baseCtx is the base context of the notebrew instance.
+	baseCtx context.Context
+
+	// baseCtxCancel cancels the base context.
+	baseCtxCancel func()
+
+	// baseCtxWaitGroup tracks the number of background jobs spawned by the
+	// notebrew instance. Each background job should take in the base context,
+	// and should should initiate shutdown when the base context is canceled.
 	baseCtxWaitGroup sync.WaitGroup
 }
 
+// New returns a new instance of Notebrew. Each field within it still needs to
+// be manually configured.
 func New() *Notebrew {
 	populateExts()
 	baseCtx, baseCtxCancel := context.WithCancel(context.Background())
@@ -137,6 +217,8 @@ func New() *Notebrew {
 	return nbrew
 }
 
+// Close shuts down the notebrew instance as well as any background jobs it may
+// have spawned.
 func (nbrew *Notebrew) Close() error {
 	nbrew.baseCtxCancel()
 	defer nbrew.baseCtxWaitGroup.Wait()
@@ -158,20 +240,40 @@ func (nbrew *Notebrew) Close() error {
 	return nil
 }
 
+// User represents a user in the users table.
 type User struct {
-	UserID                ID
-	Username              string
-	Email                 string
+	// UserID uniquely identifies a user. It cannot be change.
+	UserID ID
+
+	// Username uniquely identifies a user. It can be changed.
+	Username string
+
+	// Email uniquely identifies a user. It can be changed.
+	Email string
+
+	// TimezoneOffsetSeconds represents a user's preferred timezone offset in
+	// seconds.
 	TimezoneOffsetSeconds int
-	DisableReason         string
-	SiteLimit             int64
-	StorageLimit          int64
+
+	// Is not empty, DisableReason is the reason why the user's account is
+	// marked as disabled.
+	DisableReason string
+
+	// SiteLimit is the limit on the number of sites the user can create.
+	SiteLimit int64
+
+	// StorageLimit is the limit on the amount of storage the user can use.
+	StorageLimit int64
 }
 
 type contextKey struct{}
 
+// LoggerKey is the key used by notebrew for setting and getting a logger from
+// the request context.
 var LoggerKey = &contextKey{}
 
+// GetLogger is a syntactic sugar operation for getting a request-specific
+// logger from the context, or else it returns the default logger.
 func (nbrew *Notebrew) GetLogger(ctx context.Context) *slog.Logger {
 	if logger, ok := ctx.Value(LoggerKey).(*slog.Logger); ok {
 		return logger
@@ -192,7 +294,7 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 	encoder.SetEscapeHTML(false)
 	err := encoder.Encode(&value)
 	if err != nil {
-		return fmt.Errorf("marshaling JSON: %w", err)
+		return stacktrace.New(err)
 	}
 	cookie := &http.Cookie{
 		Path:     "/",
@@ -211,7 +313,7 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 		binary.BigEndian.PutUint64(flashTokenBytes[:8], uint64(time.Now().Unix()))
 		_, err := rand.Read(flashTokenBytes[8:])
 		if err != nil {
-			return fmt.Errorf("reading rand: %w", err)
+			return stacktrace.New(err)
 		}
 		var flashTokenHash [8 + blake2b.Size256]byte
 		checksum := blake2b.Sum256(flashTokenBytes[8:])
@@ -226,7 +328,7 @@ func (nbrew *Notebrew) SetFlashSession(w http.ResponseWriter, r *http.Request, v
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("flash: %w", err)
+			return stacktrace.New(err)
 		}
 		cookie.Value = strings.TrimLeft(hex.EncodeToString(flashTokenBytes[:]), "0")
 	}
@@ -285,7 +387,7 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 				if errors.Is(err, sql.ErrNoRows) {
 					return false, nil
 				}
-				return false, err
+				return false, stacktrace.New(err)
 			}
 		default:
 			data, err = sq.FetchOne(r.Context(), nbrew.DB, sq.Query{
@@ -301,7 +403,7 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 				if errors.Is(err, sql.ErrNoRows) {
 					return false, nil
 				}
-				return false, err
+				return false, stacktrace.New(err)
 			}
 			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
@@ -311,20 +413,23 @@ func (nbrew *Notebrew) GetFlashSession(w http.ResponseWriter, r *http.Request, v
 				},
 			})
 			if err != nil {
-				return false, err
+				return false, stacktrace.New(err)
 			}
 		}
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	err = decoder.Decode(valuePtr)
 	if err != nil {
-		return true, err
+		return true, stacktrace.New(err)
 	}
 	return true, nil
 }
 
+// Crockford Base32 encoding.
 var base32Encoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)
 
+// markdownTextOnly takes in a markdown snippet and extracts the text only,
+// removing any markup.
 func markdownTextOnly(parser parser.Parser, src []byte) string {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
@@ -369,6 +474,8 @@ func markdownTextOnly(parser parser.Parser, src []byte) string {
 	return b.String()
 }
 
+// isURLUnsafe is a rune-to-bool mapping indicating if a rune is unsafe for
+// URLs.
 var isURLUnsafe = [...]bool{
 	' ': true, '!': true, '"': true, '#': true, '$': true, '%': true, '&': true, '\'': true,
 	'(': true, ')': true, '*': true, '+': true, ',': true, '/': true, ':': true, ';': true,
@@ -376,6 +483,8 @@ var isURLUnsafe = [...]bool{
 	'`': true, '{': true, '}': true, '|': true, '~': true,
 }
 
+// urlSafe sanitizes a string to make it url-safe by removing any url-unsafe
+// characters.
 func urlSafe(s string) string {
 	s = strings.TrimSpace(s)
 	var count int
@@ -410,7 +519,8 @@ func urlSafe(s string) string {
 	return strings.Trim(b.String(), ".")
 }
 
-// https://stackoverflow.com/a/31976060
+// filenameReplacementChars is a map of filename-unsafe runes to their
+// filename-safe replacements. Reference: https://stackoverflow.com/a/31976060.
 var filenameReplacementChars = [...]rune{
 	'<':  '＜', // U+FF1C, FULLWIDTH LESS-THAN SIGN
 	'>':  '＞', // U+FF1E, FULLWIDTH GREATER-THAN SIGN
@@ -421,9 +531,14 @@ var filenameReplacementChars = [...]rune{
 	'|':  '│', // U+2502, BOX DRAWINGS LIGHT VERTICAL
 	'?':  '？', // U+FF1F, FULLWIDTH QUESTION MARK
 	'*':  '∗', // U+2217, ASTERISK OPERATOR
-	'#':  '＃', // U+FF03, FULLWIDTH NUMBER SIGN
+	// NOTE: Hex is technically not filename-unsafe, but is does not get
+	// properly escaped in URLs because it gets mistaken as the fragment
+	// identifier so we need to replace it too.
+	'#': '＃', // U+FF03, FULLWIDTH NUMBER SIGN
 }
 
+// filenameSafe makes a string safe for use in filenames by replacing any
+// filename-unsafe characters to their filename-safe equivalents.
 func filenameSafe(s string) string {
 	s = strings.TrimSpace(s)
 	var b strings.Builder
@@ -463,6 +578,11 @@ var readerPool = sync.Pool{
 	},
 }
 
+// ExecuteTemplate renders a given template with the given data into the
+// ResponseWriter, but it first buffers the HTML output so that it can detect
+// if any template errors occurred, and if so return 500 Internal Server Error
+// instead. Additionally, it does on-the-fly gzipping of the HTML response as
+// well as calculating the ETag so that the HTML may be cached by the client.
 func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, tmpl *template.Template, data any) {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer func() {
@@ -471,13 +591,11 @@ func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, t
 			bufPool.Put(buf)
 		}
 	}()
-
 	hasher := hashPool.Get().(hash.Hash)
 	defer func() {
 		hasher.Reset()
 		hashPool.Put(hasher)
 	}()
-
 	multiWriter := io.MultiWriter(buf, hasher)
 	gzipWriter := gzipWriterPool.Get().(*gzip.Writer)
 	gzipWriter.Reset(multiWriter)
@@ -485,7 +603,6 @@ func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, t
 		gzipWriter.Reset(io.Discard)
 		gzipWriterPool.Put(gzipWriter)
 	}()
-
 	err := tmpl.Execute(gzipWriter, data)
 	if err != nil {
 		nbrew.GetLogger(r.Context()).Error(err.Error())
@@ -499,7 +616,6 @@ func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, t
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
-
 	var b [blake2b.Size256]byte
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Content-Encoding", "gzip")
@@ -508,6 +624,8 @@ func (nbrew *Notebrew) ExecuteTemplate(w http.ResponseWriter, r *http.Request, t
 	http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(buf.Bytes()))
 }
 
+// ContentBaseURL returns the content site's base URL (starting with http:// or
+// https://) for a given site prefix.
 func (nbrew *Notebrew) ContentBaseURL(sitePrefix string) string {
 	if strings.Contains(sitePrefix, ".") {
 		return "https://" + sitePrefix
@@ -524,6 +642,9 @@ func (nbrew *Notebrew) ContentBaseURL(sitePrefix string) string {
 	return "http://" + nbrew.CMSDomain
 }
 
+// GetReferer is like (*http.Request).Referer() except it returns an empty
+// string if the referer is the same as the current page's URL so that the user
+// doesn't keep pressing back to the same page.
 func (nbrew *Notebrew) GetReferer(r *http.Request) string {
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referer
 	//
@@ -540,14 +661,16 @@ func (nbrew *Notebrew) GetReferer(r *http.Request) string {
 	uri.Host = r.Host
 	uri.Fragment = ""
 	uri.User = nil
-	// If the referer is same as the current page, return an empty string so
-	// that the user doesn't keep pressing back to the same page.
 	if referer == uri.String() {
 		return ""
 	}
 	return referer
 }
 
+// errorTemplate is the template used for all error responses i.e.
+// InternalServerError, NotFound, NotAuthorized, etc. It is parsed once at
+// package initialization time so any changes to the error template require
+// recompiling the notebrew binary.
 var errorTemplate = template.Must(template.
 	New("error.html").
 	Funcs(map[string]any{
@@ -561,6 +684,8 @@ var errorTemplate = template.Must(template.
 	ParseFS(RuntimeFS, "embed/error.html"),
 )
 
+// HumanReadableFileSize returns a human readable file size of an int64 size in
+// bytes.
 func HumanReadableFileSize(size int64) string {
 	// https://yourbasic.org/golang/formatting-byte-size-to-human-readable-format/
 	if size < 0 {
@@ -578,6 +703,7 @@ func HumanReadableFileSize(size int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "kMGTPE"[exp])
 }
 
+// BadRequest indicates that something was wrong with the request data.
 func (nbrew *Notebrew) BadRequest(w http.ResponseWriter, r *http.Request, serverErr error) {
 	var message string
 	var maxBytesErr *http.MaxBytesError
@@ -640,6 +766,7 @@ func (nbrew *Notebrew) BadRequest(w http.ResponseWriter, r *http.Request, server
 	buf.WriteTo(w)
 }
 
+// NotAuthenticated indicates that the user is not logged in.
 func (nbrew *Notebrew) NotAuthenticated(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -691,6 +818,8 @@ func (nbrew *Notebrew) NotAuthenticated(w http.ResponseWriter, r *http.Request) 
 	buf.WriteTo(w)
 }
 
+// NotAuthorized indicates that the user is logged in, but is not authorized to
+// view the current page or perform the current action.
 func (nbrew *Notebrew) NotAuthorized(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -717,7 +846,7 @@ func (nbrew *Notebrew) NotAuthorized(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	var byline string
-	if r.Method == "GET" {
+	if r.Method == "GET" || r.Method == "HEAD" {
 		byline = "You do not have permission to view this page (try logging in to a different account)."
 	} else {
 		byline = "You do not have permission to perform that action (try logging in to a different account)."
@@ -741,6 +870,7 @@ func (nbrew *Notebrew) NotAuthorized(w http.ResponseWriter, r *http.Request) {
 	buf.WriteTo(w)
 }
 
+// NotFound indicates that a URL does not exist.
 func (nbrew *Notebrew) NotFound(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -785,6 +915,7 @@ func (nbrew *Notebrew) NotFound(w http.ResponseWriter, r *http.Request) {
 	buf.WriteTo(w)
 }
 
+// MethodNotAllowed indicates that the request method is not allowed.
 func (nbrew *Notebrew) MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -829,6 +960,8 @@ func (nbrew *Notebrew) MethodNotAllowed(w http.ResponseWriter, r *http.Request) 
 	buf.WriteTo(w)
 }
 
+// UnsupportedContentType indicates that the request did not send a supported
+// Content-Type.
 func (nbrew *Notebrew) UnsupportedContentType(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	var message string
@@ -880,6 +1013,12 @@ func (nbrew *Notebrew) UnsupportedContentType(w http.ResponseWriter, r *http.Req
 	buf.WriteTo(w)
 }
 
+// InternalServerError is a catch-all handler for catching server errors and
+// displaying it to the user.
+//
+// This includes the error message as well as the stack trace and notebrew
+// version, in hopes that a user will be able to give developers the detailed
+// error and trace in order to diagnose the problem faster.
 func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Request, serverErr error) {
 	if serverErr == nil {
 		if r.Method == "HEAD" {
@@ -964,6 +1103,9 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 	buf.WriteTo(w)
 }
 
+// ServeFile serves a given file (in the form of an io.Reader). It applies a
+// potential list of optimizations such as gzipping the response, handling
+// Range requests, calculating the ETag and setting the Cache-Control header.
 func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, fileType FileType, reader io.Reader, cacheControl string) {
 	// If max-age is present in Cache-Control, don't set the ETag because that
 	// would override max-age. https://stackoverflow.com/a/51257030
@@ -995,7 +1137,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 				if !ok {
 					logger = slog.Default()
 				}
-				logger.Error(err.Error())
+				logger.Error(stacktrace.New(err).Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -1005,7 +1147,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 				if !ok {
 					logger = slog.Default()
 				}
-				logger.Error(err.Error())
+				logger.Error(stacktrace.New(err).Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -1059,7 +1201,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 				if !ok {
 					logger = slog.Default()
 				}
-				logger.Error(err.Error())
+				logger.Error(stacktrace.New(err).Error())
 				http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -1109,7 +1251,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			if !ok {
 				logger = slog.Default()
 			}
-			logger.Error(err.Error())
+			logger.Error(stacktrace.New(err).Error())
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -1119,7 +1261,7 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 			if !ok {
 				logger = slog.Default()
 			}
-			logger.Error(err.Error())
+			logger.Error(stacktrace.New(err).Error())
 			http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -1156,8 +1298,11 @@ func ServeFile(w http.ResponseWriter, r *http.Request, name string, size int64, 
 	gzipWriter.Close()
 }
 
+// ErrStorageLimitExceeded is the error returned by an operation if a user
+// exceeded their storage limit during the operation.
 var ErrStorageLimitExceeded = fmt.Errorf("storage limit exceeded")
 
+// StorageLimitExceeded indicates that the user exceeded their storage limit.
 func (nbrew *Notebrew) StorageLimitExceeded(w http.ResponseWriter, r *http.Request) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -1202,6 +1347,7 @@ func (nbrew *Notebrew) StorageLimitExceeded(w http.ResponseWriter, r *http.Reque
 	buf.WriteTo(w)
 }
 
+// AccountDisabled indicates that a user's account is disabled.
 func (nbrew *Notebrew) AccountDisabled(w http.ResponseWriter, r *http.Request, disableReason string) {
 	if r.Form.Has("api") {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -1242,7 +1388,7 @@ func (nbrew *Notebrew) AccountDisabled(w http.ResponseWriter, r *http.Request, d
 	buf.WriteTo(w)
 }
 
-// The missing LimitedWriter from the stdlib.
+// LimitedWriter is the missing half of LimitedReader from the stdlib.
 // https://github.com/golang/go/issues/54111#issuecomment-1220793565
 type LimitedWriter struct {
 	W   io.Writer // underlying writer
@@ -1250,6 +1396,7 @@ type LimitedWriter struct {
 	Err error     // error to be returned once limit is reached
 }
 
+// Write implements io.Writer.
 func (lw *LimitedWriter) Write(p []byte) (int, error) {
 	if lw.N < 1 {
 		return 0, lw.Err
@@ -1262,6 +1409,7 @@ func (lw *LimitedWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// RealClientIP returns the real client IP of the request.
 func RealClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs map[netip.Addr]struct{}) netip.Addr {
 	// Reference: https://adam-p.ca/blog/2022/03/x-forwarded-for/
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -1314,6 +1462,8 @@ func RealClientIP(r *http.Request, realIPHeaders map[netip.Addr]string, proxyIPs
 	return netip.Addr{}
 }
 
+// MaxMindDBRecord is the struct used to retrieve the country for an IP
+// address.
 type MaxMindDBRecord struct {
 	Country struct {
 		ISOCode string `maxminddb:"iso_code"`
@@ -1324,24 +1474,41 @@ var (
 	//go:embed embed static
 	embedFS embed.FS
 
+	// RuntimeFS is the FS containing the runtime files needed by notebrew for
+	// operation.
 	RuntimeFS fs.FS = embedFS
 
+	// developerMode indicates if the developer mode is enabled for the current
+	// binary.
 	developerMode = false
 
+	// StylesCSS is the contents of the styles.css file in the embed/
+	// directory.
 	StylesCSS string
 
+	// StylesCSSHash is the sha256 hash of the StylesCSS contents.
 	StylesCSSHash string
 
+	// BaselineJS is the contents of the baseline.js file in the embed/
+	// directory.
 	BaselineJS string
 
+	// BaselineJSHash is the sha256 hash of the BaselineJS contents.
 	BaselineJSHash string
 
+	// Version holds the current notebrew git revision.
 	Version string
 
+	// commonPasswords is a set of the top 10,000 most common passwords from
+	// top_10000_passwords.txt in the embed/ directory.
 	commonPasswords = make(map[string]struct{})
 
+	// CountryCodes is the ISO code to country mapping from country_codes.json
+	// in the embed/ directory.
 	CountryCodes map[string]string
 
+	// ReservedSubdomains is the list of reserved subdomains that users will
+	// not be able to use on the content domain.
 	ReservedSubdomains = []string{"www", "cdn", "storage", "videocdn", "videostorage"}
 )
 
