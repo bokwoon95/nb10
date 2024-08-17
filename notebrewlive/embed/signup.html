@@ -22,6 +22,7 @@
   <div class='mv3'>
     <div><label for='email' class='b'>Email:</label></div>
     <input id='email' type='email' name='email' value='{{ $.Email }}' class='pv1 ph2 br2 ba w-100' readonly>
+    <button type='submit' class='button ba br2 b--black pa2 mv3 w-100' disabled>sign up</button>
   </div>
 </div>
 {{- else if eq $.Error "EmailRateLimited" }}
