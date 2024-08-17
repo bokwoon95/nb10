@@ -9,7 +9,7 @@ creation_time_darwin.go
 creation_time_linux.go
 creation_time_windows.go
 notebrew.go
-dev.go
+developer_mode.go
 site_generator.go
 
 site_json.go
