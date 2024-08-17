@@ -1415,7 +1415,7 @@ const smtpHelp = `# == smtp keys == #
 # port          - SMTP port.
 # mailFrom      - SMTP MAIL FROM address.
 # replyTo       - SMTP Reply-To address.
-# limitInterval - Interval for replenishing one token back to the rate limiter bucket. e.g 3m -> 480 emails per day, 12s -> 300 emails per hour, 1s -> 1 email per second (default is 3m)
+# limitInterval - Interval for replenishing one token back to the rate limiter bucket. e.g 3m -> 480 emails per day, 5m -> 8760 emails per month, 1s -> 1 email per second (default is 3m)
 # limitBurst    - Maximum tokens that can be held by the rate limiter bucket at any time. (default is 20)
 `
 
