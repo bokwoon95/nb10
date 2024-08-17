@@ -10,8 +10,23 @@ import (
 	"time"
 )
 
+// ID is a 16-byte UUID that is sortable by a timestamp component. The first 5
+// bytes of the ID are the timestamp component and the remaining 11 bytes are
+// completely random. Unlike UUIDv7, there is no version byte and there are no
+// monotonic guarantees, which makes generating a spec-compliant ID much
+// simpler.
+//
+// The timestamp component is 5 bytes so that it can be perfectly encoded by an
+// 8-character Base32 string. While this feature is not used by IDs because
+// they are always displayed in canonical UUID form
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx for maxmimum compatibility, these 5
+// byte timestamps appear in other places in notebrew which do exploit the fact
+// that they can be perfectly encoded by an 8-character Base32 string so it
+// just seems like a good idea to ensure all timestamp prefixes occupy 5 bytes
+// for consistency.
 type ID [16]byte
 
+// NewID creates a new ID.
 func NewID() ID {
 	var timestamp [8]byte
 	binary.BigEndian.PutUint64(timestamp[:], uint64(time.Now().Unix()))
@@ -24,6 +39,8 @@ func NewID() ID {
 	return id
 }
 
+// ParseID parses a UUID string of the format
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx into an ID.
 func ParseID(s string) (ID, error) {
 	if len(s) == 0 {
 		return ID{}, nil
@@ -48,10 +65,13 @@ func ParseID(s string) (ID, error) {
 	return id, nil
 }
 
+// IsZero reports if an ID is all zeroes, which is used to represent the null
+// state.
 func (id ID) IsZero() bool {
 	return id == ID{}
 }
 
+// String prints the ID in UUID format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
 func (id ID) String() string {
 	if id.IsZero() {
 		return ""
@@ -69,6 +89,8 @@ func (id ID) String() string {
 	return string(b[:])
 }
 
+// MarshalJSON converts an ID to a JSON string in the format
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
 func (id ID) MarshalJSON() ([]byte, error) {
 	if id.IsZero() {
 		return []byte(`""`), nil
@@ -88,6 +110,9 @@ func (id ID) MarshalJSON() ([]byte, error) {
 	return array[:], nil
 }
 
+// UnmarshalJSON converts a JSON string in the format
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx into an ID. If the JSON value is null,
+// the existing ID's value is untouched.
 func (id *ID) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, []byte("null")) {
 		return nil
