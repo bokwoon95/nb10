@@ -860,12 +860,17 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 				if objectsConfig.SecretAccessKey == "" {
 					return nil, closers, fmt.Errorf("%s: missing secretAccessKey field", filepath.Join(configDir, "objects.json"))
 				}
+				contentTypeMap := make(map[string]string)
+				for _, fileType := range nb10.AllowedFileTypes {
+					contentTypeMap[fileType.Ext] = fileType.ContentType
+				}
 				objectStorage, err = nb10.NewS3Storage(context.Background(), nb10.S3StorageConfig{
 					Endpoint:        objectsConfig.Endpoint,
 					Region:          objectsConfig.Region,
 					Bucket:          objectsConfig.Bucket,
 					AccessKeyID:     objectsConfig.AccessKeyID,
 					SecretAccessKey: objectsConfig.SecretAccessKey,
+					ContentTypeMap:  contentTypeMap,
 					Logger:          nbrew.Logger,
 				})
 				if err != nil {

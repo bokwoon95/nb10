@@ -8,6 +8,7 @@ creation_time.go
 creation_time_darwin.go
 creation_time_linux.go
 creation_time_windows.go
+mailer.go
 notebrew.go
 developer_mode.go
 site_generator.go
