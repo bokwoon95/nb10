@@ -33,6 +33,7 @@ calculatestorage.go
 cancelexport.go
 cancelimport.go
 changepassword.go
+createsession.go
 deletesession.go
 export.go
 exports.go
