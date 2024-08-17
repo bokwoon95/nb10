@@ -211,12 +211,12 @@ func (mailer *Mailer) start() {
 			for !quit {
 				err := client.Mail(mail.MailFrom)
 				if err != nil {
-					mailer.Logger.Error(err.Error())
+					mailer.Logger.Error(err.Error(), slog.String("mailFrom", mail.MailFrom), slog.String("rcptTo", mail.RcptTo), slog.String("rcptTo", strings.Join(mail.Headers, "|")))
 					break
 				}
 				err = client.Rcpt(mail.RcptTo)
 				if err != nil {
-					mailer.Logger.Error(err.Error())
+					mailer.Logger.Error(err.Error(), slog.String("mailFrom", mail.MailFrom), slog.String("rcptTo", mail.RcptTo), slog.String("rcptTo", strings.Join(mail.Headers, "|")))
 					break
 				}
 				buf.Reset()
@@ -230,24 +230,24 @@ func (mailer *Mailer) start() {
 				buf.WriteString("\r\n")
 				writer, err := client.Data()
 				if err != nil {
-					mailer.Logger.Error(err.Error())
+					mailer.Logger.Error(err.Error(), slog.String("mailFrom", mail.MailFrom), slog.String("rcptTo", mail.RcptTo), slog.String("rcptTo", strings.Join(mail.Headers, "|")))
 					break
 				}
 				_, err = io.Copy(writer, &buf)
 				if err != nil {
 					writer.Close()
-					mailer.Logger.Error(err.Error())
+					mailer.Logger.Error(err.Error(), slog.String("mailFrom", mail.MailFrom), slog.String("rcptTo", mail.RcptTo), slog.String("rcptTo", strings.Join(mail.Headers, "|")))
 					break
 				}
 				_, err = io.Copy(writer, mail.Body)
 				if err != nil {
 					writer.Close()
-					mailer.Logger.Error(err.Error())
+					mailer.Logger.Error(err.Error(), slog.String("mailFrom", mail.MailFrom), slog.String("rcptTo", mail.RcptTo), slog.String("rcptTo", strings.Join(mail.Headers, "|")))
 					break
 				}
 				err = writer.Close()
 				if err != nil {
-					mailer.Logger.Error(err.Error())
+					mailer.Logger.Error(err.Error(), slog.String("mailFrom", mail.MailFrom), slog.String("rcptTo", mail.RcptTo), slog.String("rcptTo", strings.Join(mail.Headers, "|")))
 					break
 				}
 				timer.Reset(100 * time.Second)
