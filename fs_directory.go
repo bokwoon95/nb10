@@ -15,31 +15,40 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// DirectoryFSConfig holds the parameters needed to construct a DirectoryFS.
 type DirectoryFSConfig struct {
-	// RootDir is the root directory of the DirectoryFS.
+	// Root directory of the DirectoryFS.
 	RootDir string
 
-	// TempDir is the temp directory of the DirectoryFS.
+	// Temp directory of the DirectoryFS.
 	TempDir string
 }
 
-// DirectoryFS represents a filesystem rooted on a directory.
+// DirectoryFS implements a writeable filesystem using a local directory.
+//
+// NOTE: Each FS method should only ever work with forward slash file path
+// separators. Even on Windows, because Windows accepts forward slash file path
+// separators just fine. This simplifies our implementation a lot because we
+// only ever have to think about forward slashes.
 type DirectoryFS struct {
 	// RootDir is the root directory of the DirectoryFS. Has to be an absolute
 	// path!!
 	RootDir string
 
-	// TempDir is the temp directory of the DirectoryFS. Files are first written to
-	// the TempDir before being swapped into the rootDir via an atomic rename
-	// (windows is the exception I've found the renames there to be BUGGY AF!
-	// *insert github issue where rename on windows keep failing intermittently
-	// with an annoying permission error*)
+	// TempDir is used to store files while they are being written before being
+	// renamed to their target destination when complete.
+	//
+	// Windows is the exception, as os.Rename on the temporary files (even
+	// after I've closed them) intermittently returns "Access is denied" for no
+	// discernable reason so I've skipped the temp file into rename workflow
+	// for Windows entirely.
 	TempDir string
 
 	// ctx provides the context of all operations called on the DirectoryFS.
 	ctx context.Context
 }
 
+// NewDirectoryFS constructs a new DirectoryFS.
 func NewDirectoryFS(config DirectoryFSConfig) (*DirectoryFS, error) {
 	rootDir, err := filepath.Abs(config.RootDir)
 	if err != nil {
@@ -57,6 +66,8 @@ func NewDirectoryFS(config DirectoryFSConfig) (*DirectoryFS, error) {
 	return directoryFS, nil
 }
 
+// As writes the current directoryFS into the target if it is a valid
+// DirectoryFS pointer.
 func (fsys *DirectoryFS) As(target any) bool {
 	switch target := target.(type) {
 	case *DirectoryFS:
@@ -70,6 +81,7 @@ func (fsys *DirectoryFS) As(target any) bool {
 	}
 }
 
+// WithContext returns a new FS with the given context.
 func (fsys *DirectoryFS) WithContext(ctx context.Context) FS {
 	return &DirectoryFS{
 		RootDir: fsys.RootDir,
@@ -78,6 +90,7 @@ func (fsys *DirectoryFS) WithContext(ctx context.Context) FS {
 	}
 }
 
+// Open implements the Open FS operation for DirectoryFS.
 func (fsys *DirectoryFS) Open(name string) (fs.File, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -93,6 +106,7 @@ func (fsys *DirectoryFS) Open(name string) (fs.File, error) {
 	return file, nil
 }
 
+// Stat implements the fs.StatFS interface.
 func (fsys *DirectoryFS) Stat(name string) (fs.FileInfo, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -108,6 +122,7 @@ func (fsys *DirectoryFS) Stat(name string) (fs.FileInfo, error) {
 	return fileInfo, nil
 }
 
+// OpenWriter implements the OpenWriter FS operation for DirectoryFS.
 func (fsys *DirectoryFS) OpenWriter(name string, _ fs.FileMode) (io.WriteCloser, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -179,6 +194,7 @@ type DirectoryFileWriter struct {
 	writeFailed bool
 }
 
+// ReadFrom implements io.ReaderFrom.
 func (file *DirectoryFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	err = file.ctx.Err()
 	if err != nil {
@@ -193,6 +209,9 @@ func (file *DirectoryFileWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	return n, nil
 }
 
+// Write writes len(b) bytes from b to the DirectoryFileWriter. It returns the
+// number of bytes written and an error, if any. Write returns a non-nil error
+// when n != len(b).
 func (file *DirectoryFileWriter) Write(p []byte) (n int, err error) {
 	err = file.ctx.Err()
 	if err != nil {
@@ -207,6 +226,8 @@ func (file *DirectoryFileWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
+// Close saves the contents of the DirectoryFileWriter into a file and closes
+// the DirectoryFileWriter.
 func (file *DirectoryFileWriter) Close() error {
 	tempFilePath := path.Join(file.tempDir, file.tempName)
 	destFilePath := path.Join(file.rootDir, file.name)
@@ -225,6 +246,7 @@ func (file *DirectoryFileWriter) Close() error {
 	return nil
 }
 
+// ReadDir implements the ReadDir FS operation for DirectoryFS.
 func (fsys *DirectoryFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -236,6 +258,7 @@ func (fsys *DirectoryFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return os.ReadDir(path.Join(fsys.RootDir, name))
 }
 
+// Mkdir implements the Mkdir FS operation for DirectoryFS.
 func (fsys *DirectoryFS) Mkdir(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -247,6 +270,7 @@ func (fsys *DirectoryFS) Mkdir(name string, _ fs.FileMode) error {
 	return os.Mkdir(path.Join(fsys.RootDir, name), 0755)
 }
 
+// MkdirAll implements the MkdirAll FS operation for DirectoryFS.
 func (fsys *DirectoryFS) MkdirAll(name string, _ fs.FileMode) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -258,6 +282,7 @@ func (fsys *DirectoryFS) MkdirAll(name string, _ fs.FileMode) error {
 	return os.MkdirAll(path.Join(fsys.RootDir, name), 0755)
 }
 
+// Remove implements the Remove FS operation for DirectoryFS.
 func (fsys *DirectoryFS) Remove(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -269,6 +294,7 @@ func (fsys *DirectoryFS) Remove(name string) error {
 	return os.Remove(path.Join(fsys.RootDir, name))
 }
 
+// RemoveAll implements the RemoveAll FS operation for DirectoryFS.
 func (fsys *DirectoryFS) RemoveAll(name string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -280,6 +306,7 @@ func (fsys *DirectoryFS) RemoveAll(name string) error {
 	return os.RemoveAll(path.Join(fsys.RootDir, name))
 }
 
+// Rename implements the Rename FS operation for DirectoryFS.
 func (fsys *DirectoryFS) Rename(oldName, newName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -309,6 +336,7 @@ func (fsys *DirectoryFS) Rename(oldName, newName string) error {
 	return nil
 }
 
+// Copy implements the Copy FS operation for DirectoryFS.
 func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 	err := fsys.ctx.Err()
 	if err != nil {
@@ -320,6 +348,7 @@ func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 	if !fs.ValidPath(destName) || strings.Contains(destName, "\\") {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrInvalid}
 	}
+	// Make sure destName does not exist.
 	_, err = os.Stat(path.Join(fsys.RootDir, destName))
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
@@ -328,6 +357,7 @@ func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 	} else {
 		return &fs.PathError{Op: "copy", Path: destName, Err: fs.ErrExist}
 	}
+	// Make sure srcName exists.
 	srcFileInfo, err := os.Stat(path.Join(fsys.RootDir, srcName))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -335,6 +365,7 @@ func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 		}
 		return stacktrace.New(err)
 	}
+	// If srcFile is a file, we can just copy the file and be done with it.
 	if !srcFileInfo.IsDir() {
 		srcFile, err := fsys.WithContext(fsys.ctx).Open(srcName)
 		if err != nil {
@@ -356,12 +387,19 @@ func (fsys *DirectoryFS) Copy(srcName, destName string) error {
 		}
 		return nil
 	}
+	// Otherwise, we'll need to recursively walk the directory and copy each
+	// file and directory we find along the way.
+	//
+	// We're passing in srcName as the root to fs.WalkDir and not
+	// path.Join(fsys.RootDir, srcName) because fs.WalkDir calls fsys.ReadDir()
+	// under the hood, and fsys.ReadDir() internally already converts srcName
+	// to path.Join(fsys.RootDir, srcName).
 	group, groupctx := errgroup.WithContext(fsys.ctx)
 	err = fs.WalkDir(fsys.WithContext(groupctx), srcName, func(filePath string, dirEntry fs.DirEntry, err error) error {
 		if err != nil {
 			return stacktrace.New(err)
 		}
-		relativePath := strings.TrimPrefix(strings.TrimPrefix(filePath, srcName), string(os.PathSeparator))
+		relativePath := strings.TrimPrefix(strings.TrimPrefix(filePath, srcName), "/")
 		if dirEntry.IsDir() {
 			err := fsys.WithContext(groupctx).MkdirAll(path.Join(destName, relativePath), 0755)
 			if err != nil {
