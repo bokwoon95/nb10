@@ -83,9 +83,7 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
-CREATE TABLE stripe_customer (user_id BINARY(16), customer_id VARCHAR(500))
-
-moderator.notebrew.com/ => package moderator
+package notebrewlive
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites
     - doesn't even have to be bad sites. it can fetch all unchecked sites in general. once a site is checked to be safe, it goes into the moderation database so that it doesn't have to be checked again.
