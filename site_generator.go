@@ -156,8 +156,13 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		siteGen.funcMap[name] = fn
 	}
 	siteGen.funcMap["markdownToHTML"] = func(x any) (template.HTML, error) {
-		if x, ok := x.(string); ok {
-			return markdownToHTML(siteGen.markdown, x)
+		if s, ok := x.(string); ok {
+			var b strings.Builder
+			err := siteGen.markdown.Convert([]byte(s), &b)
+			if err != nil {
+				return "", err
+			}
+			return template.HTML(b.String()), nil
 		}
 		return "", fmt.Errorf("%#v is not a string", x)
 	}
@@ -2535,15 +2540,6 @@ func toString(v any) string {
 	default:
 		return fmt.Sprint(v)
 	}
-}
-
-func markdownToHTML(markdown goldmark.Markdown, s string) (template.HTML, error) {
-	var b strings.Builder
-	err := markdown.Convert([]byte(s), &b)
-	if err != nil {
-		return "", err
-	}
-	return template.HTML(b.String()), nil
 }
 
 type Heading struct {
