@@ -69,21 +69,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		if !timezoneOffsets[request.TimezoneOffset] {
 			request.TimezoneOffset = "+00:00"
 		}
-		var home string
-		siteName := strings.TrimPrefix(sitePrefix, "@")
-		if siteName == "" {
-			home = "home"
-		} else if strings.Contains(siteName, ".") {
-			home = siteName
-		} else {
-			home = siteName + "." + nbrew.ContentDomain
-		}
-		if len(request.NavigationLinks) == 0 {
-			request.NavigationLinks = []NavigationLink{
-				{Name: home, URL: "/"},
-				{Name: "posts", URL: "/posts/"},
-			}
-		}
 		return request
 	}
 
