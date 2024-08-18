@@ -60,9 +60,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		if !languageCodes[request.LanguageCode] {
 			request.LanguageCode = "en"
 		}
-		if request.Title == "" {
-			request.Title = "My Blog"
-		}
 		if request.Emoji == "" {
 			request.Emoji = "☕"
 		}
@@ -71,9 +68,6 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		}
 		if !timezoneOffsets[request.TimezoneOffset] {
 			request.TimezoneOffset = "+00:00"
-		}
-		if request.Description == "" {
-			request.Description = "# Hello World!\n\nWelcome to my blog."
 		}
 		var home string
 		siteName := strings.TrimPrefix(sitePrefix, "@")
