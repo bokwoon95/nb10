@@ -218,7 +218,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 		response.Sessions = sessions
 		return nil
 	})
-	if user.CustomerID != "" {
+	if user.CustomerID != "" && stripe.Key != "" {
 		group.Go(func() (err error) {
 			defer stacktrace.RecoverPanic(&err)
 			iter := subscription.List(&stripe.SubscriptionListParams{
