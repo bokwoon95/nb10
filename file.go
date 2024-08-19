@@ -509,7 +509,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						response.URL = template.URL(response.ContentBaseURL)
 						response.BelongsTo = "pages/index.html"
 					} else {
-						response.URL = template.URL(response.ContentBaseURL + "/" + path.Join("pages", dir) + "/")
+						response.URL = template.URL(response.ContentBaseURL + "/" + dir + "/")
 						response.BelongsTo = path.Join("pages", dir+".html")
 					}
 				}
