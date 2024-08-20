@@ -2794,12 +2794,12 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				Level: headingLevel,
 			}
 			if parent := parents[heading.Level-1]; parent != nil {
-				fmt.Println("a:", heading.Title)
+				fmt.Println("a:", heading.Level, heading.Title)
 				parent.Subheadings = append(parent.Subheadings, heading)
 				n := len(parent.Subheadings) - 1
 				parents[heading.Level] = &parent.Subheadings[n]
 			} else {
-				fmt.Println("b:", heading.Title)
+				fmt.Println("b:", heading.Level, heading.Title)
 				fallbackParent := headings[len(headings)-1]
 				fallbackParent.Subheadings = append(fallbackParent.Subheadings, heading)
 				n := len(fallbackParent.Subheadings) - 1
