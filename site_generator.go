@@ -2797,13 +2797,13 @@ func htmlHeadings(reader io.Reader) ([]Heading, error) {
 			default:
 				continue
 			}
+			index++
 			heading := Heading{
 				Title: headingTitle.String(),
 				ID:    headingID,
 				Level: headingLevel,
 				Index: index,
 			}
-			index++
 			var mostRecentParent *Heading
 			for i := heading.Level - 1; i >= 0; i-- {
 				parent := parents[i]
