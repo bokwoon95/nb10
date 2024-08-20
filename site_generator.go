@@ -177,9 +177,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			return nil, stacktrace.New(err)
 		}
 	} else {
-		config.LanguageCode = "en"
 		config.Emoji = "☕"
-		config.CodeStyle = "onedark"
 		var home string
 		siteName := strings.TrimPrefix(siteGen.sitePrefix, "@")
 		if siteName == "" {
@@ -194,12 +192,18 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 			{Name: "posts", URL: "/posts/"},
 		}
 	}
+	if config.LanguageCode == "" {
+		config.LanguageCode = "en"
+	}
 	if config.Favicon == "" {
 		emoji := config.Emoji
 		if emoji == "" {
 			emoji = "☕"
 		}
 		config.Favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 10 10%22><text y=%221em%22 font-size=%228%22>" + emoji + "</text></svg>"
+	}
+	if config.CodeStyle == "" {
+		config.CodeStyle = "onedark"
 	}
 	// Prepare the site's markdown parser and renderer based on their code
 	// syntax highlighter style.
