@@ -2720,10 +2720,8 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 	var headingTitle bytes.Buffer
 	// parents[1] to parents[6] correspond to the latest h1 - h6 parents.
 	// parents[0] is the root parent i.e. h0.
-	var headings []*Heading
 	var parents [1 + 6]*Heading
 	parents[0] = &Heading{}
-	headings = append(headings, parents[0])
 	tokenizer := html.NewTokenizer(reader)
 	for {
 		tokenType := tokenizer.Next()
@@ -2767,25 +2765,33 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				headingTitle.Write(tokenizer.Raw())
 			}
 		case html.EndTagToken:
-			var level int
 			name, _ := tokenizer.TagName()
 			switch string(name) {
 			case "h1":
-				level = 1
+				if headingLevel != 1 {
+					continue
+				}
 			case "h2":
-				level = 2
+				if headingLevel != 2 {
+					continue
+				}
 			case "h3":
-				level = 3
+				if headingLevel != 3 {
+					continue
+				}
 			case "h4":
-				level = 4
+				if headingLevel != 4 {
+					continue
+				}
 			case "h5":
-				level = 5
+				if headingLevel != 5 {
+					continue
+				}
 			case "h6":
-				level = 6
+				if headingLevel != 6 {
+					continue
+				}
 			default:
-				continue
-			}
-			if level != headingLevel {
 				continue
 			}
 			heading := Heading{
@@ -2793,19 +2799,15 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				ID:    headingID,
 				Level: headingLevel,
 			}
-			if parent := parents[heading.Level-1]; parent != nil {
-				fmt.Println("a:", heading.Level, heading.Title)
+			for i := heading.Level - 1; i >= 0; i-- {
+				parent := parents[i]
+				if parent == nil {
+					continue
+				}
 				parent.Subheadings = append(parent.Subheadings, heading)
 				n := len(parent.Subheadings) - 1
 				parents[heading.Level] = &parent.Subheadings[n]
-			} else {
-				fmt.Println("b:", heading.Level, heading.Title)
-				fallbackParent := headings[len(headings)-1]
-				fallbackParent.Subheadings = append(fallbackParent.Subheadings, heading)
-				n := len(fallbackParent.Subheadings) - 1
-				parents[heading.Level] = &fallbackParent.Subheadings[n]
 			}
-			headings = append(headings, parents[heading.Level])
 			headingTitle.Reset()
 			headingID = ""
 			headingLevel = 0
