@@ -2720,9 +2720,10 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 	var headingTitle bytes.Buffer
 	// parents[1] to parents[6] correspond to the latest h1 - h6 parents.
 	// parents[0] is the root parent i.e. h0.
+	var headings []*Heading
 	var parents [1 + 6]*Heading
 	parents[0] = &Heading{}
-	fallbackParent := parents[0]
+	headings = append(headings, parents[0])
 	tokenizer := html.NewTokenizer(reader)
 	for {
 		tokenType := tokenizer.Next()
@@ -2797,11 +2798,12 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				n := len(parent.Subheadings) - 1
 				parents[heading.Level] = &parent.Subheadings[n]
 			} else {
+				fallbackParent := headings[len(headings)-1]
 				fallbackParent.Subheadings = append(fallbackParent.Subheadings, heading)
 				n := len(fallbackParent.Subheadings) - 1
 				parents[heading.Level] = &fallbackParent.Subheadings[n]
 			}
-			fallbackParent = parents[heading.Level]
+			headings = append(headings, parents[heading.Level])
 			headingTitle.Reset()
 			headingID = ""
 			headingLevel = 0
