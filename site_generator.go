@@ -2814,7 +2814,6 @@ func htmlHeadings(reader io.Reader) ([]Heading, error) {
 					mostRecentParent = parent
 				}
 			}
-			fmt.Printf("title = %q, level = %d, parent level = %d\n", heading.Title, heading.Level, mostRecentParent.Level)
 			mostRecentParent.Subheadings = append(mostRecentParent.Subheadings, heading)
 			n := len(mostRecentParent.Subheadings) - 1
 			parents[heading.Level] = &mostRecentParent.Subheadings[n]
