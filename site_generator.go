@@ -2805,11 +2805,7 @@ func htmlHeadings(reader io.Reader) ([]Heading, error) {
 				Position: position,
 			}
 			var mostRecentParent *Heading
-			for i := heading.Level - 1; i >= 0; i-- {
-				parent := parents[i]
-				if parent == nil {
-					continue
-				}
+			for _, parent := range parents {
 				if mostRecentParent == nil || parent.Position > mostRecentParent.Position {
 					mostRecentParent = parent
 				}
