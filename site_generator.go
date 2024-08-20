@@ -2808,6 +2808,7 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				parent.Subheadings = append(parent.Subheadings, heading)
 				n := len(parent.Subheadings) - 1
 				parents[heading.Level] = &parent.Subheadings[n]
+				break
 			}
 			headingTitle.Reset()
 			headingID = ""
