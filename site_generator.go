@@ -2804,6 +2804,7 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				if parent == nil {
 					continue
 				}
+				fmt.Printf("level = %d, parent level = %d, title = %q", parent.Level, heading.Level, heading.Title)
 				parent.Subheadings = append(parent.Subheadings, heading)
 				n := len(parent.Subheadings) - 1
 				parents[heading.Level] = &parent.Subheadings[n]
