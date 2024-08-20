@@ -2801,9 +2801,7 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				n := len(fallbackParent.Subheadings) - 1
 				parents[heading.Level] = &fallbackParent.Subheadings[n]
 			}
-			if heading.Level == fallbackParent.Level+1 {
-				fallbackParent = parents[heading.Level]
-			}
+			fallbackParent = parents[heading.Level]
 			headingTitle.Reset()
 			headingID = ""
 			headingLevel = 0
