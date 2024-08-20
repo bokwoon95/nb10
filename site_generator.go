@@ -2360,9 +2360,9 @@ var baseFuncMap = map[string]any{
 	"htmlHeadings": func(x any) ([]Heading, error) {
 		switch x := x.(type) {
 		case string:
-			return tableOfContentsHeadings(strings.NewReader(x))
+			return htmlHeadings(strings.NewReader(x))
 		case template.HTML:
-			return tableOfContentsHeadings(strings.NewReader(string(x)))
+			return htmlHeadings(strings.NewReader(string(x)))
 		default:
 			return nil, fmt.Errorf("note a string or template.HTML: %#v", x)
 		}
@@ -2710,12 +2710,15 @@ type Heading struct {
 
 	// Subheadings of the heading.
 	Subheadings []Heading
+
+	// Index of the heading.
+	Index int
 }
 
-// tableOfContentsHeadings parses a stream of HTML from a reader and returns a
-// list of top-level headings that have an id defined on them.
-func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
-	var headingLevel int
+// htmlHeadings parses a stream of HTML from a reader and returns a list of
+// headings (nested appropriately) that have an id defined on them.
+func htmlHeadings(reader io.Reader) ([]Heading, error) {
+	var headingLevel, index int
 	var headingID string
 	var headingTitle bytes.Buffer
 	// parents[1] to parents[6] correspond to the latest h1 - h6 parents.
@@ -2798,17 +2801,19 @@ func tableOfContentsHeadings(reader io.Reader) ([]Heading, error) {
 				Title: headingTitle.String(),
 				ID:    headingID,
 				Level: headingLevel,
+				Index: index,
 			}
+			index++
+			var mostRecentParent *Heading
 			for i := heading.Level - 1; i >= 0; i-- {
 				parent := parents[i]
-				if parent == nil {
-					continue
+				if mostRecentParent == nil || parent.Index > mostRecentParent.Index {
+					mostRecentParent = parent
 				}
-				parent.Subheadings = append(parent.Subheadings, heading)
-				n := len(parent.Subheadings) - 1
-				parents[heading.Level] = &parent.Subheadings[n]
-				break
 			}
+			mostRecentParent.Subheadings = append(mostRecentParent.Subheadings, heading)
+			n := len(mostRecentParent.Subheadings) - 1
+			parents[n] = &mostRecentParent.Subheadings[n]
 			headingTitle.Reset()
 			headingID = ""
 			headingLevel = 0
