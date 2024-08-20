@@ -594,6 +594,12 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	} else {
 		urlPath = strings.TrimSuffix(urlPath, path.Ext(urlPath))
 	}
+	// Sanity check: /posts/ and /themes/ are reserved for user posts and user
+	// themes, we absolutely do not want to generate any page here or else it
+	// might overwrite existing user posts and themes.
+	if urlPath == "posts" || urlPath == "themes" {
+		return stacktrace.New(fmt.Errorf("attempted to generate page in %s", path.Join(siteGen.sitePrefix, "output", urlPath)))
+	}
 	// outputDir is where we will render the page output to.
 	outputDir := path.Join(siteGen.sitePrefix, "output", urlPath)
 	pageData := PageData{
