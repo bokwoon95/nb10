@@ -2805,7 +2805,11 @@ func htmlHeadings(reader io.Reader) ([]Heading, error) {
 				Position: position,
 			}
 			var mostRecentParent *Heading
-			for _, parent := range parents {
+			for i := heading.Level - 1; i >= 0; i-- {
+				parent := parents[i]
+				if parent == nil {
+					continue
+				}
 				if mostRecentParent == nil || parent.Position > mostRecentParent.Position {
 					mostRecentParent = parent
 				}
@@ -2813,7 +2817,7 @@ func htmlHeadings(reader io.Reader) ([]Heading, error) {
 			fmt.Printf("title = %q, level = %d, parent level = %d\n", heading.Title, heading.Level, mostRecentParent.Level)
 			mostRecentParent.Subheadings = append(mostRecentParent.Subheadings, heading)
 			n := len(mostRecentParent.Subheadings) - 1
-			parents[n] = &mostRecentParent.Subheadings[n]
+			parents[heading.Level] = &mostRecentParent.Subheadings[n]
 			headingTitle.Reset()
 			headingID = ""
 			headingLevel = 0
