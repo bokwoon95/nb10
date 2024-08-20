@@ -2711,14 +2711,14 @@ type Heading struct {
 	// Subheadings of the heading.
 	Subheadings []Heading
 
-	// Index of the heading.
-	Index int
+	// Running count of the heading.
+	Position int
 }
 
 // htmlHeadings parses a stream of HTML from a reader and returns a list of
 // headings (nested appropriately) that have an id defined on them.
 func htmlHeadings(reader io.Reader) ([]Heading, error) {
-	var headingLevel, index int
+	var headingLevel, position int
 	var headingID string
 	var headingTitle bytes.Buffer
 	// parents[1] to parents[6] correspond to the latest h1 - h6 parents.
@@ -2797,17 +2797,20 @@ func htmlHeadings(reader io.Reader) ([]Heading, error) {
 			default:
 				continue
 			}
-			index++
+			position++
 			heading := Heading{
-				Title: headingTitle.String(),
-				ID:    headingID,
-				Level: headingLevel,
-				Index: index,
+				Title:    headingTitle.String(),
+				ID:       headingID,
+				Level:    headingLevel,
+				Position: position,
 			}
 			var mostRecentParent *Heading
 			for i := heading.Level - 1; i >= 0; i-- {
 				parent := parents[i]
-				if mostRecentParent == nil || parent.Index > mostRecentParent.Index {
+				if parent == nil {
+					continue
+				}
+				if mostRecentParent == nil || parent.Position > mostRecentParent.Position {
 					mostRecentParent = parent
 				}
 			}
