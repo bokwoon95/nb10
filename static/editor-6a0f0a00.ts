@@ -1,8 +1,7 @@
 // To build this file:
 // - Navigate to the project root where package.json is located.
 // - Run npm install
-// - Run ./node_modules/.bin/esbuild ./static/editor-xxxxxxxx.ts --outfile=./static/editor-xxxxxxxx.js --bundle --minify
-// - Replace xxxxxxxx with the first 8 characters of the SHA256 hash of the file contents (normalize all \r\n to \n)
+// - Run ./node_modules/.bin/esbuild --outdir=./static/ --bundle --minify ./static/*.ts
 import { EditorState, Prec, Compartment } from '@codemirror/state';
 import { EditorView, lineNumbers, keymap } from '@codemirror/view';
 import { indentWithTab, history, defaultKeymap, historyKeymap } from '@codemirror/commands';
@@ -85,9 +84,9 @@ function initDataEditor() {
     // https://stackoverflow.com/a/48460773). Just set the scrollHeight directly.
     // This means the textarea will never shrink, only grow, but it's the price
     // to pay for not being annoying to type on mobile.
-    textarea.addEventListener("input", function() {
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    });
+    // textarea.addEventListener("input", function() {
+    //   textarea.style.height = `${textarea.scrollHeight}px`;
+    // });
 
     // Create the codemirror editor.
     const wordwrap = new Compartment();
@@ -135,6 +134,7 @@ function initDataEditor() {
               key: "Mod-s",
               run: function(_: EditorView): boolean {
                 if (form) {
+                  // manualSubmit:true
                   form.dispatchEvent(new Event("submit"));
                   if (!config.get("ajaxSubmission")) {
                     form.submit();
@@ -181,14 +181,14 @@ function initDataEditor() {
         effects: wordwrap.reconfigure(EditorView.lineWrapping),
       });
       textarea.style.whiteSpace = "pre-wrap";
-      textarea.style.overflow = "hidden";
+      // textarea.style.overflow = "hidden";
       textarea.style.height = `${textarea.scrollHeight}px`;
     } else {
       editor.dispatch({
         effects: wordwrap.reconfigure([]),
       });
       textarea.style.whiteSpace = "pre";
-      textarea.style.overflow = "auto";
+      // textarea.style.overflow = "auto";
       textarea.style.height = `${textarea.scrollHeight}px`;
     }
     if (config.has("wordwrapCheckboxID")) {
@@ -203,7 +203,7 @@ function initDataEditor() {
               effects: wordwrap.reconfigure(EditorView.lineWrapping),
             });
             textarea.style.whiteSpace = "pre-wrap";
-            textarea.style.overflow = "hidden";
+            // textarea.style.overflow = "hidden";
             textarea.style.height = `${textarea.scrollHeight}px`;
           } else {
             localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
@@ -211,7 +211,7 @@ function initDataEditor() {
               effects: wordwrap.reconfigure([]),
             });
             textarea.style.whiteSpace = "pre";
-            textarea.style.overflow = "auto";
+            // textarea.style.overflow = "auto";
             textarea.style.height = `${textarea.scrollHeight}px`;
           }
         });
