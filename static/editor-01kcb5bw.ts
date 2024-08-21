@@ -86,6 +86,7 @@ function initDataEditor() {
         // This means the textarea will never shrink, only grow, but it's the price
         // to pay for not being annoying to type on mobile.
         textarea.style.height = `${textarea.scrollHeight}px`;
+        console.log(`resized: ${textarea.scrollHeight}`);
       });
     }
 
