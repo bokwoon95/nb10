@@ -182,14 +182,14 @@ function initDataEditor() {
       });
       textarea.style.whiteSpace = "pre-wrap";
       // textarea.style.overflow = "hidden";
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.style.height = `${textarea.scrollHeight+5}px`;
     } else {
       editor.dispatch({
         effects: wordwrap.reconfigure([]),
       });
       textarea.style.whiteSpace = "pre";
       // textarea.style.overflow = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.style.height = `${textarea.scrollHeight+5}px`;
     }
     if (config.has("wordwrapCheckboxID")) {
       const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
@@ -204,7 +204,7 @@ function initDataEditor() {
             });
             textarea.style.whiteSpace = "pre-wrap";
             // textarea.style.overflow = "hidden";
-            textarea.style.height = `${textarea.scrollHeight}px`;
+            textarea.style.height = `${textarea.scrollHeight+5}px`;
           } else {
             localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
             editor.dispatch({
@@ -212,7 +212,7 @@ function initDataEditor() {
             });
             textarea.style.whiteSpace = "pre";
             // textarea.style.overflow = "auto";
-            textarea.style.height = `${textarea.scrollHeight}px`;
+            textarea.style.height = `${textarea.scrollHeight+5}px`;
           }
         });
       }
