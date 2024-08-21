@@ -183,13 +183,13 @@ function initDataEditor() {
         effects: wordwrap.reconfigure(EditorView.lineWrapping),
       });
       // textarea.style.whiteSpace = "pre-wrap";
-      // textarea.style.height = `${textarea.scrollHeight + 5}px`;
+      textarea.style.height = `${textarea.scrollHeight + 5}px`;
     } else {
       editor.dispatch({
         effects: wordwrap.reconfigure([]),
       });
       // textarea.style.whiteSpace = "pre";
-      // textarea.style.height = `${textarea.scrollHeight + 5}px`;
+      textarea.style.height = `${textarea.scrollHeight + 5}px`;
     }
     if (config.has("wordwrapCheckboxID")) {
       const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
