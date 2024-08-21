@@ -31,9 +31,6 @@ function initDataEditor() {
     if (!textarea) {
       continue;
     }
-    if (window["chrome"]) {
-      handleChromeTextarea(textarea, true);
-    };
 
     // Locate the parent form that houses the textarea.
     let form: HTMLFormElement | undefined;
@@ -330,41 +327,3 @@ if (typeof globalThis.init == "function") {
 } else {
   globalThis.init = initDataEditor;
 }
-
-function handleChromeTextarea(el, useScroll) {
-  let getNoLineBreaks = () => {
-    //source: https://stackoverflow.com/questions/10950538/how-to-detect-line-breaks-in-a-text-area-input
-    return (el.value.match(/\n/g) || []).length;
-  };
-
-  let getScrollPos = () => {
-    return el.scrollTop;
-  };
-
-  let onInput = (e) => {
-    const newNoLineBreaks = getNoLineBreaks();
-
-    if (noLineBreaks < newNoLineBreaks) {
-      el.scrollTop = scrollPos;
-      console.log(`onInput: scrollTop = ${scrollPos}`);
-    };
-
-    noLineBreaks = newNoLineBreaks;
-    console.log(`onInput: noLineBreaks = ${noLineBreaks}`);
-  };
-
-  let onBeforeInput = (e) => {
-    scrollPos = getScrollPos();
-    console.log(`onBeforeInput: scrollPos is ${scrollPos}`);
-  };
-
-  let noLineBreaks = getNoLineBreaks();
-  let scrollPos = getScrollPos();
-
-  el.addEventListener("input", onInput);
-  el.addEventListener("beforeinput", onBeforeInput); //Already supported by Chrome - you may wish to use this without the scroll event
-
-  if (useScroll) {
-    el.addEventListener("scroll", onBeforeInput);
-  };
-};
