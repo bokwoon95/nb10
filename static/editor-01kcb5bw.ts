@@ -155,10 +155,10 @@ function initDataEditor() {
 
     if (config.get("scrollIntoView")) {
       // Restore textarea cursor position from localStorage.
-      const textareaCursorPosition = Number(localStorage.getItem(`textareaCursorPosition:${window.location.pathname}:${index}`));
-      if (textareaCursorPosition && textareaCursorPosition <= textarea.value.length) {
-        textarea.setSelectionRange(textareaCursorPosition, textareaCursorPosition);
-      }
+      // const textareaCursorPosition = Number(localStorage.getItem(`textareaCursorPosition:${window.location.pathname}:${index}`));
+      // if (textareaCursorPosition && textareaCursorPosition <= textarea.value.length) {
+      //   textarea.setSelectionRange(textareaCursorPosition, textareaCursorPosition);
+      // }
 
       // Restore editor cursor position from localStorage.
       const editorCursorPosition = Number(localStorage.getItem(`editorCursorPosition:${window.location.pathname}:${index}`));
