@@ -346,13 +346,16 @@ function handleChromeTextarea(el, useScroll) {
 
     if (noLineBreaks < newNoLineBreaks) {
       el.scrollTop = scrollPos;
+      console.log(`onInput: scrollTop = ${scrollPos}`);
     };
 
     noLineBreaks = newNoLineBreaks;
+    console.log(`onInput: noLineBreaks = ${noLineBreaks}`);
   };
 
   let onBeforeInput = (e) => {
     scrollPos = getScrollPos();
+    console.log(`onBeforeInput: scrollPos is ${scrollPos}`);
   };
 
   let noLineBreaks = getNoLineBreaks();
