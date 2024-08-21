@@ -78,15 +78,16 @@ function initDataEditor() {
       }
     });
 
-    // Auto-resize textarea as user types into it.
-    // NOTE: Resetting the height with "auto" causes annoying viewport jumps when
-    // typing on iOS Safari. Don't do it (like in answer
-    // https://stackoverflow.com/a/48460773). Just set the scrollHeight directly.
-    // This means the textarea will never shrink, only grow, but it's the price
-    // to pay for not being annoying to type on mobile.
-    // textarea.addEventListener("input", function() {
-    //   textarea.style.height = `${textarea.scrollHeight}px`;
-    // });
+    if (config.has("resizeOnInput")) {
+      textarea.addEventListener("input", function() {
+        // NOTE: Resetting the height with "auto" causes annoying viewport jumps when
+        // typing on iOS Safari. Don't do it (like in answer
+        // https://stackoverflow.com/a/48460773). Just set the scrollHeight directly.
+        // This means the textarea will never shrink, only grow, but it's the price
+        // to pay for not being annoying to type on mobile.
+        textarea.style.height = `${textarea.scrollHeight + 5}px`;
+      });
+    }
 
     // Create the codemirror editor.
     const wordwrap = new Compartment();
@@ -181,15 +182,13 @@ function initDataEditor() {
         effects: wordwrap.reconfigure(EditorView.lineWrapping),
       });
       textarea.style.whiteSpace = "pre-wrap";
-      // textarea.style.overflow = "hidden";
-      textarea.style.height = `${textarea.scrollHeight+5}px`;
+      textarea.style.height = `${textarea.scrollHeight + 5}px`;
     } else {
       editor.dispatch({
         effects: wordwrap.reconfigure([]),
       });
       textarea.style.whiteSpace = "pre";
-      // textarea.style.overflow = "auto";
-      textarea.style.height = `${textarea.scrollHeight+5}px`;
+      textarea.style.height = `${textarea.scrollHeight + 5}px`;
     }
     if (config.has("wordwrapCheckboxID")) {
       const wordwrapCheckboxID = config.get("wordwrapCheckboxID");
@@ -203,16 +202,14 @@ function initDataEditor() {
               effects: wordwrap.reconfigure(EditorView.lineWrapping),
             });
             textarea.style.whiteSpace = "pre-wrap";
-            // textarea.style.overflow = "hidden";
-            textarea.style.height = `${textarea.scrollHeight+5}px`;
+            textarea.style.height = `${textarea.scrollHeight + 5}px`;
           } else {
             localStorage.setItem(`wordwrap:${window.location.pathname}:${index}`, "false");
             editor.dispatch({
               effects: wordwrap.reconfigure([]),
             });
             textarea.style.whiteSpace = "pre";
-            // textarea.style.overflow = "auto";
-            textarea.style.height = `${textarea.scrollHeight+5}px`;
+            textarea.style.height = `${textarea.scrollHeight + 5}px`;
           }
         });
       }

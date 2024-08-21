@@ -90,7 +90,7 @@
       {{- end }}
     </ul>
   </div>
-  <div data-editor='{"extElementName":"ext","wordwrapCheckboxID":"wordwrap","ajaxSubmission":{{ gt (len $.UploadableExts) 0 }}}'>
+  <div data-editor='{"extElementName":"ext","wordwrapCheckboxID":"wordwrap","ajaxSubmission":{{ gt (len $.UploadableExts) 0 }},"resizeOnInput":true}'>
     <textarea id='content' name='content' dir='auto' class='w-100 pa2 min-h5 h6 resize-vertical code'>{{ $.Content }}</textarea>
   </div>
   {{- if $.UploadableExts }}
