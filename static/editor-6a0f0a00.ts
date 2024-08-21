@@ -85,7 +85,7 @@ function initDataEditor() {
         // https://stackoverflow.com/a/48460773). Just set the scrollHeight directly.
         // This means the textarea will never shrink, only grow, but it's the price
         // to pay for not being annoying to type on mobile.
-        textarea.style.height = `${textarea.scrollHeight + 5}px`;
+        textarea.style.height = `${textarea.scrollHeight}px`;
       });
     }
 
