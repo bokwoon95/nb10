@@ -2309,9 +2309,9 @@ var baseFuncMap = map[string]any{
 		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(x)) + "</pre>")
 	},
 	"list": func(args ...any) []any { return args },
-	"dict": func(keyvalue ...any) (map[string]any, error) {
-		dict := make(map[string]any)
-		if len(dict)%2 != 0 {
+	"map": func(keyvalue ...any) (map[string]any, error) {
+		m := make(map[string]any)
+		if len(m)%2 != 0 {
 			return nil, fmt.Errorf("odd number of arguments passed in")
 		}
 		for i := 0; i+1 < len(keyvalue); i += 2 {
@@ -2319,9 +2319,9 @@ var baseFuncMap = map[string]any{
 			if !ok {
 				return nil, fmt.Errorf("key is not a string: %#v", keyvalue[i])
 			}
-			dict[key] = keyvalue[i+1]
+			m[key] = keyvalue[i+1]
 		}
-		return dict, nil
+		return m, nil
 	},
 	"humanReadableFileSize": func(size any) (string, error) {
 		switch size := size.(type) {
