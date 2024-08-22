@@ -99,7 +99,7 @@ TODO: notebrewlive probably needs a terms of service page somewhere (linked in s
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
-    TODO: /files/static/definitive-guide-6a0f0a00.html (user tutorials)
+    TODO: /files/static/essential-guide-6a0f0a00.html (user tutorials)
     TODO: /files/static/template-reference-6a0f0a00.html
     TODO: /files/static/self-hosting-tutorial-6a0f0a00.html
         TODO: we may also need a separate tutorial on how to purchase a VPS and gain console access. again, emphasize how it does not assume any prior skills other than following instructions (we want rando housewives to be able to follow them). This has to be hosted on notebrew.org itself because the admin dashboard screenshots may change very often.
