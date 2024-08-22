@@ -2366,9 +2366,9 @@ var baseFuncMap = map[string]any{
 	"htmlHeadings": func(x any) ([]Heading, error) {
 		switch x := x.(type) {
 		case string:
-			return htmlHeadings(x)
+			return htmlHeadings(strings.NewReader(x))
 		case template.HTML:
-			return htmlHeadings(string(x))
+			return htmlHeadings(strings.NewReader(string(x)))
 		default:
 			return nil, fmt.Errorf("note a string or template.HTML: %#v", x)
 		}
@@ -2723,7 +2723,7 @@ type Heading struct {
 
 // htmlHeadings parses a stream of HTML from a reader and returns a list of
 // headings (nested appropriately) that have an id defined on them.
-func htmlHeadings(s string) ([]Heading, error) {
+func htmlHeadings(r io.Reader) ([]Heading, error) {
 	var headingLevel, position int
 	var headingID string
 	var headingTitle bytes.Buffer
@@ -2731,7 +2731,7 @@ func htmlHeadings(s string) ([]Heading, error) {
 	// parents[0] is the root parent i.e. h0.
 	var parents [1 + 6]*Heading
 	parents[0] = &Heading{}
-	tokenizer := html.NewTokenizer(strings.NewReader(s))
+	tokenizer := html.NewTokenizer(r)
 	for {
 		tokenType := tokenizer.Next()
 		switch tokenType {
