@@ -255,6 +255,7 @@
   <span>&boxv;</span>
   {{- else if $.BelongsTo }}
   <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}/'>&larr; back</a>
+  <span>&boxv;</span>
   {{- else }}
   <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>&larr; back</a>
   <span>&boxv;</span>
