@@ -411,6 +411,7 @@
   {{- else if and (eq (head $.FilePath) "output") (eq (head (tail $.FilePath)) "themes") (eq (ext $.FilePath) ".html") }}
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100 bg-transparent' name='regenerateSite' value='true'>save and regenerate site</button>
   {{- end }}
+  <div class='f6'>tip: Ctrl+S (or Cmd+S on macOS) saves when the textbox is focused</div>
   <div role='status'></div>
 </form>
 {{- if or
