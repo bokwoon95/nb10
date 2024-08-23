@@ -187,7 +187,7 @@
             {{- end }}
           {{- end }}
           <a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}{{ if $file.IsDir }}/{{ end }}' class='flex-wrap'>{{ if eq $file.Parent $.FilePath }}{{ $file.Name }}{{ else }}/{{ join $file.Parent $file.Name }}{{ end }}{{ if $file.IsDir }}/{{ end }}</a>
-          {{- if not $file.IsDir }}
+          {{- if or (not $file.IsDir) $.IsDatabaseFS }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
           <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
@@ -231,7 +231,7 @@
             {{- end }}
           {{- end }}
           <a href='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}'>{{ $file.Name }}{{ if $file.IsDir }}/{{ end }}</a>
-          {{- if not $file.IsDir }}
+          {{- if or (not $file.IsDir) $.IsDatabaseFS }}
           <span class='ml2 f6 mid-gray'>{{ humanReadableFileSize $file.Size }}</span>
           {{- end }}
           <span class='ml2 f6 mid-gray'>{{ $file.CreationTime.Format "2006-01-02" }}</span>
