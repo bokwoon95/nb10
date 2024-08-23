@@ -2308,6 +2308,24 @@ var baseFuncMap = map[string]any{
 	"dump": func(x any) template.HTML {
 		return template.HTML("<pre>" + template.HTMLEscapeString(spew.Sdump(x)) + "</pre>")
 	},
+	"join": func(args ...any) (string, error) {
+		s := make([]string, len(args))
+		for i, v := range args {
+			switch v := v.(type) {
+			case string:
+				s[i] = v
+			case int:
+				s[i] = strconv.Itoa(v)
+			case int64:
+				s[i] = strconv.FormatInt(v, 10)
+			case float64:
+				s[i] = strconv.Itoa(int(v))
+			default:
+				return "", fmt.Errorf("not a string or number: %#v", v)
+			}
+		}
+		return path.Join(s...), nil
+	},
 	"list": func(args ...any) []any { return args },
 	"map": func(keyvalue ...any) (map[string]any, error) {
 		m := make(map[string]any)
@@ -2322,18 +2340,6 @@ var baseFuncMap = map[string]any{
 			m[key] = keyvalue[i+1]
 		}
 		return m, nil
-	},
-	"humanReadableFileSize": func(size any) (string, error) {
-		switch size := size.(type) {
-		case int:
-			return HumanReadableFileSize(int64(size)), nil
-		case int64:
-			return HumanReadableFileSize(size), nil
-		case float64:
-			return HumanReadableFileSize(int64(size)), nil
-		default:
-			return "", fmt.Errorf("not a number: %#v", size)
-		}
 	},
 	"safeHTML": func(x any) template.HTML {
 		switch x := x.(type) {
@@ -2403,50 +2409,6 @@ var baseFuncMap = map[string]any{
 		}
 		return fallback
 	},
-	"join": func(args ...any) (string, error) {
-		s := make([]string, len(args))
-		for i, v := range args {
-			switch v := v.(type) {
-			case string:
-				s[i] = v
-			case int:
-				s[i] = strconv.Itoa(v)
-			case int64:
-				s[i] = strconv.FormatInt(v, 10)
-			case float64:
-				s[i] = strconv.Itoa(int(v))
-			default:
-				return "", fmt.Errorf("not a string or number: %#v", v)
-			}
-		}
-		return path.Join(s...), nil
-	},
-	"head": func(x any) (string, error) {
-		if x, ok := x.(string); ok {
-			head, _, _ := strings.Cut(x, "/")
-			return head, nil
-		}
-		return "", fmt.Errorf("not a string: %#v", x)
-	},
-	"tail": func(x any) (string, error) {
-		if x, ok := x.(string); ok {
-			_, tail, _ := strings.Cut(x, "/")
-			return tail, nil
-		}
-		return "", fmt.Errorf("not a string: %#v", x)
-	},
-	"base": func(x any) (string, error) {
-		if x, ok := x.(string); ok {
-			return path.Base(x), nil
-		}
-		return "", fmt.Errorf("not a string: %#v", x)
-	},
-	"ext": func(x any) (string, error) {
-		if x, ok := x.(string); ok {
-			return path.Ext(x), nil
-		}
-		return "", fmt.Errorf("not a string: %#v", x)
-	},
 	"hasPrefix": func(str, prefix any) (bool, error) {
 		if str, ok := str.(string); ok {
 			if prefix, ok := prefix.(string); ok {
@@ -2486,6 +2448,32 @@ var baseFuncMap = map[string]any{
 	"trimSpace": func(x any) (string, error) {
 		if x, ok := x.(string); ok {
 			return strings.TrimSpace(x), nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
+	},
+	"head": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			head, _, _ := strings.Cut(x, "/")
+			return head, nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
+	},
+	"tail": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			_, tail, _ := strings.Cut(x, "/")
+			return tail, nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
+	},
+	"base": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			return path.Base(x), nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
+	},
+	"ext": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			return path.Ext(x), nil
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
 	},
