@@ -99,7 +99,7 @@ type NavigationLink struct {
 	Name string
 
 	// URL of the link.
-	URL template.URL
+	URL string
 }
 
 // Site holds the global properties of a site.
