@@ -37,7 +37,7 @@
 </nav>
 <hr>
 <div class='text-sm gray-600'>{{ formatTime $.CreationTime "2006-01-02" $.Site.TimezoneOffsetSeconds }}</div>
-<div><a href='/{{ join "posts" $.Category }}/'>&larr; index</a></div>
+<div><a href='/{{ join "posts" $.Category }}/'>&larr; post list</a></div>
 <main>
   {{ markdownToHTML $.Content }}
   {{ range $image := $.Images }}
