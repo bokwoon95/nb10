@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -210,7 +209,7 @@ func (storage *S3ObjectStorage) Delete(ctx context.Context, key string) error {
 func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string) error {
 	_, err := storage.Client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     &storage.Bucket,
-		CopySource: aws.String(srcKey),
+		CopySource: aws.String(storage.Bucket + "/" + srcKey),
 		Key:        aws.String(destKey),
 	})
 	if err != nil {
@@ -220,7 +219,6 @@ func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string
 				return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
 			}
 		}
-		fmt.Printf("srcKey=%q, destKey=%q\n", srcKey, destKey)
 		return stacktrace.New(err)
 	}
 	return nil
