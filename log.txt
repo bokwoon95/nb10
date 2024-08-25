@@ -96,9 +96,18 @@ the admin page needs to:
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
 ```
+[notebrew] --- [dashboard] [sign up]
+
 notebrew is a simple blogging platform
 
-Check out notebrew.org if you are looking for the self-hosted version
+(Check out notebrew.org if you are looking for the self-hosted version.)
+
+Screenshots
+
+Features (without the credits and automatic HTTPS)
+
+---
+[notebrew.org] [r/notebrew] [github]
 ```
 
 notebrew.com/docs/
