@@ -2595,7 +2595,7 @@ var baseFuncMap = map[string]any{
 			}
 			return result, nil
 		}
-		if floatCount > 0 && stringCount == 0 {
+		if intCount+floatCount == len(args) {
 			var result float64
 			for _, arg := range args {
 				switch arg := arg.(type) {
