@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -219,6 +220,7 @@ func (storage *S3ObjectStorage) Copy(ctx context.Context, srcKey, destKey string
 				return &fs.PathError{Op: "copy", Path: srcKey, Err: fs.ErrNotExist}
 			}
 		}
+		fmt.Printf("srcKey=%q, destKey=%q\n", srcKey, destKey)
 		return stacktrace.New(err)
 	}
 	return nil
