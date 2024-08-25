@@ -95,6 +95,31 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
+"View the docs"
+- How to download, install and use themes
+- How to edit your home page
+- How to add a new post
+- How to create custom HTML pages (essential guide) (embedded)
+- How to export and host your own themes
+- Self hosting tutorial
+- Advanced self hosting tutorial
+- Admin tutorial
+- API documentation (embedded)
+
+Running it as a desktop program.
+- Where to download
+- double click the binary. you should see this.
+- Here are where the files are located. You can change the location by editing the config dir (?)
+
+Self hosting your own instance.
+- Automatic HTTPS
+
+Themes showcase.
+- How to download and install themes
+- How to export and host your own themes
+
+API Documentation.
+
 TODO: notebrewlive probably needs a terms of service page somewhere (linked in signup.html?)
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
