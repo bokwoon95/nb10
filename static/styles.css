@@ -221,7 +221,7 @@ details[open] summary.button { background-color: white; }
 .break-word { overflow-wrap: break-word; word-break: break-word; }
 
 /* misc */
-code, .code { font-family: Consolas, monaco, monospace; }
+code, .code { font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace; }
 details > summary.hide-marker::marker, /* Latest Chrome, Edge, Firefox */ details > summary.hide-marker::-webkit-details-marker /* Safari */ { display: none; }
 .list-style-disc { list-style: disc; }
 .o-70 { opacity: 0.7; }
