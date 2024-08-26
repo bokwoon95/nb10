@@ -95,26 +95,14 @@ the admin page needs to:
 - through it all, all actions must be recorded down so that we know exactly which sites were deleted and who those sites belonged to (again for future data training, but it also lets us link a specific site to a specific object in the backblaze bucket). This means the spam database must be *persistent*!
 - show me CDN usage by site (need to communicate with BunnyCDN's API). that's about it, since I doubt many users will trigger this check. if someone does, I can handle it manually first.
 
-```
-[notebrew] --- [dashboard] [sign up]
-
-notebrew is a simple blogging platform
-
-(Check out notebrew.org if you are looking for the self-hosted version.)
-
-Screenshots
-
-Features (without the credits and automatic HTTPS)
-
----
-[notebrew.org] [r/notebrew] [github]
-```
-
 notebrew.com/docs/
 notebrew.com/docs/how-to-install-themes/
 notebrew.com/docs/how-to-host-your-own-themes/
 notebrew.com/docs/the-essential-guide-to-writing-html-pages-in-notebrew/
 notebrew.com/docs/api-documentation/
+
+template tutorial => /docs/the-essential-guide-to-writing-html-pages-in-notebrew/#internal-templates
+markdown tutorial => /docs/markdown-tutorial/
 
 localhost:6444/files/
 

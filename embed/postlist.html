@@ -1,3 +1,4 @@
+<title>{{ if $.Category }}{{ $.Category }}{{ else }}posts{{ end }} - {{ $.Site.Title }}</title>
 <style>
   html { max-width: 80ch; padding: 2rem 0.5rem; margin: auto; line-height: 1.75; font-size: 1.15rem; background-color: #fafafa; }
   p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
@@ -29,7 +30,6 @@
   .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .list-none { list-style: none; }
 </style>
-<title>{{ if $.Category }}{{ $.Category }}{{ else }}posts{{ end }} - {{ $.Site.Title }}</title>
 <nav>
   {{ range $i, $navigationLink := $.Site.NavigationLinks }}
   {{ if $i }}&boxv; {{ end }}<a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a>

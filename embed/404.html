@@ -1,3 +1,4 @@
+<title>404</title>
 <style>
   html { max-width: 80ch; padding: 2rem 0.5rem; margin: auto; line-height: 1.75; font-size: 1.15rem; background-color: #fafafa; }
   p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
@@ -5,7 +6,6 @@
   a { background-color: transparent; text-decoration: none; cursor: pointer; }
   a:hover, a:focus { text-decoration: underline; }
 </style>
-<title>{{ $.Site.Title }}</title>
 <nav>
   {{ range $i, $navigationLink := $.Site.NavigationLinks }}
   {{ if $i }}&boxv; {{ end }}<a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a>
