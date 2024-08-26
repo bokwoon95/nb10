@@ -35,7 +35,7 @@ template { display: none; }
 [hidden] { display: none; }
 
 *, *::before, *::after { box-sizing: border-box; }
-body { background-color: #fafafa; font-family: Helvetica, Arial, sans-serif; line-height: 1.5; }
+body { background-color: #fafafa; font-family: system-ui, sans-serif; line-height: 1.5; }
 a { text-decoration: none; cursor: pointer; color: #0000ee; }
 a:hover, a:focus { text-decoration: underline; }
 button { color:inherit; cursor: pointer; }

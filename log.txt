@@ -502,7 +502,7 @@ Rationale: Earthy and robust, this palette uses warm brick reds and soft coral a
 
 ----
 
-== generate styles ==
+== general styles ==
 
 background (dark/light)
 background image?
@@ -524,14 +524,30 @@ links
 tables
 blockquotes
 
+== post styles ==
+
+where to put creationTime/modificationTime?
+
 == postlist styles ==
 
-show date?
+// always include an Atom feed link mention on the post list page!
 
-show preview?
-
-plain
-- https://wordsandbuttons.online/
-
-line delimited
-- https://akoutmos.com/
+- image gallery, instagram style | https://www.avogado6.com/
+- single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
+- title + preview + read more | https://wordsandbuttons.online/
+- title + preview | https://stevelosh.com/blog/
+- line delimited | https://akoutmos.com/
+- boxed | https://www.eyeswift.com/category/blogging/
+- cards with image (if exists) | https://theblogtrottergirl.com/
+- line delimited | https://www.craigkerstiens.com/
+- all posts, everything | https://charity.wtf/
+- classic title + preview + read more | https://www.depesz.com/
+- all thing, everything | https://lemire.me/blog/
+- title and date only | https://drewdevault.com/
+- all posts, everything, classic blog layout | https://www.positech.co.uk/cliffsblog/
+- rachelbythebay | https://rachelbythebay.com/w/
+- basic bihcc github pages | https://travisdowns.github.io/
+- only titles, very bold | https://arun.is/blog/
+- clean look title + preview + date | https://ognjen.io/
+- single line per post with title and date only | https://ntietz.com/blog/
+- boxed | https://danilafe.com/blog/
