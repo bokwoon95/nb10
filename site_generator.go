@@ -838,7 +838,7 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						page.Title = strings.TrimSpace(strings.TrimPrefix(line, "#title "))
 					}
 				} else if strings.HasPrefix(line, "<title>") && strings.HasSuffix(line, "</title>") {
-					page.Title = strings.TrimSpace(strings.TrimPrefix(line, "#title "))
+					page.Title = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "<title>"), "</title>"))
 				}
 				if page.Title == "" {
 					page.Title = titleConverter.Title(urlSeparatorReplacer.Replace(page.Name))
@@ -899,6 +899,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 							if bytes.HasPrefix(line, []byte("#title ")) {
 								pageData.ChildPages[i].Title = string(bytes.TrimSpace(bytes.TrimPrefix(line, []byte("#title "))))
 							}
+						} else if bytes.HasPrefix(line, []byte("<title>")) && bytes.HasSuffix(line, []byte("</title>")) {
+							pageData.ChildPages[i].Title = string(bytes.TrimSpace(bytes.TrimSuffix(bytes.TrimPrefix(line, []byte("<title>")), []byte("</title>"))))
 						}
 						break
 					}
