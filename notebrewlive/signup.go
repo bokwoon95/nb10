@@ -82,7 +82,6 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 		response.CaptchaWidgetScriptSrc = nbrew.CaptchaConfig.WidgetScriptSrc
 		response.CaptchaWidgetClass = nbrew.CaptchaConfig.WidgetClass
 		response.CaptchaSiteKey = nbrew.CaptchaConfig.SiteKey
-		response.Email = r.Form.Get("email")
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
