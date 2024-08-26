@@ -15,6 +15,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/jdkato/prose v1.2.1
 	github.com/klauspost/cpuid/v2 v2.2.8
 	github.com/libdns/cloudflare v0.1.1
 	github.com/libdns/godaddy v1.0.3
@@ -60,14 +61,12 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mholt/acmez v1.2.0 // indirect
 	github.com/mholt/acmez/v2 v2.0.2 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/neruyzo/etree v0.0.0-20230816193247-70b7b06b18ad // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.20.0 // indirect

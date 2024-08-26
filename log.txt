@@ -505,7 +505,6 @@ Rationale: Earthy and robust, this palette uses warm brick reds and soft coral a
 background (dark/light)
 background image?
 banner image?
-profile image?
 headings
 - font (serif/sans-serif)
 - color (accent/neutral)

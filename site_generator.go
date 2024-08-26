@@ -31,6 +31,7 @@ import (
 	"github.com/bokwoon95/nb10/sq"
 	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/jdkato/prose/transform"
 	fences "github.com/stefanfritsch/goldmark-fences"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
@@ -38,8 +39,6 @@ import (
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/net/html"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 // SiteGenerator is used to generate pages and posts for a particular site.
@@ -2310,6 +2309,8 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	}
 }
 
+var titleConverter = transform.NewTitleConverter(transform.APStyle)
+
 // baseFuncMap is the base funcMap used for all user templates.
 var baseFuncMap = map[string]any{
 	"dump": func(x any) template.HTML {
@@ -2472,7 +2473,7 @@ var baseFuncMap = map[string]any{
 	},
 	"title": func(x any) (string, error) {
 		if x, ok := x.(string); ok {
-			return cases.Title(language.Und, cases.NoLower).String(x), nil
+			return titleConverter.Title(x),nil
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
 	},
