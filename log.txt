@@ -532,6 +532,8 @@ where to put creationTime/modificationTime?
 
 // always include an Atom feed link mention on the post list page!
 
+// rule of thumb, as long as you show the preview you should always comb $.MentionedImages and $.UnmentionedImages
+
 - image gallery, instagram style | https://www.avogado6.com/
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
 - title + preview + read more | https://wordsandbuttons.online/
@@ -551,3 +553,18 @@ where to put creationTime/modificationTime?
 - clean look title + preview + date | https://ognjen.io/
 - single line per post with title and date only | https://ntietz.com/blog/
 - boxed | https://danilafe.com/blog/
+- title + preview + read more (w nice link accents) | https://lukeplant.me.uk/blog/
+- single line per post | https://mazzo.li/archive.html
+- title + preview + read more https://www.jefftk.com/
+- classic blogspot | https://johorkaki.blogspot.com/
+- single line per post | https://justinjaffray.com/posts/
+- dark theme | https://aarontgrogg.com/
+- single line per post | https://finmoorhouse.com/writing/
+- single line per post (wild green) | https://www.lkhrs.com/blog/
+- blogger title + preview + read more + image classic, with fallback if no image | https://theoccasionaltraveller.com/blog/
+- dark theme | all thing, everything | https://kottke.org/
+- clean white, single line per post | https://orlp.net/blog/
+- I... don't know how to describe this. It's single line per post, all right | https://www.spicyweb.dev/blog
+- cards + title + preview + read more | https://blog.vanillajava.blog/
+- aha, the same wordpress theme used by theoccasionaltraveller | title + preview + read more + image | https://wheretheroadforks.com/blog/
+-
