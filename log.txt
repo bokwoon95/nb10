@@ -150,7 +150,7 @@ TODO: include handwritten API documentation, involving POST-ing to /login/.
 TODO: figure out how to make a pluggable header image in a theme
     - /themes/background.jpg: full-size image that occupies the whole screen
     - /themes/banner.jpg:     long jpg that occupies a strip on the top of the screen
-    - /themes/profile.jpg:    profile photo
+    - /themes/profile.jpg:    profile photo (NO! all profile photos and their associated desciptions are a purely userland thing)
 TODO: how to configure client-side SSL for connecting to Postgres/MySQL?
 
 DNS testcases:
