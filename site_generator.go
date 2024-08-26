@@ -837,6 +837,8 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 					if strings.HasPrefix(line, "#title ") {
 						page.Title = strings.TrimSpace(strings.TrimPrefix(line, "#title "))
 					}
+				} else if strings.HasPrefix(line, "<title>") && strings.HasSuffix(line, "</title>") {
+					page.Title = strings.TrimSpace(strings.TrimPrefix(line, "#title "))
 				}
 				if page.Title == "" {
 					page.Title = titleConverter.Title(urlSeparatorReplacer.Replace(page.Name))

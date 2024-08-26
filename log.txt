@@ -502,6 +502,8 @@ Rationale: Earthy and robust, this palette uses warm brick reds and soft coral a
 
 ----
 
+== generate styles ==
+
 background (dark/light)
 background image?
 banner image?
@@ -521,3 +523,15 @@ links
 - clicked (accent)
 tables
 blockquotes
+
+== postlist styles ==
+
+show date?
+
+show preview?
+
+plain
+- https://wordsandbuttons.online/
+
+line delimited
+- https://akoutmos.com/
