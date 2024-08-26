@@ -545,6 +545,9 @@ type PageData struct {
 	// Name of the page.
 	Name string
 
+	// Title of the page.
+	Title string
+
 	// ChildPages of the page.
 	ChildPages []Page
 
@@ -628,6 +631,16 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	}
 	if pageData.Name == "." {
 		pageData.Name = ""
+	}
+	line, _, _ := strings.Cut(text, "\n")
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, "<!--") && strings.HasSuffix(line, "-->") {
+		line := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "<!--"), "-->"))
+		if strings.HasPrefix(line, "#title ") {
+			pageData.Title = strings.TrimSpace(strings.TrimPrefix(line, "#title "))
+		}
+	} else if strings.HasPrefix(line, "<title>") && strings.HasSuffix(line, "</title>") {
+		pageData.Title = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "<title>"), "</title>"))
 	}
 	var err error
 	var tmpl *template.Template
