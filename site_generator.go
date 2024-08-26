@@ -38,6 +38,8 @@ import (
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 	"golang.org/x/net/html"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // SiteGenerator is used to generate pages and posts for a particular site.
@@ -2462,6 +2464,12 @@ var baseFuncMap = map[string]any{
 			return "", fmt.Errorf("not a string: %#v", before)
 		}
 		return "", fmt.Errorf("not a string: %#v", str)
+	},
+	"title": func(x any) (string, error) {
+		if x, ok := x.(string); ok {
+			return cases.Title(language.Und, cases.NoLower).String(x), nil
+		}
+		return "", fmt.Errorf("not a string: %#v", x)
 	},
 	"head": func(x any) (string, error) {
 		if x, ok := x.(string); ok {
