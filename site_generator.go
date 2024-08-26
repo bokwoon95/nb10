@@ -589,6 +589,11 @@ type Image struct {
 	Caption string
 }
 
+var (
+	titleConverter       = transform.NewTitleConverter(transform.APStyle)
+	urlSeparatorReplacer = strings.NewReplacer("-", " ", "_", " ")
+)
+
 // GeneratePage generates a page. filePath is the file path to the source .html
 // page in the pages/ directory, text is the source text of the page, modTime
 // and creationTime are when the page was modified and created.
@@ -827,18 +832,15 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						Result:  sq.Expr("substring_index(text, char(10), 1)"),
 					}},
 				}))
-				if !strings.HasPrefix(line, "<!--") {
-					return page
+				if strings.HasPrefix(line, "<!--") && strings.HasSuffix(line, "-->") {
+					line := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "<!--"), "-->"))
+					if strings.HasPrefix(line, "#title ") {
+						page.Title = strings.TrimSpace(strings.TrimPrefix(line, "#title "))
+					}
 				}
-				line = strings.TrimSpace(strings.TrimPrefix(line, "<!--"))
-				if !strings.HasPrefix(line, "#title") {
-					return page
+				if page.Title == "" {
+					page.Title = titleConverter.Title(urlSeparatorReplacer.Replace(page.Name))
 				}
-				line = strings.TrimSpace(strings.TrimPrefix(line, "#title"))
-				if !strings.HasSuffix(line, "-->") {
-					return page
-				}
-				page.Title = strings.TrimSpace(strings.TrimSuffix(line, "-->"))
 				return page
 			})
 			if err != nil {
@@ -890,19 +892,16 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 							done = true
 						}
 						line = bytes.TrimSpace(line)
-						if !bytes.HasPrefix(line, []byte("<!--")) {
-							break
+						if bytes.HasPrefix(line, []byte("<!--")) && bytes.HasSuffix(line, []byte("-->")) {
+							line := bytes.TrimSpace(bytes.TrimSuffix(bytes.TrimPrefix(line, []byte("<!--")), []byte("-->")))
+							if bytes.HasPrefix(line, []byte("#title ")) {
+								pageData.ChildPages[i].Title = string(bytes.TrimSpace(bytes.TrimPrefix(line, []byte("#title "))))
+							}
 						}
-						line = bytes.TrimSpace(bytes.TrimPrefix(line, []byte("<!--")))
-						if !bytes.HasPrefix(line, []byte("#title")) {
-							break
-						}
-						line = bytes.TrimSpace(bytes.TrimPrefix(line, []byte("#title")))
-						if !bytes.HasSuffix(line, []byte("-->")) {
-							break
-						}
-						pageData.ChildPages[i].Title = string(bytes.TrimSpace(bytes.TrimSuffix(line, []byte("-->"))))
 						break
+					}
+					if pageData.ChildPages[i].Title == "" {
+						pageData.ChildPages[i].Title = titleConverter.Title(urlSeparatorReplacer.Replace(pageData.ChildPages[i].Name))
 					}
 					return nil
 				})
@@ -2309,8 +2308,6 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 	}
 }
 
-var titleConverter = transform.NewTitleConverter(transform.APStyle)
-
 // baseFuncMap is the base funcMap used for all user templates.
 var baseFuncMap = map[string]any{
 	"dump": func(x any) template.HTML {
@@ -2473,7 +2470,7 @@ var baseFuncMap = map[string]any{
 	},
 	"title": func(x any) (string, error) {
 		if x, ok := x.(string); ok {
-			return titleConverter.Title(x),nil
+			return titleConverter.Title(x), nil
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
 	},
