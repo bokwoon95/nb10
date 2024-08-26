@@ -112,6 +112,9 @@ type Site struct {
 	// Title of the site.
 	Title string
 
+	// Tagline of the site.
+	Tagline string
+
 	// Favicon of the site.
 	Favicon template.URL
 
@@ -161,6 +164,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	var config struct {
 		LanguageCode    string
 		Title           string
+		Tagline         string
 		Emoji           string
 		Favicon         string
 		CodeStyle       string
@@ -260,6 +264,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	siteGen.Site = Site{
 		LanguageCode:          config.LanguageCode,
 		Title:                 config.Title,
+		Tagline:               config.Tagline,
 		Favicon:               template.URL(config.Favicon),
 		TimezoneOffsetSeconds: timezoneOffsetSeconds,
 		NavigationLinks:       config.NavigationLinks,

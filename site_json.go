@@ -31,6 +31,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 	type Request struct {
 		LanguageCode    string           `json:"languageCode"`
 		Title           string           `json:"title"`
+		Tagline         string           `json:"tagline"`
 		Emoji           string           `json:"emoji"`
 		Favicon         string           `json:"favicon"`
 		CodeStyle       string           `json:"codeStyle"`
@@ -47,6 +48,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		DisableReason     string            `json:"disableReason"`
 		LanguageCode      string            `json:"languageCode"`
 		Title             string            `json:"title"`
+		Tagline           string            `json:"tagline"`
 		Emoji             string            `json:"emoji"`
 		Favicon           string            `json:"favicon"`
 		CodeStyle         string            `json:"codeStyle"`
@@ -150,6 +152,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 		request = normalizeRequest(request)
 		response.LanguageCode = request.LanguageCode
 		response.Title = request.Title
+		response.Tagline = request.Tagline
 		response.Emoji = request.Emoji
 		response.Favicon = request.Favicon
 		response.CodeStyle = request.CodeStyle
@@ -214,6 +217,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			}
 			request.LanguageCode = r.Form.Get("languageCode")
 			request.Title = r.Form.Get("title")
+			request.Tagline = r.Form.Get("tagline")
 			request.Emoji = r.Form.Get("emoji")
 			request.Favicon = r.Form.Get("favicon")
 			request.CodeStyle = r.Form.Get("codeStyle")
@@ -274,6 +278,7 @@ func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user Use
 			SitePrefix:        sitePrefix,
 			LanguageCode:      request.LanguageCode,
 			Title:             request.Title,
+			Tagline:           request.Tagline,
 			Emoji:             request.Emoji,
 			Favicon:           request.Favicon,
 			CodeStyle:         request.CodeStyle,
