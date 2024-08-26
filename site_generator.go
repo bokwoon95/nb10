@@ -642,6 +642,9 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 	} else if strings.HasPrefix(line, "<title>") && strings.HasSuffix(line, "</title>") {
 		pageData.Title = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "<title>"), "</title>"))
 	}
+	if pageData.Title == "" {
+		pageData.Title = titleConverter.Title(urlSeparatorReplacer.Replace(pageData.Name))
+	}
 	var err error
 	var tmpl *template.Template
 	group, groupctx := errgroup.WithContext(ctx)
