@@ -821,9 +821,18 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 						Result:  sq.Expr("substring_index(text, char(10), 1)"),
 					}},
 				}))
-				if strings.HasPrefix(line, "<title>") && strings.HasSuffix(line, "</title>") {
-					page.Title = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "<title>"), "</title>"))
+				if !strings.HasPrefix(line, "<!--") {
+					return page
 				}
+				line = strings.TrimSpace(strings.TrimPrefix(line, "<!--"))
+				if !strings.HasPrefix(line, "#title") {
+					return page
+				}
+				line = strings.TrimSpace(strings.TrimPrefix(line, "#title"))
+				if !strings.HasSuffix(line, "-->") {
+					return page
+				}
+				page.Title = strings.TrimSpace(strings.TrimSuffix(line, "-->"))
 				return page
 			})
 			if err != nil {
@@ -875,9 +884,18 @@ func (siteGen *SiteGenerator) GeneratePage(ctx context.Context, filePath, text s
 							done = true
 						}
 						line = bytes.TrimSpace(line)
-						if bytes.HasPrefix(line, []byte("<title>")) && bytes.HasSuffix(line, []byte("</title>")) {
-							pageData.ChildPages[i].Title = string(bytes.TrimSpace(bytes.TrimSuffix(bytes.TrimPrefix(line, []byte("<title>")), []byte("</title>"))))
+						if !bytes.HasPrefix(line, []byte("<!--")) {
+							break
 						}
+						line = bytes.TrimSpace(bytes.TrimPrefix(line, []byte("<!--")))
+						if !bytes.HasPrefix(line, []byte("#title")) {
+							break
+						}
+						line = bytes.TrimSpace(bytes.TrimPrefix(line, []byte("#title")))
+						if !bytes.HasSuffix(line, []byte("-->")) {
+							break
+						}
+						pageData.ChildPages[i].Title = string(bytes.TrimSpace(bytes.TrimSuffix(line, []byte("-->"))))
 						break
 					}
 					return nil
