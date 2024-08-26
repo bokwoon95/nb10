@@ -150,7 +150,9 @@ TODO: include handwritten API documentation, involving POST-ing to /login/.
 TODO: figure out how to make a pluggable header image in a theme
     - /themes/background.jpg: full-size image that occupies the whole screen
     - /themes/banner.jpg:     long jpg that occupies a strip on the top of the screen
+    - /themes/logo.jpg:       logo of the website, should the user choose to make one (refer to financial samurai as well as stratechery.com)
     - /themes/profile.jpg:    profile photo (NO! all profile photos and their associated desciptions are a purely userland thing)
+        - maybe too difficult to make it work because we need it to play nice w the background color and all that jazz (not hot swappable)
 TODO: how to configure client-side SSL for connecting to Postgres/MySQL?
 
 DNS testcases:
@@ -537,7 +539,7 @@ where to put creationTime/modificationTime?
 - image gallery, instagram style | https://www.avogado6.com/
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
 - title + preview + read more | https://wordsandbuttons.online/
-- title + preview | https://stevelosh.com/blog/
+- title + preview, dates justified to the right | https://stevelosh.com/blog/
 - line delimited | https://akoutmos.com/
 - boxed | https://www.eyeswift.com/category/blogging/
 - cards with image (if exists) | https://theblogtrottergirl.com/
@@ -567,4 +569,62 @@ where to put creationTime/modificationTime?
 - I... don't know how to describe this. It's single line per post, all right | https://www.spicyweb.dev/blog
 - cards + title + preview + read more | https://blog.vanillajava.blog/
 - aha, the same wordpress theme used by theoccasionaltraveller | title + preview + read more + image | https://wheretheroadforks.com/blog/
--
+- nice solid-color banner on top | all thing, everything I guess | https://prog21.dadgum.com/
+- nice solid colors and clean solid lines | classic blogger title + preview + read more | https://www.raptitude.com/
+- honestly a real basic-bitch looking layout, but the floating island is a nice idea | classic title + preview + read more | https://specbranch.com/
+- solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
+- idea: css grid layout left-to-right, going all the way down | title + preview + read more | https://lareviewofbooks.org/
+- dark theme, banner + navbar + title, preview, read more | https://christianheilmann.com
+- dark theme, date,title,preview kind of resembles a print magazine | https://craigmod.com/essays/
+- bold-ass colors, left-right-left-right alternating posts | https://pipewrenchmag.com/
+- nice gray background + white box | single line per post | https://www.akpain.net/blog/
+- title on the left and dates on the right, with dotted lines connecting between them | https://www.jtolio.com/posts/
+- white minimalist, title + preview + read more | http://antirez.com/latest/0
+- another plain background, implicit lines blog | https://kevinlawler.com/
+- white background, horizontal lines to delimit the date | https://www.johndcook.com/blog/
+- dark theme | straightforward list of posts | title on left, date on right | https://blog.wesleyac.com/
+- ok don't follow the post list, but the black navbar and huge letter font is a real doozy | https://www.financialsamurai.com/
+- very composable theme, just change the color palette | title and dates | https://marijnhaverbeke.nl/blog/
+- left right left right post cards in the list, with prominent images per post | https://zitseng.com/
+- post list kind of sucks but take a look at the post, header looks nice | https://imagine27.com/post/go-is-korean/
+- nice logo on top | all thing, everything | https://stratechery.com/
+- nice pink box on top "technically a blog" | single line per post | https://ntietz.com/blog/
+- all thing, everything | date pushed to the left, interesting | https://pointersgonewild.com/
+- plain light background plus highly accented eye-popping links | single line per post | dark mode and light mode actually look good | https://tinyprojects.dev/
+- very classic title and tagline on right, navbar on left, plain simple title + preview + read more posts delimited by line | https://rantover.co.uk/
+- dark theme, highly replaceable color palette | title + preview + read more | https://aartaka.me/
+
+https://unskilled.blog/
+https://manuelmoreale.com/bearblog-is-fun
+https://www.scribblinggeek.com/
+https://cyrillschumacher.com/
+https://popey.com/blog/
+https://shkspr.mobi/blog/
+https://benjamincongdon.me/
+https://wesbos.com/
+https://robertheaton.com/
+https://benhoyt.com/
+https://www.anildash.com/
+https://victoria.dev/
+https://acoup.blog/
+https://blog.ploeh.dk/
+https://trstringer.com/
+https://rtpg.co/
+https://yosefk.com/blog/
+https://nipafx.dev/
+https://djy.io/
+https://ddrscott.github.io/
+(background image!) https://askthepilot.com/essaysandstories/whats-the-matter-with-airports/
+https://web.archive.org/web/20210718135405/https://web.eecs.utk.edu/~azh/blog.html
+https://blog.jonudell.net/index/
+https://www.abandonedspaces.com/
+https://momjian.us/main/blogs/pgblog/2021.html
+https://blog.sql-workbench.eu/post/
+https://susam.net/
+https://danluu.com/
+https://tonsky.me/
+https://www.codevscolor.com/
+https://brandur.org/articles
+https://www.dampfkraft.com/
+https://codahale.com/
+(background image!) https://kodare.net/
