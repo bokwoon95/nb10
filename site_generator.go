@@ -2451,6 +2451,18 @@ var baseFuncMap = map[string]any{
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
 	},
+	"replace": func(str, before, after any) (string, error) {
+		if str, ok := str.(string); ok {
+			if before, ok := before.(string); ok {
+				if after, ok := after.(string); ok {
+					return strings.ReplaceAll(str, before, after), nil
+				}
+				return "", fmt.Errorf("not a string: %#v", after)
+			}
+			return "", fmt.Errorf("not a string: %#v", before)
+		}
+		return "", fmt.Errorf("not a string: %#v", str)
+	},
 	"head": func(x any) (string, error) {
 		if x, ok := x.(string); ok {
 			head, _, _ := strings.Cut(x, "/")

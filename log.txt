@@ -499,3 +499,26 @@ Primary: #B22222 (Firebrick)
 Secondary: #CD5C5C (Indian Red)
 Accent: #F08080 (Light Coral)
 Rationale: Earthy and robust, this palette uses warm brick reds and soft coral accents to evoke the solidity and warmth of bricks, creating a grounded and sturdy theme.
+
+----
+
+background (dark/light)
+background image?
+banner image?
+profile image?
+headings
+- font (serif/sans-serif)
+- color (accent/neutral)
+- padding/margin
+text
+- font (serif/sans-serif)
+- color (neutral)
+- line-height
+links
+- color (accent)
+- style (underline/highlight)
+- default (accent)
+- hover (accent)
+- clicked (accent)
+tables
+blockquotes
