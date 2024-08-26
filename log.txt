@@ -628,3 +628,5 @@ https://brandur.org/articles
 https://www.dampfkraft.com/
 https://codahale.com/
 (background image!) https://kodare.net/
+
+{{ replace (title $.Category) "-" " " }}

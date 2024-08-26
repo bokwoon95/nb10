@@ -2476,15 +2476,33 @@ var baseFuncMap = map[string]any{
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
 	},
-	"replace": func(str, before, after any) (string, error) {
+	"replace": func(str any, replacements ...any) (string, error) {
 		if str, ok := str.(string); ok {
-			if before, ok := before.(string); ok {
-				if after, ok := after.(string); ok {
-					return strings.ReplaceAll(str, before, after), nil
-				}
-				return "", fmt.Errorf("not a string: %#v", after)
+			if len(replacements)%2 != 0 {
+				return "", fmt.Errorf("odd number of replacements passed in")
 			}
-			return "", fmt.Errorf("not a string: %#v", before)
+			if len(replacements) == 2 {
+				if before, ok := replacements[0].(string); ok {
+					if after, ok := replacements[1].(string); ok {
+						return strings.ReplaceAll(str, before, after), nil
+					}
+					return "", fmt.Errorf("not a string: %#v", replacements[1])
+				}
+				return "", fmt.Errorf("not a string: %#v", replacements[0])
+			}
+			beforeafter := make([]string, 0, len(replacements))
+			for i := 0; i+1 < len(replacements); i += 2 {
+				before, ok := replacements[i].(string)
+				if !ok {
+					return "", fmt.Errorf("not a string: %#v", replacements[i])
+				}
+				after, ok := replacements[i+1].(string)
+				if !ok {
+					return "", fmt.Errorf("not a string: %#v", replacements[i+1])
+				}
+				beforeafter = append(beforeafter, before, after)
+			}
+			return strings.NewReplacer(beforeafter...).Replace(str), nil
 		}
 		return "", fmt.Errorf("not a string: %#v", str)
 	},
