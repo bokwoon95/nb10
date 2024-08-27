@@ -90,20 +90,6 @@
     </ul>
   </nav>
   {{ end }}
-</div><div>
-  <div class='f4 mv2'>{{ $.Site.Title }}</div>
-  {{ if $.Site.Tagline }}
-  <div class='mv2'>{{ $.Site.Tagline }}</div>
-  {{ end }}
-  {{ if $.Site.NavigationLinks }}
-  <nav>
-    <ul class='list-style-none flex flex-wrap pa0 mv3 bt bb'>
-      {{ range $i, $navigationLink := $.Site.NavigationLinks }}
-      <li class='mv2 mr3'><a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a></li>
-      {{ end }}
-    </ul>
-  </nav>
-  {{ end }}
 </div>
 <h1 class='mv3 pa0'>{{ if $.Category }}{{ title (replace $.Category "-" " ") }}{{ else }}Posts{{ end }}</h1>
 {{ if $.Posts }}
