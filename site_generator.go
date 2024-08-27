@@ -245,7 +245,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 		return "", fmt.Errorf("%#v is not a string", x)
 	}
-	siteGen.funcMap["markdownFirstLine"] = func(x any) (string, error) {
+	siteGen.funcMap["markdownFirstLineOfText"] = func(x any) (string, error) {
 		if s, ok := x.(string); ok {
 			var line string
 			remainder := s
