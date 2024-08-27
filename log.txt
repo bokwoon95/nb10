@@ -129,6 +129,7 @@ Themes showcase.
 
 API Documentation.
 
+TODO: <- back | $.SitePrefix | 
 TODO: notebrewlive probably needs a terms of service page somewhere (linked in signup.html?)
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
@@ -535,6 +536,11 @@ where to put creationTime/modificationTime?
 // always include an Atom feed link mention on the post list page!
 
 // rule of thumb, as long as you show the preview you should always comb $.MentionedImages and $.UnmentionedImages
+
+{{ template "/themes/notebrew.org/gallery/postlist.html" $ }}
+
+notebrew.com/
+notebrew.com/download/
 
 - image gallery, instagram style | https://www.avogado6.com/
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
