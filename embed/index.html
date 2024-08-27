@@ -1,15 +1,96 @@
 <title>{{ $.Site.Title }}</title>
 <style>
-  html { max-width: 80ch; padding: 2rem 0.5rem; margin: auto; line-height: 1.75; font-size: 1.15rem; background-color: #fafafa; }
-  p, ul, ol { margin-bottom: 1rem; color: #1d1d1d; font-family: sans-serif; }
-  pre { padding: 4px; overflow: auto; line-height: 1.25; }
-  a { background-color: transparent; text-decoration: none; cursor: pointer; }
-  a:hover, a:focus { text-decoration: underline; }
+  /* baseline */
+  html { -webkit-text-size-adjust: none; text-size-adjust: none; line-height: 1.5; font-size: 1.15rem; background-color: #fafafa; font-family: system-ui, sans-serif; }
+  pre { padding: 0.5rem; overflow-x: auto; font-size: 1em; }
+  a { text-decoration: none; cursor: pointer; color: #0000ee; }
+  a:hover,
+  a:focus { text-decoration: underline; }
+  /* margin all */
+  .ma0 { margin: 0; }
+  /* margin vertical */
+  .mv0 { margin-top: 0; margin-bottom: 0; }
+  .mv1 { margin-top: 0.25rem; margin-bottom: 0.25rem; }
+  .mv2 { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+  .mv3 { margin-top: 1rem; margin-bottom: 1rem; }
+  .mv4 { margin-top: 2rem; margin-bottom: 2rem; }
+  /* margin left */
+  .ml2 { margin-left: 0.5rem; }
+  /* margin right */
+  .mr1 { margin-right: 0.25rem; }
+  .mr3 { margin-right: 1rem; }
+  /* padding all */
+  .pa0 { padding: 0; }
+  /* flexbox */
+  .flex { display: flex; }
+  .flex-wrap { flex-wrap: wrap; }
+  .justify-center { justify-content: center; }
+  /* fonts */
+  .b { font-weight: bold; }
+  .f4 { font-size: 1.25rem; }
+  .f6 { font-size: 0.875rem; }
+  /* border */
+  .bt { border-top-style: solid; border-top-width: 1px; }
+  .bb { border-bottom-style: solid; border-bottom-width: 1px; }
+  /* color */
+  .mid-gray { color: #555555; }
+  /* height */
+  .h3 { height: 4rem; }
+  /* width */
+  .w-100 { width: 100%; }
+  .w3 { width: 4rem; }
+  @media screen and (min-width: 30em) and (max-width: 60em) {
+    .w-90-m { width: 90%; }
+    .w-80-m { width: 80%; }
+  }
+  @media screen and (min-width: 60em) {
+    .w-80-l { width: 80%; }
+    .w-70-l { width: 70%; }
+  }
+  /* display and positioning */
+  .centered-body { max-width: 100ch; padding: 0 0.5rem 0 0.5rem; margin: 0.5rem auto; }
+  .center { margin-right: auto; margin-left: auto; }
+  /* text */
+  .break-word { overflow-wrap: break-word; word-break: break-word; }
+  /* misc */
+  .list-style-none { list-style: none; }
+  .object-cover { object-fit: cover; }
+  /* pagination */
+  .pagination a { padding: 0.5rem 1rem; text-decoration: none; color: black; }
+  .pagination a:hover,
+  .pagination a:focus { padding: 0.5rem 1rem; background-color: #d4d4d4; }
+  .pagination a.current { font-weight: bold; text-decoration: underline; }
+  /* gallery */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); grid-gap: 1px; }
+  @media screen and (min-width: 30em) and (max-width: 60em) {
+    .gallery { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  }
+  @media screen and (min-width: 60em) {
+    .gallery { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  }
+  .gallery figure { position: relative; height: 100%; width: 100%; margin: 0; padding: 0; }
+  .gallery figure img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1; }
+  .gallery figure .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); opacity: 0; transition: opacity 0.3s ease; overflow: hidden; }
+  .gallery figure:hover .overlay,
+  .gallery figure:focus .overlay { opacity: 1; }
+  .gallery figure .overlay figcaption { padding: 1rem; color: white; }
 </style>
-<nav>
-  {{ range $i, $navigationLink := $.Site.NavigationLinks }}
-  {{ if $i }}&boxv; {{ end }}<a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a>
+<body class='centered-body'>
+<div>
+  <div class='f4 mv2'>{{ $.Site.Title }}</div>
+  {{ if $.Site.Tagline }}
+  <div class='mv2'>{{ $.Site.Tagline }}</div>
   {{ end }}
-</nav>
-<hr>
-{{ markdownToHTML $.Site.Description }}
+  {{ if $.Site.NavigationLinks }}
+  <nav>
+    <ul class='list-style-none flex flex-wrap pa0 mv3 bt bb'>
+      {{ range $i, $navigationLink := $.Site.NavigationLinks }}
+      <li class='mv2 mr3'><a href='{{ $navigationLink.URL }}'>{{ $navigationLink.Name }}</a></li>
+      {{ end }}
+    </ul>
+  </nav>
+  {{ end }}
+</div>
+<article>
+  {{ markdownToHTML $.Site.Description }}
+</article>
