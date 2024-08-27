@@ -1973,7 +1973,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 			}
 		}
 		defer writer.Close()
-		atomPath := "/" + path.Join("posts", category) + "/index.atom"
+		atomPath := "/" + path.Join("posts", category) + "/feed.atom"
 		_, err = io.Copy(writer, strings.NewReader("<!DOCTYPE html>\n"+
 			"<html lang='"+template.HTMLEscapeString(siteGen.Site.LanguageCode)+"'>\n"+
 			"<meta charset='utf-8'>\n"+
@@ -2084,7 +2084,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				Title:   siteGen.Site.Title,
 				Updated: time.Now().UTC().Format("2006-01-02 15:04:05Z"),
 				Link: []AtomLink{{
-					Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/index.atom",
+					Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/feed.atom",
 					Rel:  "self",
 				}, {
 					Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/",
@@ -2135,7 +2135,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					},
 				}
 			}
-			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
+			writer, err := siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "feed.atom"), 0644)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
 					return stacktrace.New(err)
@@ -2144,7 +2144,7 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 				if err != nil {
 					return stacktrace.New(err)
 				}
-				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "index.atom"), 0644)
+				writer, err = siteGen.fsys.WithContext(groupctxB).OpenWriter(path.Join(outputDir, "feed.atom"), 0644)
 				if err != nil {
 					return stacktrace.New(err)
 				}
