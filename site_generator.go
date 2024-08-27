@@ -251,21 +251,6 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 		return "", fmt.Errorf("%#v is not a string", x)
 	}
-	siteGen.funcMap["firstLine"] = func(x any) (string, error) {
-		if s, ok := x.(string); ok {
-			var line string
-			remainder := s
-			for len(remainder) > 0 {
-				line, remainder, _ = strings.Cut(remainder, "\n")
-				if len(line) == 0 {
-					continue
-				}
-				return line, nil
-			}
-			return markdownTextOnly(siteGen.markdown.Parser(), []byte(s)), nil
-		}
-		return "", fmt.Errorf("%#v is not a string", x)
-	}
 	var timezoneOffsetSeconds int
 	if strings.HasPrefix(config.TimezoneOffset, "+") || strings.HasPrefix(config.TimezoneOffset, "-") {
 		before, after, ok := strings.Cut(config.TimezoneOffset, ":")
@@ -2770,6 +2755,20 @@ var baseFuncMap = map[string]any{
 			}
 		}
 		return result, nil
+	},
+	"firstLine": func(x any) (string, error) {
+		if s, ok := x.(string); ok {
+			var line string
+			remainder := s
+			for len(remainder) > 0 {
+				line, remainder, _ = strings.Cut(remainder, "\n")
+				if len(line) == 0 {
+					continue
+				}
+				return line, nil
+			}
+		}
+		return "", fmt.Errorf("%#v is not a string", x)
 	},
 }
 
