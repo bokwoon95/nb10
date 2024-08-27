@@ -253,6 +253,16 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, response.Parent)+"/", http.StatusFound)
 				return
 			case "posts":
+				_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, tail+".md"))
+				if err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						http.Redirect(w, r, "/"+path.Join("files", sitePrefix, tail), http.StatusFound)
+						return
+					}
+					nbrew.GetLogger(r.Context()).Error(err.Error())
+					nbrew.InternalServerError(w, r, err)
+					return
+				}
 				http.Redirect(w, r, "/"+path.Join("files", sitePrefix, tail+".md"), http.StatusFound)
 				return
 			case "":
