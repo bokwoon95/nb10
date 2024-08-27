@@ -29,6 +29,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var defaultMarkdown = goldmark.New(goldmark.WithParserOptions(parser.WithAttribute()))
+
 func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type Request struct {
 		Parent  string
@@ -338,10 +340,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 							continue
 						}
 						if response.Ext == ".md" {
-							markdown := goldmark.New(
-								goldmark.WithParserOptions(parser.WithAttribute()),
-							)
-							response.Name = filenameSafe(markdownTextOnly(markdown.Parser(), []byte(line)))
+							response.Name = filenameSafe(markdownTextOnly(defaultMarkdown.Parser(), []byte(line)))
 						} else {
 							response.Name = filenameSafe(line)
 						}
@@ -404,9 +403,6 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			if request.Name != "" {
 				response.Name = urlSafe(request.Name)
 			} else {
-				markdown := goldmark.New(
-					goldmark.WithParserOptions(parser.WithAttribute()),
-				)
 				remainder := response.Content
 				for remainder != "" {
 					response.Name, remainder, _ = strings.Cut(remainder, "\n")
@@ -414,7 +410,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					if response.Name == "" {
 						continue
 					}
-					response.Name = urlSafe(markdownTextOnly(markdown.Parser(), []byte(response.Name)))
+					response.Name = urlSafe(markdownTextOnly(defaultMarkdown.Parser(), []byte(response.Name)))
 					if response.Name == "" {
 						continue
 					}

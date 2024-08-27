@@ -245,6 +245,12 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 		return "", fmt.Errorf("%#v is not a string", x)
 	}
+	siteGen.funcMap["markdownTextOnly"] = func(x any) (string, error) {
+		if s, ok := x.(string); ok {
+			return markdownTextOnly(siteGen.markdown.Parser(), []byte(s)), nil
+		}
+		return "", fmt.Errorf("%#v is not a string", x)
+	}
 	var timezoneOffsetSeconds int
 	if strings.HasPrefix(config.TimezoneOffset, "+") || strings.HasPrefix(config.TimezoneOffset, "-") {
 		before, after, ok := strings.Cut(config.TimezoneOffset, ":")
