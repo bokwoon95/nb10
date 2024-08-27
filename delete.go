@@ -256,7 +256,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 				_, err := fs.Stat(nbrew.FS.WithContext(r.Context()), path.Join(sitePrefix, tail+".md"))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
-						http.Redirect(w, r, "/"+path.Join("files", sitePrefix, tail), http.StatusFound)
+						http.Redirect(w, r, "/"+path.Join("files", sitePrefix, tail)+"/", http.StatusFound)
 						return
 					}
 					nbrew.GetLogger(r.Context()).Error(err.Error())
