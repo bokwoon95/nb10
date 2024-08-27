@@ -2518,19 +2518,25 @@ var baseFuncMap = map[string]any{
 		}
 		return "", fmt.Errorf("not a string: %#v", x)
 	},
-	"head": func(x any) (string, error) {
-		if x, ok := x.(string); ok {
-			head, _, _ := strings.Cut(x, "/")
-			return head, nil
+	"trimHead": func(str, sep any) (string, error) {
+		if str, ok := str.(string); ok {
+			if sep, ok := sep.(string); ok {
+				_, tail, _ := strings.Cut(str, sep)
+				return tail, nil
+			}
+			return "", fmt.Errorf("not a string: %#v", sep)
 		}
-		return "", fmt.Errorf("not a string: %#v", x)
+		return "", fmt.Errorf("not a string: %#v", str)
 	},
-	"tail": func(x any) (string, error) {
-		if x, ok := x.(string); ok {
-			_, tail, _ := strings.Cut(x, "/")
-			return tail, nil
+	"trimTail": func(str, sep any) (string, error) {
+		if str, ok := str.(string); ok {
+			if sep, ok := sep.(string); ok {
+				head, _, _ := strings.Cut(str, sep)
+				return head, nil
+			}
+			return "", fmt.Errorf("not a string: %#v", sep)
 		}
-		return "", fmt.Errorf("not a string: %#v", x)
+		return "", fmt.Errorf("not a string: %#v", str)
 	},
 	"base": func(x any) (string, error) {
 		if x, ok := x.(string); ok {
@@ -2755,20 +2761,6 @@ var baseFuncMap = map[string]any{
 			}
 		}
 		return result, nil
-	},
-	"firstLine": func(x any) (string, error) {
-		if s, ok := x.(string); ok {
-			var line string
-			remainder := s
-			for len(remainder) > 0 {
-				line, remainder, _ = strings.Cut(remainder, "\n")
-				if len(line) == 0 {
-					continue
-				}
-				return line, nil
-			}
-		}
-		return "", fmt.Errorf("%#v is not a string", x)
 	},
 }
 
