@@ -72,7 +72,7 @@ type SiteGenerator struct {
 
 	// mutex is used to guard access to templateCache, templateInProgress and
 	// imgFileIDs.
-	mutex sync.RWMutex
+	mutex sync.Mutex
 
 	// templateCache caches already-parsed templates, keyed by their file path
 	// (relative to the sitePrefix).
@@ -156,7 +156,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		contentDomainHTTPS: siteGenConfig.ContentDomainHTTPS,
 		cdnDomain:          siteGenConfig.CDNDomain,
 		funcMap:            map[string]any{},
-		mutex:              sync.RWMutex{},
+		mutex:              sync.Mutex{},
 		templateCache:      make(map[string]*template.Template),
 		templateInProgress: make(map[string]chan struct{}),
 	}
@@ -421,9 +421,9 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 			}
 			// If a template is currently being parsed, wait for it to finish
 			// before checking the templateCache for the result.
-			siteGen.mutex.RLock()
+			siteGen.mutex.Lock()
 			wait := siteGen.templateInProgress[externalName]
-			siteGen.mutex.RUnlock()
+			siteGen.mutex.Unlock()
 			if wait != nil {
 				select {
 				case <-groupctx.Done():
@@ -432,9 +432,9 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 					break
 				}
 			}
-			siteGen.mutex.RLock()
+			siteGen.mutex.Lock()
 			cachedTemplate, ok := siteGen.templateCache[externalName]
-			siteGen.mutex.RUnlock()
+			siteGen.mutex.Unlock()
 			if ok {
 				// We found the template; add it to the slice and exit. Note
 				// that the cachedTemplate may be nil, if parsing that template
