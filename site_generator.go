@@ -179,6 +179,7 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 	if len(b) > 0 {
 		err := json.Unmarshal(b, &config)
 		if err != nil {
+			fmt.Printf("%s\n", string(b))
 			return nil, stacktrace.New(err)
 		}
 	} else {
