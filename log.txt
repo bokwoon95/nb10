@@ -541,9 +541,13 @@ where to put creationTime/modificationTime?
 notebrew.com/
 notebrew.com/download/
 
+[DONE]
 - image gallery, instagram style | https://www.avogado6.com/
+
+[MEH]
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
 - title + preview + read more | https://wordsandbuttons.online/
+
 - title + preview, dates justified to the right | https://stevelosh.com/blog/
 - line delimited | https://akoutmos.com/
 - boxed | https://www.eyeswift.com/category/blogging/
