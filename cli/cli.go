@@ -25,7 +25,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	texttemplate "text/template"
 	"time"
 
 	"github.com/bokwoon95/nb10"
@@ -1069,7 +1068,24 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, closers, err
 		}
-		tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
+		siteConfig := nb10.SiteConfig{
+			LanguageCode:   "en",
+			Title:          "My Blog",
+			Tagline:        "",
+			Emoji:          "☕️",
+			Favicon:        "",
+			CodeStyle:      "onedark",
+			TimezoneOffset: "+00:00",
+			Description:    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+			NavigationLinks: []nb10.NavigationLink{{
+				Name: "Home",
+				URL:  "/",
+			}, {
+				Name: "Posts",
+				URL:  "/posts/",
+			}},
+		}
+		b, err := json.MarshalIndent(&siteConfig, "", "  ")
 		if err != nil {
 			return nil, closers, err
 		}
@@ -1078,7 +1094,7 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 			return nil, closers, err
 		}
 		defer writer.Close()
-		err = tmpl.Execute(writer, nil)
+		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
 			return nil, closers, err
 		}

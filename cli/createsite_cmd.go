@@ -2,7 +2,9 @@ package cli
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,7 +14,6 @@ import (
 	"path"
 	"slices"
 	"strings"
-	texttemplate "text/template"
 	"time"
 
 	"github.com/bokwoon95/nb10"
@@ -249,7 +250,24 @@ func (cmd *CreatesiteCmd) Run() error {
 		}
 		group, groupctx := errgroup.WithContext(context.Background())
 		group.Go(func() error {
-			tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
+			siteConfig := nb10.SiteConfig{
+				LanguageCode:   "en",
+				Title:          cmd.SiteTitle,
+				Tagline:        cmd.SiteTagline,
+				Emoji:          "☕️",
+				Favicon:        "",
+				CodeStyle:      "onedark",
+				TimezoneOffset: "+00:00",
+				Description:    cmd.SiteDescription,
+				NavigationLinks: []nb10.NavigationLink{{
+					Name: "Home",
+					URL:  "/",
+				}, {
+					Name: "Posts",
+					URL:  "/posts/",
+				}},
+			}
+			b, err := json.MarshalIndent(&siteConfig, "", "  ")
 			if err != nil {
 				return err
 			}
@@ -258,11 +276,7 @@ func (cmd *CreatesiteCmd) Run() error {
 				return err
 			}
 			defer writer.Close()
-			err = tmpl.Execute(writer, map[string]string{
-				"Title":       cmd.SiteTitle,
-				"Tagline":     cmd.SiteTagline,
-				"Description": cmd.SiteDescription,
-			})
+			_, err = io.Copy(writer, bytes.NewReader(b))
 			if err != nil {
 				return err
 			}

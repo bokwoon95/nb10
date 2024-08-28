@@ -1,11 +1,13 @@
 package nb10
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"mime"
 	"net"
@@ -15,7 +17,6 @@ import (
 	"path"
 	"slices"
 	"strings"
-	texttemplate "text/template"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
@@ -395,7 +396,32 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 		}
-		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
+		seconds := user.TimezoneOffsetSeconds
+		sign := "+"
+		if seconds < 0 {
+			seconds = -seconds
+			sign = "-"
+		}
+		hours := seconds / 3600
+		minutes := (seconds % 3600) / 60
+		siteConfig := SiteConfig{
+			LanguageCode:   "en",
+			Title:          response.SiteTitle,
+			Tagline:        response.SiteTagline,
+			Emoji:          "☕️",
+			Favicon:        "",
+			CodeStyle:      "onedark",
+			TimezoneOffset: fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
+			Description:    response.SiteDescription,
+			NavigationLinks: []NavigationLink{{
+				Name: "Home",
+				URL:  "/",
+			}, {
+				Name: "Posts",
+				URL:  "/posts/",
+			}},
+		}
+		b, err := json.MarshalIndent(&siteConfig, "", "  ")
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
@@ -408,20 +434,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			return
 		}
 		defer writer.Close()
-		seconds := user.TimezoneOffsetSeconds
-		sign := "+"
-		if seconds < 0 {
-			seconds = -seconds
-			sign = "-"
-		}
-		hours := seconds / 3600
-		minutes := (seconds % 3600) / 60
-		err = tmpl.Execute(writer, map[string]string{
-			"Title":          response.SiteTitle,
-			"Tagline":        response.SiteTagline,
-			"Description":    response.SiteDescription,
-			"TimezoneOffset": fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
-		})
+		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)

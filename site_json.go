@@ -23,6 +23,18 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type SiteConfig struct {
+	LanguageCode    string           `json:"languageCode"`
+	Title           string           `json:"title"`
+	Tagline         string           `json:"tagline"`
+	Emoji           string           `json:"emoji"`
+	Favicon         string           `json:"favicon"`
+	CodeStyle       string           `json:"codeStyle"`
+	TimezoneOffset  string           `json:"timezoneOffset"`
+	Description     string           `json:"description"`
+	NavigationLinks []NavigationLink `json:"navigationLinks"`
+}
+
 func (nbrew *Notebrew) siteJSON(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
 	type NavigationLink struct {
 		Name string       `json:"name"`

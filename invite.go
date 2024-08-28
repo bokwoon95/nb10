@@ -1,6 +1,7 @@
 package nb10
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/hex"
@@ -8,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -18,7 +20,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	texttemplate "text/template"
 	"time"
 	"unicode/utf8"
 
@@ -547,7 +548,32 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 				return
 			}
 		}
-		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
+		sign := "+"
+		seconds := response.TimezoneOffsetSeconds
+		if response.TimezoneOffsetSeconds < 0 {
+			sign = "-"
+			seconds = -response.TimezoneOffsetSeconds
+		}
+		hours := seconds / 3600
+		minutes := (seconds % 3600) / 60
+		siteConfig := SiteConfig{
+			LanguageCode:   "en",
+			Title:          response.SiteTitle,
+			Tagline:        response.SiteTagline,
+			Emoji:          "☕️",
+			Favicon:        "",
+			CodeStyle:      "onedark",
+			TimezoneOffset: fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
+			Description:    response.SiteDescription,
+			NavigationLinks: []NavigationLink{{
+				Name: "Home",
+				URL:  "/",
+			}, {
+				Name: "Posts",
+				URL:  "/posts/",
+			}},
+		}
+		b, err := json.MarshalIndent(&siteConfig, "", "  ")
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
@@ -560,20 +586,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return
 		}
 		defer writer.Close()
-		sign := "+"
-		seconds := response.TimezoneOffsetSeconds
-		if response.TimezoneOffsetSeconds < 0 {
-			sign = "-"
-			seconds = -response.TimezoneOffsetSeconds
-		}
-		hours := seconds / 3600
-		minutes := (seconds % 3600) / 60
-		err = tmpl.Execute(writer, map[string]string{
-			"Title":          response.SiteTitle,
-			"Tagline":        response.SiteTagline,
-			"Description":    response.SiteDescription,
-			"TimezoneOffset": fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
-		})
+		_, err = io.Copy(writer, bytes.NewReader(b))
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
 			nbrew.InternalServerError(w, r, err)
