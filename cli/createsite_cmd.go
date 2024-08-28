@@ -25,6 +25,7 @@ type CreatesiteCmd struct {
 	Stdout          io.Writer
 	SiteName        string
 	SiteTitle       string
+	SiteTagline     string
 	SiteDescription string
 }
 
@@ -43,6 +44,10 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 	})
 	flagset.Func("title", "", func(s string) error {
 		cmd.SiteTitle = strings.TrimSpace(s)
+		return nil
+	})
+	flagset.Func("tagline", "", func(s string) error {
+		cmd.SiteTagline = strings.TrimSpace(s)
 		return nil
 	})
 	flagset.Func("description", "", func(s string) error {
@@ -125,6 +130,12 @@ func CreatesiteCommand(nbrew *nb10.Notebrew, args ...string) (*CreatesiteCmd, er
 				return nil, err
 			}
 			cmd.SiteTitle = strings.TrimSpace(text)
+			fmt.Print("Site tagline: ")
+			text, err = reader.ReadString('\n')
+			if err != nil {
+				return nil, err
+			}
+			cmd.SiteTagline = strings.TrimSpace(text)
 			fmt.Print("Site description: ")
 			text, err = reader.ReadString('\n')
 			if err != nil {
@@ -238,16 +249,6 @@ func (cmd *CreatesiteCmd) Run() error {
 		}
 		group, groupctx := errgroup.WithContext(context.Background())
 		group.Go(func() error {
-			var home string
-			if cmd.SiteTitle != "" {
-				home = cmd.SiteTitle
-			} else if cmd.SiteName == "" {
-				home = "home"
-			} else if strings.Contains(cmd.SiteName, ".") {
-				home = cmd.SiteName
-			} else {
-				home = cmd.SiteName + "." + cmd.Notebrew.ContentDomain
-			}
 			tmpl, err := texttemplate.ParseFS(nb10.RuntimeFS, "embed/site.json")
 			if err != nil {
 				return err
@@ -258,8 +259,8 @@ func (cmd *CreatesiteCmd) Run() error {
 			}
 			defer writer.Close()
 			err = tmpl.Execute(writer, map[string]string{
-				"Home":        home,
 				"Title":       cmd.SiteTitle,
+				"Tagline":     cmd.SiteTagline,
 				"Description": cmd.SiteDescription,
 			})
 			if err != nil {

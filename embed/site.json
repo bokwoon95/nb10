@@ -1,6 +1,7 @@
 {
   "languageCode": "{{ if $.LanguageCode }}{{ $.LanguageCode }}{{ else }}en{{ end }}",
   "title": "{{ if $.Title }}{{ $.Title }}{{ else }}My Blog{{ end }}",
+  "tagline": "{{ $.Tagline }}",
   "emoji": "{{ if $.Emoji }}{{ $.Emoji }}{{ else }}☕{{ end }}",
   "favicon": "",
   "codeStyle": "{{ if $.CodeStyle }}{{ $.CodeStyle}}{{ else }}onedark{{ end }}",
@@ -8,11 +9,11 @@
   "description": "{{ if $.Description }}{{ $.Description }}{{ else }}# Hello World!\n\nWelcome to my blog.{{ end }}",
   "navigationLinks": [
     {
-      "name": "{{ if $.Home }}{{ $.Home }}{{ else }}home{{ end }}",
+      "name": "Home",
       "url": "/"
     },
     {
-      "name": "posts",
+      "name": "Posts",
       "url": "/posts/"
     }
   ]

@@ -103,6 +103,15 @@
     </ul>
   </div>
   <div class='mv3'>
+    <div><label for='siteTagline' class='b'>Tagline:</label></div>
+    <input id='siteTagline' name='siteTagline' value='{{ $.SiteTagline }}' class='pv1 ph2 br2 ba w-100{{ if index $.FormErrors "siteTagline" }} b--invalid-red{{ end }}'>
+    <ul class='list-style-disc ph3 f6 invalid-red'>
+      {{- range $error := index $.FormErrors "siteTagline" }}
+      <li>{{ $error }}</li>
+      {{- end }}
+    </ul>
+  </div>
+  <div class='mv3'>
     <div><label for='siteDescription' class='b'>Description:</label></div>
     <textarea id='siteDescription' name='siteDescription' class='min-h4 pv1 ph2 br2 ba w-100 resize-vertical code{{ if index $.FormErrors "siteDescription" }} b--invalid-red{{ end }}'>{{ $.SiteDescription }}</textarea>
     <ul class='list-style-disc ph3 f6 invalid-red'>

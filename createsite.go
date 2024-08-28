@@ -28,6 +28,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 	type Request struct {
 		SiteName        string `json:"siteName"`
 		SiteTitle       string `json:"siteTitle"`
+		SiteTagline     string `json:"siteTagline"`
 		SiteDescription string `json:"siteDescription"`
 	}
 	type Response struct {
@@ -42,6 +43,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		UserSiteNames        []string   `json:"userSiteNames"`
 		SiteName             string     `json:"siteName"`
 		SiteTitle            string     `json:"siteTitle"`
+		SiteTagline          string     `json:"siteTagline"`
 		SiteDescription      string     `json:"siteDescription"`
 		Error                string     `json:"error"`
 		FormErrors           url.Values `json:"formErrors"`
@@ -217,6 +219,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 			}
 			request.SiteName = r.Form.Get("siteName")
 			request.SiteTitle = r.Form.Get("siteTitle")
+			request.SiteTagline = r.Form.Get("siteTagline")
 			request.SiteDescription = r.Form.Get("siteDescription")
 		default:
 			nbrew.UnsupportedContentType(w, r)
@@ -227,6 +230,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		response := Response{
 			SiteName:        request.SiteName,
 			SiteTitle:       request.SiteTitle,
+			SiteTagline:     request.SiteTagline,
 			SiteDescription: request.SiteDescription,
 			FormErrors:      url.Values{},
 		}
@@ -391,16 +395,6 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 				return
 			}
 		}
-		var home string
-		if response.SiteTitle != "" {
-			home = response.SiteTitle
-		} else if response.SiteName == "" {
-			home = "home"
-		} else if strings.Contains(response.SiteName, ".") {
-			home = response.SiteName
-		} else {
-			home = response.SiteName + "." + nbrew.ContentDomain
-		}
 		tmpl, err := texttemplate.ParseFS(RuntimeFS, "embed/site.json")
 		if err != nil {
 			nbrew.GetLogger(r.Context()).Error(err.Error())
@@ -423,8 +417,8 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		hours := seconds / 3600
 		minutes := (seconds % 3600) / 60
 		err = tmpl.Execute(writer, map[string]string{
-			"Home":           home,
 			"Title":          response.SiteTitle,
+			"Tagline":        response.SiteTagline,
 			"Description":    response.SiteDescription,
 			"TimezoneOffset": fmt.Sprintf("%s%02d:%02d", sign, hours, minutes),
 		})
