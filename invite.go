@@ -232,6 +232,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			}
 			request.SiteName = r.Form.Get("siteName")
 			request.SiteTitle = r.Form.Get("siteTitle")
+			request.SiteTagline = r.Form.Get("siteTagline")
 			request.SiteDescription = r.Form.Get("siteDescription")
 		default:
 			nbrew.UnsupportedContentType(w, r)
@@ -245,6 +246,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			TimezoneOffsetSeconds: request.TimezoneOffsetSeconds,
 			SiteName:              request.SiteName,
 			SiteTitle:             request.SiteTitle,
+			SiteTagline:           request.SiteTagline,
 			SiteDescription:       request.SiteDescription,
 			FormErrors:            url.Values{},
 		}
