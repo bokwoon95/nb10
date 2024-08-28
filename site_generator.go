@@ -183,18 +183,9 @@ func NewSiteGenerator(ctx context.Context, siteGenConfig SiteGeneratorConfig) (*
 		}
 	} else {
 		config.Emoji = "☕"
-		var home string
-		siteName := strings.TrimPrefix(siteGen.sitePrefix, "@")
-		if siteName == "" {
-			home = "home"
-		} else if strings.Contains(siteName, ".") {
-			home = siteName
-		} else {
-			home = siteName + "." + siteGen.contentDomain
-		}
 		config.NavigationLinks = []NavigationLink{
-			{Name: home, URL: "/"},
-			{Name: "posts", URL: "/posts/"},
+			{Name: "Home", URL: "/"},
+			{Name: "Posts", URL: "/posts/"},
 		}
 	}
 	if config.LanguageCode == "" {
