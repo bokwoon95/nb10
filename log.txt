@@ -132,8 +132,6 @@ API Documentation.
 TODO: come up with a unified stylesheet and use it as the base for the default theme + all other themes.
     TODO: once you come up with it, update the default theme in the embedded index.html/404.html/post.html/postlist.html
 TODO: see if you can reduce the vertical spacing for the default theme, so the navbar area looks smaller.
-TODO: notebrewlive probably needs a terms of service page somewhere (linked in signup.html?)
-TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
     TODO: /files/static/essential-guide-6a0f0a00.html (user tutorials)
