@@ -62,7 +62,7 @@
   .pagination a.current { font-weight: bold; text-decoration: underline; }
 </style>
 <body class='centered-body'>
-<div>
+<header>
   <div class='f4 mv2'>{{ $.Site.Title }}</div>
   {{ if $.Site.Tagline }}
   <div class='mv2'>{{ $.Site.Tagline }}</div>
@@ -76,7 +76,7 @@
     </ul>
   </nav>
   {{ end }}
-</div>
+</header>
 <h1 class='mv3 pa0'>{{ if $.Category }}{{ title (replace $.Category "-" " ") }}{{ else }}Posts{{ end }}</h1>
 {{ if $.Posts }}
 {{ template "pagination" $ }}

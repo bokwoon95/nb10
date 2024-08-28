@@ -57,7 +57,7 @@
   .object-cover { object-fit: cover; }
 </style>
 <body class='centered-body'>
-<div>
+<header>
   <div class='f4 mv2'>{{ $.Site.Title }}</div>
   {{ if $.Site.Tagline }}
   <div class='mv2'>{{ $.Site.Tagline }}</div>
@@ -71,7 +71,7 @@
     </ul>
   </nav>
   {{ end }}
-</div>
+</header>
 <article>
   {{ markdownToHTML $.Site.Description }}
 </article>
