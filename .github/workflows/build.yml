@@ -77,6 +77,8 @@ jobs:
         prerelease: false
 
     - name: Upload to Release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         for os_arch in $(ls dist); do
           gh release upload ${{ github.ref }} dist/$os_arch/notebrew* --clobber
