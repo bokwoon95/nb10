@@ -64,7 +64,7 @@ jobs:
     - name: Download binaries
       uses: actions/download-artifact@v4
       with:
-        name: notebrew-${{ matrix.os }}-${{ matrix.arch }}
+        path: ./dist
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
