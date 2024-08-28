@@ -549,6 +549,8 @@ notebrew.com/download/
 - title + preview + read more | https://wordsandbuttons.online/
 
 - title + preview, dates justified to the right | https://stevelosh.com/blog/
+    - "steve"
+    - sakura pink-red?
 - line delimited | https://akoutmos.com/
 - boxed | https://www.eyeswift.com/category/blogging/
 - cards with image (if exists) | https://theblogtrottergirl.com/
