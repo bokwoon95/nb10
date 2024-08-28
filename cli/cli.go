@@ -629,7 +629,7 @@ func Notebrew(configDir, dataDir string, csp map[string]string) (*nb10.Notebrew,
 			var db *sql.DB
 			var errorCode func(error) string
 			switch fsConfig.Dialect {
-			case "sqlite":
+			case "", "sqlite":
 				if fsConfig.FilePath == "" {
 					fsConfig.FilePath = filepath.Join(dataDir, "notebrew-files.db")
 				}
