@@ -50,9 +50,9 @@ jobs:
         go build -ldflags '-w' -tags open_browser,fts5 -trimpath -o dist/${{ matrix.os }}-${{ matrix.arch }}/${binary_name} ./notebrew
 
     - name: Upload binaries
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: myapp-${{ matrix.os }}-${{ matrix.arch }}
+        name: notebrew-${{ matrix.os }}-${{ matrix.arch }}
         path: dist/${{ matrix.os }}-${{ matrix.arch }}/notebrew*
 
   release:
@@ -62,9 +62,9 @@ jobs:
 
     steps:
     - name: Download binaries
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
-        name: '**'
+        name: notebrew-${{ matrix.os }}-${{ matrix.arch }}
 
     - name: Create GitHub Release
       uses: actions/create-release@v1
