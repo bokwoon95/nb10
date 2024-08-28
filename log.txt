@@ -129,6 +129,7 @@ Themes showcase.
 
 API Documentation.
 
+TODO: figure out how to implement "press any key to exit" on macOS.
 TODO: come up with a unified stylesheet and use it as the base for the default theme + all other themes.
     TODO: once you come up with it, update the default theme in the embedded index.html/404.html/post.html/postlist.html
 TODO: see if you can reduce the vertical spacing for the default theme, so the navbar area looks smaller.
