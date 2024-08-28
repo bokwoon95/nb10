@@ -26,15 +26,28 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "GOOS=$(echo ${{ matrix.os }} | cut -d'-' -f1)" >> $GITHUB_ENV
-        echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+        # Set GOOS based on matrix.os
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          echo "GOOS=windows" >> $GITHUB_ENV
+        elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+          echo "GOOS=darwin" >> $GITHUB_ENV
+        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          echo "GOOS=linux" >> $GITHUB_ENV
+        fi
+
+        # Set GOARCH based on matrix.arch
+        if [ "${{ matrix.arch }}" == "amd64" ]; then
+          echo "GOARCH=amd64" >> $GITHUB_ENV
+        elif [ "${{ matrix.arch }}" == "arm64" ]; then
+          echo "GOARCH=arm64" >> $GITHUB_ENV
+        fi
 
     - name: Build
       run: |
         mkdir -p dist/${{ matrix.os }}-${{ matrix.arch }}
         binary_name="notebrew"
         if [ "${{ env.GOOS }}" == "windows" ]; then binary_name="notebrew.exe"; fi
-        go build -o dist/${{ matrix.os }}-${{ matrix.arch }}/${binary_name} ./...
+        go build -ldflags '-w' -tags open_browser,fts5 -trimpath -o dist/${{ matrix.os }}-${{ matrix.arch }}/${binary_name} ./notebrew
 
     - name: Upload binaries
       uses: actions/upload-artifact@v3
