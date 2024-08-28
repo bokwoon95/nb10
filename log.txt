@@ -129,6 +129,7 @@ Themes showcase.
 
 API Documentation.
 
+TODO: add tagline to createsite_cmd.go, createsite.go and invite.go.
 TODO: notebrewlive probably needs a terms of service page somewhere (linked in signup.html?)
 TODO: simplegallery postlist.html: add visual feedback when an image link is clicked.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
