@@ -99,11 +99,16 @@ Flags:`)
 				return nil, err
 			}
 			cmd.Username = strings.TrimSpace(text)
+			var hasInvalidChar bool
 			for _, char := range cmd.Username {
 				if (char < 'a' || char > 'z') && (char < '0' || char > '9') && char != '-' {
-					fmt.Println("username can only contain lowercase letters, numbers and hyphen")
-					continue
+					hasInvalidChar = true
+					break
 				}
+			}
+			if hasInvalidChar {
+				fmt.Println("username can only contain lowercase letters, numbers and hyphen")
+				continue
 			}
 			if len(cmd.Username) > 30 {
 				fmt.Println("username cannot exceed 30 characters")
