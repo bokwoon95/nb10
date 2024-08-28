@@ -25,6 +25,7 @@ func init() {
 	// the first place. If run from the command line, do not present the user with
 	// the prompt.
 	exit = func(exitErr error) {
+		fmt.Println(exitErr)
 		// Detect if windows golang executable file is running via double click or
 		// from cmd/shell terminator.
 		// https://gist.github.com/yougg/213250cc04a52e2b853590b06f49d865
@@ -41,16 +42,13 @@ func init() {
 		var mode uint32
 		err := syscall.GetConsoleMode(h, &mode)
 		if err != nil {
-			fmt.Println(exitErr)
 			return
 		}
 		success, _, _ := setConsoleMode.Call(uintptr(h), 0)
 		if success == 0 {
-			fmt.Println(exitErr)
 			return
 		}
 		defer setConsoleMode.Call(uintptr(h), uintptr(mode))
-		fmt.Println(exitErr)
 		fmt.Print("Press any key to exit...")
 		os.Stdin.Read(make([]byte, 1))
 		os.Exit(1)

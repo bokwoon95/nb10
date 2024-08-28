@@ -295,7 +295,7 @@ func (cmd *CreateuserCmd) Run() error {
 
 var getCommonPasswords = sync.OnceValues(func() (map[string]struct{}, error) {
 	commonPasswords := make(map[string]struct{}, 10000)
-	file, err := nb10.RuntimeFS.Open("embed/top-10000-passwords.txt")
+	file, err := nb10.RuntimeFS.Open("embed/top_10000_passwords.txt")
 	if err != nil {
 		return nil, err
 	}
