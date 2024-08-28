@@ -70,6 +70,7 @@ jobs:
         path: ./dist
 
     - name: Create GitHub Release
+      id: create_release # Assign an ID to reference this step later
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -79,10 +80,13 @@ jobs:
         draft: false
         prerelease: false
 
+    - name: Ensure Release is Created
+      run: sleep 10  # Optional: Add a small delay to ensure the release is available
+
     - name: Upload to Release
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         for os_arch in $(ls dist); do
-          gh release upload ${{ github.ref }} dist/$os_arch/notebrew* --clobber
+          gh release upload ${{ steps.create_release.outputs.html_url }} dist/$os_arch/notebrew* --clobber
         done
