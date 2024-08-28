@@ -1,0 +1,70 @@
+name: Go Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build Go Binary
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        arch: [amd64, arm64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Set environment variables
+      run: |
+        echo "GOOS=$(echo ${{ matrix.os }} | cut -d'-' -f1)" >> $GITHUB_ENV
+        echo "GOARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+
+    - name: Build
+      run: |
+        mkdir -p dist/${{ matrix.os }}-${{ matrix.arch }}
+        binary_name="notebrew"
+        if [ "${{ env.GOOS }}" == "windows" ]; then binary_name="notebrew.exe"; fi
+        go build -o dist/${{ matrix.os }}-${{ matrix.arch }}/${binary_name} ./...
+
+    - name: Upload binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: myapp-${{ matrix.os }}-${{ matrix.arch }}
+        path: dist/${{ matrix.os }}-${{ matrix.arch }}/notebrew*
+
+  release:
+    name: Create Release and Upload Binaries
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Download binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: '**'
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload to Release
+      run: |
+        for os_arch in $(ls dist); do
+          gh release upload ${{ github.ref }} dist/$os_arch/notebrew* --clobber
+        done
