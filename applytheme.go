@@ -527,7 +527,7 @@ func (nbrew *Notebrew) applytheme(w http.ResponseWriter, r *http.Request, user U
 					return stacktrace.New(err)
 				}
 				creationTime := time.Now()
-				err = siteGen.GeneratePage(groupctx, "pages/index.html", text, creationTime, creationTime)
+				err = siteGen.GeneratePage(groupctx, "pages/404/index.html", text, creationTime, creationTime)
 				if err != nil {
 					var templateErr TemplateError
 					if errors.As(err, &templateErr) {
