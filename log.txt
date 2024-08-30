@@ -613,6 +613,7 @@ notebrew.com/download/
 - very classic title and tagline on right, navbar on left, plain simple title + preview + read more posts delimited by line | https://rantover.co.uk/
 - dark theme, highly replaceable color palette | title + preview + read more | https://aartaka.me/
 
+https://eieio.games/blog/
 https://unskilled.blog/
 https://manuelmoreale.com/bearblog-is-fun
 https://www.scribblinggeek.com/
