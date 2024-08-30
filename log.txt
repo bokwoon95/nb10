@@ -129,7 +129,9 @@ Themes showcase.
 
 API Documentation.
 
+TODO: implement gallery theme such that gallery.html can be dropped into any existing theme and it will replace the template "content".
 TODO: figure out how to implement "press any key to exit" on macOS.
+    - include a "you may close this window" message in case they're not savvy enough to realize only enter works.
 TODO: figure out if you can reduce the max-width to 80ch on the default theme as well (see how it plays with the image gallery?)
     NOTE: stevelosh.com, medium and substack all have about the same width. Emulate it!
     NOTE: don't constrain max-width on the body. instead use class='max-width-80ch pa0 mv2 center' hell, we could add max-width-100ch and max-width-120ch as well.
