@@ -1388,7 +1388,7 @@ func (nbrew *Notebrew) AccountDisabled(w http.ResponseWriter, r *http.Request, d
 	buf.WriteTo(w)
 }
 
-// LimitedWriter is the missing half of LimitedReader from the stdlib.
+// LimitedWriter is the missing counterpart of LimitedReader from the stdlib.
 // https://github.com/golang/go/issues/54111#issuecomment-1220793565
 type LimitedWriter struct {
 	W   io.Writer // underlying writer
