@@ -2128,17 +2128,13 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					_, err := io.Copy(pipeWriter, strings.NewReader("\n<div><img"+
 						" src='"+template.HTMLEscapeString(image.Name)+"'"+
 						" alt='"+template.HTMLEscapeString(image.AltText)+"'"+
-						"></div>",
+						"></div>\n",
 					))
 					if err != nil {
 						return stacktrace.New(err)
 					}
 					if len(image.Caption) > 0 {
-						_, err := io.Copy(pipeWriter, strings.NewReader("\n"))
-						if err != nil {
-							return stacktrace.New(err)
-						}
-						err = siteGen.markdown.Convert([]byte(image.Caption), pipeWriter)
+						err := siteGen.markdown.Convert([]byte(image.Caption), pipeWriter)
 						if err != nil {
 							return stacktrace.New(err)
 						}
