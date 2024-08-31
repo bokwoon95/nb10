@@ -301,6 +301,24 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
+			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
+				var b strings.Builder
+				segments := strings.Split(filePath, "/")
+				if sitePrefix != "" {
+					segments = append([]string{sitePrefix}, segments...)
+				}
+				for i := 0; i < len(segments)-1; i++ {
+					if segments[i] == "" {
+						continue
+					}
+					if b.Len() > 0 {
+						b.WriteString("\n<span class='mh1'>&boxv;</span>")
+					}
+					href := "/files/" + path.Join(segments[:i+1]...) + "/"
+					b.WriteString("<a href='" + href + "'>" + segments[i] + "</a>")
+				}
+				return template.HTML(b.String())
+			},
 		}
 		tmpl, err := template.New("image.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/image.html")
 		if err != nil {

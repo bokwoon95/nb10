@@ -27,7 +27,7 @@
   <button class='f3 bg-transparent bn o-70 hover-black' data-dismiss-alert>&times;</button>
 </div>
 {{- end }}
-<div class='mv2'>
+<div class='mv2 flex flex-wrap'>
   {{- if referer }}
   <a href='{{ referer }}' data-go-back>&larr; back</a>
   <span class='mh1'>&boxv;</span>
@@ -48,13 +48,13 @@
     <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
       {{- if eq (head (tail $.FilePath)) "posts" }}
       <span class='mh1'>&boxv;</span>
-      view: <a href='{{ $.URL }}'>post</a>
+      view:&nbsp;<a href='{{ $.URL }}'>post</a>
       {{- else if ne (head (tail $.FilePath)) "themes" }}
       <span class='mh1'>&boxv;</span>
-      view: <a href='{{ $.URL }}'>page</a>
+      view:&nbsp;<a href='{{ $.URL }}'>page</a>
       {{- end }}
     <span class='mh1'>&boxv;</span>
-    belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}'>{{ base $.BelongsTo }}</a>
+    belongs to:&nbsp;<a href='/{{ join "files" $.SitePrefix $.BelongsTo }}'>{{ base $.BelongsTo }}</a>
     {{- else }}
       <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
       {{- if eq (head (tail $.FilePath)) "themes" }}

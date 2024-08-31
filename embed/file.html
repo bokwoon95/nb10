@@ -246,7 +246,7 @@
   </form>
 </div>
 {{- end }}
-<div class='mv2'>
+<div class='mv2 flex flex-wrap'>
   {{- if eq (index $.PostRedirectGet "from") "createfile" "rename" }}
   <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>&larr; back</a>
   <span class='mh1'>&boxv;</span>
@@ -267,17 +267,17 @@
   {{- else if eq (head $.FilePath) "pages" }}
   {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
   <span class='mh1'>&boxv;</span>
-  view: <a href='{{ $.URL }}'>page</a>
+  view:&nbsp;<a href='{{ $.URL }}'>page</a>
   <span class='mh1'>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create page</a>
   {{- else if eq (head $.FilePath) "posts" }}
     {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
     {{- if eq (base $.FilePath) "postlist.html" }}
     <span class='mh1'>&boxv;</span>
-    view: <a href='{{ $.URL }}'>posts</a>
+    view:&nbsp;<a href='{{ $.URL }}'>posts</a>
     {{- else if not (eq (base $.FilePath) "post.html") }}
     <span class='mh1'>&boxv;</span>
-    view: <a href='{{ $.URL }}'>post</a>
+    view:&nbsp;<a href='{{ $.URL }}'>post</a>
     {{- end }}
   <span class='mh1'>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create post</a>
@@ -285,15 +285,15 @@
     {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
     {{- if $.BelongsTo }}
     <span class='mh1'>&boxv;</span>
-    belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}/'>{{ base $.BelongsTo }}</a>
+    belongs to:&nbsp;<a href='/{{ join "files" $.SitePrefix $.BelongsTo }}/'>{{ base $.BelongsTo }}</a>
     {{- end }}
     {{- if $.URL }}
       {{- if eq (head (tail $.FilePath)) "posts" }}
       <span class='mh1'>&boxv;</span>
-      view: <a href='{{ $.URL }}'>post</a>
+      view:&nbsp;<a href='{{ $.URL }}'>post</a>
       {{- else if ne (head (tail $.FilePath)) "themes" }}
       <span class='mh1'>&boxv;</span>
-      view: <a href='{{ $.URL }}'>page</a>
+      view:&nbsp;<a href='{{ $.URL }}'>page</a>
       {{- end }}
     {{- end }}
     <span class='mh1'>&boxv;</span>
