@@ -2110,7 +2110,40 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					postID = scheme + contentDomain + "/" + path.Join("posts", post.Category, post.Name) + "/"
 				}
 				var b strings.Builder
-				err := siteGen.markdown.Convert([]byte(post.Content), &b)
+				pipeReader, pipeWriter := io.Pipe()
+				result := make(chan error, 1)
+				go func() {
+					defer func() {
+						if v := recover(); v != nil {
+							result <- stacktrace.New(fmt.Errorf("panic: %v", v))
+						}
+					}()
+					result <- siteGen.rewriteURLs(&b, pipeReader, path.Join("posts", post.Category, post.Name))
+				}()
+				err := siteGen.markdown.Convert([]byte(post.Content), pipeWriter)
+				if err != nil {
+					return stacktrace.New(err)
+				}
+				for _, image := range post.Images {
+					_, err := io.Copy(pipeWriter, strings.NewReader("<div><img"+
+						" src='"+template.HTMLEscapeString(image.Name)+"'"+
+						" alt='"+template.HTMLEscapeString(image.AltText)+"'"+
+						"></div><div>",
+					))
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					err = siteGen.markdown.Convert([]byte(image.Caption), pipeWriter)
+					if err != nil {
+						return stacktrace.New(err)
+					}
+					_, err = io.Copy(pipeWriter, strings.NewReader("</div>"))
+					if err != nil {
+						return stacktrace.New(err)
+					}
+				}
+				pipeWriter.Close()
+				err = <-result
 				if err != nil {
 					return stacktrace.New(err)
 				}
