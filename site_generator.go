@@ -2070,10 +2070,16 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					contentDomain = siteGen.contentDomain
 				}
 			}
+			var title string
+			if postListData.Category != "" {
+				title = titleConverter.Title(urlSeparatorReplacer.Replace(postListData.Category)) + " - " + contentDomain
+			} else {
+				title = "Posts - " + contentDomain
+			}
 			feed := AtomFeed{
 				Xmlns:   "http://www.w3.org/2005/Atom",
 				ID:      scheme + contentDomain,
-				Title:   siteGen.Site.Title,
+				Title:   title,
 				Updated: time.Now().UTC().Format("2006-01-02 15:04:05Z"),
 				Link: []AtomLink{{
 					Href: scheme + contentDomain + "/" + path.Join("posts", postListData.Category) + "/feed.atom",
