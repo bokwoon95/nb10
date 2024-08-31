@@ -2125,10 +2125,10 @@ func (siteGen *SiteGenerator) GeneratePostListPage(ctx context.Context, category
 					return stacktrace.New(err)
 				}
 				for _, image := range post.Images {
-					_, err := io.Copy(pipeWriter, strings.NewReader("<div><img"+
+					_, err := io.Copy(pipeWriter, strings.NewReader("\n<div><img"+
 						" src='"+template.HTMLEscapeString(image.Name)+"'"+
 						" alt='"+template.HTMLEscapeString(image.AltText)+"'"+
-						"></div><div>",
+						"></div>\n<div>",
 					))
 					if err != nil {
 						return stacktrace.New(err)
