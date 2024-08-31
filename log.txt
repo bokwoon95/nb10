@@ -556,11 +556,11 @@ notebrew.com/download/
 [MEH]
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
 - title + preview + read more | https://wordsandbuttons.online/
-
 - title + preview, dates justified to the right | https://stevelosh.com/blog/
-    - "steve"
-    - sakura pink-red?
+
 - line delimited | https://akoutmos.com/
+    - banner
+
 - boxed | https://www.eyeswift.com/category/blogging/
 - cards with image (if exists) | https://theblogtrottergirl.com/
 - line delimited | https://www.craigkerstiens.com/
