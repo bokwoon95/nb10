@@ -592,6 +592,24 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				fileType := AllowedFileTypes[path.Ext(asset.Name)]
 				return fileType.Has(AttributeImg)
 			},
+			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
+				var b strings.Builder
+				segments := strings.Split(filePath, "/")
+				if sitePrefix != "" {
+					segments = append([]string{sitePrefix}, segments...)
+				}
+				for i := 0; i < len(segments)-1; i++ {
+					if segments[i] == "" {
+						continue
+					}
+					if b.Len() > 0 {
+						b.WriteString("\n<span class='mh1'>&boxv;</span>")
+					}
+					href := "/files/" + path.Join(segments[:i+1]...) + "/"
+					b.WriteString("<a href='" + href + "'>" + segments[i] + "</a>")
+				}
+				return template.HTML(b.String())
+			},
 			"isInClipboard": func(name string) bool {
 				if sitePrefix != clipboard.Get("sitePrefix") {
 					return false

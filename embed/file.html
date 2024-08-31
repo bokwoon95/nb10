@@ -261,35 +261,17 @@
   <span class='mh1'>&boxv;</span>
   {{- end }}
   {{- if eq (head $.FilePath) "notes" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
-  <span class='mh1'>&boxv;</span>
-  <a href='/{{ join "files" $.SitePrefix "notes" }}/'>notes</a>
-    {{- if ne (dir $.FilePath) "notes" }}
-    <span class='mh1'>&boxv;</span>
-    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
-    {{- end }}
+  {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
   <span class='mh1'>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create note</a>
   {{- else if eq (head $.FilePath) "pages" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
-  <span class='mh1'>&boxv;</span>
-  <a href='/{{ join "files" $.SitePrefix "pages" }}/'>pages</a>
-    {{- if ne (dir $.FilePath) "pages" }}
-    <span class='mh1'>&boxv;</span>
-    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
-    {{- end }}
+  {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
   <span class='mh1'>&boxv;</span>
   view: <a href='{{ $.URL }}'>page</a>
   <span class='mh1'>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create page</a>
   {{- else if eq (head $.FilePath) "posts" }}
-  <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
-  <span class='mh1'>&boxv;</span>
-  <a href='/{{ join "files" $.SitePrefix "posts" }}/'>posts</a>
-    {{- if ne (dir $.FilePath) "posts" }}
-    <span class='mh1'>&boxv;</span>
-    category: <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
-    {{- end }}
+    {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
     {{- if eq (base $.FilePath) "postlist.html" }}
     <span class='mh1'>&boxv;</span>
     view: <a href='{{ $.URL }}'>posts</a>
@@ -300,19 +282,10 @@
   <span class='mh1'>&boxv;</span>
   <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ dir $.FilePath }}'>create post</a>
   {{- else if eq (head $.FilePath) "output" }}
-    <a href='/{{ join "files" $.SitePrefix }}/'>{{ if $.SitePrefix }}{{ $.SitePrefix }}{{ else }}files{{ end }}</a>
-    {{- if eq (head (tail $.FilePath)) "themes" }}
-    <span class='mh1'>&boxv;</span>
-    <a href='/{{ join "files" $.SitePrefix "output/themes" }}/'>themes</a>
-    {{- end }}
+    {{ generateBreadcrumbLinks $.SitePrefix $.FilePath }}
     {{- if $.BelongsTo }}
     <span class='mh1'>&boxv;</span>
-    <a href='/{{ join "files" $.SitePrefix (dir $.BelongsTo) }}/'>{{ base (dir $.BelongsTo) }}</a>
-    <span class='mh1'>&boxv;</span>
     belongs to: <a href='/{{ join "files" $.SitePrefix $.BelongsTo }}/'>{{ base $.BelongsTo }}</a>
-    {{- else if ne (dir $.FilePath) "output/themes" }}
-    <span class='mh1'>&boxv;</span>
-    <a href='/{{ join "files" $.SitePrefix (dir $.FilePath) }}/'>{{ base (dir $.FilePath) }}</a>
     {{- end }}
     {{- if $.URL }}
       {{- if eq (head (tail $.FilePath)) "posts" }}
