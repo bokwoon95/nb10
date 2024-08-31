@@ -557,15 +557,23 @@ notebrew.com/download/
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
 - title + preview + read more | https://wordsandbuttons.online/
 - title + preview, dates justified to the right | https://stevelosh.com/blog/
+- line delimited | https://www.craigkerstiens.com/
 
 - line delimited | https://akoutmos.com/
     - banner
 
 - boxed | https://www.eyeswift.com/category/blogging/
+    - boxes
+
 - cards with image (if exists) | https://theblogtrottergirl.com/
-- line delimited | https://www.craigkerstiens.com/
+    - cards
+
 - all posts, everything | https://charity.wtf/
+    - full
+
 - classic title + preview + read more | https://www.depesz.com/
+    - it's a variant of default, except it has dark background. we can give a name to this!
+
 - all thing, everything | https://lemire.me/blog/
 - title and date only | https://drewdevault.com/
 - all posts, everything, classic blog layout | https://www.positech.co.uk/cliffsblog/
