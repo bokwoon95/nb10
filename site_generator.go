@@ -2314,9 +2314,6 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			isAnchorTag := bytes.Equal(name, []byte("a"))
 			for moreAttr {
 				key, val, moreAttr = tokenizer.TagAttr()
-				if bytes.Equal(key, []byte("style")) && bytes.Contains(val, []byte("background:")) {
-					fmt.Printf("style: %s\n", string(val))
-				}
 				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
 					uri, err := url.Parse(string(val))
 					if err == nil && uri.Scheme == "" && uri.Host == "" {
