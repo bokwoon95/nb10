@@ -2275,7 +2275,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			}
 		case html.DoctypeToken:
 			for _, b := range [...][]byte{
-				[]byte("<!DOCTYPE "), tokenizer.Text(), []byte(">"),
+				[]byte("<!DOCTYPE "), tokenizer.Raw(), []byte(">"),
 			} {
 				_, err := writer.Write(b)
 				if err != nil {
@@ -2284,7 +2284,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			}
 		case html.CommentToken:
 			for _, b := range [...][]byte{
-				[]byte("<!--"), tokenizer.Text(), []byte("-->"),
+				[]byte("<!--"), tokenizer.Raw(), []byte("-->"),
 			} {
 				_, err := writer.Write(b)
 				if err != nil {
@@ -2314,6 +2314,9 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			isAnchorTag := bytes.Equal(name, []byte("a"))
 			for moreAttr {
 				key, val, moreAttr = tokenizer.TagAttr()
+				if bytes.Equal(key, []byte("style")) {
+					fmt.Printf("style: %q\n", string(val))
+				}
 				rewrittenVal = val
 				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
 					uri, err := url.Parse(string(val))
