@@ -2304,7 +2304,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 					return stacktrace.New(err)
 				}
 			}
-			var key, val, rewrittenVal []byte
+			var key, val []byte
 			name, moreAttr := tokenizer.TagName()
 			_, err := writer.Write(name)
 			if err != nil {
@@ -2317,7 +2317,6 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 				if bytes.Equal(key, []byte("style")) && bytes.Contains(val, []byte("background:")) {
 					fmt.Printf("style: %s\n", string(val))
 				}
-				rewrittenVal = val
 				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
 					uri, err := url.Parse(string(val))
 					if err == nil && uri.Scheme == "" && uri.Host == "" {
@@ -2329,20 +2328,20 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
 								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
 									uri.Path = "/" + fileID.String() + path.Ext(filePath)
-									rewrittenVal = []byte(uri.String())
+									val = []byte(uri.String())
 								}
 							} else {
 								filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
 								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
 									uri.Path = "/" + fileID.String() + path.Ext(filePath)
-									rewrittenVal = []byte(uri.String())
+									val = []byte(uri.String())
 								}
 							}
 						}
 					}
 				}
 				for _, b := range [...][]byte{
-					[]byte(` `), key, []byte(`="`), rewrittenVal, []byte(`"`),
+					[]byte(` `), key, []byte(`="`), bytes.ReplaceAll(val, []byte("\""), []byte("&quot;")), []byte(`"`),
 				} {
 					_, err := writer.Write(b)
 					if err != nil {
