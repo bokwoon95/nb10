@@ -2314,7 +2314,7 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			isAnchorTag := bytes.Equal(name, []byte("a"))
 			for moreAttr {
 				key, val, moreAttr = tokenizer.TagAttr()
-				if bytes.Equal(key, []byte("style")) {
+				if bytes.Equal(key, []byte("style")) && bytes.Contains(val, []byte("background:")) {
 					fmt.Printf("style: %q\n", string(val))
 				}
 				rewrittenVal = val
