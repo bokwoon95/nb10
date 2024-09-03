@@ -577,6 +577,12 @@ background
     #FF8C42 accent
     pumpkin
 
+    https://wordpress.com/theme/tronar/bokwoon846263759.wordpress.com?tab_filter=recommended
+    https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
+    https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
+    https://wordpress.com/theme/marl/bokwoon846263759.wordpress.com?tab_filter=recommended
+    https://wordpress.com/theme/reverie/bokwoon846263759.wordpress.com?tab_filter=recommended
+
 - cards with image (if exists) | https://theblogtrottergirl.com/
     - cards
 
