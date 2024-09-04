@@ -583,6 +583,9 @@ background
     https://wordpress.com/theme/marl/bokwoon846263759.wordpress.com?tab_filter=recommended
     https://wordpress.com/theme/reverie/bokwoon846263759.wordpress.com?tab_filter=recommended
 
+- https://philpearl.github.io/post/dumb_ways_to_die_random_pointers/
+    - vertical black bar on the left
+
 - cards with image (if exists) | https://theblogtrottergirl.com/
     - cards
 
