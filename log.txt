@@ -562,6 +562,7 @@ background
 
 [DONE]
 - image gallery, instagram style | https://www.avogado6.com/
+- boxed | https://www.eyeswift.com/category/blogging/
 
 [MEH]
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
@@ -569,13 +570,6 @@ background
 - title + preview, dates justified to the right | https://stevelosh.com/blog/
 - line delimited | https://www.craigkerstiens.com/
 - line delimited | https://akoutmos.com/
-
-- boxed | https://www.eyeswift.com/category/blogging/
-    - boxes
-    #E7E5E5 bg
-    #4E598C text
-    #FF8C42 accent
-    pumpkin
 
     https://wordpress.com/theme/tronar/bokwoon846263759.wordpress.com?tab_filter=recommended
     https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
