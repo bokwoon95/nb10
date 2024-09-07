@@ -554,11 +554,13 @@ default
 gallery
 steve
 (for the rest of the themes, don't give a a descriptive name of what the postlist or header looks like. instead, name it the name of the color palette you are using)
-banner
+banner (https://themes.gohugo.io/themes/hugo-dpsg/)
+vertical (https://philpearl.github.io/post/dumb_ways_to_die_random_pointers/)
 boxes
 cards
 full
 background
+news (it's a spin on cards)
 
 [DONE]
 - image gallery, instagram style | https://www.avogado6.com/
@@ -580,9 +582,6 @@ background
     https://wordpress.com/theme/tenku/bokwoon846263759.wordpress.com?tab_filter=recommended
     https://wordpress.com/theme/bsoj/bokwoon846263759.wordpress.com?tab_filter=recommended
     https://wordpress.com/theme/lowfi/bokwoon846263759.wordpress.com?tab_filter=recommended
-
-- https://philpearl.github.io/post/dumb_ways_to_die_random_pointers/
-    - vertical black bar on the left
 
 - cards with image (if exists) | https://theblogtrottergirl.com/
     - cards
