@@ -328,12 +328,34 @@ news (it's a spin on cards)
 - left right left right post cards in the list, with prominent images per post | https://zitseng.com/
 - nice logo on top | all thing, everything | https://stratechery.com/
 - nice pink box on top "technically a blog" | single line per post | https://ntietz.com/blog/
+- already covered by banner: all thing, everything | date pushed to the left, interesting | https://pointersgonewild.com/
+- dark theme, highly replaceable color palette | title + preview + read more | https://aartaka.me/
+- https://eieio.games/blog/
+- https://unskilled.blog/
+- https://www.scribblinggeek.com/
+- https://cyrillschumacher.com/
+- https://shkspr.mobi/blog/
+- https://wesbos.com/
+- https://robertheaton.com/
+- https://acoup.blog/
+- https://blog.ploeh.dk/
+- https://trstringer.com/
+- https://ddrscott.github.io/
+- (background image!) https://askthepilot.com/essaysandstories/whats-the-matter-with-airports/
+- https://web.archive.org/web/20210718135405/https://web.eecs.utk.edu/~azh/blog.html
+- https://blog.jonudell.net/index/
+- https://www.abandonedspaces.com/
+- https://blog.sql-workbench.eu/post/
+- https://danluu.com/
+- https://tonsky.me/
+- https://www.codevscolor.com/
+- (background image!) https://kodare.net/
 
 - TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
     - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
     - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
     - ah, and each theme needs to expose a reusable template. I guess header.html and base.html are the entrypoints?
-        - TODO: thinking about it, vertical's content block should have ma3 innately applied, it should not be up to the user to manually wrap their contents in a ma3 div. That way base.html becomes a lot more reusable.
+        - TODO: thinking about it, vertical's content block should have ma3 innately applied, it should not be up to the user to manually wrap their contents in a ma3 div. That way base.html becomes a lot more user-friendly.
 
 - cards
     - cards with image (if exists) | https://theblogtrottergirl.com/
@@ -369,57 +391,48 @@ news (it's a spin on cards)
     - nice gray background + white box | single line per post | https://www.akpain.net/blog/
         - the link colorscheme is good too
 
+- rounded
+    - https://www.anildash.com/ (great light mode too)
+
+- space
+    - a mix of victoria.dev and kodare.net, where we use a starry svg background from etsy and a translucent overlay with white text
+    - a cool thing is how the blog title and tag line are only available on the home page, for the rest of the pages the post takes priority
+
+- paper
+    - https://rtpg.co/
+
+- cream
+    - https://djy.io/
+    - incredibly tasteful colors and link style
+
 - nice dark modes
     - single line per post | https://finmoorhouse.com/writing/
     - dark theme | straightforward list of posts | title on left, date on right | https://blog.wesleyac.com/
+    - plain light background plus highly accented eye-popping links | single line per post | dark mode and light mode actually look good | https://tinyprojects.dev/
+    - https://popey.com/blog/
+    - https://benjamincongdon.me/
+    - https://victoria.dev/
+    - https://nipafx.dev/
+    - https://susam.net/
+    - https://brandur.org/articles
 
 - nice light modes
     - nice solid colors and clean solid lines | classic blogger title + preview + read more | https://www.raptitude.com/
     - I LOVE the bold yellow header with the light colored background: bold-ass colors, left-right-left-right alternating posts | https://pipewrenchmag.com/
     - very composable theme, just change the color palette | title and dates | https://marijnhaverbeke.nl/blog/
+    - very classic title and tagline on right, navbar on left, plain simple title + preview + read more posts delimited by line | https://rantover.co.uk/
+    - https://neustadt.fr/
+    - https://manuelmoreale.com/bearblog-is-fun
+        - text-decoration-skip-ink was the missing piece I needed to make link highlights. copy copy
+    - https://benhoyt.com/
+    - I love what he has done with the links: https://yosefk.com/blog/
+    - https://momjian.us/main/blogs/pgblog/2021.html
+    - https://brandur.org/articles
+    - nice link accents: https://www.dampfkraft.com/
+    - https://codahale.com/
 
 - nice fonts
     - post list kind of sucks but take a look at the post, header looks nice | https://imagine27.com/post/go-is-korean/
 
-- all thing, everything | date pushed to the left, interesting | https://pointersgonewild.com/
-- plain light background plus highly accented eye-popping links | single line per post | dark mode and light mode actually look good | https://tinyprojects.dev/
-- very classic title and tagline on right, navbar on left, plain simple title + preview + read more posts delimited by line | https://rantover.co.uk/
-- dark theme, highly replaceable color palette | title + preview + read more | https://aartaka.me/
-
-https://neustadt.fr/
-https://enderman.ch/about
-https://eieio.games/blog/
-https://unskilled.blog/
-https://manuelmoreale.com/bearblog-is-fun
-https://www.scribblinggeek.com/
-https://cyrillschumacher.com/
-https://popey.com/blog/
-https://shkspr.mobi/blog/
-https://benjamincongdon.me/
-https://wesbos.com/
-https://robertheaton.com/
-https://benhoyt.com/
-https://www.anildash.com/
-https://victoria.dev/
-https://acoup.blog/
-https://blog.ploeh.dk/
-https://trstringer.com/
-https://rtpg.co/
-https://yosefk.com/blog/
-https://nipafx.dev/
-https://djy.io/
-https://ddrscott.github.io/
-(background image!) https://askthepilot.com/essaysandstories/whats-the-matter-with-airports/
-https://web.archive.org/web/20210718135405/https://web.eecs.utk.edu/~azh/blog.html
-https://blog.jonudell.net/index/
-https://www.abandonedspaces.com/
-https://momjian.us/main/blogs/pgblog/2021.html
-https://blog.sql-workbench.eu/post/
-https://susam.net/
-https://danluu.com/
-https://tonsky.me/
-https://www.codevscolor.com/
-https://brandur.org/articles
-https://www.dampfkraft.com/
-https://codahale.com/
-(background image!) https://kodare.net/
+- genuinely love these but the CSS is beyond my capability
+    - https://enderman.ch/about
