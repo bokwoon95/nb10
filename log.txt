@@ -294,69 +294,93 @@ news (it's a spin on cards)
 - title + preview, dates justified to the right | https://stevelosh.com/blog/
 - line delimited | https://www.craigkerstiens.com/
 - line delimited | https://akoutmos.com/
-
-    https://wordpress.com/theme/tronar/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/marl/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/reverie/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/pixl/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/tenku/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/bsoj/bokwoon846263759.wordpress.com?tab_filter=recommended
-    https://wordpress.com/theme/lowfi/bokwoon846263759.wordpress.com?tab_filter=recommended
-
-- cards with image (if exists) | https://theblogtrottergirl.com/
-    - cards
-
-- all posts, everything | https://charity.wtf/
-    - full
-
-- classic title + preview + read more | https://www.depesz.com/
-    - it's a variant of default, except it has dark background. we can give a name to this!
-
 - all thing, everything | https://lemire.me/blog/
-- title and date only | https://drewdevault.com/
+- classic title + preview + read more | https://www.depesz.com/
 - all posts, everything, classic blog layout | https://www.positech.co.uk/cliffsblog/
 - rachelbythebay | https://rachelbythebay.com/w/
 - basic bihcc github pages | https://travisdowns.github.io/
-- only titles, very bold | https://arun.is/blog/
 - clean look title + preview + date | https://ognjen.io/
 - single line per post with title and date only | https://ntietz.com/blog/
 - boxed | https://danilafe.com/blog/
 - title + preview + read more (w nice link accents) | https://lukeplant.me.uk/blog/
 - single line per post | https://mazzo.li/archive.html
-- title + preview + read more https://www.jefftk.com/
 - classic blogspot | https://johorkaki.blogspot.com/
 - single line per post | https://justinjaffray.com/posts/
 - dark theme | https://aarontgrogg.com/
-- single line per post | https://finmoorhouse.com/writing/
+- https://wordpress.com/theme/tronar/bokwoon846263759.wordpress.com?tab_filter=recommended
+- https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
+- https://wordpress.com/theme/marl/bokwoon846263759.wordpress.com?tab_filter=recommended
+- https://wordpress.com/theme/reverie/bokwoon846263759.wordpress.com?tab_filter=recommended (nice idea but requires a background png)
+- https://wordpress.com/theme/tenku/bokwoon846263759.wordpress.com?tab_filter=recommended
+- https://wordpress.com/theme/bsoj/bokwoon846263759.wordpress.com?tab_filter=recommended
 - single line per post (wild green) | https://www.lkhrs.com/blog/
 - blogger title + preview + read more + image classic, with fallback if no image | https://theoccasionaltraveller.com/blog/
 - dark theme | all thing, everything | https://kottke.org/
-- clean white, single line per post | https://orlp.net/blog/
-- I... don't know how to describe this. It's single line per post, all right | https://www.spicyweb.dev/blog
 - cards + title + preview + read more | https://blog.vanillajava.blog/
 - aha, the same wordpress theme used by theoccasionaltraveller | title + preview + read more + image | https://wheretheroadforks.com/blog/
 - nice solid-color banner on top | all thing, everything I guess | https://prog21.dadgum.com/
-- nice solid colors and clean solid lines | classic blogger title + preview + read more | https://www.raptitude.com/
 - honestly a real basic-bitch looking layout, but the floating island is a nice idea | classic title + preview + read more | https://specbranch.com/
-- solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
-- idea: css grid layout left-to-right, going all the way down | title + preview + read more | https://lareviewofbooks.org/
+- honestly novel idea but looks ugly if there's only one post because it would be all the way towards the left: css grid layout left-to-right, going all the way down | title + preview + read more | https://lareviewofbooks.org/
 - dark theme, banner + navbar + title, preview, read more | https://christianheilmann.com
-- dark theme, date,title,preview kind of resembles a print magazine | https://craigmod.com/essays/
-- bold-ass colors, left-right-left-right alternating posts | https://pipewrenchmag.com/
-- nice gray background + white box | single line per post | https://www.akpain.net/blog/
 - title on the left and dates on the right, with dotted lines connecting between them | https://www.jtolio.com/posts/
-- white minimalist, title + preview + read more | http://antirez.com/latest/0
-- another plain background, implicit lines blog | https://kevinlawler.com/
 - white background, horizontal lines to delimit the date | https://www.johndcook.com/blog/
-- dark theme | straightforward list of posts | title on left, date on right | https://blog.wesleyac.com/
 - ok don't follow the post list, but the black navbar and huge letter font is a real doozy | https://www.financialsamurai.com/
-- very composable theme, just change the color palette | title and dates | https://marijnhaverbeke.nl/blog/
 - left right left right post cards in the list, with prominent images per post | https://zitseng.com/
-- post list kind of sucks but take a look at the post, header looks nice | https://imagine27.com/post/go-is-korean/
 - nice logo on top | all thing, everything | https://stratechery.com/
 - nice pink box on top "technically a blog" | single line per post | https://ntietz.com/blog/
+
+- TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
+    - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
+    - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
+    - ah, and each theme needs to expose a reusable template. I guess header.html and base.html are the entrypoints?
+        - TODO: thinking about it, vertical's content block should have ma3 innately applied, it should not be up to the user to manually wrap their contents in a ma3 div. That way base.html becomes a lot more reusable.
+
+- cards
+    - cards with image (if exists) | https://theblogtrottergirl.com/
+    - I love this colorscheme: https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
+    - follow news, first post takes two slots
+    - include image if exists: https://wordpress.com/theme/tenku/bokwoon846263759.wordpress.com?tab_filter=recommended
+    - use the font inspirations from here: dark theme, date,title,preview kind of resembles a print magazine | https://craigmod.com/essays/
+
+- full
+    - all posts, everything | https://charity.wtf/
+    - cute fonts can make such a huge difference: https://wordpress.com/theme/lowfi/bokwoon846263759.wordpress.com?tab_filter=recommended
+
+- minimal
+    - bare essentials, brutalist html design
+    - title and date only | https://drewdevault.com/
+    - https://www.jefftk.com/
+    - clean white, single line per post | https://orlp.net/blog/
+    - white minimalist, title + preview + read more | http://antirez.com/latest/0
+
+- monospace
+    - https://wordpress.com/theme/pixl/bokwoon846263759.wordpress.com?tab_filter=recommended
+
+- implicit
+    - solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
+    - another plain background, implicit lines blog | https://kevinlawler.com/
+
+- feisty
+    - I... don't know how to describe this. It's single line per post, all right | https://www.spicyweb.dev/blog
+        - actually the background color is really nice too
+    - I like the arrow after each title: only titles, very bold | https://arun.is/blog/
+
+- box
+    - nice gray background + white box | single line per post | https://www.akpain.net/blog/
+        - the link colorscheme is good too
+
+- nice dark modes
+    - single line per post | https://finmoorhouse.com/writing/
+    - dark theme | straightforward list of posts | title on left, date on right | https://blog.wesleyac.com/
+
+- nice light modes
+    - nice solid colors and clean solid lines | classic blogger title + preview + read more | https://www.raptitude.com/
+    - I LOVE the bold yellow header with the light colored background: bold-ass colors, left-right-left-right alternating posts | https://pipewrenchmag.com/
+    - very composable theme, just change the color palette | title and dates | https://marijnhaverbeke.nl/blog/
+
+- nice fonts
+    - post list kind of sucks but take a look at the post, header looks nice | https://imagine27.com/post/go-is-korean/
+
 - all thing, everything | date pushed to the left, interesting | https://pointersgonewild.com/
 - plain light background plus highly accented eye-popping links | single line per post | dark mode and light mode actually look good | https://tinyprojects.dev/
 - very classic title and tagline on right, navbar on left, plain simple title + preview + read more posts delimited by line | https://rantover.co.uk/
