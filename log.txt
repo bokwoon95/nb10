@@ -83,6 +83,8 @@ notebrew/server.go
 notebrew/main.go
 notebrew/open_browser.go
 
+package gui
+
 package notebrewlive
 the admin page needs to:
 - let me customize the shell script used to flag out bad sites
