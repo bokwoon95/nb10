@@ -354,8 +354,6 @@ news (it's a spin on cards)
 - TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
     - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
     - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
-    - ah, and each theme needs to expose a reusable template. I guess header.html and base.html are the entrypoints?
-        - TODO: thinking about it, vertical's content block should have ma3 innately applied, it should not be up to the user to manually wrap their contents in a ma3 div. That way base.html becomes a lot more user-friendly.
 
 - cards
     - cards with image (if exists) | https://theblogtrottergirl.com/
