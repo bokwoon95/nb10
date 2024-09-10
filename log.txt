@@ -287,6 +287,12 @@ news (it's a spin on cards)
 [DONE]
 - image gallery, instagram style | https://www.avogado6.com/
 - boxed | https://www.eyeswift.com/category/blogging/
+- minimal
+    - bare essentials, brutalist html design
+    - title and date only | https://drewdevault.com/
+    - https://www.jefftk.com/
+    - clean white, single line per post | https://orlp.net/blog/
+    - white minimalist, title + preview + read more | http://antirez.com/latest/0
 
 [MEH]
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
@@ -365,13 +371,6 @@ news (it's a spin on cards)
 - full
     - all posts, everything | https://charity.wtf/
     - cute fonts can make such a huge difference: https://wordpress.com/theme/lowfi/bokwoon846263759.wordpress.com?tab_filter=recommended
-
-- minimal
-    - bare essentials, brutalist html design
-    - title and date only | https://drewdevault.com/
-    - https://www.jefftk.com/
-    - clean white, single line per post | https://orlp.net/blog/
-    - white minimalist, title + preview + read more | http://antirez.com/latest/0
 
 - monospace
     - https://wordpress.com/theme/pixl/bokwoon846263759.wordpress.com?tab_filter=recommended
