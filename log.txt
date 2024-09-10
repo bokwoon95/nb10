@@ -382,7 +382,7 @@ news (it's a spin on cards)
     - solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
     - another plain background, implicit lines blog | https://kevinlawler.com/
 
-- feisty
+- feisty/callout
     - I... don't know how to describe this. It's single line per post, all right | https://www.spicyweb.dev/blog
         - actually the background color is really nice too
     - I like the arrow after each title: only titles, very bold | https://arun.is/blog/
