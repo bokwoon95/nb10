@@ -412,6 +412,7 @@ news (it's a spin on cards)
     - https://nipafx.dev/
     - https://susam.net/
     - https://brandur.org/articles
+    - https://navendu.me/posts/nginx-is-fine/
 
 - nice light modes
     - nice solid colors and clean solid lines | classic blogger title + preview + read more | https://www.raptitude.com/
