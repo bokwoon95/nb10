@@ -326,7 +326,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	postsDir := path.Join(sitePrefix, "posts")
 	postTemplate, err := siteGen.PostTemplate(ctx, "")
 	if err != nil {
-		if !errors.As(err, &regenerationStats.TemplateError) {
+		if errors.As(err, &regenerationStats.TemplateError) {
 			return regenerationStats, nil
 		}
 		return regenerationStats, stacktrace.New(err)
@@ -336,7 +336,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	}
 	postListTemplate, err := siteGen.PostListTemplate(ctx, "")
 	if err != nil {
-		if !errors.As(err, &regenerationStats.TemplateError) {
+		if errors.As(err, &regenerationStats.TemplateError) {
 			return regenerationStats, nil
 		}
 		return regenerationStats, stacktrace.New(err)
@@ -534,8 +534,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		})
 		err = group.Wait()
 		if err != nil {
-			if !errors.As(err, &regenerationStats.TemplateError) {
-				return RegenerationStats{}, nil
+			if errors.As(err, &regenerationStats.TemplateError) {
+				return regenerationStats, nil
 			}
 		}
 	} else {
@@ -723,8 +723,8 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 		})
 		err = group.Wait()
 		if err != nil {
-			if !errors.As(err, &regenerationStats.TemplateError) {
-				return RegenerationStats{}, err
+			if errors.As(err, &regenerationStats.TemplateError) {
+				return regenerationStats, err
 			}
 		}
 	}
