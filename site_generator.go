@@ -2315,23 +2315,27 @@ func (siteGen *SiteGenerator) rewriteURLs(writer io.Writer, reader io.Reader, ur
 			for moreAttr {
 				key, val, moreAttr = tokenizer.TagAttr()
 				if (isImgTag && bytes.Equal(key, []byte("src"))) || (isAnchorTag && bytes.Equal(key, []byte("href"))) {
-					uri, err := url.Parse(string(val))
-					if err == nil && uri.Scheme == "" && uri.Host == "" {
-						fileType := AllowedFileTypes[path.Ext(uri.Path)]
-						if fileType.Has(AttributeImg) {
-							uri.Scheme = ""
-							uri.Host = siteGen.cdnDomain
-							if strings.HasPrefix(uri.Path, "/") {
-								filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
-								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-									uri.Path = "/" + fileID.String() + path.Ext(filePath)
-									val = []byte(uri.String())
-								}
-							} else {
-								filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
-								if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
-									uri.Path = "/" + fileID.String() + path.Ext(filePath)
-									val = []byte(uri.String())
+					rawURL := string(val)
+					fileType := AllowedFileTypes[path.Ext(rawURL)]
+					if fileType.Has(AttributeObject) {
+						uri, err := url.Parse(rawURL)
+						if err == nil && uri.Scheme == "" && uri.Host == "" {
+							fileType := AllowedFileTypes[path.Ext(uri.Path)]
+							if fileType.Has(AttributeImg) {
+								uri.Scheme = ""
+								uri.Host = siteGen.cdnDomain
+								if strings.HasPrefix(uri.Path, "/") {
+									filePath := path.Join(siteGen.sitePrefix, "output", uri.Path)
+									if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
+										uri.Path = "/" + fileID.String() + path.Ext(filePath)
+										val = []byte(uri.String())
+									}
+								} else {
+									filePath := path.Join(siteGen.sitePrefix, "output", urlPath, uri.Path)
+									if fileID, ok := siteGen.imgFileIDs[filePath]; ok {
+										uri.Path = "/" + fileID.String() + path.Ext(filePath)
+										val = []byte(uri.String())
+									}
 								}
 							}
 						}
