@@ -321,23 +321,29 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	if err != nil {
 		return RegenerationStats{}, stacktrace.New(err)
 	}
+	var regenerationStats RegenerationStats
 	pagesDir := path.Join(sitePrefix, "pages")
 	postsDir := path.Join(sitePrefix, "posts")
 	postTemplate, err := siteGen.PostTemplate(ctx, "")
 	if err != nil {
-		return RegenerationStats{}, stacktrace.New(err)
+		if !errors.As(err, &regenerationStats.TemplateError) {
+			return regenerationStats, nil
+		}
+		return regenerationStats, stacktrace.New(err)
 	}
 	postTemplates := map[string]*template.Template{
 		"": postTemplate,
 	}
 	postListTemplate, err := siteGen.PostListTemplate(ctx, "")
 	if err != nil {
-		return RegenerationStats{}, stacktrace.New(err)
+		if !errors.As(err, &regenerationStats.TemplateError) {
+			return regenerationStats, nil
+		}
+		return regenerationStats, stacktrace.New(err)
 	}
 	postListTemplates := map[string]*template.Template{
 		"": postListTemplate,
 	}
-	var regenerationStats RegenerationStats
 	var regenerationCount atomic.Int64
 	startedAt := time.Now()
 
