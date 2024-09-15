@@ -405,7 +405,7 @@ func (siteGen *SiteGenerator) parseTemplate(ctx context.Context, name, text stri
 		group.Go(func() (err error) {
 			defer stacktrace.RecoverPanic(&err)
 			n := slices.Index(callers, externalName)
-			if n > 0 {
+			if n >= 0 {
 				return TemplateError{
 					Name:         externalName,
 					ErrorMessage: "circular template reference: " + strings.Join(callers[n:], "=>") + " => " + externalName,

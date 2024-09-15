@@ -293,6 +293,12 @@ news (it's a spin on cards)
     - https://www.jefftk.com/
     - clean white, single line per post | https://orlp.net/blog/
     - white minimalist, title + preview + read more | http://antirez.com/latest/0
+- cards
+    - cards with image (if exists) | https://theblogtrottergirl.com/
+    - I love this colorscheme: https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
+    - follow news, first post takes two slots
+    - include image if exists: https://wordpress.com/theme/tenku/bokwoon846263759.wordpress.com?tab_filter=recommended
+    - use the font inspirations from here: dark theme, date,title,preview kind of resembles a print magazine | https://craigmod.com/essays/
 
 [MEH]
 - single line per post with title and date only | https://eli.thegreenplace.net/archives/2024
@@ -360,13 +366,6 @@ news (it's a spin on cards)
 - TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
     - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
     - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
-
-- cards
-    - cards with image (if exists) | https://theblogtrottergirl.com/
-    - I love this colorscheme: https://wordpress.com/theme/dark-academia/bokwoon846263759.wordpress.com?tab_filter=recommended
-    - follow news, first post takes two slots
-    - include image if exists: https://wordpress.com/theme/tenku/bokwoon846263759.wordpress.com?tab_filter=recommended
-    - use the font inspirations from here: dark theme, date,title,preview kind of resembles a print magazine | https://craigmod.com/essays/
 
 - full
     - all posts, everything | https://charity.wtf/
