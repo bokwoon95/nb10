@@ -362,6 +362,9 @@ news (it's a spin on cards)
 - https://tonsky.me/
 - https://www.codevscolor.com/
 - (background image!) https://kodare.net/
+- implicit
+    - solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
+    - another plain background, implicit lines blog | https://kevinlawler.com/
 
 - TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
     - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
@@ -373,10 +376,6 @@ news (it's a spin on cards)
 
 - monospace
     - https://wordpress.com/theme/pixl/bokwoon846263759.wordpress.com?tab_filter=recommended
-
-- implicit
-    - solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
-    - another plain background, implicit lines blog | https://kevinlawler.com/
 
 - feisty/callout
     - I... don't know how to describe this. It's single line per post, all right | https://www.spicyweb.dev/blog
