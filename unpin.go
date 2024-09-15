@@ -23,6 +23,7 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 	type File struct {
 		FileID       ID        `json:"fileID"`
 		Name         string    `json:"name"`
+		IsObject     bool      `json:"isObject"`
 		IsDir        bool      `json:"isDir"`
 		Size         int64     `json:"size"`
 		ModTime      time.Time `json:"modTime"`
@@ -160,11 +161,13 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 					}
 					return stacktrace.New(err)
 				}
+				fileType := AllowedFileTypes[path.Ext(name)]
 				file := File{
-					Name:    name,
-					IsDir:   fileInfo.IsDir(),
-					Size:    fileInfo.Size(),
-					ModTime: fileInfo.ModTime(),
+					Name:     name,
+					IsObject: fileType.Has(AttributeObject),
+					IsDir:    fileInfo.IsDir(),
+					Size:     fileInfo.Size(),
+					ModTime:  fileInfo.ModTime(),
 				}
 				if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
 					file.FileID = databaseFileInfo.FileID
