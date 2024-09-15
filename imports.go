@@ -22,6 +22,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
 		Name         string    `json:"name"`
+		IsObject     bool      `json:"isObject"`
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
@@ -269,7 +270,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				},
 			}, func(row *sq.Row) File {
 				filePath := row.String("files.file_path")
-				return File{
+				file := File{
 					FileID:       row.UUID("files.file_id"),
 					Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 					Name:         path.Base(filePath),
@@ -278,6 +279,9 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 					CreationTime: row.Time("files.creation_time"),
 					IsDir:        row.Bool("files.is_dir"),
 				}
+				fileType := AllowedFileTypes[path.Ext(file.Name)]
+				file.IsObject = fileType.Has(AttributeObject)
+				return file
 			})
 			if err != nil {
 				return err
@@ -302,7 +306,7 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				},
 			}, func(row *sq.Row) File {
 				filePath := row.String("files.file_path")
-				return File{
+				file := File{
 					FileID:       row.UUID("files.file_id"),
 					Parent:       strings.Trim(strings.TrimPrefix(path.Dir(filePath), sitePrefix), "/"),
 					Name:         path.Base(filePath),
@@ -311,6 +315,9 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 					CreationTime: row.Time("files.creation_time"),
 					IsDir:        row.Bool("files.is_dir"),
 				}
+				fileType := AllowedFileTypes[path.Ext(file.Name)]
+				file.IsObject = fileType.Has(AttributeObject)
+				return file
 			})
 			if err != nil {
 				return err
@@ -352,12 +359,13 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 					ModTime:      fileInfo.ModTime(),
 					CreationTime: CreationTime(absolutePath, fileInfo),
 				}
-				if file.IsDir {
-					response.Files = append(response.Files, file)
+				fileType, ok := AllowedFileTypes[path.Ext(file.Name)]
+				if !ok {
 					continue
 				}
-				_, ok := AllowedFileTypes[path.Ext(file.Name)]
-				if !ok {
+				file.IsObject = fileType.Has(AttributeObject)
+				if file.IsDir {
+					response.Files = append(response.Files, file)
 					continue
 				}
 				response.Files = append(response.Files, file)

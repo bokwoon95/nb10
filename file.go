@@ -36,6 +36,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
 		Name         string    `json:"name"`
+		IsObject     bool      `json:"isObject"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
 		Size         int64     `json:"size"`

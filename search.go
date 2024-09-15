@@ -20,6 +20,7 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	type Match struct {
 		FileID       ID        `json:"fileID"`
 		FilePath     string    `json:"filePath"`
+		IsObject     bool      `json:"isObject"`
 		IsDir        bool      `json:"isDir"`
 		Preview      string    `json:"preview"`
 		ModTime      time.Time `json:"modTime"`
@@ -326,6 +327,8 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				ModTime:      row.Time("files.mod_time"),
 				CreationTime: row.Time("files.creation_time"),
 			}
+			fileType := AllowedFileTypes[path.Ext(match.FilePath)]
+			match.IsObject = fileType.Has(AttributeObject)
 			if sitePrefix != "" {
 				_, match.FilePath, _ = strings.Cut(match.FilePath, "/")
 			}
@@ -337,9 +340,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 	case "postgres":
-		// SELECT * FROM files WHERE files.fts @@ ((to_tsquery('english', 'apple') || phraseto_tsquery('english', 'steve jobs')) && !!to_tsquery('english', 'iphone'))
+		// TODO: SELECT * FROM files WHERE files.fts @@ ((to_tsquery('english', 'apple') || phraseto_tsquery('english', 'steve jobs')) && !!to_tsquery('english', 'iphone'))
 	case "mysql":
-		// SELECT * FROM files WHERE MATCH (file_name, text) AGAINST ('("apple" "steve jobs") -"iphone"' IN BOOLEAN MODE)
+		// TODO: SELECT * FROM files WHERE MATCH (file_name, text) AGAINST ('("apple" "steve jobs") -"iphone"' IN BOOLEAN MODE)
 	}
 	writeResponse(w, r, response)
 }
