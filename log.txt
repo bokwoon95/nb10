@@ -371,6 +371,9 @@ news (it's a spin on cards)
     - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
 
 TODO: fix all instances of `rg '\$.CDNDomain \$.IsDatabaseFS'` (we must use isImg and isObject instead. BUT we want to avoid looking up the AllowFileTypes map twice. How?)
+    - {{ $attribute := getAttribute $file.FileName }}
+    - {{ if $attribute.Has 32 /* AttributeImg */ }}
+    - {{ if $attribute.Has 2 /* AttributeObject */ }}
 
 - full
     - all posts, everything | https://charity.wtf/
