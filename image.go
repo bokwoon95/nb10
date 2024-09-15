@@ -32,6 +32,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 		DisableReason     string            `json:"disableReason"`
 		FileID            ID                `json:"fileID"`
 		FilePath          string            `json:"filePath"`
+		IsObject          bool              `json:"isObject"`
 		IsDir             bool              `json:"isDir"`
 		Size              int64             `json:"size"`
 		ModTime           time.Time         `json:"modTime"`
@@ -97,6 +98,8 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
 		}
 		response.FilePath = filePath
+		fileType := AllowedFileTypes[path.Ext(filePath)]
+		response.IsObject = fileType.Has(AttributeObject)
 		response.Size = fileInfo.Size()
 		response.IsDir = fileInfo.IsDir()
 		response.ModTime = fileInfo.ModTime()
