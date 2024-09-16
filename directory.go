@@ -139,6 +139,9 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
+			"getFileType": func(name string) FileType {
+				return AllowedFileTypes[path.Ext(name)]
+			},
 			"isImg": func(file File) bool {
 				if file.IsDir {
 					return false

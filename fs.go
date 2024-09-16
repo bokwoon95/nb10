@@ -94,6 +94,18 @@ func (fileType FileType) Has(attribute Attribute) bool {
 	return fileType.Attribute&attribute != 0
 }
 
+// IsImg is shorthand for Has(AttributeImg). Used in templates, which do not
+// have access to the Attribute* constants.
+func (fileType FileType) IsImg() bool {
+	return fileType.Has(AttributeImg)
+}
+
+// IsObject is shorthand for Has(AttributeObject). Used in templates, which do
+// not have access to the Attribute* constants.
+func (fileType FileType) IsObject() bool {
+	return fileType.Has(AttributeObject)
+}
+
 // AllowedFileTypes is a list of file types allowed by notebrew.
 //
 // It is exported so that people using notebrew as a library may add their own

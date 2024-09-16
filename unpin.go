@@ -80,6 +80,10 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				"stylesCSS":             func() template.CSS { return template.CSS(StylesCSS) },
 				"baselineJS":            func() template.JS { return template.JS(BaselineJS) },
 				"referer":               func() string { return referer },
+				"getAttribute": func(name string) Attribute {
+					fileType := AllowedFileTypes[path.Ext(name)]
+					return fileType.Attribute
+				},
 				"isImg": func(file File) bool {
 					if file.IsDir {
 						return false
