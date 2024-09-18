@@ -20,7 +20,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 	type Match struct {
 		FileID       ID        `json:"fileID"`
 		FilePath     string    `json:"filePath"`
-		IsObject     bool      `json:"isObject"`
 		IsDir        bool      `json:"isDir"`
 		Preview      string    `json:"preview"`
 		ModTime      time.Time `json:"modTime"`
@@ -83,9 +82,9 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			return
 		}
 		referer := nbrew.GetReferer(r)
-		selected := make(map[string]struct{})
+		selectedFileTypes := make(map[string]struct{})
 		for _, value := range response.FileTypes {
-			selected[value] = struct{}{}
+			selectedFileTypes[value] = struct{}{}
 		}
 		funcMap := map[string]any{
 			"join":       path.Join,
@@ -100,15 +99,11 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 			"referer":    func() string { return referer },
 			"incr":       func(n int) int { return n + 1 },
 			"fileTypeSelected": func(value string) bool {
-				_, ok := selected[value]
+				_, ok := selectedFileTypes[value]
 				return ok
 			},
-			"isImg": func(match Match) bool {
-				if match.IsDir {
-					return false
-				}
-				fileType := AllowedFileTypes[path.Ext(match.FilePath)]
-				return fileType.Has(AttributeImg)
+			"getFileType": func(name string) FileType {
+				return AllowedFileTypes[path.Ext(name)]
 			},
 			"joinTerms": func(termsList ...[]string) string {
 				var b strings.Builder
@@ -327,8 +322,6 @@ func (nbrew *Notebrew) search(w http.ResponseWriter, r *http.Request, user User,
 				ModTime:      row.Time("files.mod_time"),
 				CreationTime: row.Time("files.creation_time"),
 			}
-			fileType := AllowedFileTypes[path.Ext(match.FilePath)]
-			match.IsObject = fileType.Has(AttributeObject)
 			if sitePrefix != "" {
 				_, match.FilePath, _ = strings.Cut(match.FilePath, "/")
 			}

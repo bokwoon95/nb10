@@ -142,13 +142,6 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 			"getFileType": func(name string) FileType {
 				return AllowedFileTypes[path.Ext(name)]
 			},
-			"isImg": func(file File) bool {
-				if file.IsDir {
-					return false
-				}
-				fileType := AllowedFileTypes[path.Ext(file.Name)]
-				return fileType.Has(AttributeImg)
-			},
 			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
 				var b strings.Builder
 				b.WriteString("<a href='/files/'>files</a>")

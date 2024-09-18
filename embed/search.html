@@ -73,8 +73,9 @@
   <li>
     <div>
       <span class='mr1'>{{ incr $i }}.</span>
-      {{- if isImg $match }}
-        {{- if and $.CDNDomain $.IsDatabaseFS $match.IsObject }}
+      {{- $fileType := getFileType $match.FilePath }}
+      {{- if $fileType.IsImg }}
+        {{- if and $.CDNDomain $.IsDatabaseFS $fileType.IsObject }}
         <img src='//{{ $.CDNDomain }}/{{ $match.FileID }}{{ ext $match.FilePath }}' class='h3 w3 ml1 object-cover' loading='lazy'>
         {{- else }}
         <img src='/{{ join "files" $.SitePrefix $match.FilePath }}?raw' class='h3 w3 ml1 object-cover' loading='lazy'>
