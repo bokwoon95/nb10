@@ -370,6 +370,13 @@ news (it's a spin on cards)
     - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
     - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
 
+notebrew-windows.msi
+notebrew-windows-arm.msi
+notebrew-macos.dmg
+notebrew-macos-apple-silicon.dmg
+notebrew-linux
+notebrew-linux-arm
+
 TODO: fix all instances of `rg '\$.CDNDomain \$.IsDatabaseFS'` (we must use isImg and isObject instead. BUT we want to avoid looking up the AllowFileTypes map twice. How?)
     - {{ $attribute := getAttribute $file.FileName }}
     - {{ if $attribute.Has 32 }} <!-- AttributeImg -->
