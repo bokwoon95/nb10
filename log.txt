@@ -377,6 +377,8 @@ notebrew-macos-apple-silicon.dmg
 notebrew-linux
 notebrew-linux-arm
 
+go install github.com/bokwoon95/notebrew/notebrew@latest
+
 TODO: fix all instances of `rg '\$.CDNDomain \$.IsDatabaseFS'` (we must use isImg and isObject instead. BUT we want to avoid looking up the AllowFileTypes map twice. How?)
     - {{ $attribute := getAttribute $file.FileName }}
     - {{ if $attribute.Has 32 }} <!-- AttributeImg -->
