@@ -22,6 +22,8 @@ func main() {
 	// Create a new application
 	myApp := app.New()
 	myWindow := myApp.NewWindow("HTTP Server UI")
+	myWindow.Resize(fyne.NewSize(900, 600)) // Set initial window size to 900x600 (3:2 aspect ratio)
+	myWindow.CenterOnScreen() // Center the window on the screen
 
 	// Input widgets
 	portEntry := widget.NewEntry()
