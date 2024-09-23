@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
@@ -117,3 +117,37 @@ func stopServer(myWindow fyne.Window, portEntry, contentDomainEntry *widget.Entr
 	}
 
 	// Reset the UI to initial form state
+	portEntry.SetText("")
+	contentDomainEntry.SetText("")
+	filesProviderRadio.SetSelected("")
+
+	form := container.NewVBox(
+		widget.NewLabel("Port (number)"),
+		portEntry,
+		widget.NewLabel("Content Domain"),
+		contentDomainEntry,
+		widget.NewLabel("Files Provider"),
+		filesProviderRadio,
+		startServerButton,
+	)
+
+	myWindow.SetContent(form)
+}
+
+// Open a browser window with the given URL
+func openBrowser(url string) {
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		log.Printf("Failed to open browser: %v", err)
+	}
+}
