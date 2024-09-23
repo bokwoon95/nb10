@@ -129,6 +129,22 @@ Themes showcase.
 - How to download and install themes
 - How to export and host your own themes
 
+<label>
+    <div>Port (number)</div>
+    <input type="number" name="port">
+</label>
+<label>
+    <div>Content Domain</div>
+    <input type="text" name="contentDomain">
+</label>
+<div>Files Provider</div>
+<label>
+    <input type="checkbox" name="filesProvider" value="directory">
+</label>
+<label>
+    <input type="checkbox" name="filesProvider" value="database">
+</label>
+
 API Documentation.
 
 TODO: themes: default, gallery, steve, parchment
