@@ -139,11 +139,16 @@ Themes showcase.
 </label>
 <div>Files Provider</div>
 <label>
-    <input type="checkbox" name="filesProvider" value="directory">
+    <input type="radio" name="filesProvider" value="directory">
 </label>
 <label>
-    <input type="checkbox" name="filesProvider" value="database">
+    <input type="radio" name="filesProvider" value="database">
 </label>
+<button>Start server</button>
+
+<div>Listening on port {{ $.Port }}...</div>
+<button>Open browser</button>
+<button>Stop server</button>
 
 API Documentation.
 
