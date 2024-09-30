@@ -146,7 +146,7 @@ Themes showcase.
 </label>
 <button>Start server</button>
 
-<div>Listening on port {{ $.Port }}...</div>
+<div>Server running on port {{ $.Port }}...</div>
 <button>Open browser</button>
 <button>Stop server</button>
 
