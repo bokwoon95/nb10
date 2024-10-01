@@ -130,27 +130,18 @@ Themes showcase.
 - How to export and host your own themes
 
 <label>
-    <div>Port (number)</div>
-    <input type="number" name="port">
-</label>
-<label>
     <div>Content Domain</div>
+    <div>(this is the URL of your static website e.g. example.com)</div> 
     <input type="text" name="contentDomain">
 </label>
-<div>Files Provider</div>
-<label>
-    <input type="radio" name="filesProvider" value="directory">
-</label>
-<label>
-    <input type="radio" name="filesProvider" value="database">
-</label>
-<button>Start server</button>
+<button>Start notebrew</button>
 
 <div>Notebrew running on port {{ $.Port }}...</div>
 <button>Open browser</button>
+<button>Open folder</button>
 <button>🛑 Stop notebrew</button>
 
-TODO: remove the port (it's always 6444). Remove the option to toggle between database and directory for files provider, it's always database leader with a directory follower (async). The only thing we let the user configure is the content domain, and it must be filled in before they start the server. If they change content domain between iterations, it's up to them to reconfigure it.
+TODO: remove the port (it's always 6444). Remove the option to toggle between database and directory for files provider, it's always database leader with a directory follower (async). The only thing we let the user configure is the content domain, and it must be filled in before they start the server. If they change content domain between iterations, it's up to them to regenerate it.
     - When the server is running, the buttons read:
         - Open browser
         - Open output folder
@@ -158,6 +149,7 @@ TODO: remove the port (it's always 6444). Remove the option to toggle between da
 
 API Documentation.
 
+TODO: you know, Tokyo metro's black on yellow signs/posters is actually a pretty aesthetically pleasing colorscheme. can we emulate it?
 TODO: themes: default, gallery, steve, parchment
 TODO: implement gallery theme such that gallery.html can be dropped into any existing theme and it will replace the template "content".
     - it has to only depend on baseline.css
