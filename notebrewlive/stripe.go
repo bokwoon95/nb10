@@ -309,9 +309,11 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 					break
 				}
 			}
+			// TODO: enable "UploadImages" user flag.
 		} else {
 			siteLimit = 1
 			storageLimit = 10_000_000
+			// TODO: disable "UploadImages" user flag.
 		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
