@@ -58,9 +58,10 @@ func RecoverPanic(err *error) {
 			callers = append(callers, frame.File+":"+strconv.Itoa(frame.Line))
 		}
 		if err != nil {
-			*err = &Error{
-				Err:     fmt.Errorf("panic: %v", v),
-				Callers: callers,
+			if v, ok := v.(error); ok {
+				*err = &Error{Err: v, Callers: callers}
+			} else {
+				*err = &Error{Err: fmt.Errorf("panic: %v", v), Callers: callers}
 			}
 		}
 	}

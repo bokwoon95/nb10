@@ -242,7 +242,7 @@ func (nbrew *Notebrew) Close() error {
 
 // User represents a user in the users table.
 type User struct {
-	// UserID uniquely identifies a user. It cannot be change.
+	// UserID uniquely identifies a user. It cannot be changed.
 	UserID ID
 
 	// Username uniquely identifies a user. It can be changed.
@@ -264,6 +264,10 @@ type User struct {
 
 	// StorageLimit is the limit on the amount of storage the user can use.
 	StorageLimit int64
+
+	// UserFlags are various properties on a user that may be enabled or
+	// disabled e.g. UploadImages.
+	UserFlags map[string]bool
 }
 
 type contextKey struct{}

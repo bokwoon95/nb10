@@ -27,6 +27,7 @@ import (
 	"github.com/bokwoon95/nb10"
 	"github.com/bokwoon95/nb10/cli"
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/bokwoon95/sqddl/ddl"
 	"github.com/stripe/stripe-go/v79"
 	"golang.org/x/crypto/blake2b"
@@ -461,6 +462,13 @@ func ServeHTTP(nbrew *nb10.Notebrew, stripeConfig StripeConfig, signupDisabled b
 				user.DisableReason = row.String("users.disable_reason")
 				user.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
 				user.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
+				b := row.Bytes(nil, "users.user_flags")
+				if len(b) > 0 {
+					err := json.Unmarshal(b, &user.UserFlags)
+					if err != nil {
+						panic(stacktrace.New(err))
+					}
+				}
 				user.CustomerID = row.String("customer.customer_id")
 				return user
 			})
@@ -536,6 +544,13 @@ func ServeHTTP(nbrew *nb10.Notebrew, stripeConfig StripeConfig, signupDisabled b
 				user.DisableReason = row.String("users.disable_reason")
 				user.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
 				user.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
+				b := row.Bytes(nil, "users.user_flags")
+				if len(b) > 0 {
+					err := json.Unmarshal(b, &user.UserFlags)
+					if err != nil {
+						panic(stacktrace.New(err))
+					}
+				}
 				user.CustomerID = row.String("customer.customer_id")
 				return user
 			})

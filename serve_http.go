@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/caddyserver/certmagic"
 	"golang.org/x/crypto/blake2b"
 )
@@ -66,7 +68,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						sq.BytesParam("sessionTokenHash", sessionTokenHash[:]),
 					},
 				}, func(row *sq.Row) User {
-					return User{
+					user := User{
 						UserID:                row.UUID("users.user_id"),
 						Username:              row.String("users.username"),
 						Email:                 row.String("users.email"),
@@ -75,6 +77,14 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						SiteLimit:             row.Int64("coalesce(users.site_limit, -1)"),
 						StorageLimit:          row.Int64("coalesce(users.storage_limit, -1)"),
 					}
+					b := row.Bytes(nil, "users.user_flags")
+					if len(b) > 0 {
+						err := json.Unmarshal(b, &user.UserFlags)
+						if err != nil {
+							panic(stacktrace.New(err))
+						}
+					}
+					return user
 				})
 				if err != nil {
 					if !errors.Is(err, sql.ErrNoRows) {
@@ -182,6 +192,9 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		user := User{
 			SiteLimit:    -1,
 			StorageLimit: -1,
+			UserFlags: map[string]bool{
+				"UploadImages": true,
+			},
 		}
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
@@ -237,6 +250,13 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				result.DisableReason = row.String("users.disable_reason")
 				result.SiteLimit = row.Int64("coalesce(users.site_limit, -1)")
 				result.StorageLimit = row.Int64("coalesce(users.storage_limit, -1)")
+				b := row.Bytes(nil, "users.user_flags")
+				if len(b) > 0 {
+					err := json.Unmarshal(b, &result.UserFlags)
+					if err != nil {
+						panic(stacktrace.New(err))
+					}
+				}
 				result.IsAuthorizedForSite = row.Bool("EXISTS (SELECT 1"+
 					" FROM site"+
 					" JOIN site_user ON site_user.site_id = site.site_id"+

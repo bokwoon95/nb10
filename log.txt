@@ -397,6 +397,57 @@ notebrew-linux
 notebrew-linux-arm
 
 go install github.com/bokwoon95/notebrew/notebrew@latest
+account permission
+- is the user account disabled?
+- can the user upload images?
+
+storageLimit
+siteLimit
+disableReason
+canUploadImages
+
+type Notebrew struct {
+    NewUserTemplate User
+}
+User.UploadImages
+newusertemplate.json
+
+fastest way to check if account is disabled?
+User.Has(AttributeDisabled)
+- fastest way to check if the user can upload images?
+User.Has(AttributeUploadImage)
+User.Has(PermissionWrite)
+User.Has(PermissionUploadImage)
+
+permissions = ["uploadImage"]
+
+$user.HasFlag("uploadImage")
+
+if index $user.Permissions "uploadImage"
+
+const (
+	AttributeGzippable  Attribute = 1 << 0 // Should be gzipped when sent in the response body.
+	AttributeObject     Attribute = 1 << 1 // Should be stored in ObjectStorage (instead of the database).
+	AttributeAttachment Attribute = 1 << 2 // Should be downloaded with Content-Disposition: attachment.
+	AttributeEditable   Attribute = 1 << 3 // Can be edited by the user.
+	AttributeFont       Attribute = 1 << 4 // Can be used as a @font-face src.
+	AttributeImg        Attribute = 1 << 5 // Can be displayed with an <img> tag.
+	AttributeVideo      Attribute = 1 << 6 // Can be displayed with a <video> tag.
+)
+
+$user.Has("uploadImage")
+
+permisionUnmarshalMap
+permissionFromString
+
+PermissionUploadImage
+PermissionWrite
+
+file attributes (static, based on file extension)
+user permissions (server admin can change)
+file(user) permissions (users can change)
+
+if $user.HasPermission "Write"
 
 TODO: fix all instances of `rg '\$.CDNDomain \$.IsDatabaseFS'` (we must use isImg and isObject instead. BUT we want to avoid looking up the AllowFileTypes map twice. How?)
     - {{ $attribute := getAttribute $file.FileName }}
