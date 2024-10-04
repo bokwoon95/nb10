@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -18,7 +17,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,6 +24,7 @@ import (
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -208,11 +207,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -239,7 +234,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					response.PinnedAssets = pinnedAssets
 					for i := range response.PinnedAssets {
@@ -252,11 +247,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return nil
 				})
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -281,7 +272,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 					})
 					if err != nil && !errors.Is(err, sql.ErrNoRows) {
-						return err
+						return stacktrace.New(err)
 					}
 					response.Assets = assets
 					for i := range response.Assets {
@@ -369,11 +360,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			if ok {
 				group, groupctx := errgroup.WithContext(r.Context())
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					pinnedAssets, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -400,7 +387,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					response.PinnedAssets = pinnedAssets
 					for i := range response.PinnedAssets {
@@ -413,11 +400,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					return nil
 				})
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					assets, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 						Dialect: databaseFS.Dialect,
 						Format: "SELECT {*}" +
@@ -442,7 +425,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 					})
 					if err != nil && !errors.Is(err, sql.ErrNoRows) {
-						return err
+						return stacktrace.New(err)
 					}
 					response.Assets = assets
 					for i := range response.Assets {
@@ -964,11 +947,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 									return
 								}
 								group.Go(func() (err error) {
-									defer func() {
-										if v := recover(); v != nil {
-											err = fmt.Errorf("panic: " + string(debug.Stack()))
-										}
-									}()
+									defer stacktrace.RecoverPanic(&err)
 									defer os.Remove(inputPath)
 									defer os.Remove(outputPath)
 									cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
@@ -976,11 +955,11 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 									cmd.Stderr = os.Stderr
 									err = cmd.Run()
 									if err != nil {
-										return err
+										return stacktrace.New(err)
 									}
 									output, err := os.Open(outputPath)
 									if err != nil {
-										return err
+										return stacktrace.New(err)
 									}
 									defer output.Close()
 									err = writeFile(groupctx, filePath, output)
@@ -1156,11 +1135,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			group, groupctx := errgroup.WithContext(r.Context())
 			startedAt := time.Now()
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				err = siteGen.GeneratePage(groupctx, filePath, response.Content, response.ModTime, response.CreationTime)
 				if err != nil {
 					var templateErr TemplateError
@@ -1175,11 +1150,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 			})
 			if request.RegenerateParent {
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					var parentPage string
 					dir := path.Dir(filePath)
 					if dir == "pages" {
@@ -1189,6 +1160,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 					}
 					file, err := nbrew.FS.WithContext(groupctx).Open(path.Join(sitePrefix, parentPage))
 					if err != nil {
+						if errors.Is(err, fs.ErrNotExist) {
+							return nil
+						}
 						return err
 					}
 					fileInfo, err := file.Stat()
@@ -1310,11 +1284,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				group, groupctx := errgroup.WithContext(r.Context())
 				startedAt := time.Now()
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					tmpl, err := siteGen.PostTemplate(groupctx, category)
 					if err != nil {
 						var templateErr TemplateError
@@ -1338,11 +1308,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				})
 				if request.RegeneratePostList {
 					group.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
+						defer stacktrace.RecoverPanic(&err)
 						tmpl, err := siteGen.PostListTemplate(groupctx, category)
 						if err != nil {
 							var templateErr TemplateError

@@ -1081,6 +1081,9 @@ func (nbrew *Notebrew) InternalServerError(w http.ResponseWriter, r *http.Reques
 			"Referer":  nbrew.GetReferer(r),
 			"Title":    "deadline exceeded",
 			"Headline": "The server took too long to process your request.",
+			"Details":  errmsg,
+			"Callers":  callers,
+			"Version":  Version,
 		}
 	} else {
 		data = map[string]any{
