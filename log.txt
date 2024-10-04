@@ -402,8 +402,9 @@ if index $user.UserFlags "UploadImage"
 TODO: flags:
 - CustomDomain
 - UploadImage
-- Analytics
-- Newsletter
+- Analytics (only notebrewlive)
+- Newsletter (only notebrewlive)
+NOTE: we may need to bake user flags into the plans (stripe.json) after all.
 
 TODO: stripe.go: whenever a user goes to a paid plan (or when they checkout success), enable the "UploadImages" user flag. When their plan lapses back to the free plan, disable the "UploadImages" user flag. You would likely have to use database-specific functions to patch the JSON field.
 
