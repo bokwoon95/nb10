@@ -443,6 +443,9 @@ go install github.com/bokwoon95/notebrew/notebrew@latest
     - https://djy.io/
     - incredibly tasteful colors and link style
 
+- yellow
+    - https://zeldman.com/2024/10/04/i-stayed/
+
 - nice dark modes
     - single line per post | https://finmoorhouse.com/writing/
     - dark theme | straightforward list of posts | title on left, date on right | https://blog.wesleyac.com/
