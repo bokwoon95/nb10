@@ -33,18 +33,6 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var startMessage = `
-                     _       _
-         _ __   ___ | |_ ___| |__  _ __ _____      __
-        | '_ \ / _ \| __/ _ \ '_ \| '__/ _ \ \ /\ / /
-        | | | | (_) | ||  __/ |_) | | |  __/\ V  V /
-        |_| |_|\___/ \__\___|_.__/|_|  \___| \_/\_/
-
-     notebrew is running on %s
-
-  Please do not close this window (except to quit notebrew).
-`
-
 func main() {
 	err := func() error {
 		homeDir, err := os.UserHomeDir()
@@ -280,7 +268,7 @@ func main() {
 				}
 				return nil
 			case "start":
-				cmd, err := cli.StartCommand(nbrew, configDir, startMessage, args[1:]...)
+				cmd, err := cli.StartCommand(nbrew, configDir, args[1:]...)
 				if err != nil {
 					return fmt.Errorf("%s: %w", args[0], err)
 				}
@@ -351,7 +339,7 @@ func main() {
 					close(wait)
 				}
 			}()
-			fmt.Printf(startMessage, server.Addr)
+			fmt.Printf("notebrew is running on %s\n", server.Addr)
 		} else {
 			go func() {
 				err := server.Serve(listener)
@@ -361,9 +349,9 @@ func main() {
 				}
 			}()
 			if !nbrew.CMSDomainHTTPS {
-				fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
+				fmt.Printf("notebrew is running on %s\n", "http://"+nbrew.CMSDomain+"/files/")
 			} else {
-				fmt.Printf(startMessage, server.Addr)
+				fmt.Printf("notebrew is running on %s\n", server.Addr)
 			}
 		}
 		<-wait

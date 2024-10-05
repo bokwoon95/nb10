@@ -22,15 +22,13 @@ type StartCmd struct {
 	Notebrew     *nb10.Notebrew
 	Stdout       io.Writer
 	ConfigDir    string
-	StartMessage string
 	Handler      http.Handler
 }
 
-func StartCommand(nbrew *nb10.Notebrew, configDir string, startMessage string, args ...string) (*StartCmd, error) {
+func StartCommand(nbrew *nb10.Notebrew, configDir string, args ...string) (*StartCmd, error) {
 	var cmd StartCmd
 	cmd.Notebrew = nbrew
 	cmd.ConfigDir = configDir
-	cmd.StartMessage = startMessage
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
 	flagset.Usage = func() {
 		fmt.Fprintln(flagset.Output(), `Usage:
@@ -100,7 +98,7 @@ func (cmd *StartCmd) Run() error {
 				close(wait)
 			}
 		}()
-		fmt.Printf(cmd.StartMessage, server.Addr)
+		fmt.Printf("notebrew is running on %s\n", server.Addr)
 	} else {
 		go func() {
 			err := server.Serve(listener)
@@ -110,9 +108,9 @@ func (cmd *StartCmd) Run() error {
 			}
 		}()
 		if !cmd.Notebrew.CMSDomainHTTPS {
-			fmt.Printf(cmd.StartMessage, "http://"+cmd.Notebrew.CMSDomain+"/files/")
+			fmt.Printf("notebrew is running on %s\n", "http://"+cmd.Notebrew.CMSDomain+"/files/")
 		} else {
-			fmt.Printf(cmd.StartMessage, server.Addr)
+			fmt.Printf("notebrew is running on %s\n", server.Addr)
 		}
 	}
 	<-wait
