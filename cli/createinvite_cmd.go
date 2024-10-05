@@ -26,6 +26,7 @@ type CreateinviteCmd struct {
 	Email        sql.NullString
 	SiteLimit    sql.NullInt64
 	StorageLimit sql.NullInt64
+	UserFlags    sql.NullString
 }
 
 func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd, error) {
@@ -57,6 +58,10 @@ func CreateinviteCommand(nbrew *nb10.Notebrew, args ...string) (*CreateinviteCmd
 			return fmt.Errorf("%q is not a valid integer", s)
 		}
 		cmd.StorageLimit = sql.NullInt64{Int64: storageLimit, Valid: true}
+		return nil
+	})
+	flagset.Func("user-flags", "", func(s string) error {
+		cmd.UserFlags = sql.NullString{String: s, Valid: true}
 		return nil
 	})
 	flagset.Usage = func() {
@@ -97,13 +102,14 @@ func (cmd *CreateinviteCmd) Run() error {
 	copy(inviteTokenHash[8:], checksum[:])
 	_, err = sq.Exec(context.Background(), cmd.Notebrew.DB, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
-		Format: "INSERT INTO invite (invite_token_hash, email, site_limit, storage_limit)" +
-			" VALUES ({inviteTokenHash}, {email}, {siteLimit}, {storageLimit})",
+		Format: "INSERT INTO invite (invite_token_hash, email, site_limit, storage_limit, user_flags)" +
+			" VALUES ({inviteTokenHash}, {email}, {siteLimit}, {storageLimit}, {userFlags})",
 		Values: []any{
 			sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
 			sq.Param("email", cmd.Email),
 			sq.Param("siteLimit", cmd.SiteLimit),
 			sq.Param("storageLimit", cmd.StorageLimit),
+			sq.Param("userFlags", cmd.UserFlags),
 		},
 	})
 	if err != nil {

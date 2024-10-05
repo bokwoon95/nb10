@@ -490,7 +490,7 @@ func ServeHTTP(nbrew *nb10.Notebrew, stripeConfig StripeConfig, signupDisabled b
 			}
 			switch tail {
 			case "":
-				signup(nbrew, w, r)
+				signup(nbrew, w, r, stripeConfig)
 				return
 			case "success":
 				signupSuccess(nbrew, w, r)

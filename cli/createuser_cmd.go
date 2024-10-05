@@ -30,6 +30,7 @@ type CreateuserCmd struct {
 	PasswordHash string
 	SiteLimit    sql.NullInt64
 	StorageLimit sql.NullInt64
+	UserFlags    sql.NullString
 }
 
 func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, error) {
@@ -69,6 +70,10 @@ func CreateuserCommand(nbrew *nb10.Notebrew, args ...string) (*CreateuserCmd, er
 			return fmt.Errorf("%q is not a valid integer", s)
 		}
 		cmd.StorageLimit = sql.NullInt64{Int64: storageLimit, Valid: true}
+		return nil
+	})
+	flagset.Func("user-flags", "", func(s string) error {
+		cmd.UserFlags = sql.NullString{String: s, Valid: true}
 		return nil
 	})
 	flagset.Usage = func() {
@@ -258,8 +263,8 @@ func (cmd *CreateuserCmd) Run() error {
 	defer tx.Rollback()
 	_, err = sq.Exec(context.Background(), tx, sq.Query{
 		Dialect: cmd.Notebrew.Dialect,
-		Format: "INSERT INTO users (user_id, username, email, password_hash, site_limit, storage_limit)" +
-			" VALUES ({userID}, {username}, {email}, {passwordHash}, {siteLimit}, {storageLimit})",
+		Format: "INSERT INTO users (user_id, username, email, password_hash, site_limit, storage_limit, user_flags)" +
+			" VALUES ({userID}, {username}, {email}, {passwordHash}, {siteLimit}, {storageLimit}, {userFlags})",
 		Values: []any{
 			sq.UUIDParam("userID", nb10.NewID()),
 			sq.StringParam("username", cmd.Username),
@@ -267,6 +272,7 @@ func (cmd *CreateuserCmd) Run() error {
 			sq.StringParam("passwordHash", cmd.PasswordHash),
 			sq.Param("siteLimit", cmd.SiteLimit),
 			sq.Param("storageLimit", cmd.StorageLimit),
+			sq.Param("userFlags", cmd.UserFlags),
 		},
 	})
 	if err != nil {

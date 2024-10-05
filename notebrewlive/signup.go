@@ -24,7 +24,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
+func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, stripeConfig StripeConfig) {
 	type Request struct {
 		CaptchaResponse string
 		Email           string
@@ -36,6 +36,16 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 		Email                  string       `json:"email"`
 		Error                  string       `json:"error"`
 		FormErrors             url.Values   `json:"formErrors"`
+	}
+	freePlan := Plan{
+		SiteLimit:    1,
+		StorageLimit: 10_000_000,
+	}
+	for _, plan := range stripeConfig.Plans {
+		if plan.PriceID == "" {
+			freePlan = plan
+			break
+		}
 	}
 
 	switch r.Method {
@@ -285,15 +295,22 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request) {
 		var inviteTokenHash [8 + blake2b.Size256]byte
 		copy(inviteTokenHash[:8], inviteTokenBytes[:8])
 		copy(inviteTokenHash[8:], checksum[:])
+		userFlags, err := json.Marshal(freePlan.UserFlags)
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
 		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format: "INSERT INTO invite (invite_token_hash, email, site_limit, storage_limit)" +
-				" VALUES ({inviteTokenHash}, {email}, {siteLimit}, {storageLimit})",
+			Format: "INSERT INTO invite (invite_token_hash, email, site_limit, storage_limit, user_flags)" +
+				" VALUES ({inviteTokenHash}, {email}, {siteLimit}, {storageLimit}, {userFlags})",
 			Values: []any{
 				sq.BytesParam("inviteTokenHash", inviteTokenHash[:]),
-				sq.Param("email", response.Email),
-				sq.Param("siteLimit", 1),
-				sq.Param("storageLimit", 10_000_000),
+				sq.StringParam("email", response.Email),
+				sq.Int64Param("siteLimit", freePlan.SiteLimit),
+				sq.Int64Param("storageLimit", freePlan.StorageLimit),
+				sq.BytesParam("userFlags", userFlags),
 			},
 		})
 		if err != nil {

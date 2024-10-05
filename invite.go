@@ -282,10 +282,12 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			Email        sql.NullString
 			SiteLimit    sql.NullInt64
 			StorageLimit sql.NullInt64
+			UserFlags    sql.NullString
 		}) {
 			result.Email = row.NullString("email")
 			result.SiteLimit = row.NullInt64("site_limit")
 			result.StorageLimit = row.NullInt64("storage_limit")
+			result.UserFlags = row.NullString("user_flags")
 			return result
 		})
 		if err != nil {

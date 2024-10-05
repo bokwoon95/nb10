@@ -141,9 +141,6 @@ Themes showcase.
 <button>Open folder</button>
 <button>🛑 Stop notebrew</button>
 
-TODO: userFlags
-- NoUploadImage
-- NoCustomDomain
 TODO: we need default users settings somewhere such that all newly created users take from that template.
 TODO: remove the port (it's always 6444). Remove the option to toggle between database and directory for files provider, it's always database leader with a directory follower (async). The only thing we let the user configure is the content domain, and it must be filled in before they start the server. If they change content domain between iterations, it's up to them to regenerate it.
     - When the server is running, the buttons read:
