@@ -18,12 +18,23 @@ func main() {
 	contentDomainEntry.SetText("example.com")
 	progress := widget.NewProgressBar()
 	progress.Hide()
-	stop := widget.NewButton("stop sync ❌", func() {})
+	var stop *widget.Button
+	stop = widget.NewButton("stop sync ❌", func() {})
 	stop.Hide()
+	var s1, s2 *widget.Button
+	s1 = widget.NewButton("Start notebrew ▶", func() {
+		s1.Disable()
+		s2.Enable()
+	})
+	s2 = widget.NewButton("Stop notebrew 🛑", func() {
+		s2.Disable()
+		s1.Enable()
+	})
+	s2.Disable()
 	myWindow.SetContent(container.NewVBox(
 		widget.NewLabel("Site URL"),
 		contentDomainEntry,
-		container.NewGridWithColumns(2, widget.NewButton("Start notebrew ▶", func() {}), widget.NewButton("Stop notebrew 🛑", func() {})),
+		container.NewGridWithColumns(2, s1, s2),
 		widget.NewButton("Open browser 🌐", func() {}),
 		widget.NewButton("Open output folder 📂", func() {}),
 		widget.NewButton("Sync output folder 🔄", func() {
