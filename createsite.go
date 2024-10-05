@@ -33,21 +33,22 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		SiteDescription string `json:"siteDescription"`
 	}
 	type Response struct {
-		CMSDomain            string     `json:"cmsDomain"`
-		ContentDomain        string     `json:"contentDomain"`
-		IP4                  netip.Addr `json:"ip4"`
-		ValidateCustomDomain bool       `json:"validateCustomDomain"`
-		UserID               ID         `json:"userID"`
-		Username             string     `json:"username"`
-		DisableReason        string     `json:"disableReason"`
-		SiteLimit            int64      `json:"siteLimit"`
-		UserSiteNames        []string   `json:"userSiteNames"`
-		SiteName             string     `json:"siteName"`
-		SiteTitle            string     `json:"siteTitle"`
-		SiteTagline          string     `json:"siteTagline"`
-		SiteDescription      string     `json:"siteDescription"`
-		Error                string     `json:"error"`
-		FormErrors           url.Values `json:"formErrors"`
+		CMSDomain            string          `json:"cmsDomain"`
+		ContentDomain        string          `json:"contentDomain"`
+		IP4                  netip.Addr      `json:"ip4"`
+		ValidateCustomDomain bool            `json:"validateCustomDomain"`
+		UserID               ID              `json:"userID"`
+		Username             string          `json:"username"`
+		DisableReason        string          `json:"disableReason"`
+		SiteLimit            int64           `json:"siteLimit"`
+		UserFlags            map[string]bool `json:"userFlags"`
+		UserSiteNames        []string        `json:"userSiteNames"`
+		SiteName             string          `json:"siteName"`
+		SiteTitle            string          `json:"siteTitle"`
+		SiteTagline          string          `json:"siteTagline"`
+		SiteDescription      string          `json:"siteDescription"`
+		Error                string          `json:"error"`
+		FormErrors           url.Values      `json:"formErrors"`
 	}
 
 	getUserSiteInfo := func(username string) (userSiteNames []string, maxSitesReached bool, err error) {
@@ -132,6 +133,7 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
 		response.SiteLimit = user.SiteLimit
+		response.UserFlags = user.UserFlags
 		if response.Error != "" {
 			writeResponse(w, r, response)
 			return
@@ -277,6 +279,12 @@ func (nbrew *Notebrew) createsite(w http.ResponseWriter, r *http.Request, user U
 		}
 		var sitePrefix string
 		if strings.Contains(response.SiteName, ".") {
+			if user.UserFlags["NoCustomDomain"] {
+				response.FormErrors.Add("siteName", "custom domain not allowed")
+				response.Error = "CustomDomainNotAllowed"
+				writeResponse(w, r, response)
+				return
+			}
 			sitePrefix = response.SiteName
 			if nbrew.Port == 443 {
 				ips, err := net.DefaultResolver.LookupIPAddr(r.Context(), response.SiteName)
