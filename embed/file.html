@@ -354,24 +354,26 @@
   </div>
   {{- end }}
   {{- if or
-    (and
-      (eq (head $.FilePath) "pages")
-      (eq (ext $.FilePath) ".html"))
-    (and
-      (eq (head $.FilePath) "posts")
-      (eq (ext $.FilePath) ".md"))
+      (and
+        (eq (head $.FilePath) "pages")
+        (eq (ext $.FilePath) ".html"))
+      (and
+        (eq (head $.FilePath) "posts")
+        (eq (ext $.FilePath) ".md"))
   }}
-  <div class='mt2'>
-    {{- if eq (head $.FilePath) "pages" }}
-    <div class='b'>upload assets:</div>
-    <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
-    <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
-    {{- else if eq (head $.FilePath) "posts" }}
-    <div class='b'>upload images:</div>
-    <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
-    <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
+    {{- if $.UploadableExts }}
+    <div class='mt2'>
+      {{- if eq (head $.FilePath) "pages" }}
+      <div class='b'>upload assets:</div>
+      <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
+      <div><input placeholder='paste files here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
+      {{- else if eq (head $.FilePath) "posts" }}
+      <div class='b'>upload images:</div>
+      <div><input type='file' name='file' style='max-width: 220px;' accept='{{ joinStrings $.UploadableExts "," }}' multiple></div>
+      <div><input placeholder='paste images here' class='mt2' data-paste='{"name":"file","ext":{{ jsonArray $.UploadableExts }}}'></div>
+      {{- end }}
+    </div>
     {{- end }}
-  </div>
   {{- end }}
   <button type='submit' class='button ba br2 b--black pa2 mv3 w-100'>save</button>
   {{- if and (eq (head $.FilePath) "pages") (eq (ext $.FilePath) ".html") (ne $.FilePath "pages/index.html") }}
@@ -423,7 +425,7 @@
     <a href='/{{ join "files" $.SitePrefix "createfile" }}/?parent={{ join "output" (trimSuffix (tail $.FilePath) ".html") }}' class='nowrap mh2'>create file</a>
     {{- end }}
   </div>
-  {{- else }}
+  {{- else if or $.UploadableExts $.Assets }}
   <details class='mv2'>
     <summary class='pointer f6'>how do I include images in my post?</summary>
     <div>
@@ -545,8 +547,8 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
       </li>
       {{- end }}
     </ul>
-  <form>
-  {{- else }}
+  </form>
+  {{- else if $.UploadableExts }}
   <div class='mv2 tc'>{{ if eq (head $.FilePath) "posts" }}- No images -{{ else }}- No assets -{{ end }}</div>
   {{- end }}
 {{- end }}
