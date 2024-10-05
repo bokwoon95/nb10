@@ -18,39 +18,41 @@ func main() {
 	contentDomainEntry.SetText("example.com")
 	progress := widget.NewProgressBar()
 	progress.Hide()
-	var stop *widget.Button
-	stop = widget.NewButton("stop sync ❌", func() {})
-	stop.Hide()
-	var s1, s2 *widget.Button
+	var s1, s2, open *widget.Button
 	s1 = widget.NewButton("Start notebrew ▶", func() {
 		s1.Disable()
 		s2.Enable()
+		open.Enable()
 	})
 	s2 = widget.NewButton("Stop notebrew 🛑", func() {
 		s2.Disable()
 		s1.Enable()
+		open.Disable()
 	})
 	s2.Disable()
+	open = widget.NewButton("Open browser 🌐", func() {})
+	open.Disable()
+	var syncFolder *widget.Button
+	syncFolder = widget.NewButton("Sync folder 🔄", func() {
+		go func() {
+			syncFolder.SetText("Stop sync ❌")
+			progress.Show()
+			for i := 0.0; i <= 1.0; i += 0.1 {
+				time.Sleep(time.Millisecond * 250)
+				progress.SetValue(i)
+			}
+			progress.Hide()
+			syncFolder.SetText("Sync folder 🔄")
+		}()
+	})
 	myWindow.SetContent(container.NewVBox(
 		widget.NewLabel("Site URL"),
 		contentDomainEntry,
 		container.NewGridWithColumns(2, s1, s2),
-		widget.NewButton("Open browser 🌐", func() {}),
-		widget.NewButton("Open output folder 📂", func() {}),
-		widget.NewButton("Sync output folder 🔄", func() {
-			go func() {
-				progress.Show()
-				stop.Show()
-				for i := 0.0; i <= 1.0; i += 0.1 {
-					time.Sleep(time.Millisecond * 250)
-					progress.SetValue(i)
-				}
-				progress.Hide()
-				stop.Hide()
-			}()
-		}),
+		open,
+		widget.NewButton("Open folder 📂", func() {}),
+		syncFolder,
 		progress,
-		stop,
 	))
 	myWindow.ShowAndRun()
 }
