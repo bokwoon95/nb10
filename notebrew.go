@@ -634,16 +634,16 @@ func (nbrew *Notebrew) ContentBaseURL(sitePrefix string) string {
 	if strings.Contains(sitePrefix, ".") {
 		return "https://" + sitePrefix
 	}
-	if nbrew.CMSDomainHTTPS {
+	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") {
 		if sitePrefix != "" {
-			return "https://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.ContentDomain
+			return "http://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.CMSDomain
 		}
-		return "https://" + nbrew.ContentDomain
+		return "http://" + nbrew.CMSDomain
 	}
 	if sitePrefix != "" {
-		return "http://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.CMSDomain
+		return "https://" + strings.TrimPrefix(sitePrefix, "@") + "." + nbrew.ContentDomain
 	}
-	return "http://" + nbrew.CMSDomain
+	return "https://" + nbrew.ContentDomain
 }
 
 // GetReferer is like (*http.Request).Referer() except it returns an empty

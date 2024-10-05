@@ -431,8 +431,12 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Figure out the sitePrefix of the site we have to serve.
 	var sitePrefix string
 	var subdomain string
-	if certmagic.MatchWildcard(r.Host, "*."+nbrew.ContentDomain) {
-		subdomain = strings.TrimSuffix(r.Host, "."+nbrew.ContentDomain)
+	contentDomain := nbrew.ContentDomain
+	if nbrew.CMSDomain == "localhost" || strings.HasPrefix(nbrew.CMSDomain, "localhost:") {
+		contentDomain = nbrew.CMSDomain
+	}
+	if certmagic.MatchWildcard(r.Host, "*."+contentDomain) {
+		subdomain = strings.TrimSuffix(r.Host, "."+contentDomain)
 		if subdomain == "cdn" || subdomain == "storage" {
 			databaseFS, ok := &DatabaseFS{}, false
 			switch v := nbrew.FS.(type) {
@@ -477,7 +481,7 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sitePrefix = "@" + subdomain
-	} else if r.Host != nbrew.ContentDomain {
+	} else if r.Host != contentDomain {
 		sitePrefix = r.Host
 	}
 	var ok bool

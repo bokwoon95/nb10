@@ -141,6 +141,7 @@ Themes showcase.
 <button>Open folder</button>
 <button>🛑 Stop notebrew</button>
 
+TODO: gui: when the server starts, we need to both write to the contentdomain as well as clear the cdndomain (cdn domain *must* be empty when using notebrew as a SSG).
 TODO: remove the port (it's always 6444). Remove the option to toggle between database and directory for files provider, it's always database leader with a directory follower (async). The only thing we let the user configure is the content domain, and it must be filled in before they start the server. If they change content domain between iterations, it's up to them to regenerate it.
     - When the server is running, the buttons read:
         - Open browser
