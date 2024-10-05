@@ -164,7 +164,7 @@ notebrew-windows-arm.msi
 notebrew-linux
 notebrew-linux-arm
 
-If you are a programmer, you might want the commandline version instead. The commandline version
+If you are a programmer, you might want the commandline version instead.
 - install Git
 - install Go
 - `go install -tags fts5 -trimpath github.com/bokwoon95/notebrew/notebrew`
