@@ -454,8 +454,9 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
               <span class='mr1 flex items-center'>📌</span>
-              {{- if isImg $asset }}
-                {{- if and $.CDNDomain $.IsDatabaseFS }}
+              {{- $fileType := getFileType $asset.Name }}
+              {{- if $fileType.IsImg }}
+                {{- if and $.CDNDomain $.IsDatabaseFS $fileType.IsObject }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.CDNDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1 object-cover' loading='lazy'>
                 {{- else }}
                 <img alt='{{ $asset.AltText }}' src='/{{ join "files" $.SitePrefix $asset.Parent $asset.Name }}?raw' class='h3 w3 mr1 object-cover' loading='lazy'>
@@ -502,8 +503,9 @@ It's a [cat](https://en.wikipedia.org/wiki/Cat)</pre>
           </div>
           <div class='mt1 br2{{ if isInClipboard $asset.Name }} dashed-border{{ end }}'>
             <div class='flex flex-wrap break-word items-center'>
-              {{- if isImg $asset }}
-                {{- if and $.CDNDomain $.IsDatabaseFS }}
+              {{- $fileType := getFileType $asset.Name }}
+              {{- if $fileType.IsImg }}
+                {{- if and $.CDNDomain $.IsDatabaseFS $fileType.IsObject }}
                 <img alt='{{ $asset.AltText }}' src='//{{ $.CDNDomain }}/{{ $asset.FileID }}{{ ext $asset.Name }}' class='h3 w3 mr1 object-cover' loading='lazy'>
                 {{- else }}
                 <img alt='{{ $asset.AltText }}' src='/{{ join "files" $.SitePrefix $asset.Parent $asset.Name }}?raw' class='h3 w3 mr1 object-cover' loading='lazy'>

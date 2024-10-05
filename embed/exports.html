@@ -179,8 +179,9 @@
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
-          {{- if isImg $file }}
-            {{- if and $.CDNDomain $.IsDatabaseFS }}
+          {{- $fileType := getFileType $file.Name }}
+          {{- if $fileType.IsImg }}
+            {{- if and $.CDNDomain $.IsDatabaseFS $fileType.IsObject }}
             <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1 object-cover' loading='lazy'>
             {{- else }}
             <img src='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}?raw' class='h3 w3 mr1 object-cover' loading='lazy'>
@@ -223,8 +224,9 @@
           {{- else if and (eq (head $.FilePath) "posts") (eq $file.Name "postlist.json") }}
           <span class='mr1 flex items-center'>⚙️</span>
           {{- end }}
-          {{- if isImg $file }}
-            {{- if and $.CDNDomain $.IsDatabaseFS }}
+          {{- $fileType := getFileType $file.Name }}
+          {{- if $fileType.IsImg }}
+            {{- if and $.CDNDomain $.IsDatabaseFS $fileType.IsObject }}
             <img src='//{{ $.CDNDomain }}/{{ $file.FileID }}{{ ext $file.Name }}' class='h3 w3 mr1' loading='lazy'>
             {{- else }}
             <img src='/{{ join "files" $.SitePrefix $file.Parent $file.Name }}?raw' class='h3 w3 mr1' loading='lazy'>

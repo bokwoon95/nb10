@@ -22,7 +22,6 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 		FileID       ID        `json:"fileID"`
 		Parent       string    `json:"parent"`
 		Name         string    `json:"name"`
-		IsObject     bool      `json:"isObject"`
 		IsDir        bool      `json:"isDir"`
 		ModTime      time.Time `json:"modTime"`
 		CreationTime time.Time `json:"creationTime"`
@@ -139,12 +138,8 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
-			"isImg": func(file File) bool {
-				if file.IsDir {
-					return false
-				}
-				fileType := AllowedFileTypes[path.Ext(file.Name)]
-				return fileType.Has(AttributeImg)
+			"getFileType": func(name string) FileType {
+				return AllowedFileTypes[path.Ext(name)]
 			},
 			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
 				var b strings.Builder
@@ -279,8 +274,6 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 					CreationTime: row.Time("files.creation_time"),
 					IsDir:        row.Bool("files.is_dir"),
 				}
-				fileType := AllowedFileTypes[path.Ext(file.Name)]
-				file.IsObject = fileType.Has(AttributeObject)
 				return file
 			})
 			if err != nil {
@@ -315,8 +308,6 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 					CreationTime: row.Time("files.creation_time"),
 					IsDir:        row.Bool("files.is_dir"),
 				}
-				fileType := AllowedFileTypes[path.Ext(file.Name)]
-				file.IsObject = fileType.Has(AttributeObject)
 				return file
 			})
 			if err != nil {
@@ -359,11 +350,6 @@ func (nbrew *Notebrew) imports(w http.ResponseWriter, r *http.Request, user User
 					ModTime:      fileInfo.ModTime(),
 					CreationTime: CreationTime(absolutePath, fileInfo),
 				}
-				fileType, ok := AllowedFileTypes[path.Ext(file.Name)]
-				if !ok {
-					continue
-				}
-				file.IsObject = fileType.Has(AttributeObject)
 				if file.IsDir {
 					response.Files = append(response.Files, file)
 					continue

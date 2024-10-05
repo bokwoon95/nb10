@@ -138,12 +138,8 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
-			"isImg": func(file File) bool {
-				if file.IsDir {
-					return false
-				}
-				fileType := AllowedFileTypes[path.Ext(file.Name)]
-				return fileType.Has(AttributeImg)
+			"getFileType": func(name string) FileType {
+				return AllowedFileTypes[path.Ext(name)]
 			},
 			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
 				var b strings.Builder

@@ -82,13 +82,6 @@ func (nbrew *Notebrew) unpin(w http.ResponseWriter, r *http.Request, user User, 
 				"getFileType": func(name string) FileType {
 					return AllowedFileTypes[path.Ext(name)]
 				},
-				"isImg": func(file File) bool {
-					if file.IsDir {
-						return false
-					}
-					fileType := AllowedFileTypes[path.Ext(file.Name)]
-					return fileType.Has(AttributeImg)
-				},
 			}
 			tmpl, err := template.New("unpin.html").Funcs(funcMap).ParseFS(RuntimeFS, "embed/unpin.html")
 			if err != nil {

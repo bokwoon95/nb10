@@ -572,9 +572,8 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				_, tail, _ := strings.Cut(s, "/")
 				return tail
 			},
-			"isImg": func(asset Asset) bool {
-				fileType := AllowedFileTypes[path.Ext(asset.Name)]
-				return fileType.Has(AttributeImg)
+			"getFileType": func(name string) FileType {
+				return AllowedFileTypes[path.Ext(name)]
 			},
 			"generateBreadcrumbLinks": func(sitePrefix, filePath string) template.HTML {
 				var b strings.Builder
