@@ -409,25 +409,6 @@ news (it's a spin on cards)
 
 go install github.com/bokwoon95/notebrew/notebrew@latest
 
-if index $user.UserFlags "UploadImage"
-TODO: flags:
-- CustomDomain
-- UploadImage
-- Analytics (only notebrewlive)
-- Newsletter (only notebrewlive)
-NOTE: we may need to bake user flags into the plans (stripe.json) after all.
-
-TODO: stripe.go: whenever a user goes to a paid plan (or when they checkout success), enable the "UploadImages" user flag. When their plan lapses back to the free plan, disable the "UploadImages" user flag. You would likely have to use database-specific functions to patch the JSON field.
-
-file attributes (static, based on file extension)
-user permissions (server admin can change)
-file-user permissions (users can change)
-
-TODO: fix all instances of `rg '\$.CDNDomain \$.IsDatabaseFS'` (we must use isImg and isObject instead. BUT we want to avoid looking up the AllowFileTypes map twice. How?)
-    - {{ $attribute := getAttribute $file.FileName }}
-    - {{ if $attribute.Has 32 }} <!-- AttributeImg -->
-    - {{ if $attribute.Has 2  }} <!-- AttributeObject -->
-
 - full
     - all posts, everything | https://charity.wtf/
     - cute fonts can make such a huge difference: https://wordpress.com/theme/lowfi/bokwoon846263759.wordpress.com?tab_filter=recommended
