@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"sync"
 
 	"fyne.io/fyne/v2"
@@ -22,48 +21,28 @@ func main() {
 	// Create a new application
 	myApp := app.New()
 	myWindow := myApp.NewWindow("HTTP Server UI")
-	myWindow.Resize(fyne.NewSize(900, 600)) // Set initial window size to 900x600 (3:2 aspect ratio)
+	myWindow.Resize(fyne.NewSize(300, 300)) // Set initial window size to 900x600 (3:2 aspect ratio)
 	myWindow.CenterOnScreen() // Center the window on the screen
-
-	// Input widgets
-	portEntry := widget.NewEntry()
-	portEntry.SetPlaceHolder("Enter port number")
 
 	contentDomainEntry := widget.NewEntry()
 	contentDomainEntry.SetPlaceHolder("Enter content domain")
 
-	// Radio group for files provider
-	filesProviderRadio := widget.NewRadioGroup([]string{"Directory", "Database"}, func(selected string) {
-		log.Printf("Selected files provider: %s", selected)
-	})
-
 	// Start server button
 	var startServerButton *widget.Button
 	startServerButton = widget.NewButton("Start server", func() {
-		port, err := strconv.Atoi(portEntry.Text)
-		if err != nil || port <= 0 {
-			log.Println("Invalid port number")
-			return
-		}
 		contentDomain := contentDomainEntry.Text
 
-		filesProvider := filesProviderRadio.Selected
-		if filesProvider == "" {
-			log.Println("No files provider selected")
-			return
-		}
-
-		startServer(port, contentDomain, filesProvider)
+		startServer(contentDomain)
 
 		// Change UI to show server started status
-		listeningLabel := widget.NewLabel(fmt.Sprintf("Listening on port %d...", port))
+		listeningLabel := widget.NewLabel(fmt.Sprintf("Listening on port 6444..."))
 
 		openBrowserButton := widget.NewButton("Open browser", func() {
-			openBrowser(fmt.Sprintf("http://localhost:%d", port))
+			openBrowser(fmt.Sprintf("http://localhost:6444"))
 		})
 
 		stopServerButton := widget.NewButton("Stop server", func() {
-			stopServer(myWindow, portEntry, contentDomainEntry, filesProviderRadio, startServerButton)
+			stopServer(myWindow, contentDomainEntry, startServerButton)
 		})
 
 		buttonContainer := container.NewVBox(listeningLabel, openBrowserButton, stopServerButton)
@@ -72,12 +51,9 @@ func main() {
 
 	// Form container
 	form := container.NewVBox(
-		widget.NewLabel("Port (number)"),
-		portEntry,
 		widget.NewLabel("Content Domain"),
 		contentDomainEntry,
 		widget.NewLabel("Files Provider"),
-		filesProviderRadio,
 		startServerButton,
 	)
 
@@ -86,15 +62,14 @@ func main() {
 }
 
 // Start HTTP server
-func startServer(port int, contentDomain string, filesProvider string) {
-	address := fmt.Sprintf(":%d", port)
+func startServer(contentDomain string) {
+	address := fmt.Sprintf("localhost:%d", 6444)
 
 	server = &http.Server{Addr: address, Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(fmt.Sprintf("Hello from server running on port %d!\n", port)))
+		w.Write([]byte(fmt.Sprintf("Hello from server running on port %d!\n", 6444)))
 		w.Write([]byte(fmt.Sprintf("Content Domain: %s\n", contentDomain)))
-		w.Write([]byte(fmt.Sprintf("Files Provider: %s\n", filesProvider)))
 	})}
 
 	wg.Add(1)
@@ -104,11 +79,11 @@ func startServer(port int, contentDomain string, filesProvider string) {
 			log.Fatalf("Could not listen on %s: %v\n", address, err)
 		}
 	}()
-	log.Printf("Server started on port %d...\n", port)
+	log.Printf("Server started on port 6444...\n")
 }
 
 // Stop the server
-func stopServer(myWindow fyne.Window, portEntry, contentDomainEntry *widget.Entry, filesProviderRadio *widget.RadioGroup, startServerButton *widget.Button) {
+func stopServer(myWindow fyne.Window, contentDomainEntry *widget.Entry, startServerButton *widget.Button) {
 	if server != nil {
 		if err := server.Close(); err != nil {
 			log.Printf("Error stopping server: %v\n", err)
@@ -118,18 +93,13 @@ func stopServer(myWindow fyne.Window, portEntry, contentDomainEntry *widget.Entr
 		server = nil
 	}
 
-	// Reset the UI to initial form state
-	portEntry.SetText("")
 	contentDomainEntry.SetText("")
-	filesProviderRadio.SetSelected("")
 
 	form := container.NewVBox(
 		widget.NewLabel("Port (number)"),
-		portEntry,
 		widget.NewLabel("Content Domain"),
 		contentDomainEntry,
 		widget.NewLabel("Files Provider"),
-		filesProviderRadio,
 		startServerButton,
 	)
 
@@ -143,7 +113,7 @@ func openBrowser(url string) {
 	case "linux":
 		err = exec.Command("xdg-open", url).Start()
 	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		err = exec.Command("explorer.exe", url).Start()
 	case "darwin":
 		err = exec.Command("open", url).Start()
 	default:
