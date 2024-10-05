@@ -162,9 +162,9 @@ notebrew-linux
 notebrew-linux-arm
 
 If you are a programmer, you might want the commandline version instead. The commandline version
-- download Go
-- download Git
-- `go install -tags fts5,open_browser github.com/bokwoon95/notebrew/notebrew`
+- install Git
+- install Go
+- `go install -tags fts5 github.com/bokwoon95/notebrew/notebrew`
 
 API Documentation.
 

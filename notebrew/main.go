@@ -21,8 +21,7 @@ import (
 	"github.com/bokwoon95/sqddl/ddl"
 )
 
-var (
-	startMessage = `
+var startMessage = `
                      _       _
          _ __   ___ | |_ ___| |__  _ __ _____      __
         | '_ \ / _ \| __/ _ \ '_ \| '__/ _ \ \ /\ / /
@@ -33,7 +32,6 @@ var (
 
   Please do not close this window (except to quit notebrew).
 `
-)
 
 func main() {
 	err := func() error {
