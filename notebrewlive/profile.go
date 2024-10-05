@@ -35,20 +35,21 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 		Current            bool      `json:"current"`
 	}
 	type Response struct {
-		UserID                nb10.ID        `json:"userID"`
-		Username              string         `json:"username"`
-		Email                 string         `json:"email"`
-		TimezoneOffsetSeconds int            `json:"timezoneOffsetSeconds"`
-		DisableReason         string         `json:"disableReason"`
-		SiteLimit             int64          `json:"siteLimit"`
-		StorageLimit          int64          `json:"storageLimit"`
-		StorageUsed           int64          `json:"storageUsed"`
-		Sites                 []Site         `json:"sites"`
-		Sessions              []Session      `json:"sessions"`
-		Plans                 []Plan         `json:"plans"`
-		CustomerID            string         `json:"customerID"`
-		HasSubscription       bool           `json:"hasSubscription"`
-		PostRedirectGet       map[string]any `json:"postRedirectGet"`
+		UserID                nb10.ID         `json:"userID"`
+		Username              string          `json:"username"`
+		Email                 string          `json:"email"`
+		TimezoneOffsetSeconds int             `json:"timezoneOffsetSeconds"`
+		DisableReason         string          `json:"disableReason"`
+		SiteLimit             int64           `json:"siteLimit"`
+		StorageLimit          int64           `json:"storageLimit"`
+		UserFlags             map[string]bool `json:"userFlags"`
+		StorageUsed           int64           `json:"storageUsed"`
+		Sites                 []Site          `json:"sites"`
+		Sessions              []Session       `json:"sessions"`
+		Plans                 []Plan          `json:"plans"`
+		CustomerID            string          `json:"customerID"`
+		HasSubscription       bool            `json:"hasSubscription"`
+		PostRedirectGet       map[string]any  `json:"postRedirectGet"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.MethodNotAllowed(w, r)
@@ -136,6 +137,7 @@ func profile(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, user 
 	response.DisableReason = user.DisableReason
 	response.SiteLimit = user.SiteLimit
 	response.StorageLimit = user.StorageLimit
+	response.UserFlags = user.UserFlags
 	response.Plans = stripeConfig.Plans
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() (err error) {

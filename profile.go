@@ -32,17 +32,18 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 		Current            bool      `json:"current"`
 	}
 	type Response struct {
-		UserID                ID             `json:"userID"`
-		Username              string         `json:"username"`
-		Email                 string         `json:"email"`
-		TimezoneOffsetSeconds int            `json:"timezoneOffsetSeconds"`
-		DisableReason         string         `json:"disableReason"`
-		SiteLimit             int64          `json:"siteLimit"`
-		StorageLimit          int64          `json:"storageLimit"`
-		StorageUsed           int64          `json:"storageUsed"`
-		Sites                 []Site         `json:"sites"`
-		Sessions              []Session      `json:"sessions"`
-		PostRedirectGet       map[string]any `json:"postRedirectGet"`
+		UserID                ID              `json:"userID"`
+		Username              string          `json:"username"`
+		Email                 string          `json:"email"`
+		TimezoneOffsetSeconds int             `json:"timezoneOffsetSeconds"`
+		DisableReason         string          `json:"disableReason"`
+		SiteLimit             int64           `json:"siteLimit"`
+		StorageLimit          int64           `json:"storageLimit"`
+		UserFlags             map[string]bool `json:"userFlags"`
+		StorageUsed           int64           `json:"storageUsed"`
+		Sites                 []Site          `json:"sites"`
+		Sessions              []Session       `json:"sessions"`
+		PostRedirectGet       map[string]any  `json:"postRedirectGet"`
 	}
 	if r.Method != "GET" && r.Method != "HEAD" {
 		nbrew.MethodNotAllowed(w, r)
@@ -129,6 +130,7 @@ func (nbrew *Notebrew) profile(w http.ResponseWriter, r *http.Request, user User
 	response.DisableReason = user.DisableReason
 	response.SiteLimit = user.SiteLimit
 	response.StorageLimit = user.StorageLimit
+	response.UserFlags = user.UserFlags
 	group, groupctx := errgroup.WithContext(r.Context())
 	group.Go(func() (err error) {
 		defer stacktrace.RecoverPanic(&err)

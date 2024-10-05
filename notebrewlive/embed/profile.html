@@ -68,22 +68,41 @@
 <div class='ma2'>
   <a href='/users/updateprofile/'>update profile</a>
 </div>
-<div class='ma2'>
-  <div class='b'>Username:</div>
-  <div>{{ if $.Username }}{{ $.Username }}{{ else }}<em>default user</em>{{ end }}</div>
-</div>
-<div class='ma2'>
-  <div class='b'>Email:</div>
-  <div>{{ $.Email }}</div>
-  <div><a href='/users/updateemail/'>update email</a></div>
-</div>
-<div class='ma2'>
-  <div class='b'>Password:</div>
-  <div><a href='/users/changepassword/'>change password</a></div>
-</div>
-<div class='ma2'>
-  <div class='b'>Preferred timezone offset:</div>
-  <div>{{ formatTimezone $.TimezoneOffsetSeconds }}</div>
+<div class='overflow-x-auto'>
+  <table class='ma2 collapse'>
+    <tr class='bb bt'>
+      <td class='pa2 b'>Username</td>
+      <td class='pa2'>{{ if $.Username }}{{ $.Username }}{{ else }}<em>default user</em>{{ end }}</td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Email</td>
+      <td class='pa2'>{{ $.Email }} <a href='/users/updateemail/'>update email</a></td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Password</td>
+      <td class='pa2'><a href='/users/changepassword/'>change password</a></td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Preferred timezone offset</td>
+      <td class='pa2'>{{ formatTimezone $.TimezoneOffsetSeconds }}</td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Current site limit</td>
+      <td class='pa2'>{{ if gt $.SiteLimit 0 }}{{ $.SiteLimit }}{{ else }}-{{ end }}</td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Current storage limit</td>
+      <td class='pa2'>{{ if gt $.StorageLimit 0 }}{{ humanReadableFileSize $.StorageLimit }}{{ else }}-{{ end }}</td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Upload images</td>
+      <td class='pa2'>{{ if index $.UserFlags "NoUploadImage" }}❌{{ else }}✅{{ end }}</td>
+    </tr>
+    <tr class='bb'>
+      <td class='pa2 b'>Use custom domains</td>
+      <td class='pa2'>{{ if index $.UserFlags "NoCustomDomain" }}❌{{ else }}✅{{ end }}</td>
+    </tr>
+  </table>
 </div>
 <h2 class='mb0 mh2 underline'>Sites</h2>
 <div class='overflow-x-auto'>
@@ -154,14 +173,6 @@
   </table>
 </form>
 <h2 class='mb0 mh2 underline'>Plans</h2>
-<div class='ma2'>
-  <div class='b'>Current site limit:</div>
-  <div>{{ if gt $.SiteLimit 0 }}{{ $.SiteLimit }}{{ else }}-{{ end }}</div>
-</div>
-<div class='ma2'>
-  <div class='b'>Current storage limit:</div>
-  <div>{{ if gt $.StorageLimit 0 }}{{ humanReadableFileSize $.StorageLimit }}{{ else }}-{{ end }}</div>
-</div>
 {{- if $.HasSubscription }}
 <form method='post' action='/stripe/portal/' class='ma2 mb4'>
   <button type='submit' class='button ba ph3 br2 b--black pv1'>manage subscription</button>
@@ -174,6 +185,8 @@
         <th class='pa2'>Name</th>
         <th class='pa2'>Site limit</th>
         <th class='pa2'>Storage limit</th>
+        <th class='pa2'>Upload images</th>
+        <th class='pa2'>Use custom domains</th>
         <th class='pa2'>Choose plan</th>
       </tr>
     </thead>
@@ -183,11 +196,17 @@
         <td class='pa2'>{{ $plan.Name }}</td>
         <td class='pa2'>{{ $plan.SiteLimit }}</td>
         <td class='pa2'>{{ humanReadableFileSize $plan.StorageLimit }}</td>
+        <td class='pa2'>{{ if index $plan.UserFlags "NoUploadImage" }}❌{{ else }}✅{{ end }}</td>
+        <td class='pa2'>{{ if index $plan.UserFlags "NoCustomDomain" }}❌{{ else }}✅{{ end }}</td>
         <td class='pa2'>
+          {{- if $plan.PriceID }}
           <form method='post' action='/stripe/checkout/'>
             <input type='hidden' name='priceID' value='{{ $plan.PriceID }}'>
             <button type='submit' class='button ba br2 b--black ph2 pv1'>{{ $plan.Price }}</button>
           </form>
+          {{- else }}
+          -
+          {{- end }}
         </td>
       </tr>
       {{- end }}

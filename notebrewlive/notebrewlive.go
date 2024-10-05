@@ -13,11 +13,12 @@ type User struct {
 }
 
 type Plan struct {
-	Name         string `json:"name"`
-	SiteLimit    int64  `json:"siteLimit"`
-	StorageLimit int64  `json:"storageLimit"`
-	Price        string `json:"price"`
-	PriceID      string `json:"priceID"`
+	Name         string          `json:"name"`
+	SiteLimit    int64           `json:"siteLimit"`
+	StorageLimit int64           `json:"storageLimit"`
+	UserFlags    map[string]bool `json:"userFlags"`
+	Price        string          `json:"price"`
+	PriceID      string          `json:"priceID"`
 }
 
 type StripeConfig struct {
