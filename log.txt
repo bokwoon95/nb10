@@ -158,7 +158,7 @@ Downloads:
 notebrew-windows.msi
 notebrew-windows-arm.msi
 --
-(macbooks before 2019) notebrew-macos.dmg
+(macbooks before 2019) notebrew-macos-intel.dmg
 (macbooks after 2019) notebrew-macos-apple-silicon.dmg
 --
 notebrew-linux
