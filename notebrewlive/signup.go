@@ -40,6 +40,10 @@ func signup(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request, stripe
 	freePlan := Plan{
 		SiteLimit:    1,
 		StorageLimit: 10_000_000,
+		UserFlags: map[string]bool{
+			"NoUploadImage":  true,
+			"NoCustomDomain": true,
+		},
 	}
 	for _, plan := range stripeConfig.Plans {
 		if plan.PriceID == "" {

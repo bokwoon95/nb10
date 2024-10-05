@@ -111,22 +111,6 @@ func stripeCheckoutSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.
 		nbrew.InternalServerError(w, r, err)
 		return
 	}
-	var siteLimit, storageLimit int64
-	for _, lineItem := range checkoutSession.LineItems.Data {
-		if lineItem.Price == nil {
-			continue
-		}
-		for _, plan := range stripeConfig.Plans {
-			if plan.PriceID == lineItem.Price.ID {
-				siteLimit = plan.SiteLimit
-				storageLimit = plan.StorageLimit
-				break
-			}
-		}
-		if siteLimit != 0 && storageLimit != 0 {
-			break
-		}
-	}
 	if user.CustomerID == "" {
 		_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
@@ -150,13 +134,44 @@ func stripeCheckoutSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.
 			}
 		}
 	}
-	if siteLimit > 0 && storageLimit > 0 {
-		_, err := sq.Exec(r.Context(), nbrew.DB, sq.Query{
+	var plan *Plan
+	for _, lineItem := range checkoutSession.LineItems.Data {
+		if lineItem.Price == nil {
+			continue
+		}
+		for i := range stripeConfig.Plans {
+			if stripeConfig.Plans[i].PriceID == lineItem.Price.ID {
+				plan = &stripeConfig.Plans[i]
+				break
+			}
+		}
+		if plan != nil {
+			break
+		}
+	}
+	if plan != nil {
+		b, err := json.Marshal(plan.UserFlags)
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
+		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
 			Dialect: nbrew.Dialect,
-			Format:  "UPDATE users SET site_limit = {siteLimit}, storage_limit = {storageLimit} WHERE user_id = {userID}",
+			Format:  "UPDATE users SET site_limit = {siteLimit}, storage_limit = {storageLimit}, user_flags = {userFlags} WHERE user_id = {userID}",
 			Values: []any{
-				sq.Int64Param("siteLimit", siteLimit),
-				sq.Int64Param("storageLimit", storageLimit),
+				sq.Int64Param("siteLimit", plan.SiteLimit),
+				sq.Int64Param("storageLimit", plan.StorageLimit),
+				sq.Param("userFlags", sq.DialectExpression{
+					Default: sq.Expr("json_patch(coalesce(user_flags, json_object()), {})", string(b)),
+					Cases: []sq.DialectCase{{
+						Dialect: "postgres",
+						Result:  sq.Expr("coalesce(user_flags, jsonb_build_object()) || CAST({} AS JSONB)", string(b)),
+					}, {
+						Dialect: "mysql",
+						Result:  sq.Expr("json_merge_patch(coalesce(user_flags, json_object(), CAST({} AS JSON)))", string(b)),
+					}},
+				}),
 				sq.UUIDParam("userID", user.UserID),
 			},
 		})
@@ -165,18 +180,18 @@ func stripeCheckoutSuccess(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.
 			nbrew.InternalServerError(w, r, err)
 			return
 		}
-	}
-	err = nbrew.SetFlashSession(w, r, map[string]any{
-		"postRedirectGet": map[string]any{
-			"from":         "stripe/checkout/success",
-			"siteLimit":    siteLimit,
-			"storageLimit": storageLimit,
-		},
-	})
-	if err != nil {
-		nbrew.GetLogger(r.Context()).Error(err.Error())
-		nbrew.InternalServerError(w, r, err)
-		return
+		err = nbrew.SetFlashSession(w, r, map[string]any{
+			"postRedirectGet": map[string]any{
+				"from":         "stripe/checkout/success",
+				"siteLimit":    plan.SiteLimit,
+				"storageLimit": plan.StorageLimit,
+			},
+		})
+		if err != nil {
+			nbrew.GetLogger(r.Context()).Error(err.Error())
+			nbrew.InternalServerError(w, r, err)
+			return
+		}
 	}
 	http.Redirect(w, r, "/users/profile/", http.StatusSeeOther)
 }
@@ -242,37 +257,54 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		var siteLimit, storageLimit int64
+		var plan *Plan
 		for _, subscriptionItem := range subscription.Items.Data {
 			if subscriptionItem.Price == nil {
 				continue
 			}
-			for _, plan := range stripeConfig.Plans {
-				if plan.PriceID == subscriptionItem.Price.ID {
-					siteLimit = plan.SiteLimit
-					storageLimit = plan.StorageLimit
+			for i := range stripeConfig.Plans {
+				if stripeConfig.Plans[i].PriceID == subscriptionItem.Plan.ID {
+					plan = &stripeConfig.Plans[i]
 					break
 				}
 			}
-			if siteLimit != 0 && storageLimit != 0 {
+			if plan != nil {
 				break
 			}
 		}
-		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "UPDATE users" +
-				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
-				" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
-			Values: []any{
-				sq.Int64Param("siteLimit", siteLimit),
-				sq.Int64Param("storageLimit", storageLimit),
-				sq.StringParam("customerID", subscription.Customer.ID),
-			},
-		})
-		if err != nil {
-			nbrew.GetLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
+		if plan != nil {
+			b, err := json.Marshal(plan.UserFlags)
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "UPDATE users" +
+					" SET site_limit = {siteLimit}, storage_limit = {storageLimit}, user_flags = {userFlags}" +
+					" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+				Values: []any{
+					sq.Int64Param("siteLimit", plan.SiteLimit),
+					sq.Int64Param("storageLimit", plan.StorageLimit),
+					sq.Param("userFlags", sq.DialectExpression{
+						Default: sq.Expr("json_patch(coalesce(user_flags, json_object()), {})", string(b)),
+						Cases: []sq.DialectCase{{
+							Dialect: "postgres",
+							Result:  sq.Expr("coalesce(user_flags, jsonb_build_object()) || CAST({} AS JSONB)", string(b)),
+						}, {
+							Dialect: "mysql",
+							Result:  sq.Expr("json_merge_patch(coalesce(user_flags, json_object(), CAST({} AS JSON)))", string(b)),
+						}},
+					}),
+					sq.StringParam("customerID", subscription.Customer.ID),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
 		}
 	case "customer.subscription.updated":
 		var subscription stripe.Subscription
@@ -281,7 +313,7 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 			nbrew.BadRequest(w, r, err)
 			return
 		}
-		var siteLimit, storageLimit int64
+		var plan *Plan
 		if subscription.Status == stripe.SubscriptionStatusActive {
 			if subscription.CancelAtPeriodEnd {
 				// If we reach here it means that the customer canceled the
@@ -298,38 +330,65 @@ func stripeWebhook(nbrew *nb10.Notebrew, w http.ResponseWriter, r *http.Request,
 				if subscriptionItem.Price == nil {
 					continue
 				}
-				for _, plan := range stripeConfig.Plans {
-					if plan.PriceID == subscriptionItem.Price.ID {
-						siteLimit = plan.SiteLimit
-						storageLimit = plan.StorageLimit
+				for i := range stripeConfig.Plans {
+					if stripeConfig.Plans[i].PriceID == subscriptionItem.Plan.ID {
+						plan = &stripeConfig.Plans[i]
 						break
 					}
 				}
-				if siteLimit != 0 && storageLimit != 0 {
+				if plan != nil {
 					break
 				}
 			}
-			// TODO: enable "UploadImages" user flag.
 		} else {
-			siteLimit = 1
-			storageLimit = 10_000_000
-			// TODO: disable "UploadImages" user flag.
+			plan = &Plan{
+				SiteLimit:    1,
+				StorageLimit: 10_000_000,
+				UserFlags: map[string]bool{
+					"NoUploadImage":  true,
+					"NoCustomDomain": true,
+				},
+			}
+			for i := range stripeConfig.Plans {
+				if stripeConfig.Plans[i].PriceID == "" {
+					plan = &stripeConfig.Plans[i]
+					break
+				}
+			}
 		}
-		_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
-			Dialect: nbrew.Dialect,
-			Format: "UPDATE users" +
-				" SET site_limit = {siteLimit}, storage_limit = {storageLimit}" +
-				" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
-			Values: []any{
-				sq.Int64Param("siteLimit", siteLimit),
-				sq.Int64Param("storageLimit", storageLimit),
-				sq.StringParam("customerID", subscription.Customer.ID),
-			},
-		})
-		if err != nil {
-			nbrew.GetLogger(r.Context()).Error(err.Error())
-			nbrew.InternalServerError(w, r, err)
-			return
+		if plan != nil {
+			b, err := json.Marshal(plan.UserFlags)
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
+			_, err = sq.Exec(r.Context(), nbrew.DB, sq.Query{
+				Dialect: nbrew.Dialect,
+				Format: "UPDATE users" +
+					" SET site_limit = {siteLimit}, storage_limit = {storageLimit}, user_flags = {userFlags}" +
+					" WHERE user_id = (SELECT user_id FROM customer WHERE customer_id = {customerID})",
+				Values: []any{
+					sq.Int64Param("siteLimit", plan.SiteLimit),
+					sq.Int64Param("storageLimit", plan.StorageLimit),
+					sq.Param("userFlags", sq.DialectExpression{
+						Default: sq.Expr("json_patch(coalesce(user_flags, json_object()), {})", string(b)),
+						Cases: []sq.DialectCase{{
+							Dialect: "postgres",
+							Result:  sq.Expr("coalesce(user_flags, jsonb_build_object()) || CAST({} AS JSONB)", string(b)),
+						}, {
+							Dialect: "mysql",
+							Result:  sq.Expr("json_merge_patch(coalesce(user_flags, json_object(), CAST({} AS JSON)))", string(b)),
+						}},
+					}),
+					sq.StringParam("customerID", subscription.Customer.ID),
+				},
+			})
+			if err != nil {
+				nbrew.GetLogger(r.Context()).Error(err.Error())
+				nbrew.InternalServerError(w, r, err)
+				return
+			}
 		}
 	case "customer.subscription.deleted":
 		var subscription stripe.Subscription

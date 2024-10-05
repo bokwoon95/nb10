@@ -13,6 +13,7 @@ type User struct {
 }
 
 type Plan struct {
+	Archived     bool            `json:"archived"`
 	Name         string          `json:"name"`
 	SiteLimit    int64           `json:"siteLimit"`
 	StorageLimit int64           `json:"storageLimit"`

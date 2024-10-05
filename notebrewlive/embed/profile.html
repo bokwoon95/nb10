@@ -192,6 +192,7 @@
     </thead>
     <tbody>
       {{- range $plan := $.Plans }}
+      {{ if $plan.Archived }}{{ continue }}{{ end }}
       <tr class='bb tc'>
         <td class='pa2'>{{ $plan.Name }}</td>
         <td class='pa2'>{{ $plan.SiteLimit }}</td>
