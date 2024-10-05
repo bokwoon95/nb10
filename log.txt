@@ -148,6 +148,24 @@ TODO: remove the port (it's always 6444). Remove the option to toggle between da
         - Open output folder
         - Stop server
 
+Downloads:
+
+[windows] [macos] [linux]
+
+notebrew-windows.msi
+notebrew-windows-arm.msi
+--
+notebrew-macos.dmg
+notebrew-macos-apple-silicon.dmg
+--
+notebrew-linux
+notebrew-linux-arm
+
+If you are a programmer, you might want the commandline version instead. The commandline version
+- download Go
+- download Git
+- `go install -tags fts5,open_browser github.com/bokwoon95/notebrew/notebrew`
+
 API Documentation.
 
 TODO: you know, Tokyo metro's black on yellow signs/posters is actually a pretty aesthetically pleasing colorscheme. can we emulate it?
@@ -389,13 +407,6 @@ news (it's a spin on cards)
 - TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
     - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
     - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
-
-notebrew-windows.msi
-notebrew-windows-arm.msi
-notebrew-macos.dmg
-notebrew-macos-apple-silicon.dmg
-notebrew-linux
-notebrew-linux-arm
 
 go install github.com/bokwoon95/notebrew/notebrew@latest
 

@@ -22,12 +22,17 @@ import (
 )
 
 var (
-	openBrowser  = func(address string) {}
-	startMessage = "Running on %s\n"
-	exit         = func(exitErr error) {
-		fmt.Println(exitErr)
-		os.Exit(1)
-	}
+	startMessage = `
+                     _       _
+         _ __   ___ | |_ ___| |__  _ __ _____      __
+        | '_ \ / _ \| __/ _ \ '_ \| '__/ _ \ \ /\ / /
+        | | | | (_) | ||  __/ |_) | | |  __/\ V  V /
+        |_| |_|\___/ \__\___|_.__/|_|  \___| \_/\_/
+
+     notebrew is running on %s
+
+  Please do not close this window (except to quit notebrew).
+`
 )
 
 func main() {
@@ -278,7 +283,6 @@ func main() {
 			if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
 				if !nbrew.CMSDomainHTTPS {
 					fmt.Println("notebrew is already running on http://" + nbrew.CMSDomain + "/files/")
-					openBrowser("http://" + server.Addr + "/files/")
 				} else {
 					fmt.Println("notebrew is already running (run `notebrew stop` to stop the process)")
 				}
@@ -308,7 +312,6 @@ func main() {
 			}()
 			if !nbrew.CMSDomainHTTPS {
 				fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
-				openBrowser("http://" + server.Addr + "/files/")
 			} else {
 				fmt.Printf(startMessage, server.Addr)
 			}
@@ -325,7 +328,8 @@ func main() {
 			fmt.Println(migrationErr.Filename)
 			fmt.Println(migrationErr.Contents)
 		}
-		exit(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -340,19 +344,19 @@ func ServeHTTP(nbrew *nb10.Notebrew) http.HandlerFunc {
 			http.Redirect(w, r, scheme+nbrew.CMSDomain+r.URL.RequestURI(), http.StatusMovedPermanently)
 			return
 		}
-		// Redirect unclean paths to the cleaned path equivalent.
+		// Redirect unclean paths to the clean path equivalent.
 		if r.Method == "GET" || r.Method == "HEAD" {
-			cleanedPath := path.Clean(r.URL.Path)
-			if cleanedPath != "/" {
-				_, ok := nb10.AllowedFileTypes[path.Ext(cleanedPath)]
+			cleanPath := path.Clean(r.URL.Path)
+			if cleanPath != "/" {
+				_, ok := nb10.AllowedFileTypes[path.Ext(cleanPath)]
 				if !ok {
-					cleanedPath += "/"
+					cleanPath += "/"
 				}
 			}
-			if cleanedPath != r.URL.Path {
-				cleanedURL := *r.URL
-				cleanedURL.Path = cleanedPath
-				http.Redirect(w, r, cleanedURL.String(), http.StatusMovedPermanently)
+			if cleanPath != r.URL.Path {
+				cleanURL := *r.URL
+				cleanURL.Path = cleanPath
+				http.Redirect(w, r, cleanURL.String(), http.StatusMovedPermanently)
 				return
 			}
 		}

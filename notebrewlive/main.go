@@ -34,12 +34,17 @@ import (
 )
 
 var (
-	openBrowser  = func(address string) {}
-	startMessage = "Running on %s\n"
-	exit         = func(exitErr error) {
-		fmt.Println(exitErr)
-		os.Exit(1)
-	}
+	startMessage = `
+                     _       _
+         _ __   ___ | |_ ___| |__  _ __ _____      __
+        | '_ \ / _ \| __/ _ \ '_ \| '__/ _ \ \ /\ / /
+        | | | | (_) | ||  __/ |_) | | |  __/\ V  V /
+        |_| |_|\___/ \__\___|_.__/|_|  \___| \_/\_/
+
+     notebrew is running on %s
+
+  Please do not close this window (except to quit notebrew).
+`
 )
 
 func main() {
@@ -330,7 +335,6 @@ func main() {
 			if errno == syscall.EADDRINUSE || runtime.GOOS == "windows" && errno == WSAEADDRINUSE {
 				if !nbrew.CMSDomainHTTPS {
 					fmt.Println("notebrew is already running on http://" + nbrew.CMSDomain + "/files/")
-					openBrowser("http://" + server.Addr + "/files/")
 				} else {
 					fmt.Println("notebrew is already running (run `notebrew stop` to stop the process)")
 				}
@@ -360,7 +364,6 @@ func main() {
 			}()
 			if !nbrew.CMSDomainHTTPS {
 				fmt.Printf(startMessage, "http://"+nbrew.CMSDomain+"/files/")
-				openBrowser("http://" + server.Addr + "/files/")
 			} else {
 				fmt.Printf(startMessage, server.Addr)
 			}
@@ -377,7 +380,8 @@ func main() {
 			fmt.Println(migrationErr.Filename)
 			fmt.Println(migrationErr.Contents)
 		}
-		exit(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
