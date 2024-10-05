@@ -430,7 +430,9 @@ func (nbrew *Notebrew) directory(w http.ResponseWriter, r *http.Request, user Us
 	default:
 		response.UploadableExts = make([]string, 0, len(editableExts)+len(imgExts)+len(fontExts))
 		response.UploadableExts = append(response.UploadableExts, editableExts...)
-		response.UploadableExts = append(response.UploadableExts, imgExts...)
+		if !user.UserFlags["NoUploadImage"] {
+			response.UploadableExts = append(response.UploadableExts, imgExts...)
+		}
 		response.UploadableExts = append(response.UploadableExts, fontExts...)
 	}
 

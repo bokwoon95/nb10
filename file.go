@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -182,14 +181,19 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				response.AssetDir = path.Join("output", strings.TrimSuffix(tail, ".html"))
 			}
 			response.UploadableExts = make([]string, 0, len(imgExts)+3)
-			response.UploadableExts = append(response.UploadableExts, imgExts...)
+			if !user.UserFlags["NoUploadImage"] {
+				response.UploadableExts = append(response.UploadableExts, imgExts...)
+			}
 			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
-			extFilter := sq.Expr("1 = 1")
-			if len(response.UploadableExts) > 0 {
+			assetExts := make([]string, 0, len(imgExts)+3)
+			assetExts = append(assetExts, imgExts...)
+			assetExts = append(assetExts, ".css", ".js", ".md")
+			extFilter := sq.Expr("1 <> 1")
+			if len(assetExts) > 0 {
 				var b strings.Builder
-				args := make([]any, 0, len(response.UploadableExts))
+				args := make([]any, 0, len(assetExts))
 				b.WriteString("(")
-				for i, ext := range response.UploadableExts {
+				for i, ext := range assetExts {
 					if i > 0 {
 						b.WriteString(" OR ")
 					}
@@ -335,14 +339,15 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				response.URL = template.URL(response.ContentBaseURL + "/" + strings.TrimSuffix(filePath, ".md") + "/")
 			}
 			response.AssetDir = path.Join("output", strings.TrimSuffix(filePath, ".md"))
-			response.UploadableExts = imgExts
-			extFilter := sq.Expr("1 = 1")
-			if len(response.UploadableExts) > 0 {
-				slices.Sort(response.UploadableExts)
+			if !user.UserFlags["NoUploadImage"] {
+				response.UploadableExts = imgExts
+			}
+			extFilter := sq.Expr("1 <> 1")
+			if len(imgExts) > 0 {
 				var b strings.Builder
-				args := make([]any, 0, len(response.UploadableExts))
+				args := make([]any, 0, len(imgExts))
 				b.WriteString("(")
-				for i, ext := range response.UploadableExts {
+				for i, ext := range imgExts {
 					if i > 0 {
 						b.WriteString(" OR ")
 					}
@@ -844,6 +849,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 						}
 					}
 					if fileType.Has(AttributeImg) {
+						if user.UserFlags["NoUploadImage"] {
+							continue
+						}
 						if strings.TrimSuffix(fileName, fileType.Ext) == "image" {
 							var timestamp [8]byte
 							now := time.Now()

@@ -132,12 +132,16 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			response.Ext = ".html"
 			response.FileExts = []string{".html"}
 			response.UploadableExts = make([]string, 0, len(imgExts)+3)
-			response.UploadableExts = append(response.UploadableExts, imgExts...)
+			if !user.UserFlags["NoUploadImage"] {
+				response.UploadableExts = append(response.UploadableExts, imgExts...)
+			}
 			response.UploadableExts = append(response.UploadableExts, ".css", ".js", ".md")
 		case "posts":
 			response.Ext = ".md"
 			response.FileExts = []string{".md"}
-			response.UploadableExts = imgExts
+			if !user.UserFlags["NoUploadImage"] {
+				response.UploadableExts = imgExts
+			}
 		case "output":
 			next, _, _ := strings.Cut(tail, "/")
 			if next == "themes" {
@@ -666,6 +670,9 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					}
 				}
 				if fileType.Has(AttributeImg) {
+					if user.UserFlags["NoUploadImage"] {
+						continue
+					}
 					if strings.TrimSuffix(fileName, fileType.Ext) == "image" {
 						var timestamp [8]byte
 						now := time.Now()

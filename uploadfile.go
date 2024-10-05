@@ -285,6 +285,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 		switch head {
 		case "notes":
 			if fileType.Has(AttributeEditable) || fileType.Has(AttributeImg) || fileType.Has(AttributeFont) {
+				if fileType.Has(AttributeImg) && user.UserFlags["NoUploadImage"] {
+					continue
+				}
 				err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 				if err != nil {
 					var maxBytesErr *http.MaxBytesError
@@ -411,6 +414,9 @@ func (nbrew *Notebrew) uploadfile(w http.ResponseWriter, r *http.Request, user U
 					return
 				}
 			} else if fileType.Has(AttributeImg) {
+				if user.UserFlags["NoUploadImage"] {
+					continue
+				}
 				if !fileType.Has(AttributeObject) {
 					err := writeFile(r.Context(), filePath, http.MaxBytesReader(nil, part, fileType.SizeLimit))
 					if err != nil {
