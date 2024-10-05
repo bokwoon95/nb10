@@ -164,7 +164,7 @@ notebrew-linux-arm
 If you are a programmer, you might want the commandline version instead. The commandline version
 - install Git
 - install Go
-- `go install -tags fts5 github.com/bokwoon95/notebrew/notebrew`
+- `go install -tags fts5 -trimpath github.com/bokwoon95/notebrew/notebrew`
 
 API Documentation.
 
