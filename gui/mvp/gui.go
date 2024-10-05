@@ -25,7 +25,7 @@ func main() {
 	myWindow.CenterOnScreen() // Center the window on the screen
 
 	contentDomainEntry := widget.NewEntry()
-	contentDomainEntry.SetPlaceHolder("Enter content domain")
+	contentDomainEntry.SetPlaceHolder("your site URL e.g. example.com")
 
 	// Start server button
 	var startServerButton *widget.Button
