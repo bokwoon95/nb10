@@ -17,12 +17,12 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 )
 
 func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User, sitePrefix string) {
@@ -278,7 +278,7 @@ func (nbrew *Notebrew) importt(w http.ResponseWriter, r *http.Request, user User
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic:\n" + string(debug.Stack()))
+						fmt.Println(stacktrace.New(fmt.Errorf("panic: %v", v)))
 					}
 				}()
 				defer nbrew.baseCtxWaitGroup.Done()
@@ -367,7 +367,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 	}()
 	file, err := nbrew.FS.WithContext(nbrew.baseCtx).Open(path.Join(sitePrefix, "imports", tgzFileName))
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	defer file.Close()
 	var src io.Reader
@@ -381,7 +381,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			var conn *sql.Conn
 			conn, err = nbrew.DB.Conn(ctx)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			defer conn.Close()
 			db = conn
@@ -395,7 +395,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			},
 		})
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer preparedExec.Close()
 		src = &importProgressReader{
@@ -409,12 +409,12 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 	if gzipReader == nil {
 		gzipReader, err = gzip.NewReader(src)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	} else {
 		err = gzipReader.Reset(src)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	}
 	defer func() {
@@ -441,7 +441,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 			} else {
 				return nil
@@ -453,11 +453,11 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 				return nil
 			}
 			if !errors.Is(err, fs.ErrNotExist) {
-				return err
+				return stacktrace.New(err)
 			}
 			err := fsys.MkdirAll(filePath, 0755)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 		}
 		head, _, _ := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(filePath, sitePrefix), "/"), "/")
@@ -485,7 +485,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 						},
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				case "mysql":
 					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
@@ -500,7 +500,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 						},
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				default:
 					return fmt.Errorf("unsupported dialect %q", databaseFS.Dialect)
@@ -524,7 +524,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			_, err := fs.Stat(fsys, filePath)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 			} else {
 				return nil
@@ -533,25 +533,25 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 		writer, err := fsys.OpenWriter(filePath, 0644)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				return err
+				return stacktrace.New(err)
 			}
 			err := fsys.MkdirAll(path.Dir(filePath), 0755)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			writer, err = fsys.OpenWriter(filePath, 0644)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 		}
 		defer writer.Close()
 		_, err = io.Copy(writer, reader)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		err = writer.Close()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		head, _, _ := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(filePath, sitePrefix), "/"), "/")
 		if head == "pages" || head == "posts" {
@@ -578,7 +578,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 						},
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				case "mysql":
 					_, err := sq.Exec(ctx, databaseFS.DB, sq.Query{
@@ -593,7 +593,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 						},
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				default:
 					return fmt.Errorf("unsupported dialect %q", databaseFS.Dialect)
@@ -608,7 +608,7 @@ func (nbrew *Notebrew) importTgz(ctx context.Context, importJobID ID, sitePrefix
 			break
 		}
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		if !strings.HasPrefix(header.Name, rootPrefix) {
 			continue

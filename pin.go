@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"sync/atomic"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -168,14 +168,10 @@ func (nbrew *Notebrew) pin(w http.ResponseWriter, r *http.Request, user User, si
 			continue
 		}
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			result, err := preparedExec.Exec(groupctx, sq.StringParam("filePath", path.Join(sitePrefix, response.Parent, name)))
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			if result.RowsAffected > 0 {
 				numPinned.Add(1)

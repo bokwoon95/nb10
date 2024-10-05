@@ -4,19 +4,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -309,11 +308,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	if response.From != "" {
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			sites, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -334,7 +329,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				}
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			response.Sites = sites
 			if len(response.Sites) > response.Limit {
@@ -350,11 +345,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			hasPreviousSite, err := sq.FetchExists(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT 1" +
@@ -368,7 +359,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				},
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			if hasPreviousSite {
 				uri := &url.URL{
@@ -395,11 +386,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 	if response.Before != "" {
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			response.Sites, err = sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -420,7 +407,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				}
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			if len(response.Sites) > response.Limit {
 				response.Sites = response.Sites[1:]
@@ -435,11 +422,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			nextSite, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -459,7 +442,7 @@ func (nbrew *Notebrew) rootdirectory(w http.ResponseWriter, r *http.Request, use
 				if errors.Is(err, sql.ErrNoRows) {
 					return nil
 				}
-				return err
+				return stacktrace.New(err)
 			}
 			uri := &url.URL{
 				Scheme:   scheme,

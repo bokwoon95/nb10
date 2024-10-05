@@ -16,7 +16,6 @@ import (
 	"net/mail"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/caddyserver/certmagic"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/blake2b"
@@ -614,11 +614,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 		}
 		group, groupctx := errgroup.WithContext(r.Context())
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.json")
 			if err != nil {
 				nbrew.GetLogger(groupctx).Error(err.Error())
@@ -643,11 +639,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/index.html")
 			if err != nil {
 				nbrew.GetLogger(groupctx).Error(err.Error())
@@ -678,11 +670,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/404.html")
 			if err != nil {
 				nbrew.GetLogger(groupctx).Error(err.Error())
@@ -713,11 +701,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/post.html")
 			if err != nil {
 				nbrew.GetLogger(groupctx).Error(err.Error())
@@ -742,11 +726,7 @@ func (nbrew *Notebrew) invite(w http.ResponseWriter, r *http.Request, user User)
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			b, err := fs.ReadFile(RuntimeFS, "embed/postlist.html")
 			if err != nil {
 				nbrew.GetLogger(groupctx).Error(err.Error())

@@ -12,13 +12,13 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -146,11 +146,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 			}
 			seen[name] = true
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				fileInfo, err := fs.Stat(nbrew.FS.WithContext(groupctx), path.Join(sitePrefix, response.Parent, name))
 				if err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
@@ -550,11 +546,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 						}
 						name := dirEntry.Name()
 						subgroup.Go(func() (err error) {
-							defer func() {
-								if v := recover(); v != nil {
-									err = fmt.Errorf("panic: " + string(debug.Stack()))
-								}
-							}()
+							defer stacktrace.RecoverPanic(&err)
 							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
 						})
 					}
@@ -592,11 +584,7 @@ func (nbrew *Notebrew) delet(w http.ResponseWriter, r *http.Request, user User, 
 						}
 						name := dirEntry.Name()
 						subgroup.Go(func() (err error) {
-							defer func() {
-								if v := recover(); v != nil {
-									err = fmt.Errorf("panic: " + string(debug.Stack()))
-								}
-							}()
+							defer stacktrace.RecoverPanic(&err)
 							return nbrew.FS.WithContext(subctx).RemoveAll(path.Join(sitePrefix, outputDir, name))
 						})
 					}

@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -26,6 +25,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -200,11 +200,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		group, groupctx := errgroup.WithContext(r.Context())
 		if response.ExportParent {
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				size, err := exportDirSize(r.Context(), nbrew.FS.WithContext(r.Context()), sitePrefix, response.Parent)
 				if err != nil {
 					return err
@@ -265,11 +261,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					totalBytes.Add(fileInfo.Size())
 				} else {
 					group.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
+						defer stacktrace.RecoverPanic(&err)
 						size, err := exportDirSize(r.Context(), nbrew.FS.WithContext(r.Context()), sitePrefix, path.Join(response.Parent, name))
 						if err != nil {
 							return err
@@ -332,11 +324,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				}
 			}
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				size, err := exportOutputDirSize(r.Context(), nbrew.FS.WithContext(r.Context()), sitePrefix, outputDir, action)
 				if err != nil {
 					return err
@@ -512,11 +500,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 		group, groupctx := errgroup.WithContext(r.Context())
 		if response.ExportParent {
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				size, err := exportDirSize(r.Context(), nbrew.FS.WithContext(r.Context()), sitePrefix, response.Parent)
 				if err != nil {
 					return err
@@ -558,11 +542,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 					totalBytes.Add(fileInfo.Size())
 				} else {
 					group.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
+						defer stacktrace.RecoverPanic(&err)
 						size, err := exportDirSize(r.Context(), nbrew.FS.WithContext(r.Context()), sitePrefix, path.Join(response.Parent, name))
 						if err != nil {
 							return err
@@ -625,11 +605,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 				}
 			}
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				size, err := exportOutputDirSize(r.Context(), nbrew.FS.WithContext(r.Context()), sitePrefix, outputDir, action)
 				if err != nil {
 					return err
@@ -717,7 +693,7 @@ func (nbrew *Notebrew) export(w http.ResponseWriter, r *http.Request, user User,
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic: " + requestURL + ":\n" + string(debug.Stack()))
+						fmt.Println(stacktrace.New(fmt.Errorf("panic: %s: %v", requestURL, v)))
 					}
 				}()
 				defer nbrew.baseCtxWaitGroup.Done()
@@ -767,7 +743,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 	defer cancelWriter()
 	writer, err := nbrew.FS.WithContext(writerCtx).OpenWriter(path.Join(sitePrefix, "exports", tgzFileName), 0644)
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	defer func() {
 		cancelWriter()
@@ -805,7 +781,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			},
 		})
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer preparedExec.Close()
 		dest = &exportProgressWriter{
@@ -857,7 +833,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			if filePath == "." {
 				err := exportDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, ".")
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				continue
 			}
@@ -886,7 +862,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				if errors.Is(err, sql.ErrNoRows) {
 					continue
 				}
-				return err
+				return stacktrace.New(err)
 			}
 			tarHeader := &tar.Header{
 				Name:    file.FilePath,
@@ -905,11 +881,11 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				tarHeader.Mode = 0755
 				err = tarWriter.WriteHeader(tarHeader)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				err = exportDir(ctx, tarWriter, databaseFS.WithContext(ctx), sitePrefix, filePath)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				continue
 			}
@@ -924,43 +900,43 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			tarHeader.Mode = 0644
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			if fileType.Has(AttributeObject) {
 				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				_, err = io.Copy(tarWriter, reader)
 				if err != nil {
 					reader.Close()
-					return err
+					return stacktrace.New(err)
 				}
 				err = reader.Close()
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 			} else {
 				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
 					if gzipReader == nil {
 						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 					} else {
 						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 					}
 					_, err = io.Copy(tarWriter, gzipReader)
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				} else {
 					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				}
 			}
@@ -990,7 +966,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				if errors.Is(err, sql.ErrNoRows) {
 					continue
 				}
-				return err
+				return stacktrace.New(err)
 			}
 			tarHeader := &tar.Header{
 				Typeflag: tar.TypeDir,
@@ -1007,12 +983,12 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			}
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			action := outputDirsToExport[outputDir]
 			err = exportOutputDir(ctx, tarWriter, databaseFS.WithContext(ctx), sitePrefix, outputDir, action)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 		}
 	} else {
@@ -1020,7 +996,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			if filePath == "." {
 				err := exportDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, ".")
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				continue
 			}
@@ -1029,12 +1005,12 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				if errors.Is(err, fs.ErrNotExist) {
 					return nil
 				}
-				return err
+				return stacktrace.New(err)
 			}
 			fileInfo, err := file.Stat()
 			if err != nil {
 				file.Close()
-				return err
+				return stacktrace.New(err)
 			}
 			var absolutePath string
 			switch v := nbrew.FS.(type) {
@@ -1061,7 +1037,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				tarHeader.Mode = 0755
 				err := tarWriter.WriteHeader(tarHeader)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				continue
 			}
@@ -1075,12 +1051,12 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
 				file.Close()
-				return err
+				return stacktrace.New(err)
 			}
 			_, err = io.Copy(tarWriter, file)
 			if err != nil {
 				file.Close()
-				return err
+				return stacktrace.New(err)
 			}
 			file.Close()
 		}
@@ -1090,7 +1066,7 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				if errors.Is(err, fs.ErrNotExist) {
 					continue
 				}
-				return err
+				return stacktrace.New(err)
 			}
 			var absolutePath string
 			switch v := nbrew.FS.(type) {
@@ -1113,26 +1089,26 @@ func (nbrew *Notebrew) exportTgz(ctx context.Context, exportJobID ID, sitePrefix
 				},
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			action := outputDirsToExport[outputDir]
 			err = exportOutputDir(ctx, tarWriter, nbrew.FS.WithContext(ctx), sitePrefix, outputDir, action)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 		}
 	}
 	err = tarWriter.Close()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	err = gzipWriter.Close()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	err = writer.Close()
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	success = true
 	return nil
@@ -1181,7 +1157,7 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 			return row.Int64("sum(CASE WHEN files.is_dir OR files.size IS NULL THEN 0 ELSE files.size END)")
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		return size, nil
 	}
@@ -1191,14 +1167,14 @@ func exportDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, dir strin
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		if dirEntry.IsDir() {
 			return nil
 		}
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		size += fileInfo.Size()
 		return nil
@@ -1311,13 +1287,13 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			return file
 		})
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer cursor.Close()
 		for cursor.Next() {
 			file, err := cursor.Result()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			tarHeader := &tar.Header{
 				Name:    file.FilePath,
@@ -1336,7 +1312,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 				tarHeader.Mode = 0755
 				err = tarWriter.WriteHeader(tarHeader)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				continue
 			}
@@ -1351,7 +1327,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			tarHeader.Mode = 0644
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			if fileType.Has(AttributeObject) {
 				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
@@ -1361,40 +1337,40 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 				_, err = io.Copy(tarWriter, reader)
 				if err != nil {
 					reader.Close()
-					return err
+					return stacktrace.New(err)
 				}
 				err = reader.Close()
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 			} else {
 				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
 					if gzipReader == nil {
 						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 					} else {
 						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 					}
 					_, err = io.Copy(tarWriter, gzipReader)
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				} else {
 					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				}
 			}
 		}
 		err = cursor.Close()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	}
@@ -1403,11 +1379,11 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		var absolutePath string
 		switch v := fsys.(type) {
@@ -1433,7 +1409,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			tarHeader.Mode = 0755
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		}
@@ -1445,16 +1421,16 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 		tarHeader.Mode = 0644
 		err = tarWriter.WriteHeader(tarHeader)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		file, err := fsys.Open(filePath)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer file.Close()
 		_, err = io.Copy(tarWriter, file)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	}
@@ -1468,7 +1444,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 		} {
 			err := fs.WalkDir(fsys, root, walkDirFunc)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 		}
 	} else {
@@ -1480,7 +1456,7 @@ func exportDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sitePrefi
 			return walkDirFunc(filePath, dirEntry, err)
 		})
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 	}
 	return nil
@@ -1506,12 +1482,12 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return 0, err
+					return 0, stacktrace.New(err)
 				}
 			} else if counterpartFileInfo.IsDir() {
 				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 				if err != nil {
-					return 0, err
+					return 0, stacktrace.New(err)
 				}
 				var totalSize int64
 				for _, dirEntry := range dirEntries {
@@ -1520,7 +1496,7 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 					}
 					fileInfo, err := dirEntry.Info()
 					if err != nil {
-						return 0, err
+						return 0, stacktrace.New(err)
 					}
 					totalSize += fileInfo.Size()
 				}
@@ -1539,12 +1515,12 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return 0, err
+					return 0, stacktrace.New(err)
 				}
 			} else if !counterpartFileInfo.IsDir() {
 				dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 				if err != nil {
-					return 0, err
+					return 0, stacktrace.New(err)
 				}
 				var totalSize atomic.Int64
 				group, groupctx := errgroup.WithContext(ctx)
@@ -1554,14 +1530,10 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 					}
 					name := dirEntry.Name()
 					group.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
+						defer stacktrace.RecoverPanic(&err)
 						size, err := exportOutputDirSize(groupctx, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						totalSize.Add(size)
 						return nil
@@ -1607,7 +1579,7 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 			return row.Int64("sum(CASE WHEN files.is_dir OR files.size IS NULL THEN 0 ELSE files.size END)")
 		})
 		if err != nil {
-			return 0, err
+			return 0, stacktrace.New(err)
 		}
 		return size, nil
 	}
@@ -1621,7 +1593,7 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		if dirEntry.IsDir() {
 			if outputDir == "output" {
@@ -1633,7 +1605,7 @@ func exportOutputDirSize(ctx context.Context, fsys fs.FS, sitePrefix string, out
 		}
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		size += fileInfo.Size()
 		return nil
@@ -1674,7 +1646,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 			} else if counterpartFileInfo.IsDir() {
 				// Export only the files.
@@ -1718,13 +1690,13 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						return file
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					defer cursor.Close()
 					for cursor.Next() {
 						file, err := cursor.Result()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						fileType, ok := AllowedFileTypes[path.Ext(file.FilePath)]
 						if !ok {
@@ -1746,43 +1718,43 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						}
 						err = tarWriter.WriteHeader(tarHeader)
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						if fileType.Has(AttributeObject) {
 							reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 							if err != nil {
-								return err
+								return stacktrace.New(err)
 							}
 							_, err = io.Copy(tarWriter, reader)
 							if err != nil {
 								reader.Close()
-								return err
+								return stacktrace.New(err)
 							}
 							err = reader.Close()
 							if err != nil {
-								return err
+								return stacktrace.New(err)
 							}
 						} else {
 							if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
 								if gzipReader == nil {
 									gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
 									if err != nil {
-										return err
+										return stacktrace.New(err)
 									}
 								} else {
 									err = gzipReader.Reset(bytes.NewReader(file.Bytes))
 									if err != nil {
-										return err
+										return stacktrace.New(err)
 									}
 								}
 								_, err = io.Copy(tarWriter, gzipReader)
 								if err != nil {
-									return err
+									return stacktrace.New(err)
 								}
 							} else {
 								_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
 								if err != nil {
-									return err
+									return stacktrace.New(err)
 								}
 							}
 						}
@@ -1790,7 +1762,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				} else {
 					dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					for _, dirEntry := range dirEntries {
 						if dirEntry.IsDir() {
@@ -1803,12 +1775,12 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						}
 						file, err := fsys.Open(path.Join(sitePrefix, outputDir, name))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						fileInfo, err := file.Stat()
 						if err != nil {
 							file.Close()
-							return err
+							return stacktrace.New(err)
 						}
 						var absolutePath string
 						switch v := fsys.(type) {
@@ -1833,12 +1805,12 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						})
 						if err != nil {
 							file.Close()
-							return err
+							return stacktrace.New(err)
 						}
 						_, err = io.Copy(tarWriter, file)
 						if err != nil {
 							file.Close()
-							return err
+							return stacktrace.New(err)
 						}
 						file.Close()
 					}
@@ -1858,7 +1830,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			counterpartFileInfo, err := fs.Stat(fsys, counterpart)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
-					return err
+					return stacktrace.New(err)
 				}
 			} else if !counterpartFileInfo.IsDir() {
 				// Export only the directories.
@@ -1887,14 +1859,14 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						return file
 					})
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					defer cursor.Close()
 					var names []string
 					for cursor.Next() {
 						file, err := cursor.Result()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						tarHeader := &tar.Header{
 							Typeflag: tar.TypeDir,
@@ -1911,14 +1883,14 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						}
 						err = tarWriter.WriteHeader(tarHeader)
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						names = append(names, path.Base(file.FilePath))
 					}
 				} else {
 					dirEntries, err := fs.ReadDir(fsys, path.Join(sitePrefix, outputDir))
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 					for _, dirEntry := range dirEntries {
 						if !dirEntry.IsDir() {
@@ -1927,7 +1899,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 						name := dirEntry.Name()
 						fileInfo, err := dirEntry.Info()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						var absolutePath string
 						switch v := fsys.(type) {
@@ -1950,7 +1922,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 							},
 						})
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						names = append(names, name)
 					}
@@ -1958,7 +1930,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				for _, name := range names {
 					err = exportOutputDir(ctx, tarWriter, fsys, sitePrefix, path.Join(outputDir, name), exportFiles|exportDirectories)
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				}
 				return nil
@@ -2024,13 +1996,13 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			return file
 		})
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer cursor.Close()
 		for cursor.Next() {
 			file, err := cursor.Result()
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			tarHeader := &tar.Header{
 				Name:    file.FilePath,
@@ -2049,7 +2021,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 				tarHeader.Mode = 0755
 				err = tarWriter.WriteHeader(tarHeader)
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				continue
 			}
@@ -2064,50 +2036,50 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			tarHeader.Mode = 0644
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			if fileType.Has(AttributeObject) {
 				reader, err := databaseFS.ObjectStorage.Get(ctx, file.FileID.String()+path.Ext(file.FilePath))
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				_, err = io.Copy(tarWriter, reader)
 				if err != nil {
 					reader.Close()
-					return err
+					return stacktrace.New(err)
 				}
 				err = reader.Close()
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 			} else {
 				if fileType.Has(AttributeGzippable) && !IsFulltextIndexed(file.FilePath) {
 					if gzipReader == nil {
 						gzipReader, err = gzip.NewReader(bytes.NewReader(file.Bytes))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 					} else {
 						err = gzipReader.Reset(bytes.NewReader(file.Bytes))
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 					}
 					_, err = io.Copy(tarWriter, gzipReader)
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				} else {
 					_, err = io.Copy(tarWriter, bytes.NewReader(file.Bytes))
 					if err != nil {
-						return err
+						return stacktrace.New(err)
 					}
 				}
 			}
 		}
 		err = cursor.Close()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	}
@@ -2120,11 +2092,11 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			if errors.Is(err, fs.ErrNotExist) {
 				return nil
 			}
-			return err
+			return stacktrace.New(err)
 		}
 		fileInfo, err := dirEntry.Info()
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		var absolutePath string
 		switch v := fsys.(type) {
@@ -2155,7 +2127,7 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 			tarHeader.Mode = 0755
 			err = tarWriter.WriteHeader(tarHeader)
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			return nil
 		}
@@ -2167,21 +2139,21 @@ func exportOutputDir(ctx context.Context, tarWriter *tar.Writer, fsys fs.FS, sit
 		tarHeader.Mode = 0644
 		err = tarWriter.WriteHeader(tarHeader)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		file, err := fsys.Open(filePath)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		defer file.Close()
 		_, err = io.Copy(tarWriter, file)
 		if err != nil {
-			return err
+			return stacktrace.New(err)
 		}
 		return nil
 	})
 	if err != nil {
-		return err
+		return stacktrace.New(err)
 	}
 	return nil
 }

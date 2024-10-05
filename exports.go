@@ -3,17 +3,16 @@ package nb10
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -220,11 +219,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	group, groupctx := errgroup.WithContext(r.Context())
 	if nbrew.DB != nil {
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			exportJobs, err := sq.FetchAll(groupctx, nbrew.DB, sq.Query{
 				Dialect: nbrew.Dialect,
 				Format: "SELECT {*}" +
@@ -257,11 +252,7 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 	}
 	if ok {
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			pinnedFiles, err := sq.FetchAll(groupctx, databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -285,17 +276,13 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				}
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			response.PinnedFiles = pinnedFiles
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			files, err := sq.FetchAll(r.Context(), databaseFS.DB, sq.Query{
 				Dialect: databaseFS.Dialect,
 				Format: "SELECT {*}" +
@@ -318,27 +305,23 @@ func (nbrew *Notebrew) exports(w http.ResponseWriter, r *http.Request, user User
 				}
 			})
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			response.Files = files
 			return nil
 		})
 	} else {
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(path.Join(sitePrefix, "exports"))
 			if err != nil {
-				return err
+				return stacktrace.New(err)
 			}
 			response.Files = make([]File, 0, len(dirEntries))
 			for _, dirEntry := range dirEntries {
 				fileInfo, err := dirEntry.Info()
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				name := fileInfo.Name()
 				var absolutePath string

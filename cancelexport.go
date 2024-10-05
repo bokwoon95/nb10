@@ -9,12 +9,12 @@ import (
 	"mime"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -113,11 +113,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 		for i, exportJobID := range exportJobIDs {
 			i, exportJobID := i, exportJobID
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				exportJob, err := sq.FetchOne(groupctx, nbrew.DB, sq.Query{
 					Dialect: nbrew.Dialect,
 					Format:  "SELECT {*} FROM export_job WHERE export_job_id = {exportJobID}",
@@ -137,7 +133,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 					if errors.Is(err, sql.ErrNoRows) {
 						return nil
 					}
-					return err
+					return stacktrace.New(err)
 				}
 				response.ExportJobs[i] = exportJob
 				return nil
@@ -238,7 +234,7 @@ func (nbrew *Notebrew) cancelexport(w http.ResponseWriter, r *http.Request, user
 			go func() {
 				defer func() {
 					if v := recover(); v != nil {
-						fmt.Println("panic:\n" + string(debug.Stack()))
+						fmt.Println(stacktrace.New(fmt.Errorf("panic: %v", v)))
 					}
 				}()
 				defer waitGroup.Done()

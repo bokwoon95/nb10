@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -17,13 +16,13 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/parser"
 	"golang.org/x/sync/errgroup"
@@ -623,7 +622,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 					n, err = io.Copy(writer, reader)
 				}
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				err = writer.Close()
 				if err != nil {
@@ -764,11 +763,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 								return
 							}
 							group.Go(func() (err error) {
-								defer func() {
-									if v := recover(); v != nil {
-										err = fmt.Errorf("panic: " + string(debug.Stack()))
-									}
-								}()
+								defer stacktrace.RecoverPanic(&err)
 								defer os.Remove(inputPath)
 								defer os.Remove(outputPath)
 								cmd := exec.CommandContext(groupctx, cmdPath, inputPath, outputPath)
@@ -776,7 +771,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 								cmd.Stderr = os.Stderr
 								err = cmd.Run()
 								if err != nil {
-									return err
+									return stacktrace.New(err)
 								}
 								output, err := os.Open(outputPath)
 								if err != nil {
@@ -866,11 +861,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 			var templateErrPtr atomic.Pointer[TemplateError]
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				var templateErr TemplateError
 				category := tail
 				tmpl, err := siteGen.PostTemplate(groupctx, category)
@@ -895,11 +886,7 @@ func (nbrew *Notebrew) createfile(w http.ResponseWriter, r *http.Request, user U
 				return nil
 			})
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				var templateErr TemplateError
 				category := tail
 				tmpl, err := siteGen.PostListTemplate(groupctx, category)

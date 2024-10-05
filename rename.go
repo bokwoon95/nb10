@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"strings"
 	"time"
 
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -451,11 +451,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					if dirEntry.IsDir() == response.IsDir {
 						name := dirEntry.Name()
 						group.Go(func() (err error) {
-							defer func() {
-								if v := recover(); v != nil {
-									err = fmt.Errorf("panic: " + string(debug.Stack()))
-								}
-							}()
+							defer stacktrace.RecoverPanic(&err)
 							return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
 						})
 					}
@@ -588,11 +584,7 @@ func (nbrew *Notebrew) rename(w http.ResponseWriter, r *http.Request, user User,
 					if dirEntry.IsDir() == response.IsDir {
 						name := dirEntry.Name()
 						group.Go(func() (err error) {
-							defer func() {
-								if v := recover(); v != nil {
-									err = fmt.Errorf("panic: " + string(debug.Stack()))
-								}
-							}()
+							defer stacktrace.RecoverPanic(&err)
 							return nbrew.FS.WithContext(groupctx).Rename(path.Join(oldOutputDir, name), path.Join(newOutputDir, name))
 						})
 					}

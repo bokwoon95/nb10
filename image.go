@@ -4,20 +4,19 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/bokwoon95/nb10/sq"
+	"github.com/bokwoon95/nb10/stacktrace"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -112,11 +111,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 			response.IsDatabaseFS = true
 			group, groupctx := errgroup.WithContext(r.Context())
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				extFilter := sq.Expr("1 = 1")
 				if len(imgExts) > 0 {
 					var b strings.Builder
@@ -158,18 +153,14 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					if errors.Is(err, sql.ErrNoRows) {
 						return nil
 					}
-					return err
+					return stacktrace.New(err)
 				}
 				response.PreviousImageID = result.FileID
 				response.PreviousImageName = path.Base(result.FilePath)
 				return nil
 			})
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				content, err := sq.FetchOne(groupctx, databaseFS.DB, sq.Query{
 					Dialect: databaseFS.Dialect,
 					Format:  "SELECT {*} FROM files WHERE file_path = {filePath}",
@@ -180,7 +171,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					return row.String("text")
 				})
 				if err != nil {
-					return err
+					return stacktrace.New(err)
 				}
 				response.Content = strings.TrimSpace(content)
 				if strings.HasPrefix(response.Content, "!alt ") {
@@ -190,11 +181,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				return nil
 			})
 			group.Go(func() (err error) {
-				defer func() {
-					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
-					}
-				}()
+				defer stacktrace.RecoverPanic(&err)
 				extFilter := sq.Expr("1 <> 1")
 				if len(imgExts) > 0 {
 					var b strings.Builder
@@ -236,7 +223,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 					if errors.Is(err, sql.ErrNoRows) {
 						return nil
 					}
-					return err
+					return stacktrace.New(err)
 				}
 				response.NextImageID = result.FileID
 				response.NextImageName = path.Base(result.FilePath)
@@ -462,11 +449,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				}
 				startedAt := time.Now()
 				group.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					var text string
 					var creationTime time.Time
 					databaseFS, ok := &DatabaseFS{}, false
@@ -490,7 +473,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 							return result
 						})
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						text = result.Text
 						creationTime = result.CreationTime
@@ -502,13 +485,13 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 						defer file.Close()
 						fileInfo, err := file.Stat()
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						var b strings.Builder
 						b.Grow(int(fileInfo.Size()))
 						_, err = io.Copy(&b, file)
 						if err != nil {
-							return err
+							return stacktrace.New(err)
 						}
 						var absolutePath string
 						switch v := nbrew.FS.(type) {
@@ -544,11 +527,7 @@ func (nbrew *Notebrew) image(w http.ResponseWriter, r *http.Request, user User, 
 				})
 				if request.RegeneratePostList {
 					group.Go(func() (err error) {
-						defer func() {
-							if v := recover(); v != nil {
-								err = fmt.Errorf("panic: " + string(debug.Stack()))
-							}
-						}()
+						defer stacktrace.RecoverPanic(&err)
 						tmpl, err := siteGen.PostListTemplate(groupctx, category)
 						if err != nil {
 							var templateErr TemplateError

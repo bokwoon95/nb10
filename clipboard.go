@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"sync"
@@ -568,11 +567,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							if dirEntry.IsDir() == srcFileInfo.IsDir() {
 								name := dirEntry.Name()
 								subgroup.Go(func() (err error) {
-									defer func() {
-										if v := recover(); v != nil {
-											err = fmt.Errorf("panic: " + string(debug.Stack()))
-										}
-									}()
+									defer stacktrace.RecoverPanic(&err)
 									return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
 								})
 							}
@@ -645,11 +640,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 							if dirEntry.IsDir() == srcFileInfo.IsDir() {
 								name := dirEntry.Name()
 								subgroup.Go(func() (err error) {
-									defer func() {
-										if v := recover(); v != nil {
-											err = fmt.Errorf("panic: " + string(debug.Stack()))
-										}
-									}()
+									defer stacktrace.RecoverPanic(&err)
 									if isMove {
 										return nbrew.FS.WithContext(subctx).Rename(path.Join(srcOutputDir, name), path.Join(destOutputDir, name))
 									} else {
@@ -707,7 +698,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			groupB.Go(func() (err error) {
 				defer func() {
 					if v := recover(); v != nil {
-						err = fmt.Errorf("panic: " + string(debug.Stack()))
+						fmt.Println(stacktrace.New(fmt.Errorf("panic: %v", v)))
 					}
 				}()
 				siteGen, err := newSiteGenerator()
@@ -761,11 +752,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			nextHead, nextTail, _ := strings.Cut(srcTail, "/")
 			if nextHead == "posts" {
 				groupB.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					category, name, _ := strings.Cut(nextTail, "/")
 					if name == "" {
 						name = category
@@ -838,11 +825,7 @@ func (nbrew *Notebrew) clipboard(w http.ResponseWriter, r *http.Request, user Us
 			nextHead, nextTail, _ := strings.Cut(destTail, "/")
 			if nextHead == "posts" {
 				groupB.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					category, name, _ := strings.Cut(nextTail, "/")
 					if name == "" {
 						name = category

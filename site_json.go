@@ -5,14 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
 	"mime"
 	"net/http"
 	"path"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -541,11 +539,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 	} else {
 		group, groupctx := errgroup.WithContext(ctx)
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			subgroup, subctx := errgroup.WithContext(groupctx)
 			err = fs.WalkDir(nbrew.FS.WithContext(groupctx), pagesDir, func(filePath string, dirEntry fs.DirEntry, err error) error {
 				if err != nil {
@@ -555,11 +549,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 					return nil
 				}
 				subgroup.Go(func() (err error) {
-					defer func() {
-						if v := recover(); v != nil {
-							err = fmt.Errorf("panic: " + string(debug.Stack()))
-						}
-					}()
+					defer stacktrace.RecoverPanic(&err)
 					file, err := nbrew.FS.WithContext(subctx).Open(filePath)
 					if err != nil {
 						return err
@@ -608,11 +598,7 @@ func (nbrew *Notebrew) RegenerateSite(ctx context.Context, sitePrefix string) (R
 			return nil
 		})
 		group.Go(func() (err error) {
-			defer func() {
-				if v := recover(); v != nil {
-					err = fmt.Errorf("panic: " + string(debug.Stack()))
-				}
-			}()
+			defer stacktrace.RecoverPanic(&err)
 			dirEntries, err := nbrew.FS.WithContext(groupctx).ReadDir(postsDir)
 			if err != nil {
 				return err
