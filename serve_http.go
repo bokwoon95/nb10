@@ -192,9 +192,6 @@ func (nbrew *Notebrew) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		user := User{
 			SiteLimit:    -1,
 			StorageLimit: -1,
-			UserFlags: map[string]bool{
-				"UploadImages": true,
-			},
 		}
 		isAuthorizedForSite := true
 		if nbrew.DB != nil {
