@@ -786,6 +786,7 @@ func Notebrew(homeDir string, contentDomain string) (*nb10.Notebrew, []io.Closer
 	if err != nil {
 		return nil, closers, err
 	}
+	nbrew.FS = replicatedFS
 	closers = append(closers, replicatedFS)
 	for _, dir := range []string{
 		"notes",
