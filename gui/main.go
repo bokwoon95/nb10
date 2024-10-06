@@ -16,6 +16,7 @@ func main() {
 	myWindow := myApp.NewWindow("Notebrew")
 	myWindow.CenterOnScreen() // Center the window on the screen
 	var gui GUI
+	gui.Mutex = &sync.Mutex{}
 	gui.ContentDomainLabel = widget.NewLabel("Site URL (used in RSS feed):")
 	gui.ContentDomainEntry = widget.NewEntry()
 	gui.ContentDomainEntry.SetPlaceHolder("your site URL e.g. example.com")
@@ -54,7 +55,6 @@ func main() {
 	gui.SyncProgressBar = widget.NewProgressBar()
 	gui.SyncProgressBar.Hide()
 	gui.SyncDone = make(chan struct{})
-	gui.Mutex = &sync.Mutex{}
 	myWindow.SetContent(container.NewVBox(
 		gui.ContentDomainLabel,
 		gui.ContentDomainEntry,
@@ -68,6 +68,7 @@ func main() {
 }
 
 type GUI struct {
+	Mutex              *sync.Mutex
 	Notebrew           *nb10.Notebrew
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
@@ -80,7 +81,6 @@ type GUI struct {
 	SyncInProgress     bool
 	SyncCancel         func()
 	SyncDone           chan struct{}
-	Mutex              *sync.Mutex
 }
 
 func (gui *GUI) StartNotebrew() {
