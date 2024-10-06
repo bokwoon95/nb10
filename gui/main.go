@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"io"
+	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -14,7 +17,7 @@ import (
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Notebrew")
-	myWindow.CenterOnScreen() // Center the window on the screen
+	myWindow.CenterOnScreen()
 	var gui GUI
 	gui.Mutex = &sync.Mutex{}
 	gui.ContentDomainLabel = widget.NewLabel("Site URL (used in RSS feed):")
@@ -25,16 +28,22 @@ func main() {
 		gui.StartButton.Disable()
 		gui.StopButton.Enable()
 		gui.OpenBrowserButton.Enable()
+		// TODO: write contentdomain.txt, instantiate notebrew (blocking), run
 	})
 	gui.StopButton = widget.NewButton("Stop notebrew 🛑", func() {
 		gui.StartButton.Enable()
 		gui.StopButton.Disable()
 		gui.OpenBrowserButton.Disable()
+		// TODO: check if notebrew field is nil, if nil then return. if not nil then call
 	})
 	gui.StopButton.Disable()
-	gui.OpenBrowserButton = widget.NewButton("Open browser 🌐", func() {})
+	gui.OpenBrowserButton = widget.NewButton("Open browser 🌐", func() {
+		// TODO: open localhost:6444
+	})
 	gui.OpenBrowserButton.Disable()
-	gui.OpenFolderButton = widget.NewButton("Open folder 📂", func() {})
+	gui.OpenFolderButton = widget.NewButton("Open folder 📂", func() {
+		// TODO: open "$HOME/notebrew-files"
+	})
 	gui.SyncButton = widget.NewButton("Sync folder 🔄", func() {
 		gui.Mutex.Lock()
 		syncInProgress := gui.SyncInProgress
@@ -65,11 +74,14 @@ func main() {
 		gui.SyncProgressBar,
 	))
 	myWindow.ShowAndRun()
+	// TODO: instantiate a base context above, tidy up here by canceling the
+	// base context after ShowAndRun() returns.
 }
 
 type GUI struct {
 	Mutex              *sync.Mutex
 	Notebrew           *nb10.Notebrew
+	Closers            []io.Closer
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
 	StartButton        *widget.Button
@@ -84,6 +96,11 @@ type GUI struct {
 }
 
 func (gui *GUI) StartNotebrew() {
+	nbrew := nb10.New()
+	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+	})
+	nbrew.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
 }
 
 func (gui *GUI) StopNotebrew() {
