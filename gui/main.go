@@ -300,8 +300,8 @@ type GUI struct {
 	StartSync          chan struct{}
 	StopSync           chan struct{}
 	SyncInProgress     atomic.Bool
-	SyncCancel         atomic.Pointer[context.CancelFunc]
-	SyncDone           chan struct{}
+	SyncCancel         atomic.Pointer[context.CancelFunc] // TODO: remove.
+	SyncDone           chan struct{}                      // TODO: remove.
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
 	StartButton        *widget.Button
@@ -341,145 +341,19 @@ func (gui *GUI) SyncLoop() {
 func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	var nbrew *nb10.Notebrew
 	var closers []io.Closer
-	var databaseFS *nb10.DatabaseFS
-	var directoryFS *nb10.DirectoryFS
 	var server *http.Server
-	defer func() {
-		gui.DatabaseFS = databaseFS
-		gui.DirectoryFS = directoryFS
-	}()
 	nbrew = nb10.New()
-	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
-	})
-	nbrew.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
+	nbrew.Logger = gui.Logger
 	nbrew.CMSDomain = "localhost:6444"
 	nbrew.ContentDomain = contentDomain
 	nbrew.ContentDomainHTTPS = true
 	nbrew.Port = 6444
-	// DatabaseFS.
-	db, err := sql.Open("sqlite", filepath.Join(homeDir, "notebrew-files.db")+
-		"?_pragma=busy_timeout(10000)"+
-		"&_pragma=foreign_keys(ON)"+
-		"&_pragma=journal_mode(WAL)"+
-		"&_pragma=synchronous(NORMAL)"+
-		"&_pragma=page_size(8192)"+
-		"&_txlock=immediate",
-	)
-	if err != nil {
-		return err
-	}
-	err = db.Ping()
-	if err != nil {
-		return err
-	}
-	filesCatalog, err := nb10.FilesCatalog("sqlite")
-	if err != nil {
-		return err
-	}
-	automigrateCmd := &ddl.AutomigrateCmd{
-		DB:             db,
-		Dialect:        "sqlite",
-		DestCatalog:    filesCatalog,
-		AcceptWarnings: true,
-		Stderr:         io.Discard,
-	}
-	err = automigrateCmd.Run()
-	if err != nil {
-		return err
-	}
-	dbi := ddl.NewDatabaseIntrospector("sqlite", db)
-	dbi.Tables = []string{"files_fts5"}
-	tables, err := dbi.GetTables()
-	if err != nil {
-		return err
-	}
-	if len(tables) == 0 {
-		_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
-		if err != nil {
-			return err
-		}
-	}
-	dbi.Tables = []string{"files"}
-	triggers, err := dbi.GetTriggers()
-	if err != nil {
-		return err
-	}
-	triggerNames := make(map[string]struct{})
-	for _, trigger := range triggers {
-		triggerNames[trigger.TriggerName] = struct{}{}
-	}
-	if _, ok := triggerNames["files_after_insert"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return err
-		}
-	}
-	if _, ok := triggerNames["files_after_delete"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return err
-		}
-	}
-	if _, ok := triggerNames["files_after_update"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-			"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return err
-		}
-	}
-	objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
-	err = os.MkdirAll(objectsFilePath, 0755)
-	if err != nil {
-		return err
-	}
-	dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
-	if err != nil {
-		return err
-	}
-	databaseFS, err = nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
-		DB:      db,
-		Dialect: "sqlite",
-		ErrorCode: func(err error) string {
-			var sqliteErr *sqlite.Error
-			if errors.As(err, &sqliteErr) {
-				return strconv.Itoa(int(sqliteErr.Code()))
-			}
-			return ""
-		},
-		ObjectStorage: dirObjectStorage,
-		Logger:        nbrew.Logger,
-	})
-	if err != nil {
-		return err
-	}
-	// DirFS.
-	filesFilePath := filepath.Join(homeDir, "notebrew-files")
-	err = os.MkdirAll(filesFilePath, 0755)
-	if err != nil {
-		return err
-	}
-	directoryFS, err = nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
-		RootDir: filesFilePath,
-	})
-	if err != nil {
-		return err
-	}
 	// ReplicatedFS.
 	replicatedFS, err := nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
-		Leader:                 databaseFS,
-		Followers:              []nb10.FS{directoryFS},
+		Leader:                 gui.DatabaseFS,
+		Followers:              []nb10.FS{gui.DirectoryFS},
 		SynchronousReplication: false,
-		Logger:                 nbrew.Logger,
+		Logger:                 gui.Logger,
 	})
 	if err != nil {
 		return err
