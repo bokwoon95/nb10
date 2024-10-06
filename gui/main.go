@@ -241,15 +241,6 @@ func main() {
 }
 
 type GUI struct {
-	ContentDomainLabel *widget.Label
-	ContentDomainEntry *widget.Entry
-	StartButton        *widget.Button
-	StopButton         *widget.Button
-	OpenBrowserButton  *widget.Button
-	OpenFolderButton   *widget.Button
-	SyncButton         *widget.Button
-	SyncProgressBar    *widget.ProgressBar
-
 	Mutex          *sync.Mutex
 	DatabaseFS     *nb10.DatabaseFS
 	DirectoryFS    *nb10.DirectoryFS
@@ -261,6 +252,15 @@ type GUI struct {
 	SyncInProgress bool
 	SyncCancel     func()
 	SyncDone       chan struct{}
+
+	ContentDomainLabel *widget.Label
+	ContentDomainEntry *widget.Entry
+	StartButton        *widget.Button
+	StopButton         *widget.Button
+	OpenBrowserButton  *widget.Button
+	OpenFolderButton   *widget.Button
+	SyncButton         *widget.Button
+	SyncProgressBar    *widget.ProgressBar
 }
 
 func (gui *GUI) StartServer(homeDir string, contentDomain string) ([]io.Closer, error) {
