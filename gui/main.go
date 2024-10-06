@@ -20,7 +20,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -40,11 +40,12 @@ func main() {
 	gui.Window = gui.App.NewWindow("Notebrew")
 	gui.Window.Resize(fyne.NewSize(300, 300))
 	gui.Window.CenterOnScreen()
-	gui.Mutex = &sync.Mutex{}
 	gui.StartServer = make(chan struct{})
 	gui.StopServer = make(chan struct{})
 	gui.SyncDone = make(chan struct{})
 	err := func() error {
+		baseCtx, baseCtxCancel := context.WithCancel(context.Background())
+		defer baseCtxCancel()
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return err
@@ -58,8 +59,129 @@ func main() {
 		if contentDomain == "" {
 			contentDomain = "example.com"
 		}
-		baseCtx, baseCtxCancel := context.WithCancel(context.Background())
-		defer baseCtxCancel()
+		// Logger.
+		logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			AddSource: true,
+		})
+		gui.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
+		// DatabaseFS.
+		db, err := sql.Open("sqlite", filepath.Join(homeDir, "notebrew-files.db")+
+			"?_pragma=busy_timeout(10000)"+
+			"&_pragma=foreign_keys(ON)"+
+			"&_pragma=journal_mode(WAL)"+
+			"&_pragma=synchronous(NORMAL)"+
+			"&_pragma=page_size(8192)"+
+			"&_txlock=immediate",
+		)
+		if err != nil {
+			return err
+		}
+		err = db.Ping()
+		if err != nil {
+			return err
+		}
+		filesCatalog, err := nb10.FilesCatalog("sqlite")
+		if err != nil {
+			return err
+		}
+		automigrateCmd := &ddl.AutomigrateCmd{
+			DB:             db,
+			Dialect:        "sqlite",
+			DestCatalog:    filesCatalog,
+			AcceptWarnings: true,
+			Stderr:         io.Discard,
+		}
+		err = automigrateCmd.Run()
+		if err != nil {
+			return err
+		}
+		dbi := ddl.NewDatabaseIntrospector("sqlite", db)
+		dbi.Tables = []string{"files_fts5"}
+		tables, err := dbi.GetTables()
+		if err != nil {
+			return err
+		}
+		if len(tables) == 0 {
+			_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
+			if err != nil {
+				return err
+			}
+		}
+		dbi.Tables = []string{"files"}
+		triggers, err := dbi.GetTriggers()
+		if err != nil {
+			return err
+		}
+		triggerNames := make(map[string]struct{})
+		for _, trigger := range triggers {
+			triggerNames[trigger.TriggerName] = struct{}{}
+		}
+		if _, ok := triggerNames["files_after_insert"]; !ok {
+			_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
+				"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
+				"\nEND;",
+			)
+			if err != nil {
+				return err
+			}
+		}
+		if _, ok := triggerNames["files_after_delete"]; !ok {
+			_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
+				"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
+				"\nEND;",
+			)
+			if err != nil {
+				return err
+			}
+		}
+		if _, ok := triggerNames["files_after_update"]; !ok {
+			_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
+				"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
+				"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
+				"\nEND;",
+			)
+			if err != nil {
+				return err
+			}
+		}
+		objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
+		err = os.MkdirAll(objectsFilePath, 0755)
+		if err != nil {
+			return err
+		}
+		dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
+		if err != nil {
+			return err
+		}
+		gui.DatabaseFS, err = nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
+			DB:      db,
+			Dialect: "sqlite",
+			ErrorCode: func(err error) string {
+				var sqliteErr *sqlite.Error
+				if errors.As(err, &sqliteErr) {
+					return strconv.Itoa(int(sqliteErr.Code()))
+				}
+				return ""
+			},
+			ObjectStorage: dirObjectStorage,
+			Logger:        gui.Logger,
+		})
+		if err != nil {
+			return err
+		}
+		// DirectoryFS.
+		filesFilePath := filepath.Join(homeDir, "notebrew-files")
+		err = os.MkdirAll(filesFilePath, 0755)
+		if err != nil {
+			return err
+		}
+		gui.DirectoryFS, err = nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
+			RootDir: filesFilePath,
+		})
+		if err != nil {
+			return err
+		}
+		// Widgets.
 		gui.ContentDomainLabel = widget.NewLabel("Site URL (used in RSS feed):")
 		gui.ContentDomainEntry = widget.NewEntry()
 		gui.ContentDomainEntry.SetPlaceHolder("your site URL e.g. example.com")
@@ -128,39 +250,17 @@ func main() {
 			}
 		})
 		gui.SyncButton = widget.NewButton("Sync folder 🔄", func() {
-			gui.Mutex.Lock()
-			syncInProgress := gui.SyncInProgress
-			gui.Mutex.Unlock()
-			if syncInProgress {
-				gui.SyncCancel()
+			if gui.SyncInProgress.Load() {
+				// TODO: dispatch a StopSync event.
+				if cancel := gui.SyncCancel.Load(); cancel != nil {
+					(*cancel)()
+				}
 				<-gui.SyncDone
 			} else {
+				// TODO: dispatch a StartSync event.
 				syncCtx, syncCancel := context.WithCancel(baseCtx)
-				gui.Mutex.Lock()
-				gui.SyncCancel = syncCancel
-				gui.Mutex.Unlock()
-				go func() {
-					defer func() {
-						gui.SyncButton.SetText("Sync folder 🔄")
-						gui.SyncProgressBar.Hide()
-						gui.Mutex.Lock()
-						gui.SyncInProgress = false
-						gui.Mutex.Unlock()
-						gui.SyncDone <- struct{}{}
-					}()
-					gui.Mutex.Lock()
-					gui.SyncInProgress = true
-					gui.Mutex.Unlock()
-					gui.SyncProgressBar.SetValue(0)
-					for i := 0.0; i <= 1.0; i += 0.1 {
-						select {
-						case <-syncCtx.Done():
-							return
-						case <-time.After(time.Millisecond * 250):
-						}
-						gui.SyncProgressBar.SetValue(i)
-					}
-				}()
+				gui.SyncCancel.Store(&syncCancel)
+				go gui.SyncFolder(syncCtx)
 				gui.SyncButton.SetText("Stop sync ❌")
 				gui.SyncProgressBar.Show()
 			}
@@ -192,11 +292,15 @@ func main() {
 type GUI struct {
 	App                fyne.App
 	Window             fyne.Window
-	Mutex              *sync.Mutex
+	Logger             *slog.Logger
+	DatabaseFS         *nb10.DatabaseFS
+	DirectoryFS        *nb10.DirectoryFS
 	StartServer        chan struct{}
 	StopServer         chan struct{}
-	SyncInProgress     bool
-	SyncCancel         func()
+	StartSync          chan struct{}
+	StopSync           chan struct{}
+	SyncInProgress     atomic.Bool
+	SyncCancel         atomic.Pointer[context.CancelFunc]
 	SyncDone           chan struct{}
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
@@ -206,8 +310,6 @@ type GUI struct {
 	OpenFolderButton   *widget.Button
 	SyncButton         *widget.Button
 	SyncProgressBar    *widget.ProgressBar
-	DatabaseFS         *nb10.DatabaseFS
-	DirectoryFS        *nb10.DirectoryFS
 }
 
 func (gui *GUI) ServerLoop() {
@@ -226,6 +328,16 @@ func (gui *GUI) ServerLoop() {
 	}
 }
 
+func (gui *GUI) SyncLoop() {
+	// syncCtx, syncCtxCancel live here.
+	for {
+		select {
+		case <-gui.StartSync:
+		case <-gui.StopSync:
+		}
+	}
+}
+
 func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	var nbrew *nb10.Notebrew
 	var closers []io.Closer
@@ -233,10 +345,8 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	var directoryFS *nb10.DirectoryFS
 	var server *http.Server
 	defer func() {
-		gui.Mutex.Lock()
 		gui.DatabaseFS = databaseFS
 		gui.DirectoryFS = directoryFS
-		gui.Mutex.Unlock()
 	}()
 	nbrew = nb10.New()
 	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -247,16 +357,6 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	nbrew.ContentDomain = contentDomain
 	nbrew.ContentDomainHTTPS = true
 	nbrew.Port = 6444
-	// DirObjectStorage.
-	objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
-	err := os.MkdirAll(objectsFilePath, 0755)
-	if err != nil {
-		return err
-	}
-	dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
-	if err != nil {
-		return err
-	}
 	// DatabaseFS.
 	db, err := sql.Open("sqlite", filepath.Join(homeDir, "notebrew-files.db")+
 		"?_pragma=busy_timeout(10000)"+
@@ -336,6 +436,15 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 		if err != nil {
 			return err
 		}
+	}
+	objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
+	err = os.MkdirAll(objectsFilePath, 0755)
+	if err != nil {
+		return err
+	}
+	dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
+	if err != nil {
+		return err
 	}
 	databaseFS, err = nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
 		DB:      db,
@@ -670,14 +779,10 @@ func (gui *GUI) SyncFolder(ctx context.Context) {
 	defer func() {
 		gui.SyncButton.SetText("Sync folder 🔄")
 		gui.SyncProgressBar.Hide()
-		gui.Mutex.Lock()
-		gui.SyncInProgress = false
-		gui.Mutex.Unlock()
+		gui.SyncInProgress.Store(false)
 		gui.SyncDone <- struct{}{}
 	}()
-	gui.Mutex.Lock()
-	gui.SyncInProgress = true
-	gui.Mutex.Unlock()
+	gui.SyncInProgress.Store(true)
 	gui.SyncProgressBar.SetValue(0)
 	for i := 0.0; i <= 1.0; i += 0.1 {
 		select {
@@ -688,709 +793,6 @@ func (gui *GUI) SyncFolder(ctx context.Context) {
 		gui.SyncProgressBar.SetValue(i)
 	}
 	// TODO: walk the files in databaseFS and fill in any missing files in dirFS.
-}
-
-func NewServer(homeDir, contentDomain string) (*http.Server, []io.Closer, error) {
-	var closers []io.Closer
-	nbrew := nb10.New()
-	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
-	})
-	nbrew.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
-	nbrew.CMSDomain = "localhost:6444"
-	nbrew.ContentDomain = contentDomain
-	nbrew.ContentDomainHTTPS = true
-	nbrew.Port = 6444
-	// DirObjectStorage.
-	objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
-	err := os.MkdirAll(objectsFilePath, 0755)
-	if err != nil {
-		return nil, closers, err
-	}
-	dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
-	if err != nil {
-		return nil, closers, err
-	}
-	// DatabaseFS.
-	db, err := sql.Open("sqlite", filepath.Join(homeDir, "notebrew-files.db")+
-		"?_pragma=busy_timeout(10000)"+
-		"&_pragma=foreign_keys(ON)"+
-		"&_pragma=journal_mode(WAL)"+
-		"&_pragma=synchronous(NORMAL)"+
-		"&_pragma=page_size(8192)"+
-		"&_txlock=immediate",
-	)
-	if err != nil {
-		return nil, closers, err
-	}
-	err = db.Ping()
-	if err != nil {
-		return nil, closers, err
-	}
-	filesCatalog, err := nb10.FilesCatalog("sqlite")
-	if err != nil {
-		return nil, closers, err
-	}
-	automigrateCmd := &ddl.AutomigrateCmd{
-		DB:             db,
-		Dialect:        "sqlite",
-		DestCatalog:    filesCatalog,
-		AcceptWarnings: true,
-		Stderr:         io.Discard,
-	}
-	err = automigrateCmd.Run()
-	if err != nil {
-		return nil, closers, err
-	}
-	dbi := ddl.NewDatabaseIntrospector("sqlite", db)
-	dbi.Tables = []string{"files_fts5"}
-	tables, err := dbi.GetTables()
-	if err != nil {
-		return nil, closers, err
-	}
-	if len(tables) == 0 {
-		_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	dbi.Tables = []string{"files"}
-	triggers, err := dbi.GetTriggers()
-	if err != nil {
-		return nil, closers, err
-	}
-	triggerNames := make(map[string]struct{})
-	for _, trigger := range triggers {
-		triggerNames[trigger.TriggerName] = struct{}{}
-	}
-	if _, ok := triggerNames["files_after_insert"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	if _, ok := triggerNames["files_after_delete"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	if _, ok := triggerNames["files_after_update"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-			"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	databaseFS, err := nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
-		DB:      db,
-		Dialect: "sqlite",
-		ErrorCode: func(err error) string {
-			var sqliteErr *sqlite.Error
-			if errors.As(err, &sqliteErr) {
-				return strconv.Itoa(int(sqliteErr.Code()))
-			}
-			return ""
-		},
-		ObjectStorage: dirObjectStorage,
-		Logger:        nbrew.Logger,
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	// DirFS.
-	filesFilePath := filepath.Join(homeDir, "notebrew-files")
-	err = os.MkdirAll(filesFilePath, 0755)
-	if err != nil {
-		return nil, closers, err
-	}
-	dirFS, err := nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
-		RootDir: filesFilePath,
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	// ReplicatedFS.
-	replicatedFS, err := nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
-		Leader:                 databaseFS,
-		Followers:              []nb10.FS{dirFS},
-		SynchronousReplication: false,
-		Logger:                 nbrew.Logger,
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	closers = append(closers, replicatedFS)
-	for _, dir := range []string{
-		"notes",
-		"pages",
-		"posts",
-		"output",
-		"output/posts",
-		"output/themes",
-		"imports",
-		"exports",
-	} {
-		err = nbrew.FS.Mkdir(dir, 0755)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "site.json")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		siteConfig := nb10.SiteConfig{
-			LanguageCode:   "en",
-			Title:          "My Blog",
-			Tagline:        "",
-			Emoji:          "☕️",
-			Favicon:        "",
-			CodeStyle:      "onedark",
-			TimezoneOffset: "+00:00",
-			Description:    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-			NavigationLinks: []nb10.NavigationLink{{
-				Name: "Home",
-				URL:  "/",
-			}, {
-				Name: "Posts",
-				URL:  "/posts/",
-			}},
-		}
-		b, err := json.MarshalIndent(&siteConfig, "", "  ")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("site.json", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = io.Copy(writer, bytes.NewReader(b))
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "posts/postlist.json")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.json")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("posts/postlist.json", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	siteGen, err := nb10.NewSiteGenerator(context.Background(), nb10.SiteGeneratorConfig{
-		FS:                 nbrew.FS,
-		ContentDomain:      nbrew.ContentDomain,
-		ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-		CDNDomain:          nbrew.CDNDomain,
-		SitePrefix:         "",
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	_, err = fs.Stat(nbrew.FS, "pages/index.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/index.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("pages/index.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-		creationTime := time.Now()
-		err = siteGen.GeneratePage(context.Background(), "pages/index.html", string(b), creationTime, creationTime)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "pages/404.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/404.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("pages/404.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-		creationTime := time.Now()
-		err = siteGen.GeneratePage(context.Background(), "pages/404.html", string(b), creationTime, creationTime)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "posts/post.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/post.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("posts/post.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "posts/postlist.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("posts/postlist.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-		tmpl, err := siteGen.PostListTemplate(context.Background(), "")
-		if err != nil {
-			return nil, closers, err
-		}
-		_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	// Content Security Policy.
-	nbrew.ContentSecurityPolicy = "default-src 'none';" +
-		" script-src 'self' 'unsafe-hashes' " + nb10.BaselineJSHash + ";" +
-		" connect-src 'self';" +
-		" img-src 'self' data:;" +
-		" style-src 'self' 'unsafe-inline';" +
-		" base-uri 'self';" +
-		" form-action 'self';" +
-		" manifest-src 'self';" +
-		" frame-src 'self';"
-	return nil, closers, nil
-}
-
-func Notebrew(homeDir string, contentDomain string) (*nb10.Notebrew, []io.Closer, error) {
-	var closers []io.Closer
-	nbrew := nb10.New()
-	logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
-	})
-	nbrew.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
-	nbrew.CMSDomain = "localhost:6444"
-	nbrew.ContentDomain = contentDomain
-	nbrew.ContentDomainHTTPS = true
-	nbrew.Port = 6444
-	// DirObjectStorage.
-	objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
-	err := os.MkdirAll(objectsFilePath, 0755)
-	if err != nil {
-		return nil, closers, err
-	}
-	dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
-	if err != nil {
-		return nil, closers, err
-	}
-	// DatabaseFS.
-	db, err := sql.Open("sqlite", filepath.Join(homeDir, "notebrew-files.db")+
-		"?_pragma=busy_timeout(10000)"+
-		"&_pragma=foreign_keys(ON)"+
-		"&_pragma=journal_mode(WAL)"+
-		"&_pragma=synchronous(NORMAL)"+
-		"&_pragma=page_size(8192)"+
-		"&_txlock=immediate",
-	)
-	if err != nil {
-		return nil, closers, err
-	}
-	err = db.Ping()
-	if err != nil {
-		return nil, closers, err
-	}
-	filesCatalog, err := nb10.FilesCatalog("sqlite")
-	if err != nil {
-		return nil, closers, err
-	}
-	automigrateCmd := &ddl.AutomigrateCmd{
-		DB:             db,
-		Dialect:        "sqlite",
-		DestCatalog:    filesCatalog,
-		AcceptWarnings: true,
-		Stderr:         io.Discard,
-	}
-	err = automigrateCmd.Run()
-	if err != nil {
-		return nil, closers, err
-	}
-	dbi := ddl.NewDatabaseIntrospector("sqlite", db)
-	dbi.Tables = []string{"files_fts5"}
-	tables, err := dbi.GetTables()
-	if err != nil {
-		return nil, closers, err
-	}
-	if len(tables) == 0 {
-		_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	dbi.Tables = []string{"files"}
-	triggers, err := dbi.GetTriggers()
-	if err != nil {
-		return nil, closers, err
-	}
-	triggerNames := make(map[string]struct{})
-	for _, trigger := range triggers {
-		triggerNames[trigger.TriggerName] = struct{}{}
-	}
-	if _, ok := triggerNames["files_after_insert"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	if _, ok := triggerNames["files_after_delete"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	if _, ok := triggerNames["files_after_update"]; !ok {
-		_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
-			"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-			"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-			"\nEND;",
-		)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	databaseFS, err := nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
-		DB:      db,
-		Dialect: "sqlite",
-		ErrorCode: func(err error) string {
-			var sqliteErr *sqlite.Error
-			if errors.As(err, &sqliteErr) {
-				return strconv.Itoa(int(sqliteErr.Code()))
-			}
-			return ""
-		},
-		ObjectStorage: dirObjectStorage,
-		Logger:        nbrew.Logger,
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	// DirFS.
-	filesFilePath := filepath.Join(homeDir, "notebrew-files")
-	err = os.MkdirAll(filesFilePath, 0755)
-	if err != nil {
-		return nil, closers, err
-	}
-	dirFS, err := nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
-		RootDir: filesFilePath,
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	// ReplicatedFS.
-	replicatedFS, err := nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
-		Leader:                 databaseFS,
-		Followers:              []nb10.FS{dirFS},
-		SynchronousReplication: false,
-		Logger:                 nbrew.Logger,
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	nbrew.FS = replicatedFS
-	closers = append(closers, replicatedFS)
-	for _, dir := range []string{
-		"notes",
-		"pages",
-		"posts",
-		"output",
-		"output/posts",
-		"output/themes",
-		"imports",
-		"exports",
-	} {
-		err = nbrew.FS.Mkdir(dir, 0755)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "site.json")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		siteConfig := nb10.SiteConfig{
-			LanguageCode:   "en",
-			Title:          "My Blog",
-			Tagline:        "",
-			Emoji:          "☕️",
-			Favicon:        "",
-			CodeStyle:      "onedark",
-			TimezoneOffset: "+00:00",
-			Description:    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-			NavigationLinks: []nb10.NavigationLink{{
-				Name: "Home",
-				URL:  "/",
-			}, {
-				Name: "Posts",
-				URL:  "/posts/",
-			}},
-		}
-		b, err := json.MarshalIndent(&siteConfig, "", "  ")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("site.json", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = io.Copy(writer, bytes.NewReader(b))
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "posts/postlist.json")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.json")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("posts/postlist.json", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	siteGen, err := nb10.NewSiteGenerator(context.Background(), nb10.SiteGeneratorConfig{
-		FS:                 nbrew.FS,
-		ContentDomain:      nbrew.ContentDomain,
-		ContentDomainHTTPS: nbrew.ContentDomainHTTPS,
-		CDNDomain:          nbrew.CDNDomain,
-		SitePrefix:         "",
-	})
-	if err != nil {
-		return nil, closers, err
-	}
-	_, err = fs.Stat(nbrew.FS, "pages/index.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/index.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("pages/index.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-		creationTime := time.Now()
-		err = siteGen.GeneratePage(context.Background(), "pages/index.html", string(b), creationTime, creationTime)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "pages/404.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/404.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("pages/404.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-		creationTime := time.Now()
-		err = siteGen.GeneratePage(context.Background(), "pages/404.html", string(b), creationTime, creationTime)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "posts/post.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/post.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("posts/post.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	_, err = fs.Stat(nbrew.FS, "posts/postlist.html")
-	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, closers, err
-		}
-		b, err := fs.ReadFile(nb10.RuntimeFS, "embed/postlist.html")
-		if err != nil {
-			return nil, closers, err
-		}
-		writer, err := nbrew.FS.OpenWriter("posts/postlist.html", 0644)
-		if err != nil {
-			return nil, closers, err
-		}
-		defer writer.Close()
-		_, err = writer.Write(b)
-		if err != nil {
-			return nil, closers, err
-		}
-		err = writer.Close()
-		if err != nil {
-			return nil, closers, err
-		}
-		tmpl, err := siteGen.PostListTemplate(context.Background(), "")
-		if err != nil {
-			return nil, closers, err
-		}
-		_, err = siteGen.GeneratePostList(context.Background(), "", tmpl)
-		if err != nil {
-			return nil, closers, err
-		}
-	}
-	// Content Security Policy.
-	nbrew.ContentSecurityPolicy = "default-src 'none';" +
-		" script-src 'self' 'unsafe-hashes' " + nb10.BaselineJSHash + ";" +
-		" connect-src 'self';" +
-		" img-src 'self' data:;" +
-		" style-src 'self' 'unsafe-inline';" +
-		" base-uri 'self';" +
-		" form-action 'self';" +
-		" manifest-src 'self';" +
-		" frame-src 'self';"
-	return nbrew, closers, nil
 }
 
 func portPID(port int) (pid int, err error) {
