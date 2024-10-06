@@ -36,14 +36,14 @@ import (
 
 func main() {
 	var gui GUI
-	// gui.App = app.New()
-	// gui.Window = gui.App.NewWindow("Notebrew")
-	// gui.Window.Resize(fyne.NewSize(300, 300))
-	// gui.Window.CenterOnScreen()
-	myApp := app.New()
-	myWindow := myApp.NewWindow("Notebrew")
-	myWindow.Resize(fyne.NewSize(300, 300))
-	myWindow.CenterOnScreen()
+	gui.App = app.New()
+	gui.Window = gui.App.NewWindow("Notebrew")
+	gui.Window.Resize(fyne.NewSize(300, 300))
+	gui.Window.CenterOnScreen()
+	gui.Mutex = &sync.Mutex{}
+	gui.StartServer = make(chan struct{})
+	gui.StopServer = make(chan struct{})
+	gui.SyncDone = make(chan struct{})
 	err := func() error {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -60,10 +60,6 @@ func main() {
 		}
 		baseCtx, baseCtxCancel := context.WithCancel(context.Background())
 		defer baseCtxCancel()
-		gui.Mutex = &sync.Mutex{}
-		gui.StopServer = make(chan struct{})
-		gui.ServerStopped = make(chan struct{})
-		gui.SyncDone = make(chan struct{})
 		gui.ContentDomainLabel = widget.NewLabel("Site URL (used in RSS feed):")
 		gui.ContentDomainEntry = widget.NewEntry()
 		gui.ContentDomainEntry.SetPlaceHolder("your site URL e.g. example.com")
@@ -71,7 +67,7 @@ func main() {
 		gui.StartButton = widget.NewButton("Start notebrew ▶", func() {
 			pid, err := portPID(6444)
 			if err != nil {
-				dialog.ShowError(err, myWindow)
+				dialog.ShowError(err, gui.Window)
 				return
 			}
 			if pid > 0 {
@@ -89,35 +85,25 @@ func main() {
 			go func() {
 				err := os.MkdirAll(configDir, 0755)
 				if err != nil {
-					dialog.ShowError(err, myWindow)
+					dialog.ShowError(err, gui.Window)
 					return
 				}
 				err = os.WriteFile(filepath.Join(configDir, "contentdomain.txt"), []byte(contentDomain), 0644)
 				if err != nil {
-					dialog.ShowError(err, myWindow)
+					dialog.ShowError(err, gui.Window)
 					return
 				}
 			}()
-			// TODO: send a signal down gui.StartServer.
-			gui.StartButton.Disable()
-			gui.StopButton.Enable()
-			gui.OpenBrowserButton.Enable()
+			select {
+			case gui.StartServer <- struct{}{}:
+			default:
+			}
 		})
 		gui.StopButton = widget.NewButton("Stop notebrew 🛑", func() {
-			gui.Mutex.Lock()
-			closers := gui.Closers
-			nbrew := gui.Notebrew
-			gui.Mutex.Unlock()
-			if nbrew != nil {
-				for i := len(closers) - 1; i >= 0; i-- {
-					closers[i].Close()
-				}
-				nbrew.Close()
+			select {
+			case gui.StopServer <- struct{}{}:
+			default:
 			}
-			// TODO: send a signal down gui.StopServer
-			gui.StartButton.Enable()
-			gui.StopButton.Disable()
-			gui.OpenBrowserButton.Disable()
 		})
 		gui.StopButton.Disable()
 		gui.OpenBrowserButton = widget.NewButton("Open browser 🌐", func() {
@@ -181,7 +167,7 @@ func main() {
 		})
 		gui.SyncProgressBar = widget.NewProgressBar()
 		gui.SyncProgressBar.Hide()
-		myWindow.SetContent(container.NewVBox(
+		gui.Window.SetContent(container.NewVBox(
 			gui.ContentDomainLabel,
 			gui.ContentDomainEntry,
 			container.NewGridWithColumns(2, gui.StartButton, gui.StopButton),
@@ -190,34 +176,28 @@ func main() {
 			gui.SyncButton,
 			gui.SyncProgressBar,
 		))
-		myWindow.ShowAndRun()
+		go gui.ServerLoop()
+		gui.Window.ShowAndRun()
 		return nil
 	}()
 	if err != nil {
-		myWindow.SetTitle("Error starting notebrew")
-		myWindow.Resize(fyne.NewSize(300, 300))
-		myWindow.SetContent(widget.NewLabel(err.Error()))
-		myWindow.ShowAndRun()
+		gui.Window.SetTitle("Error starting notebrew")
+		gui.Window.Resize(fyne.NewSize(300, 300))
+		gui.Window.SetContent(widget.NewLabel(err.Error()))
+		gui.Window.ShowAndRun()
 		os.Exit(1)
 	}
 }
 
 type GUI struct {
-	Mutex          *sync.Mutex
-	Notebrew       *nb10.Notebrew
-	Closers        []io.Closer
-	DatabaseFS     *nb10.DatabaseFS
-	DirectoryFS    *nb10.DirectoryFS
-	Server         *http.Server
-	StartServer    chan struct{}
-	StopServer     chan struct{}
-	ServerStopped  chan struct{}
-	SyncInProgress bool
-	SyncCancel     func()
-	SyncDone       chan struct{}
-
 	App                fyne.App
 	Window             fyne.Window
+	Mutex              *sync.Mutex
+	StartServer        chan struct{}
+	StopServer         chan struct{}
+	SyncInProgress     bool
+	SyncCancel         func()
+	SyncDone           chan struct{}
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
 	StartButton        *widget.Button
@@ -226,9 +206,24 @@ type GUI struct {
 	OpenFolderButton   *widget.Button
 	SyncButton         *widget.Button
 	SyncProgressBar    *widget.ProgressBar
+	DatabaseFS         *nb10.DatabaseFS
+	DirectoryFS        *nb10.DirectoryFS
 }
 
 func (gui *GUI) ServerLoop() {
+	// nbrew, closers, server live here.
+	for {
+		select {
+		case <-gui.StartServer:
+			gui.StartButton.Disable()
+			gui.StopButton.Enable()
+			gui.OpenBrowserButton.Enable()
+		case <-gui.StopServer:
+			gui.StartButton.Enable()
+			gui.StopButton.Disable()
+			gui.OpenBrowserButton.Disable()
+		}
+	}
 }
 
 func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
@@ -239,11 +234,8 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	var server *http.Server
 	defer func() {
 		gui.Mutex.Lock()
-		gui.Notebrew = nbrew
-		gui.Closers = closers
 		gui.DatabaseFS = databaseFS
 		gui.DirectoryFS = directoryFS
-		gui.Server = server
 		gui.Mutex.Unlock()
 	}()
 	nbrew = nb10.New()
@@ -653,7 +645,7 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	}
 	go func() {
 		defer func() {
-			gui.ServerStopped <- struct{}{}
+			// gui.ServerStopped <- struct{}{}
 		}()
 		err := server.Serve(listener)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
