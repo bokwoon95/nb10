@@ -142,6 +142,7 @@ Themes showcase.
 <button>🛑 Stop notebrew</button>
 
 TODO: gui: when the server starts, we need to both write to the contentdomain as well as clear the cdndomain (cdn domain *must* be empty when using notebrew as a SSG).
+TODO: gui: "Sync Folder" should fail silently for any errors it encounters: for example, copying a file with a long name over to the Windows filesystem will fail, but that should not pop up as an error to annoy users. Using the database fs as the default is kind of genius because then it means that we can bypass the any file name length limits on all systems, get free FTS search, as well as get the ability to write captions and alt text on images.
 TODO: gui in general
 TODO: figure out how to build msi/dmg for Windows and macOS, as well as how to upload them as releases to GitHub.
 TODO: figure out how to sign macOS binaries.
