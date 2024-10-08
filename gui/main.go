@@ -26,6 +26,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/bokwoon95/nb10"
 )
@@ -34,7 +35,7 @@ func main() {
 	var gui GUI
 	gui.App = app.New()
 	gui.Window = gui.App.NewWindow("Notebrew")
-	gui.Window.Resize(fyne.NewSize(300, 300))
+	gui.Window.Resize(fyne.NewSize(600, 450))
 	gui.Window.CenterOnScreen()
 	gui.StartServer = make(chan struct{})
 	gui.StopServer = make(chan struct{})
@@ -43,6 +44,7 @@ func main() {
 		if err != nil {
 			return err
 		}
+		// contentdomain.txt
 		configDir := filepath.Join(homeDir, "notebrew-config")
 		b, err := os.ReadFile(filepath.Join(configDir, "contentdomain.txt"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -51,6 +53,36 @@ func main() {
 		contentDomain := string(bytes.TrimSpace(b))
 		if contentDomain == "" {
 			contentDomain = "example.com"
+		}
+		// port.txt
+		b, err = os.ReadFile(filepath.Join(configDir, "port.txt"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "port.txt"), err)
+		}
+		port := string(bytes.TrimSpace(b))
+		_, err = strconv.Atoi(port)
+		if err != nil {
+			port = "6444"
+		}
+		// files.json
+		b, err = os.ReadFile(filepath.Join(configDir, "files.json"))
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
+		}
+		b = bytes.TrimSpace(b)
+		var filesConfig struct {
+			Provider string `json:"provider"`
+			FilePath string `json:"filePath"`
+		}
+		if len(b) > 0 {
+			decoder := json.NewDecoder(bytes.NewReader(b))
+			err = decoder.Decode(&filesConfig)
+			if err != nil {
+				return fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
+			}
+		}
+		if filesConfig.FilePath == "" {
+			filesConfig.FilePath = filepath.Join(homeDir, "notebrew-files")
 		}
 		// Logger.
 		logHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -70,11 +102,36 @@ func main() {
 			return err
 		}
 		// Widgets.
-		gui.ContentDomainLabel = widget.NewLabel("Site URL (used in RSS feed):")
+		gui.ContentDomainLabel = widget.NewLabel("Blog URL:")
 		gui.ContentDomainEntry = widget.NewEntry()
 		gui.ContentDomainEntry.SetPlaceHolder("your site URL e.g. example.com")
 		gui.ContentDomainEntry.SetText(contentDomain)
-		gui.StartButton = widget.NewButton("Start notebrew ▶", func() {
+		gui.PortLabel = widget.NewLabel("Port:")
+		gui.PortEntry = widget.NewEntry()
+		gui.PortEntry.SetPlaceHolder("port that Notebrew listens on e.g. 6444")
+		gui.PortEntry.SetText(port)
+		gui.FolderValueLabel = widget.NewLabel(filesConfig.FilePath)
+		gui.FolderLabel = widget.NewLabel("Directory:")
+		gui.FolderValueLabel = widget.NewLabel(filesConfig.FilePath)
+		gui.FolderButton = widget.NewButton("Select Directory 📂", func() {
+			// Open folder dialog
+			folderDialog := dialog.NewFolderOpen(
+				func(uri fyne.ListableURI, err error) {
+					if err != nil {
+						dialog.ShowError(err, gui.Window)
+						return
+					}
+					if uri == nil {
+						// No folder selected, so just return
+						return
+					}
+					// Display the selected folder path
+					gui.FolderValueLabel.SetText(uri.Path())
+				}, gui.Window)
+			// Show the folder dialog
+			folderDialog.Show()
+		})
+		gui.StartButton = widget.NewButton("Start Notebrew ▶", func() {
 			pid, err := portPID(6444)
 			if err != nil {
 				dialog.ShowError(err, gui.Window)
@@ -104,19 +161,26 @@ func main() {
 					return
 				}
 			}()
+			go func() {
+				filesConfig.Provider = "directory"
+				// TODO: persist port.txt
+			}()
+			go func() {
+				// TODO: persist files.json
+			}()
 			select {
 			case gui.StartServer <- struct{}{}:
 			default:
 			}
 		})
-		gui.StopButton = widget.NewButton("Stop notebrew 🛑", func() {
+		gui.StopButton = widget.NewButton("Stop Notebrew 🛑", func() {
 			select {
 			case gui.StopServer <- struct{}{}:
 			default:
 			}
 		})
 		gui.StopButton.Disable()
-		gui.OpenBrowserButton = widget.NewButton("Open browser 🌐", func() {
+		gui.OpenBrowserButton = widget.NewButton("Open Browser 🌐", func() {
 			switch runtime.GOOS {
 			case "linux":
 				exec.Command("xdg-open", "https://localhost:6444").Start()
@@ -127,22 +191,15 @@ func main() {
 			}
 		})
 		gui.OpenBrowserButton.Disable()
-		gui.OpenFolderButton = widget.NewButton("Open folder 📂", func() {
-			switch runtime.GOOS {
-			case "linux":
-				exec.Command("xdg-open", filepath.Join(homeDir, "notebrew-files")).Start()
-			case "windows":
-				exec.Command("explorer.exe", filepath.Join(homeDir, "notebrew-files")).Start()
-			case "darwin":
-				exec.Command("open", filepath.Join(homeDir, "notebrew-files")).Start()
-			}
-		})
 		gui.Window.SetContent(container.NewVBox(
-			gui.ContentDomainLabel,
-			gui.ContentDomainEntry,
+			container.New(layout.NewFormLayout(),
+				gui.ContentDomainLabel, gui.ContentDomainEntry,
+				gui.PortLabel, gui.PortEntry,
+				gui.FolderLabel, gui.FolderValueLabel,
+			),
+			gui.FolderButton,
 			container.NewGridWithColumns(2, gui.StartButton, gui.StopButton),
 			gui.OpenBrowserButton,
-			gui.OpenFolderButton,
 		))
 		go gui.ServerLoop()
 		gui.Window.ShowAndRun()
@@ -150,7 +207,6 @@ func main() {
 	}()
 	if err != nil {
 		gui.Window.SetTitle("Error starting notebrew")
-		gui.Window.Resize(fyne.NewSize(300, 300))
 		gui.Window.SetContent(widget.NewLabel(err.Error()))
 		gui.Window.ShowAndRun()
 		os.Exit(1)
@@ -166,10 +222,14 @@ type GUI struct {
 	StopServer         chan struct{}
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
+	PortLabel          *widget.Label
+	PortEntry          *widget.Entry
+	FolderLabel        *widget.Label
+	FolderValueLabel   *widget.Label
+	FolderButton       *widget.Button
 	StartButton        *widget.Button
 	StopButton         *widget.Button
 	OpenBrowserButton  *widget.Button
-	OpenFolderButton   *widget.Button
 }
 
 func (gui *GUI) ServerLoop() {
