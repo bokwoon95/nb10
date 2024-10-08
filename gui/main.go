@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,8 +28,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/bokwoon95/nb10"
-	"github.com/bokwoon95/sqddl/ddl"
-	"modernc.org/sqlite"
 )
 
 func main() {
@@ -60,111 +57,6 @@ func main() {
 			AddSource: true,
 		})
 		gui.Logger = slog.New(logHandler).With(slog.String("version", nb10.Version))
-		// DatabaseFS.
-		db, err := sql.Open("sqlite", filepath.Join(homeDir, "notebrew-files.db")+
-			"?_pragma=busy_timeout(10000)"+
-			"&_pragma=foreign_keys(ON)"+
-			"&_pragma=journal_mode(WAL)"+
-			"&_pragma=synchronous(NORMAL)"+
-			"&_pragma=page_size(8192)"+
-			"&_txlock=immediate",
-		)
-		if err != nil {
-			return err
-		}
-		err = db.Ping()
-		if err != nil {
-			return err
-		}
-		filesCatalog, err := nb10.FilesCatalog("sqlite")
-		if err != nil {
-			return err
-		}
-		automigrateCmd := &ddl.AutomigrateCmd{
-			DB:             db,
-			Dialect:        "sqlite",
-			DestCatalog:    filesCatalog,
-			AcceptWarnings: true,
-			Stderr:         io.Discard,
-		}
-		err = automigrateCmd.Run()
-		if err != nil {
-			return err
-		}
-		dbi := ddl.NewDatabaseIntrospector("sqlite", db)
-		dbi.Tables = []string{"files_fts5"}
-		tables, err := dbi.GetTables()
-		if err != nil {
-			return err
-		}
-		if len(tables) == 0 {
-			_, err := db.Exec("CREATE VIRTUAL TABLE files_fts5 USING fts5 (file_name, text, content = 'files');")
-			if err != nil {
-				return err
-			}
-		}
-		dbi.Tables = []string{"files"}
-		triggers, err := dbi.GetTriggers()
-		if err != nil {
-			return err
-		}
-		triggerNames := make(map[string]struct{})
-		for _, trigger := range triggers {
-			triggerNames[trigger.TriggerName] = struct{}{}
-		}
-		if _, ok := triggerNames["files_after_insert"]; !ok {
-			_, err := db.Exec("CREATE TRIGGER files_after_insert AFTER INSERT ON files BEGIN" +
-				"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-				"\nEND;",
-			)
-			if err != nil {
-				return err
-			}
-		}
-		if _, ok := triggerNames["files_after_delete"]; !ok {
-			_, err := db.Exec("CREATE TRIGGER files_after_delete AFTER DELETE ON files BEGIN" +
-				"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-				"\nEND;",
-			)
-			if err != nil {
-				return err
-			}
-		}
-		if _, ok := triggerNames["files_after_update"]; !ok {
-			_, err := db.Exec("CREATE TRIGGER files_after_update AFTER UPDATE ON files BEGIN" +
-				"\n    INSERT INTO files_fts5 (files_fts5, rowid, file_name, text) VALUES ('delete', OLD.rowid, OLD.file_name, OLD.text);" +
-				"\n    INSERT INTO files_fts5 (rowid, file_name, text) VALUES (NEW.rowid, NEW.file_name, NEW.text);" +
-				"\nEND;",
-			)
-			if err != nil {
-				return err
-			}
-		}
-		objectsFilePath := filepath.Join(homeDir, "notebrew-objects")
-		err = os.MkdirAll(objectsFilePath, 0755)
-		if err != nil {
-			return err
-		}
-		dirObjectStorage, err := nb10.NewDirObjectStorage(objectsFilePath, os.TempDir())
-		if err != nil {
-			return err
-		}
-		gui.DatabaseFS, err = nb10.NewDatabaseFS(nb10.DatabaseFSConfig{
-			DB:      db,
-			Dialect: "sqlite",
-			ErrorCode: func(err error) string {
-				var sqliteErr *sqlite.Error
-				if errors.As(err, &sqliteErr) {
-					return strconv.Itoa(int(sqliteErr.Code()))
-				}
-				return ""
-			},
-			ObjectStorage: dirObjectStorage,
-			Logger:        gui.Logger,
-		})
-		if err != nil {
-			return err
-		}
 		// DirectoryFS.
 		filesFilePath := filepath.Join(homeDir, "notebrew-files")
 		err = os.MkdirAll(filesFilePath, 0755)
@@ -269,7 +161,7 @@ type GUI struct {
 	App                fyne.App
 	Window             fyne.Window
 	Logger             *slog.Logger
-	DirectoryFS        *nb10.DirectoryFS
+	DirectoryFS        *nb10.DirectoryFS // TODO: remove.
 	StartServer        chan struct{}
 	StopServer         chan struct{}
 	ContentDomainLabel *widget.Label
@@ -298,7 +190,6 @@ func (gui *GUI) ServerLoop() {
 
 func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	var nbrew *nb10.Notebrew
-	var closers []io.Closer
 	var server *http.Server
 	nbrew = nb10.New()
 	nbrew.Logger = gui.Logger
@@ -306,17 +197,6 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	nbrew.ContentDomain = contentDomain
 	nbrew.ContentDomainHTTPS = true
 	nbrew.Port = 6444
-	// ReplicatedFS.
-	replicatedFS, err := nb10.NewReplicatedFS(nb10.ReplicatedFSConfig{
-		Leader:                 gui.DatabaseFS,
-		Followers:              []nb10.FS{gui.DirectoryFS},
-		SynchronousReplication: false,
-		Logger:                 gui.Logger,
-	})
-	if err != nil {
-		return err
-	}
-	closers = append(closers, replicatedFS)
 	for _, dir := range []string{
 		"notes",
 		"pages",
@@ -327,12 +207,12 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 		"imports",
 		"exports",
 	} {
-		err = nbrew.FS.Mkdir(dir, 0755)
+		err := nbrew.FS.Mkdir(dir, 0755)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
 			return err
 		}
 	}
-	_, err = fs.Stat(nbrew.FS, "site.json")
+	_, err := fs.Stat(nbrew.FS, "site.json")
 	if err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			return err
