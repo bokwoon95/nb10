@@ -113,7 +113,7 @@ func main() {
 		gui.FolderValueLabel = widget.NewLabel(filesConfig.FilePath)
 		gui.FolderLabel = widget.NewLabel("Directory:")
 		gui.FolderValueLabel = widget.NewLabel(filesConfig.FilePath)
-		gui.FolderButton = widget.NewButton("Select Directory 📂", func() {
+		gui.FolderButton = widget.NewButton("📂", func() {
 			// Open folder dialog
 			folderDialog := dialog.NewFolderOpen(
 				func(uri fyne.ListableURI, err error) {
@@ -195,9 +195,8 @@ func main() {
 			container.New(layout.NewFormLayout(),
 				gui.ContentDomainLabel, gui.ContentDomainEntry,
 				gui.PortLabel, gui.PortEntry,
-				gui.FolderLabel, gui.FolderValueLabel,
+				gui.FolderLabel, container.NewHBox(gui.FolderValueLabel, layout.NewSpacer(), gui.FolderButton),
 			),
-			gui.FolderButton,
 			container.NewGridWithColumns(2, gui.StartButton, gui.StopButton),
 			gui.OpenBrowserButton,
 		))
