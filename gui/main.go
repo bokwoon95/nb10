@@ -20,7 +20,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -42,10 +41,7 @@ func main() {
 	gui.Window.CenterOnScreen()
 	gui.StartServer = make(chan struct{})
 	gui.StopServer = make(chan struct{})
-	gui.SyncDone = make(chan struct{})
 	err := func() error {
-		baseCtx, baseCtxCancel := context.WithCancel(context.Background())
-		defer baseCtxCancel()
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			return err
@@ -249,32 +245,12 @@ func main() {
 				exec.Command("open", filepath.Join(homeDir, "notebrew-files")).Start()
 			}
 		})
-		gui.SyncButton = widget.NewButton("Sync folder 🔄", func() {
-			if gui.SyncInProgress.Load() {
-				// TODO: dispatch a StopSync event.
-				if cancel := gui.SyncCancel.Load(); cancel != nil {
-					(*cancel)()
-				}
-				<-gui.SyncDone
-			} else {
-				// TODO: dispatch a StartSync event.
-				syncCtx, syncCancel := context.WithCancel(baseCtx)
-				gui.SyncCancel.Store(&syncCancel)
-				go gui.SyncFolder(syncCtx)
-				gui.SyncButton.SetText("Stop sync ❌")
-				gui.SyncProgressBar.Show()
-			}
-		})
-		gui.SyncProgressBar = widget.NewProgressBar()
-		gui.SyncProgressBar.Hide()
 		gui.Window.SetContent(container.NewVBox(
 			gui.ContentDomainLabel,
 			gui.ContentDomainEntry,
 			container.NewGridWithColumns(2, gui.StartButton, gui.StopButton),
 			gui.OpenBrowserButton,
 			gui.OpenFolderButton,
-			gui.SyncButton,
-			gui.SyncProgressBar,
 		))
 		go gui.ServerLoop()
 		gui.Window.ShowAndRun()
@@ -293,23 +269,15 @@ type GUI struct {
 	App                fyne.App
 	Window             fyne.Window
 	Logger             *slog.Logger
-	DatabaseFS         *nb10.DatabaseFS
 	DirectoryFS        *nb10.DirectoryFS
 	StartServer        chan struct{}
 	StopServer         chan struct{}
-	StartSync          chan struct{}
-	StopSync           chan struct{}
-	SyncInProgress     atomic.Bool
-	SyncCancel         atomic.Pointer[context.CancelFunc] // TODO: remove.
-	SyncDone           chan struct{}                      // TODO: remove.
 	ContentDomainLabel *widget.Label
 	ContentDomainEntry *widget.Entry
 	StartButton        *widget.Button
 	StopButton         *widget.Button
 	OpenBrowserButton  *widget.Button
 	OpenFolderButton   *widget.Button
-	SyncButton         *widget.Button
-	SyncProgressBar    *widget.ProgressBar
 }
 
 func (gui *GUI) ServerLoop() {
@@ -324,16 +292,6 @@ func (gui *GUI) ServerLoop() {
 			gui.StartButton.Enable()
 			gui.StopButton.Disable()
 			gui.OpenBrowserButton.Disable()
-		}
-	}
-}
-
-func (gui *GUI) SyncLoop() {
-	// syncCtx, syncCtxCancel live here.
-	for {
-		select {
-		case <-gui.StartSync:
-		case <-gui.StopSync:
 		}
 	}
 }
@@ -647,26 +605,6 @@ func (gui *GUI) StartServer2(homeDir string, contentDomain string) error {
 	// repeatedly taps the Stop notebrew button, any extra signals will simply
 	// be discarded.
 	return nil
-}
-
-func (gui *GUI) SyncFolder(ctx context.Context) {
-	defer func() {
-		gui.SyncButton.SetText("Sync folder 🔄")
-		gui.SyncProgressBar.Hide()
-		gui.SyncInProgress.Store(false)
-		gui.SyncDone <- struct{}{}
-	}()
-	gui.SyncInProgress.Store(true)
-	gui.SyncProgressBar.SetValue(0)
-	for i := 0.0; i <= 1.0; i += 0.1 {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(time.Millisecond * 250):
-		}
-		gui.SyncProgressBar.SetValue(i)
-	}
-	// TODO: walk the files in databaseFS and fill in any missing files in dirFS.
 }
 
 func portPID(port int) (pid int, err error) {
