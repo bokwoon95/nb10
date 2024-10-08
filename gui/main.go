@@ -30,6 +30,11 @@ import (
 	"github.com/bokwoon95/nb10"
 )
 
+type FilesConfig struct {
+	Provider string `json:"provider"`
+	FilePath string `json:"filePath"`
+}
+
 func main() {
 	var gui GUI
 	gui.App = app.New()
@@ -69,10 +74,6 @@ func main() {
 			return fmt.Errorf("%s: %w", filepath.Join(configDir, "files.json"), err)
 		}
 		b = bytes.TrimSpace(b)
-		type FilesConfig struct {
-			Provider string `json:"provider"`
-			FilePath string `json:"filePath"`
-		}
 		var filesConfig FilesConfig
 		if len(b) > 0 {
 			decoder := json.NewDecoder(bytes.NewReader(b))
@@ -122,44 +123,6 @@ func main() {
 			folderDialog.Show()
 		})
 		gui.StartButton = widget.NewButton("Start Notebrew ▶", func() {
-			err := os.MkdirAll(configDir, 0755)
-			if err != nil {
-				dialog.ShowError(err, gui.Window)
-				return
-			}
-			go func() {
-				err = os.WriteFile(filepath.Join(configDir, "contentdomain.txt"), []byte(gui.ContentDomainEntry.Text), 0644)
-				if err != nil {
-					dialog.ShowError(err, gui.Window)
-					return
-				}
-			}()
-			go func() {
-				_, err := strconv.Atoi(gui.PortEntry.Text)
-				if err != nil {
-					gui.PortEntry.SetText("6444")
-				}
-				err = os.WriteFile(filepath.Join(configDir, "port.txt"), []byte(gui.PortEntry.Text), 0644)
-				if err != nil {
-					dialog.ShowError(err, gui.Window)
-					return
-				}
-			}()
-			go func() {
-				b, err := json.Marshal(FilesConfig{
-					Provider: "directory",
-					FilePath: gui.FolderValueLabel.Text,
-				})
-				if err != nil {
-					dialog.ShowError(err, gui.Window)
-					return
-				}
-				err = os.WriteFile(filepath.Join(configDir, "files.json"), b, 0644)
-				if err != nil {
-					dialog.ShowError(err, gui.Window)
-					return
-				}
-			}()
 			select {
 			case gui.StartServer <- struct{}{}:
 			default:
@@ -192,7 +155,7 @@ func main() {
 			container.NewGridWithColumns(2, gui.StartButton, gui.StopButton),
 			gui.OpenBrowserButton,
 		))
-		go gui.ServerLoop()
+		go gui.ServerLoop(configDir)
 		gui.Window.ShowAndRun()
 		return nil
 	}()
@@ -222,15 +185,47 @@ type GUI struct {
 	OpenBrowserButton  *widget.Button
 }
 
-func (gui *GUI) ServerLoop() {
+func (gui *GUI) ServerLoop(configDir string) {
 	var nbrew *nb10.Notebrew
 	var server *http.Server
 	for {
 		select {
 		case <-gui.StartServer:
+			err := os.MkdirAll(configDir, 0755)
+			if err != nil {
+				dialog.ShowError(err, gui.Window)
+				return
+			}
+			err = os.WriteFile(filepath.Join(configDir, "contentdomain.txt"), []byte(gui.ContentDomainEntry.Text), 0644)
+			if err != nil {
+				dialog.ShowError(err, gui.Window)
+				return
+			}
+			_, err = strconv.Atoi(gui.PortEntry.Text)
+			if err != nil {
+				gui.PortEntry.SetText("6444")
+			}
+			err = os.WriteFile(filepath.Join(configDir, "port.txt"), []byte(gui.PortEntry.Text), 0644)
+			if err != nil {
+				dialog.ShowError(err, gui.Window)
+				return
+			}
+			b, err := json.Marshal(FilesConfig{
+				Provider: "directory",
+				FilePath: gui.FolderValueLabel.Text,
+			})
+			if err != nil {
+				dialog.ShowError(err, gui.Window)
+				return
+			}
+			err = os.WriteFile(filepath.Join(configDir, "files.json"), b, 0644)
+			if err != nil {
+				dialog.ShowError(err, gui.Window)
+				return
+			}
 			nbrew = nb10.New()
 			nbrew.Logger = gui.Logger
-			nbrew.CMSDomain = "localhost:6444"
+			nbrew.CMSDomain = "localhost:"+gui.PortEntry.Text
 			nbrew.ContentDomain = gui.ContentDomainEntry.Text
 			nbrew.ContentDomainHTTPS = true
 			nbrew.Port = 6444
