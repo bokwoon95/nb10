@@ -201,9 +201,10 @@ func (gui *GUI) ServerLoop(configDir string) {
 				dialog.ShowError(err, gui.Window)
 				return
 			}
-			_, err = strconv.Atoi(gui.PortEntry.Text)
+			port, err := strconv.Atoi(gui.PortEntry.Text)
 			if err != nil {
 				gui.PortEntry.SetText("6444")
+				port = 6444
 			}
 			err = os.WriteFile(filepath.Join(configDir, "port.txt"), []byte(gui.PortEntry.Text), 0644)
 			if err != nil {
@@ -228,7 +229,7 @@ func (gui *GUI) ServerLoop(configDir string) {
 			nbrew.CMSDomain = "localhost:"+gui.PortEntry.Text
 			nbrew.ContentDomain = gui.ContentDomainEntry.Text
 			nbrew.ContentDomainHTTPS = true
-			nbrew.Port = 6444
+			nbrew.Port = port
 			directoryFS, err := nb10.NewDirectoryFS(nb10.DirectoryFSConfig{
 				RootDir: gui.FolderValueLabel.Text,
 			})
