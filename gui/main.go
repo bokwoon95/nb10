@@ -223,11 +223,12 @@ type GUI struct {
 }
 
 func (gui *GUI) ServerLoop() {
+	var nbrew *nb10.Notebrew
 	var server *http.Server
 	for {
 		select {
 		case <-gui.StartServer:
-			nbrew := nb10.New()
+			nbrew = nb10.New()
 			nbrew.Logger = gui.Logger
 			nbrew.CMSDomain = "localhost:6444"
 			nbrew.ContentDomain = gui.ContentDomainEntry.Text
@@ -556,7 +557,8 @@ func (gui *GUI) ServerLoop() {
 			gui.StopButton.Enable()
 			gui.OpenBrowserButton.Enable()
 		case <-gui.StopServer:
-			if server != nil {
+			if server != nil && nbrew != nil {
+				nbrew.Close()
 				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 				defer cancel()
 				server.Shutdown(ctx)
