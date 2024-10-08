@@ -141,10 +141,6 @@ Themes showcase.
 <button>Open folder</button>
 <button>🛑 Stop notebrew</button>
 
-TODO: gui: Scrap the replicated fs. Scrap the database FS. we gain the ability to add captions and search files but we lose the ability to interact with the file system, which means users who want to write changes into a dropbox folder with be disappointed because the filesystem is no longer a source of truth. hell, by going with a pure directory FS it also means we no longer duplicate files twice and we also don't need to explain what the hell "sync folder" means. AND users get to use the GUI as a plain static site generator. it just feels correct.
-TODO: gui: when the server starts, we need to both write to the contentdomain as well as clear the cdndomain (cdn domain *must* be empty when using notebrew as a SSG).
-TODO: gui: "Sync Folder" should fail silently for any errors it encounters: for example, copying a file with a long name over to the Windows filesystem will fail, but that should not pop up as an error to annoy users. Using the database fs as the default is kind of genius because then it means that we can bypass the any file name length limits on all systems, get free FTS search, as well as get the ability to write captions and alt text on images.
-TODO: gui in general
 TODO: figure out how to build msi/dmg for Windows and macOS, as well as how to upload them as releases to GitHub.
 TODO: figure out how to sign macOS binaries.
 TODO: remove the port (it's always 6444). Remove the option to toggle between database and directory for files provider, it's always database leader with a directory follower (async). The only thing we let the user configure is the content domain, and it must be filled in before they start the server. If they change content domain between iterations, it's up to them to regenerate it.
