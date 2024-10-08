@@ -100,7 +100,7 @@ func main() {
 		gui.PortEntry.SetPlaceHolder("port that Notebrew listens on e.g. 6444")
 		gui.PortEntry.SetText(port)
 		gui.FolderValueLabel = widget.NewLabel(filesConfig.FilePath)
-		gui.FolderLabel = widget.NewLabel("Directory:")
+		gui.FolderLabel = widget.NewLabel("Folder:")
 		gui.FolderValueLabel = widget.NewLabel(filesConfig.FilePath)
 		gui.FolderButton = widget.NewButton("📂", func() {
 			// Open folder dialog
