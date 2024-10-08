@@ -175,11 +175,11 @@ func main() {
 		gui.OpenBrowserButton = widget.NewButton("Open Browser 🌐", func() {
 			switch runtime.GOOS {
 			case "linux":
-				exec.Command("xdg-open", "https://localhost:6444").Start()
+				exec.Command("xdg-open", "http://localhost:"+gui.PortEntry.Text+"/files/").Start()
 			case "windows":
-				exec.Command("explorer.exe", "https://localhost:6444").Start()
+				exec.Command("explorer.exe", "http://localhost:"+gui.PortEntry.Text+"/files/").Start()
 			case "darwin":
-				exec.Command("open", "https://localhost:6444").Start()
+				exec.Command("open", "http://localhost:"+gui.PortEntry.Text+"/files/").Start()
 			}
 		})
 		gui.OpenBrowserButton.Disable()
@@ -546,11 +546,11 @@ func (gui *GUI) ServerLoop() {
 			}()
 			switch runtime.GOOS {
 			case "linux":
-				exec.Command("xdg-open", "https://localhost:6444").Start()
+				exec.Command("xdg-open", "http://localhost:"+gui.PortEntry.Text+"/files/").Start()
 			case "windows":
-				exec.Command("explorer.exe", "https://localhost:6444").Start()
+				exec.Command("explorer.exe", "http://localhost:"+gui.PortEntry.Text+"/files/").Start()
 			case "darwin":
-				exec.Command("open", "https://localhost:6444").Start()
+				exec.Command("open", "http://localhost:"+gui.PortEntry.Text+"/files/").Start()
 			}
 			gui.StartButton.Disable()
 			gui.StopButton.Enable()
