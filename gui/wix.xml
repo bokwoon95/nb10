@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Product Id="*" Name="Notebrew" Language="1033" Manufacturer="Notebrew" UpgradeCode="982fbf84-9a1f-49a4-8dc3-7dcdec5978ce" Version="1.0.0">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+
+    <!-- Force overwrite of files -->
+    <Property Id="REINSTALLMODE" Value="amus" />
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="Notebrew" />
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="AppProgramMenuFolder" Name="Notebrew" />
+      </Directory>
+    </Directory>
+
+    <!-- Main installation folder -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="AppComponent" Guid="93dab108-84ff-4435-91bf-36625a545586">
+        <File Source="notebrew.exe" Id="AppExecutable" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Start menu shortcut -->
+    <DirectoryRef Id="AppProgramMenuFolder">
+      <Component Id="ProgramMenuDir" Guid="2cba2b37-806d-495f-bf16-8317941ea0e1">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="Notebrew"
+                  Description="Notebrew GUI"
+                  Target="[INSTALLFOLDER]notebrew.exe"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="AppProgramMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Notebrew\Notebrew" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <Feature Id="DefaultFeature" Level="1">
+      <ComponentRef Id="AppComponent" />
+      <ComponentRef Id="ProgramMenuDir" />
+    </Feature>
+  </Product>
+</Wix>
