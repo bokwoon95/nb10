@@ -154,8 +154,8 @@ Notebrew (ARM).exe
 (macbooks before 2019) Notebrew (Intel).app
 (macbooks after 2019) Notebrew.app
 --
-notebrew-linux
-notebrew-linux-arm
+Notebrew
+Notebrew (ARM)
 
 If you are a programmer, you might want the commandline version instead.
 - install Git
