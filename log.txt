@@ -143,16 +143,22 @@ Themes showcase.
 
 -- / --
 
+Notebrew is a free and open-source static site CMS/blogging platform for Windows, macOS and Linux.
+
 Notebrew is a simple blogging platform
 
-(Create your blog)
+You can [run it on a server](/self-hosting-tutorial/) or you can [run it locally on your computer](/download/) and upload the files to a static web hosting provider. Or, you can sign up to start your own personal blog on <blog-name>.nbrew.net.
 
-You can [run it on a server]() or you can [run it locally on your computer]() and upload the files to a static web hosting provider. Or, you can sign up to start your own personal blog on <blog-name>.nbrew.net.
+(Create your blog)
 
 Pricing | Sites | Storage | Upload images | Use custom domains
 --------------------------------------------------------------
 
-The unique selling point of Notebrew is that it is a Static Site Generator with its own Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
+The unique selling point of Notebrew is that it is both a Static Site Generator and a Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
+
+The unique selling point of Notebrew is that it is both a Static Site Generator and a Content Management System (CMS), combining the speed of a static website with the user-friendliness of a CMS.
+
+What is special about Notebrew? It is a Static Site Generator with its own Content Management System (CMS), combining the user-friendliness of a CMS with the performance of a static website.
 
 Notebrew is a static site generator with its own Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
 
