@@ -176,8 +176,12 @@ terms of service - docs - forum - github
 
 ## Windows
 
-Notebrew.exe
-Notebrew (ARM).exe
+Notebrew Windows.zip
+Notebrew Windows (ARM).zip
+Notebrew macOS.zip
+Notebrew macOS (Intel).zip
+Notebrew Linux.zip
+Notebrew Linux (ARM).zip
 
 ## macOS
 
