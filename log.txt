@@ -131,7 +131,7 @@ Themes showcase.
 
 <label>
     <div>Content Domain</div>
-    <div>(this is the URL of your static website e.g. example.com)</div> 
+    <div>(this is the URL of your static website e.g. example.com)</div>
     <input type="text" name="contentDomain">
 </label>
 <button>Start notebrew</button>
@@ -141,26 +141,34 @@ Themes showcase.
 <button>Open folder</button>
 <button>🛑 Stop notebrew</button>
 
-TODO: figure out how to build msi/dmg for Windows and macOS, as well as how to upload them as releases to GitHub.
-TODO: figure out how to sign macOS binaries.
+-- / --
 
-Downloads:
+Notebrew is a simple blogging platform
 
-[windows] [macos] [linux]
+You can [run it on a server]() or you can [run it locally on your computer]() and upload the files to a static web hosting provider. Or, you can sign up for an account on notebrew.com to get started immediately.
+
+Notebrew is a static site generator with its own Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
+
+## Screenshots
+
+## Features
+
+-- /download/ --
+
+## Windows
 
 Notebrew.exe
 Notebrew (ARM).exe
---
+
+## macOS
+
 [after 2019] Notebrew.app/Notebrew macOS.zip
 [before 2019] Notebrew (Intel).app/Notebrew macOS (Intel).zip
---
+
+## Linux
+
 Notebrew
 Notebrew (ARM)
-
-If you are a programmer, you might want the commandline version instead.
-- install Git
-- install Go
-- `go install -tags fts5 -trimpath github.com/bokwoon95/notebrew/notebrew`
 
 API Documentation.
 
