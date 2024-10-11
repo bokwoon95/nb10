@@ -129,18 +129,6 @@ Themes showcase.
 - How to download and install themes
 - How to export and host your own themes
 
-<label>
-    <div>Content Domain</div>
-    <div>(this is the URL of your static website e.g. example.com)</div>
-    <input type="text" name="contentDomain">
-</label>
-<button>Start notebrew</button>
-
-<div>Notebrew running on port {{ $.Port }}...</div>
-<button>Open browser</button>
-<button>Open folder</button>
-<button>🛑 Stop notebrew</button>
-
 -- / --
 
 Notebrew is a free and open-source static site CMS/blogging platform for Windows, macOS and Linux.
@@ -151,14 +139,19 @@ You can [run it on a server](/self-hosting-tutorial/) or you can [run it locally
 
 (Create your blog)
 
-Pricing | Sites | Storage | Upload images | Use custom domains
+Pricing | Sites | Storage | Upload images | Custom domains
 --------------------------------------------------------------
+
+Why use Notebrew? It combines the speed of a static website with the convenience of a content management system (CMS). It is a static site generator, but accessible non-technical people can use. It even comes with a production-ready web server that automatically configures HTTPS so you don't have to fiddle with a reverse proxy for deployment.
 
 The unique selling point of Notebrew is that it is both a Static Site Generator and a Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
 
 The unique selling point of Notebrew is that it is both a Static Site Generator and a Content Management System (CMS), combining the speed of a static website with the user-friendliness of a CMS.
 
-What is special about Notebrew? It is a Static Site Generator with its own Content Management System (CMS), combining the user-friendliness of a CMS with the performance of a static website. And if you are self-hosting, Notebrew comes with its own webserver *and* automatic HTTPS.
+Why use Notebrew? It is a static site generator software that non-technical people can use. Notebrew comes with its own Content Management System (CMS), ... (how to continue here?)
+What is special about Notebrew? It is a Static Site Generator with its own Content Management System (CMS), combining the user-friendliness of a CMS with the performance of a static website. It is a static site generator that non-technical people can use. And for self hosters, Notebrew comes with its own web server *and* [automatic HTTPS]() built in. It is production ready, out of the box.
+
+Why notebrew? Because it is a static site generator at heart, but is also a Content Management System (CMS) that non-technical people can use. Static site generators produce fast and secure websites, but were traditionally too steeped in technical jargon that it was only meant for programmers to use. Notebrew's CMS user interface ensures that it is accessible even to non-technical users. Finally, Notebrew is a production-ready web server that automatically handles HTTPS for you (just like Caddy).
 
 Notebrew is a static site generator with its own Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
 
@@ -212,6 +205,7 @@ TODO: come up with a unified stylesheet and use it as the base for the default t
 TODO: see if you can reduce the vertical spacing for the default theme, so the navbar area looks smaller.
 NOTE: we don't actually need to embed the API documentation into the binary yet. We can just link them to the site. When the API starts changing for notebrew, then we can consider baking in the API documentation into each binary so that it is always accurate.
 TODO: need to add a markdown reference for all textareas that accept markdown text (site_json.html, file.html, image.html...)
+    NOTE: we *NEED* this! Especially since we will no longer be mentioning the markdown features like raw HTML, syntax highlighting, math notation, heading attributes and fenced div attributes.
     TODO: the tutorial lives in /files/static/markdown-reference-6a0f0a00.html
     TODO: /files/static/essential-guide-6a0f0a00.html (user tutorials)
     TODO: /files/static/template-reference-6a0f0a00.html
