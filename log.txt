@@ -151,8 +151,8 @@ Downloads:
 Notebrew.exe
 Notebrew (ARM).exe
 --
-[after 2019] Notebrew.app
-[before 2019] Notebrew (Intel).app
+[after 2019] Notebrew.app/Notebrew macOS.zip
+[before 2019] Notebrew (Intel).app/Notebrew macOS (Intel).zip
 --
 Notebrew
 Notebrew (ARM)
