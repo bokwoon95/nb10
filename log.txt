@@ -158,13 +158,26 @@ The unique selling point of Notebrew is that it is both a Static Site Generator 
 
 The unique selling point of Notebrew is that it is both a Static Site Generator and a Content Management System (CMS), combining the speed of a static website with the user-friendliness of a CMS.
 
-What is special about Notebrew? It is a Static Site Generator with its own Content Management System (CMS), combining the user-friendliness of a CMS with the performance of a static website.
+What is special about Notebrew? It is a Static Site Generator with its own Content Management System (CMS), combining the user-friendliness of a CMS with the performance of a static website. And if you are self-hosting, Notebrew comes with its own webserver *and* automatic HTTPS.
 
 Notebrew is a static site generator with its own Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
 
 ## Screenshots
 
 ## Features
+
+- Themes
+- Write in Markdown
+    - insert html
+    - syntax highlighting
+    - math syntax
+    - heading attributes
+    - fenced divs
+- RSS Feed
+- API Access
+- Import and export your data as tarballs (.tgz files)
+
+terms of service - docs - forum - github
 
 -- /download/ --
 
