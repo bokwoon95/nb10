@@ -147,7 +147,10 @@ Notebrew is a simple blogging platform
 
 (Create your blog)
 
-You can [run it on a server]() or you can [run it locally on your computer]() and upload the files to a static web hosting provider. Or, you can sign up for an account on notebrew.com to get started immediately.
+You can [run it on a server]() or you can [run it locally on your computer]() and upload the files to a static web hosting provider. Or, you can sign up to start your own personal blog on <blog-name>.nbrew.net.
+
+Pricing | Sites | Storage | Upload images | Use custom domains
+--------------------------------------------------------------
 
 The unique selling point of Notebrew is that it is a Static Site Generator with its own Content Management System (CMS), allowing you to edit posts and pages with the convenience of a CMS while benefiting from the performance of a static website.
 
