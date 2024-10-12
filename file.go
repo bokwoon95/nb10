@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -137,7 +136,6 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
-			fmt.Printf("fileInfo = %#v, absolutePath = %q, creationTime = %#v\n", databaseFileInfo, absolutePath, response.CreationTime)
 		}
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
