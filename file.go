@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -123,9 +124,9 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 		response.Username = user.Username
 		response.DisableReason = user.DisableReason
 		response.SitePrefix = sitePrefix
-		if fileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
-			response.FileID = fileInfo.FileID
-			response.CreationTime = fileInfo.CreationTime
+		if databaseFileInfo, ok := fileInfo.(*DatabaseFileInfo); ok {
+			response.FileID = databaseFileInfo.FileID
+			response.CreationTime = databaseFileInfo.CreationTime
 		} else {
 			var absolutePath string
 			switch v := nbrew.FS.(type) {
@@ -136,6 +137,7 @@ func (nbrew *Notebrew) file(w http.ResponseWriter, r *http.Request, user User, s
 				}
 			}
 			response.CreationTime = CreationTime(absolutePath, fileInfo)
+			fmt.Printf("fileInfo = %#v, absolutePath = %q, creationTime = %#v\n", databaseFileInfo, absolutePath, response.CreationTime)
 		}
 		response.FilePath = filePath
 		response.IsDir = fileInfo.IsDir()
