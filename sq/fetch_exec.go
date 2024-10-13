@@ -10,13 +10,15 @@ import (
 	"strings"
 )
 
+// Query represents a database query.
 type Query struct {
-	Dialect string
-	Format  string
-	Values  []any
-	Debug   bool
+	Dialect string // Database dialect.
+	Format  string // Query format string.
+	Values  []any  // Query values.
+	Debug   bool   // If Debug is true, the query is logged to console.
 }
 
+// Append appends the format string and values slice to the query.
 func (query Query) Append(format string, values ...any) Query {
 	query.Format += " " + format
 	query.Values = append(query.Values, values...)
@@ -231,6 +233,9 @@ func Exec(ctx context.Context, db DB, query Query) (Result, error) {
 	return result, nil
 }
 
+// PreparedFetch represents a fetch query that wraps an explicitly-prepared
+// *sql.Stmt. Such a query can be run for different prepared statement
+// parameters without having to re-prepare the query in the database.
 type PreparedFetch[T any] struct {
 	dialect   string
 	query     string
@@ -241,6 +246,8 @@ type PreparedFetch[T any] struct {
 	debug     bool
 }
 
+// PrepareFetch takes a database instance + query + rowmapper and converts it
+// to a PreparedFetch.
 func PrepareFetch[T any](ctx context.Context, db DB, query Query, rowmapper func(*Row) T) (preparedFetch *PreparedFetch[T], err error) {
 	preparedFetch = &PreparedFetch[T]{
 		dialect:   query.Dialect,
@@ -331,6 +338,8 @@ func (preparedFetch *PreparedFetch[T]) Close() error {
 	return preparedFetch.stmt.Close()
 }
 
+// FetchCursor fetches runs the PreparedFetch with the given params and returns
+// a database cursor.
 func (preparedFetch *PreparedFetch[T]) FetchCursor(ctx context.Context, params ...Parameter) (cursor *Cursor[T], err error) {
 	cursor = &Cursor[T]{
 		ctx:       ctx,
@@ -373,7 +382,7 @@ func (preparedFetch *PreparedFetch[T]) FetchCursor(ctx context.Context, params .
 }
 
 // FetchOne returns the first result from running the PreparedFetch with the
-// give params.
+// given params.
 func (preparedFetch *PreparedFetch[T]) FetchOne(ctx context.Context, params ...Parameter) (T, error) {
 	cursor, err := preparedFetch.FetchCursor(ctx, params...)
 	if err != nil {
@@ -409,6 +418,9 @@ func (preparedFetch *PreparedFetch[T]) FetchAll(ctx context.Context, params ...P
 	return results, cursor.Close()
 }
 
+// PreparedExec represents a exec query that wraps an explicitly-prepared
+// *sql.Stmt. Such a query can be run for different prepared statement
+// parameters without having to re-prepare the query in the database.
 type PreparedExec struct {
 	dialect string
 	query   string
@@ -418,6 +430,8 @@ type PreparedExec struct {
 	debug   bool
 }
 
+// PrepareExec takes a database instance + query and converts it to a
+// PreparedExec.
 func PrepareExec(ctx context.Context, db DB, query Query) (*PreparedExec, error) {
 	preparedExec := &PreparedExec{
 		dialect: query.Dialect,
