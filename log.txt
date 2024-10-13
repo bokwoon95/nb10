@@ -199,8 +199,6 @@ TODO: you know, Tokyo metro's black on yellow signs/posters is actually a pretty
 TODO: themes: default, gallery, steve, parchment
 TODO: implement gallery theme such that gallery.html can be dropped into any existing theme and it will replace the template "content".
     - it has to only depend on baseline.css
-TODO: figure out how to implement "press any key to exit" on macOS.
-    - include a "you may close this window" message in case they're not savvy enough to realize only enter works.
 TODO: figure out if you can reduce the max-width to 80ch on the default theme as well (see how it plays with the image gallery?)
     NOTE: stevelosh.com, medium and substack all have about the same width. Emulate it!
     NOTE: don't constrain max-width on the body. instead use class='max-width-80ch pa0 mv2 center' hell, we could add max-width-100ch and max-width-120ch as well.
@@ -431,10 +429,6 @@ news (it's a spin on cards)
 - implicit
     - solid colors w implicit separators are so fuckin' classy | title and date only | https://chidiwilliams.com/
     - another plain background, implicit lines blog | https://kevinlawler.com/
-
-- TODO: change banner to use an svg image instead so that we can bundle all notebrew.com themes into one, and let the user decide freely switch between them. But to do that we cannot afford to have a fat image taking up space, so use an SVG instead.
-    - utility.css still stays where it is, though. That way we don't have to duplicate 6kb for each style, and we keep the bundle small.
-    - oh, I guess this also means we can no longer include preview images. It is up to the user to manually apply the theme and see if they like it.
 
 go install github.com/bokwoon95/notebrew/notebrew@latest
 
